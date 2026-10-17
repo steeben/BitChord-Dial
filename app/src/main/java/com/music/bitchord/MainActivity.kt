@@ -2984,8 +2984,11 @@ private fun BitChordApp(
         // leaves the tab bar and mini player in place.
         // Replay's three layers unwind in the order they were opened. Ahead of
         // every other handler because they are drawn over everything else.
-        BackHandler(enabled = showReplayShare) { showReplayShare = false }
-        BackHandler(enabled = replayStory != null && !showReplayShare) { replayStory = null }
+        // Only while there is a summary to draw them from — otherwise back
+        // would spend a step closing something that never appeared.
+        val replayDrawable = replay.summary?.isEmpty == false
+        BackHandler(enabled = replayDrawable && showReplayShare) { showReplayShare = false }
+        BackHandler(enabled = replayDrawable && replayStory != null && !showReplayShare) { replayStory = null }
         BackHandler(
             enabled = showReplay && replayStory == null && !showReplayShare,
         ) {
