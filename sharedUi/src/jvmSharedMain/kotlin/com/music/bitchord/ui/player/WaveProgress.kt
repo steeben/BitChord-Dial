@@ -13,6 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -99,8 +100,8 @@ internal fun rememberWaveMotion(playing: Boolean, animate: Boolean): WaveMotion 
 
 /**
  * One UI 9's media progress: three soft ranges of humps rising out of the played part of the
- * line and drifting toward the playhead — a white one at the back, then the secondary and the
- * primary accent over it, translucent, so where they cross their colours mix. The whole set
+ * line and drifting toward the playhead — a white one, the secondary and the primary accent,
+ * blended additively, so where they cross their colours add up and brighten. The whole set
  * tapers to nothing at the start of the bar and again where it meets the playhead.
  *
  * [baseline] is the y of the line's top edge; [played] the played length in px.
@@ -141,7 +142,9 @@ internal fun DrawScope.drawWaves(
             WaveTone.SECONDARY -> accents.secondary
             WaveTone.PRIMARY -> accents.primary
         }
-        drawPath(path, color.copy(alpha = layer.alpha * alpha))
+        // Additive: overlaps add up toward white, the way coloured light does, rather than the
+        // front wave covering the ones behind it.
+        drawPath(path, color.copy(alpha = layer.alpha * alpha), blendMode = BlendMode.Plus)
     }
 }
 

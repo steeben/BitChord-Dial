@@ -357,7 +357,8 @@ private fun WaveTrack(
         }
         if (played > 0f) {
             drawRoundRect(
-                color = activeColor.copy(alpha = activeColor.alpha * alpha),
+                // The played part of the line is in the accent, like the bead's core.
+                color = accents.primary.copy(alpha = activeColor.alpha * alpha),
                 topLeft = Offset(inset, top),
                 size = Size(played.coerceAtLeast(line * factor).coerceAtMost(width), line),
                 cornerRadius = radius,
