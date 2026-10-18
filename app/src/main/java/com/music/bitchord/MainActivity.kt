@@ -6117,7 +6117,7 @@ private fun BitChordApp(
             )
         }
         songArtPick?.let { (song, album) ->
-            ModalBottomSheet(
+            SlideDownBottomSheet(
                 onDismissRequest = { songArtPick = null },
                 containerColor = MaterialTheme.colorScheme.background,
             ) {
@@ -6369,7 +6369,7 @@ private fun BitChordApp(
         }
 
         linkingFile?.let { file ->
-            ModalBottomSheet(
+            SlideDownBottomSheet(
                 onDismissRequest = { linkingFile = null },
                 containerColor = MaterialTheme.colorScheme.background,
             ) {
