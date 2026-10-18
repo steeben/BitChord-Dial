@@ -52,6 +52,8 @@ object AlbumArtChoices {
     private const val KEY_CHOICES = "choices_json"
     private const val KEY_PICKED = "picked_json"
     private const val KEY_SONGS = "songs_json"
+    private const val KEY_SONG_PICKS = "song_picks_json"
+    private const val KEY_SONG_PICKED = "song_picked_json"
     private const val DIR = "album_art"
 
     /** The scheme [TrackArtFetcher] answers: a track's own embedded picture. */
@@ -69,6 +71,12 @@ object AlbumArtChoices {
     /** Album key to the art each of its device files was given: content uri to url. */
     private var albumSongs: Map<String, Map<String, String>> = emptyMap()
 
+    /** One song's own pick, which wins over its album's: content uri to url. */
+    private var songPicks: Map<String, String> = emptyMap()
+
+    /** Content uri to the candidate that song's pick was made from. */
+    private var songPicked: Map<String, String> = emptyMap()
+
     /** A device file's content uri to the art it shows — see [songArtFor]. */
     private val _songArt = MutableStateFlow<Map<String, String>>(emptyMap())
     val songArt = _songArt.asStateFlow()
@@ -82,8 +90,13 @@ object AlbumArtChoices {
             val obj = JSONObject(p.getString(KEY_SONGS, null) ?: return@runCatching)
             albumSongs = obj.keys().asSequence().associateWith { readMap(obj.getJSONObject(it).toString()) }
         }
-        _songArt.value = albumSongs.values.fold(emptyMap()) { all, songs -> all + songs }
+        runCatching { songPicks = p.getString(KEY_SONG_PICKS, null)?.let(::readMap).orEmpty() }
+        runCatching { songPicked = p.getString(KEY_SONG_PICKED, null)?.let(::readMap).orEmpty() }
+        _songArt.value = mergedSongArt()
     }
+
+    private fun mergedSongArt(): Map<String, String> =
+        albumSongs.values.fold(emptyMap<String, String>()) { all, songs -> all + songs } + songPicks
 
     private fun readMap(raw: String): Map<String, String> {
         val obj = JSONObject(raw)
@@ -138,9 +151,32 @@ object AlbumArtChoices {
         persist()
     }
 
+    /** Which candidate this one song's art was picked from, or null if it wasn't. */
+    fun pickedCandidateForSong(contentUri: String?): String? = contentUri?.let { songPicked[it] }
+
+    /** Gives just [song] the cover [url], one of its album's [candidates]. */
+    suspend fun pickForSong(context: Context, song: Song, url: String) = withContext(Dispatchers.IO) {
+        val local = song.localUri?.takeIf { it.startsWith("content://") } ?: return@withContext
+        val bytes = trackArtContentUri(url)?.let { embeddedPicture(context, it) }
+        val art = bytes?.let { save(context, it, digest(it)) } ?: url
+        songPicks = songPicks + (local to art)
+        songPicked = songPicked + (local to url)
+        persist()
+    }
+
+    /** Puts [song] back to whatever its album gives it. */
+    fun clearSong(song: Song) {
+        val local = song.localUri ?: return
+        songPicks = songPicks - local
+        songPicked = songPicked - local
+        persist()
+    }
+
     private fun persist() {
-        _songArt.value = albumSongs.values.fold(emptyMap()) { all, songs -> all + songs }
+        _songArt.value = mergedSongArt()
         prefs?.edit()
+            ?.putString(KEY_SONG_PICKS, JSONObject(songPicks).toString())
+            ?.putString(KEY_SONG_PICKED, JSONObject(songPicked).toString())
             ?.putString(KEY_CHOICES, JSONObject(_choices.value).toString())
             ?.putString(KEY_PICKED, JSONObject(picked).toString())
             ?.putString(KEY_SONGS, JSONObject(albumSongs.mapValues { JSONObject(it.value) }).toString())

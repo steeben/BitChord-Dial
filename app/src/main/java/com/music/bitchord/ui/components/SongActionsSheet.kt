@@ -45,6 +45,7 @@ import androidx.compose.material.icons.rounded.HighQuality
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Radio
 import androidx.compose.material.icons.rounded.PlaylistRemove
+import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.ThumbDown
 import androidx.compose.material.icons.rounded.ThumbDownOffAlt
@@ -174,6 +175,11 @@ fun SongActionsSheet(
     /** Which cut is playing now, so the row can offer the other one. */
     isAudioVersion: Boolean = false,
     onShare: (() -> Unit)? = null,
+    /**
+     * Picks this one song's art from the covers its album's files carry — see
+     * [com.music.bitchord.data.AlbumArtChoices]. Null hides the row.
+     */
+    onChangeAlbumArt: (() -> Unit)? = null,
     /**
      * Copies what the app logged while starting this track. Null everywhere
      * except the player, where "this track" means something.
@@ -390,6 +396,9 @@ fun SongActionsSheet(
                 accent = palette.accent,
                 onClick = it,
             )
+        }
+        onChangeAlbumArt?.let {
+            ActionRow(Icons.Rounded.Image, stringResource(R.string.change_album_art), accent = palette.accent, onClick = it)
         }
         if (!isOffline) {
             onShare?.let {

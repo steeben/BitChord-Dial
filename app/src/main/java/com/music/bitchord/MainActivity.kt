@@ -836,6 +836,8 @@ private fun BitChordApp(
     var browseMenuOrigin by remember { mutableStateOf<HeldItem?>(null) }
     /** The album whose cover is being chosen, or null when that sheet is shut. */
     var albumArtPick by remember { mutableStateOf<BrowseTarget?>(null) }
+    /** One song whose art is being chosen, with the album it picks from. */
+    var songArtPick by remember { mutableStateOf<Pair<Song, BrowseTarget>?>(null) }
     /**
      * The dial tile the open menu was held on, or null when the menu came from
      * anywhere else — what gives the menu its "Remove from dial" row.
@@ -5410,6 +5412,29 @@ private fun BitChordApp(
                     } else {
                         null
                     },
+                // A device file with an album: its art can be picked from
+                // the covers the album's other files carry.
+                onChangeAlbumArt = song.albumName
+                    ?.takeIf { it.isNotBlank() && song.localUri?.startsWith("content://") == true }
+                    ?.let { album ->
+                        {
+                            songActions = null
+                            scope.launch {
+                                val mates = runCatching {
+                                    com.music.bitchord.data.LocalMediaRepository.getLocalMusic(context)
+                                }.getOrDefault(emptyList())
+                                    .filter { it.albumName.equals(album, ignoreCase = true) }
+                                    .ifEmpty { listOf(song) }
+                                songArtPick = song to BrowseTarget(
+                                    browseId = null,
+                                    title = album,
+                                    subtitle = song.artist,
+                                    type = BrowseType.ALBUM,
+                                    songs = mates,
+                                )
+                            }
+                        }
+                    },
                 // The sheet stays up for a rating: it shows the new state
                 // in place, and people often thumb a song and then queue it.
                 onToggleLike = { viewModel.toggleLike(song.videoId) },
@@ -5965,6 +5990,29 @@ private fun BitChordApp(
                 },
                 dialLabelHidden = dialLabels == (target.browseId in dialHiddenLabels),
             )
+        }
+        songArtPick?.let { (song, album) ->
+            ModalBottomSheet(
+                onDismissRequest = { songArtPick = null },
+                containerColor = MaterialTheme.colorScheme.background,
+            ) {
+                com.music.bitchord.ui.components.AlbumArtPickerSheet(
+                    target = album,
+                    song = song,
+                    onPick = { url ->
+                        songArtPick = null
+                        scope.launch {
+                            if (url == null) {
+                                com.music.bitchord.data.AlbumArtChoices.clearSong(song)
+                            } else {
+                                com.music.bitchord.data.AlbumArtChoices.pickForSong(context, song, url)
+                            }
+                            // The library's rows were read with the old art.
+                            viewModel.loadLibrarySongs()
+                        }
+                    },
+                )
+            }
         }
         albumArtPick?.let { target ->
             ModalBottomSheet(

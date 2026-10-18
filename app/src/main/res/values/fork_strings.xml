@@ -86,6 +86,7 @@
     <string name="custom_cover_set">Cover updated on this device</string>
     <string name="custom_cover_failed">Couldn\'t use that image</string>
     <string name="choose_album_art">Choose album art</string>
+    <string name="change_album_art">Change album art</string>
     <string name="use_original_album_art">Use original album art</string>
     <string name="no_album_art_found">None of this album\'s songs carry artwork</string>
     <string name="stats">Stats</string>
