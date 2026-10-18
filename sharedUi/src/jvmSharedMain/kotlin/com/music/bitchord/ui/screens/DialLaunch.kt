@@ -94,6 +94,27 @@ object DialLaunch {
         return (from == home && to == key) || (from == key && to == home)
     }
 
+    /**
+     * Where in a close's run to seek for a back swipe [progress] (0 to 1) of
+     * the way across. The close's own curve is quick off the mark, so seeking
+     * straight by the swipe would shrink most of the page in its first inch;
+     * this undoes the curve, so the page shrinks in step with the finger, as
+     * far as [BACK_REACH] of the way to its tile. Letting go runs the rest.
+     */
+    fun backFraction(progress: Float): Float {
+        val shrunk = progress.coerceIn(0f, 1f) * BACK_REACH
+        var lo = 0f
+        var hi = 1f
+        repeat(24) {
+            val mid = (lo + hi) / 2f
+            if (LaunchEasing.transform(mid) < shrunk) lo = mid else hi = mid
+        }
+        return (lo + hi) / 2f
+    }
+
+    /** How much of the way to its tile a page shrinks under a full back swipe. */
+    private const val BACK_REACH = 0.6f
+
     const val OPEN_MS = 420
     const val CLOSE_MS = 360
 }

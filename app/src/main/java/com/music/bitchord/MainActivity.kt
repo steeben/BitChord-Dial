@@ -3162,7 +3162,14 @@ private fun BitChordApp(
                 val libraryDepths = remember { HashMap<String, Int>() }
                 if (libraryDepth != null) libraryDepths[pageKey] = libraryDepth else libraryDepths.remove(pageKey)
                 // What one back step from a Library page shows, and the step.
+                // A page opened from a dial tile, straight off Home: the swipe
+                // runs its close, shrinking it back toward its tile as the
+                // finger goes, in place of the blur the other pages get.
+                val dialBack = !reduceAnimationSetting && detail != null && detailStack.size == 1 &&
+                    pageKey == detail.browseId && DialLaunch.origin?.key == pageKey &&
+                    pageKeyFor(top = null) == HOME_PAGE_KEY
                 val libraryBack: Pair<String, () -> Unit>? = when {
+                    dialBack -> HOME_PAGE_KEY to { viewModel.closeDetail(); Unit }
                     libraryDepth == null || libraryDepth == 0 || detailActiveShelf != null -> null
                     pageKey == "history" -> pageKeyFor(history = false) to { showHistory = false }
                     pageKey == "spotify" -> pageKeyFor(spotify = false) to { showSpotify = false }
@@ -3202,16 +3209,22 @@ private fun BitChordApp(
                 // Library pages: the swipe slides this page off to the right and
                 // the one under it in from the left, following the finger;
                 // letting go finishes the slide, cancelling slides it back.
+                // A dial tile's page shrinks toward its tile the same way.
                 PredictiveBackHandler(
                     enabled = libraryBack != null && !showSettings && !showAccountScrobbling && !showSources &&
                         !showListenTogether && !showEqualizer && !showReplay && !showStats && !showDiscord,
                 ) { events ->
                     val back = currentLibraryBack
+                    val dialing = dialBack
                     val leaving = pageKey
                     try {
                         events.collect { event ->
                             if (back != null) {
-                                pageTransitionState.seekTo(event.progress.coerceIn(0f, 1f), back.first)
+                                val progress = event.progress.coerceIn(0f, 1f)
+                                pageTransitionState.seekTo(
+                                    if (dialing) DialLaunch.backFraction(progress) else progress,
+                                    back.first,
+                                )
                             }
                         }
                         back?.second?.invoke()
