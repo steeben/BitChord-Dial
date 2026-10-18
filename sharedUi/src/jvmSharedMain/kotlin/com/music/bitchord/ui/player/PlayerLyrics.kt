@@ -1785,7 +1785,7 @@ internal fun LyricsPanel(
     }
 
     if (lines.isEmpty()) {
-        val empty = modifier.revealLyricsControlsOnTap(!controlsOpen, onBottomHalfTap)
+        val empty = modifier.revealLyricsControlsOnTap(!controlsOpen, onBottomHalfTap, anywhere = true)
         // "None" is a finding, and it is only worth reporting once the lookup
         // has actually come back with it.
         if (looking && !instrumental) {
