@@ -69,6 +69,8 @@ object ListeningRecorder {
             // The speed dial shows a song played from an album or playlist as
             // that album or playlist; see [PlayedCollections].
             com.music.bitchord.data.settings.PlayedCollections.onTrackStarted(song)
+            // and fills in, from the library, what YouTube's history never hears of.
+            com.music.bitchord.data.settings.DevicePlays.onTrackStarted(song)
             return
         }
         val step = (now - lastSampleAt).coerceIn(0L, MAX_STEP_MS)

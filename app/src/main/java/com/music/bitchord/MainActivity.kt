@@ -202,6 +202,7 @@ import com.music.bitchord.data.scrobbling.LastFM
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.CustomizationSettings
 import com.music.bitchord.data.settings.PlayedCollections
+import com.music.bitchord.data.settings.DevicePlays
 import com.music.bitchord.data.settings.OrderedToggle
 import com.music.bitchord.data.settings.LibrarySource
 import com.music.bitchord.data.settings.speedDialId
@@ -2102,7 +2103,9 @@ private fun BitChordApp(
      * downstream read.
      */
     val shelfSong: (ShelfItem) -> Song? = { item ->
-        item.videoId?.let { videoId ->
+        // A track played from the library comes back with its file, so it
+        // plays from there rather than being looked for on YouTube.
+        DevicePlays.song(item.videoId) ?: item.videoId?.let { videoId ->
             Song(
                 videoId = videoId,
                 title = item.title,
@@ -7097,9 +7100,12 @@ private fun rememberHomeFeed(
     val lastSpeedDial by CustomizationSettings.lastSpeedDial.collectAsStateWithLifecycle()
     val homeFresh by viewModel.homeFresh.collectAsStateWithLifecycle()
     val holdSavedDial = !homeFresh && lastSpeedDial.isNotEmpty()
+    // A track from the library has started: YouTube's history won't move for
+    // it, so the dial is built again here instead.
+    val devicePlays by DevicePlays.version.collectAsStateWithLifecycle()
     // The feed as Home draws it: the speed dial, then YouTube Music's shelves
     // in the order it gives them.
-    val baseHomeState = remember(homeState, speedDialPins, holdSavedDial, lastSpeedDial, hiddenFromDial) {
+    val baseHomeState = remember(homeState, speedDialPins, holdSavedDial, lastSpeedDial, hiddenFromDial, devicePlays) {
         val savedDial = if (holdSavedDial) {
             CustomizationSettings.buildSpeedDial(
                 speedDialPins,
