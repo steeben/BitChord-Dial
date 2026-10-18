@@ -27,7 +27,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
+import com.music.bitchord.ui.components.SlideDownBottomSheet
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -193,7 +193,7 @@ fun LibraryDuplicatesScreen(
     }
 
     opened?.let { group ->
-        ModalBottomSheet(
+        SlideDownBottomSheet(
             onDismissRequest = { opened = null },
             containerColor = MaterialTheme.colorScheme.background,
         ) {

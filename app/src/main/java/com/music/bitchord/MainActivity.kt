@@ -95,6 +95,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import com.music.bitchord.ui.components.SlideDownBottomSheet
 import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.Surface
 import androidx.compose.material3.CircularProgressIndicator
@@ -3197,7 +3198,14 @@ private fun BitChordApp(
                 val libraryDepths = remember { HashMap<String, Int>() }
                 if (libraryDepth != null) libraryDepths[pageKey] = libraryDepth else libraryDepths.remove(pageKey)
                 // What one back step from a Library page shows, and the step.
+                // A page opened from a dial tile, straight off Home: the swipe
+                // runs its close, shrinking it back toward its tile as the
+                // finger goes, in place of the blur the other pages get.
+                val dialBack = !reduceAnimationSetting && detail != null && detailStack.size == 1 &&
+                    pageKey == detail.browseId && DialLaunch.origin?.key == pageKey &&
+                    pageKeyFor(top = null) == HOME_PAGE_KEY
                 val libraryBack: Pair<String, () -> Unit>? = when {
+                    dialBack -> HOME_PAGE_KEY to { viewModel.closeDetail(); Unit }
                     libraryDepth == null || libraryDepth == 0 || detailActiveShelf != null -> null
                     pageKey == "history" -> pageKeyFor(history = false) to { showHistory = false }
                     pageKey == "spotify" -> pageKeyFor(spotify = false) to { showSpotify = false }
@@ -3237,16 +3245,22 @@ private fun BitChordApp(
                 // Library pages: the swipe slides this page off to the right and
                 // the one under it in from the left, following the finger;
                 // letting go finishes the slide, cancelling slides it back.
+                // A dial tile's page shrinks toward its tile the same way.
                 PredictiveBackHandler(
                     enabled = libraryBack != null && !showSettings && !showAccountScrobbling && !showSources &&
                         !showListenTogether && !showEqualizer && !showReplay && !showStats && !showDiscord,
                 ) { events ->
                     val back = currentLibraryBack
+                    val dialing = dialBack
                     val leaving = pageKey
                     try {
                         events.collect { event ->
                             if (back != null) {
-                                pageTransitionState.seekTo(event.progress.coerceIn(0f, 1f), back.first)
+                                val progress = event.progress.coerceIn(0f, 1f)
+                                pageTransitionState.seekTo(
+                                    if (dialing) DialLaunch.backFraction(progress) else progress,
+                                    back.first,
+                                )
                             }
                         }
                         back?.second?.invoke()
@@ -5286,7 +5300,7 @@ private fun BitChordApp(
         // ---- Share the Replay ----
         if (showReplayShare) {
             replay.summary?.takeUnless { it.isEmpty }?.let { summary ->
-                ModalBottomSheet(
+                SlideDownBottomSheet(
                     onDismissRequest = { showReplayShare = false },
                     // Straight to full height. The sheet is a picture and two
                     // buttons, and half-open it showed the picture with both
@@ -5693,7 +5707,7 @@ private fun BitChordApp(
             )
         }
         songActions?.takeIf { songMenuOrigin == null }?.let { song ->
-            ModalBottomSheet(
+            SlideDownBottomSheet(
                 onDismissRequest = { songActions = null },
                 // The sheet paints itself in the track's own colours, corners
                 // and drag handle included — see SongActionsSheet.
@@ -5737,7 +5751,7 @@ private fun BitChordApp(
                 DownloadSession.markSeen()
             }
             BackHandler(onBack = closeDownloadManager)
-            ModalBottomSheet(
+            SlideDownBottomSheet(
                 onDismissRequest = closeDownloadManager,
                 containerColor = MaterialTheme.colorScheme.background,
             ) {
@@ -5755,7 +5769,7 @@ private fun BitChordApp(
                 playlistTarget = null
                 creatingPlaylist = false
             }
-            ModalBottomSheet(
+            SlideDownBottomSheet(
                 onDismissRequest = dismiss,
                 containerColor = MaterialTheme.colorScheme.background,
             ) {
@@ -6103,7 +6117,7 @@ private fun BitChordApp(
             )
         }
         songArtPick?.let { (song, album) ->
-            ModalBottomSheet(
+            SlideDownBottomSheet(
                 onDismissRequest = { songArtPick = null },
                 containerColor = MaterialTheme.colorScheme.background,
             ) {
@@ -6126,7 +6140,7 @@ private fun BitChordApp(
             }
         }
         albumArtPick?.let { target ->
-            ModalBottomSheet(
+            SlideDownBottomSheet(
                 onDismissRequest = { albumArtPick = null },
                 containerColor = MaterialTheme.colorScheme.background,
             ) {
@@ -6150,7 +6164,7 @@ private fun BitChordApp(
             }
         }
         browseActions?.takeIf { browseMenuOrigin == null }?.let { target ->
-            ModalBottomSheet(
+            SlideDownBottomSheet(
                 onDismissRequest = { browseActions = null },
                 containerColor = MaterialTheme.colorScheme.background,
             ) {
@@ -6204,7 +6218,7 @@ private fun BitChordApp(
                     override suspend fun onPostFling(consumed: Velocity, available: Velocity) = available
                 }
             }
-            ModalBottomSheet(
+            SlideDownBottomSheet(
                 onDismissRequest = close,
                 sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
                 containerColor = MaterialTheme.colorScheme.background,
@@ -6355,7 +6369,7 @@ private fun BitChordApp(
         }
 
         linkingFile?.let { file ->
-            ModalBottomSheet(
+            SlideDownBottomSheet(
                 onDismissRequest = { linkingFile = null },
                 containerColor = MaterialTheme.colorScheme.background,
             ) {

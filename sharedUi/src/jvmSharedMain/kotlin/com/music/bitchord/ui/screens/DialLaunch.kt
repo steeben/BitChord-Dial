@@ -94,12 +94,40 @@ object DialLaunch {
         return (from == home && to == key) || (from == key && to == home)
     }
 
+    /**
+     * Where in a close's run to seek for a back swipe [progress] (0 to 1) of
+     * the way across. The close's own curve is quick off the mark, so seeking
+     * straight by the swipe would shrink most of the page in its first inch;
+     * this undoes the curve, so the page shrinks in step with the finger, as
+     * far as [BACK_REACH] of the way to its tile. Letting go runs the rest.
+     */
+    fun backFraction(progress: Float): Float {
+        val shrunk = progress.coerceIn(0f, 1f) * BACK_REACH
+        var lo = 0f
+        var hi = 1f
+        repeat(24) {
+            val mid = (lo + hi) / 2f
+            if (CloseEasing.transform(mid) < shrunk) lo = mid else hi = mid
+        }
+        return (lo + hi) / 2f
+    }
+
+    /** How much of the way to its tile a page shrinks under a full back swipe. */
+    private const val BACK_REACH = 0.6f
+
     const val OPEN_MS = 420
-    const val CLOSE_MS = 360
+    const val CLOSE_MS = 420
 }
 
 /** Quick off the mark and long to settle, like a phone's own app launch. */
 private val LaunchEasing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
+
+/**
+ * The close's curve: the launch's quick start, then a touch past the tile
+ * (about 7% smaller than it) and a settle back out to it, so the page lands
+ * with a small bounce rather than stopping dead.
+ */
+private val CloseEasing = CubicBezierEasing(0.2f, 0f, 0.1f, 1.4f)
 
 /** The tile's corners, as drawn on the dial. */
 private val TILE_CORNER = 10.dp
@@ -128,7 +156,11 @@ fun DialLaunchPage(
     val origin = live ?: held[0]?.takeIf { closing }
     val progress by visibility.animateFloat(
         transitionSpec = {
-            if (origin != null) tween(if (closing) DialLaunch.CLOSE_MS else DialLaunch.OPEN_MS, easing = LaunchEasing) else snap()
+            when {
+                origin == null -> snap()
+                closing -> tween(DialLaunch.CLOSE_MS, easing = CloseEasing)
+                else -> tween(DialLaunch.OPEN_MS, easing = LaunchEasing)
+            }
         },
         label = "dialLaunch",
     ) { if (it == EnterExitState.Visible) 1f else 0f }
@@ -138,6 +170,10 @@ fun DialLaunchPage(
     if (origin != null && closing) {
         LaunchedEffect(origin) {
             snapshotFlow { progress }.first { it <= LAND_AT }
+            // Past the tile and back: not until the bounce has settled, or the
+            // tile would show round the page while it is smaller than it.
+            snapshotFlow { progress }.first { it < 0f }
+            snapshotFlow { progress }.first { it >= -SETTLED }
             DialLaunch.landed = true
         }
     }
@@ -158,17 +194,26 @@ fun DialLaunchPage(
                             val w = size.width
                             val h = size.height
                             if (w <= 0f || h <= 0f) return@graphicsLayer
-                            val scale = lerp(tile.width / w, 1f, p)
+                            // Where the page is drawn: from the tile to the whole
+                            // page, or, below zero (the close's bounce), the tile
+                            // itself a little smaller, about its own centre.
+                            val at = if (p >= 0f) {
+                                Rect(lerp(tile.left, 0f, p), lerp(tile.top, 0f, p), lerp(tile.right, w, p), lerp(tile.bottom, h, p))
+                            } else {
+                                tile.scaled(1f + p)
+                            }
+                            val scale = at.width / w
                             transformOrigin = TransformOrigin(0f, 0f)
                             scaleX = scale
                             scaleY = scale
-                            translationX = lerp(tile.left, 0f, p)
-                            translationY = lerp(tile.top, 0f, p)
+                            translationX = at.left
+                            translationY = at.top
                             // The window: the tile's shape growing to the page's,
                             // in the page's own (unscaled) units.
-                            val shownHeight = lerp(tile.height, h, p) / scale
+                            val shownHeight = at.height / scale
                             val tileScale = if (closing) 1f else origin.pressedScale
-                            val radius = lerp(TILE_CORNER.toPx() * tileScale, 0f, p) / scale
+                            val radius = lerp(TILE_CORNER.toPx() * tileScale, 0f, p.coerceAtLeast(0f)) *
+                                (1f + p.coerceAtMost(0f)) / scale
                             shape = WindowShape(shownHeight, radius)
                             clip = true
                         }
@@ -224,6 +269,9 @@ fun DialLaunchPage(
 
 /** How close to its tile a closing page is (in progress) when the tile itself comes back. */
 private const val LAND_AT = 0.04f
+
+/** How near its tile's own size a bouncing page has to be back to count as landed. */
+private const val SETTLED = 0.004f
 
 private fun lerp(a: Float, b: Float, t: Float) = a + (b - a) * t
 
