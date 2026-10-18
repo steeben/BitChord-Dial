@@ -126,6 +126,7 @@ import androidx.compose.ui.input.pointer.util.addPointerInputChange
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
@@ -289,10 +290,7 @@ private fun Modifier.trimBy(top: Dp, bottom: Dp, fraction: () -> Float): Modifie
 }
 
 /** Folds this away to no height as [fraction] runs from 0 to 1, fading as it goes. */
-private fun Modifier.collapseBy(slide: Boolean = false, fraction: () -> Float): Modifier =
-    // Clipped only while folding: at rest a control may draw past its box, as the seek bar's
-    // waves and playhead glow do.
-    graphicsLayer { clip = fraction() > 0f }
+private fun Modifier.collapseBy(slide: Boolean = false, fraction: () -> Float): Modifier = clipToBounds()
     .layout { measurable, constraints ->
         val placeable = measurable.measure(constraints)
         val f = fraction().coerceIn(0f, 1f)
