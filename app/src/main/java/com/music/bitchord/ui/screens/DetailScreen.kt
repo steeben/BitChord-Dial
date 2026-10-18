@@ -245,15 +245,13 @@ private const val ROW_REVEAL_WINDOW_MS = 800L
 /** How far the artist name/logo and everything under it sit above the usual [HEADER_DROP]. */
 private val ARTIST_HEADER_LIFT = 64.dp
 
-/** The artist action row: a large Play flanked by two smaller glass circles. */
+/** The artist action row: a large Play flanked by smaller glass circles. */
 private val ARTIST_PLAY_BUTTON = 70.dp
 
 /** A larger share of a smaller circle than the release headers' 0.44. */
 private const val ARTIST_PLAY_ICON_SCALE = 0.56f
-private val ARTIST_SIDE_BUTTON = 52.dp
-private val ARTIST_ACTION_GAP = 24.dp
 
-/** With Start radio and the pin either side as well: five across. */
+/** Radio and Shuffle, then the star and the pin: five across. */
 private val ARTIST_SIDE_BUTTON_CROWDED = 46.dp
 private val ARTIST_ACTION_GAP_CROWDED = 12.dp
 
@@ -1676,11 +1674,12 @@ private val SOFT_FOOT_BLUR = 48.dp
  * Radio • Shuffle • Play • Star • Local — the artist page's action row, as
  * Apple Music lays it out: a large Play circle with small circles either side.
  *
- * The star is the page's existing subscribe toggle. Where the page offers none
- * (a guest) an empty slot of the same size keeps Play in the middle.
+ * The star is the page's existing subscribe toggle. Any of the four small
+ * circles the page can't offer (no radio, a guest's star) stays, greyed out,
+ * so every page's row is five across.
  *
- * [compact] is the album pages' row instead — every circle the same size, the
- * group centred — for an artist that is a grouping of library tracks.
+ * [compact] is the album pages' look instead — dark glass circles, a solid
+ * Play — for an artist that is a grouping of library tracks.
  */
 @Composable
 private fun ActionRow(
@@ -1695,94 +1694,37 @@ private fun ActionRow(
     playColor: Color? = null,
     /** Left of Shuffle: a radio built off the artist. */
     onStartRadio: (() -> Unit)? = null,
-    /** Right of the star: the Local toggle, lit while on. Null hides it. */
+    /** Right of the star: the Local toggle, lit while on. Null greys it out. */
     localOnly: Boolean = false,
     onToggleLocal: (() -> Unit)? = null,
     compact: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val playFill = playColor ?: palette.accent
-    if (compact) {
-        val circles = listOfNotNull(onStartRadio, subscription, onToggleLocal).size + 2 // + Shuffle, Play
-        val full = circles >= 5
-        val circleSize = if (full) 46.dp else 50.dp
-        Row(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(horizontal = HEADER_GUTTER),
-            horizontalArrangement = Arrangement.spacedBy(
-                if (full) 8.dp else 10.dp,
-                Alignment.CenterHorizontally,
-            ),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (onStartRadio != null) {
-                CircleIconButton(
-                    icon = Icons.Rounded.Radio,
-                    contentDescription = stringResource(R.string.start_radio),
-                    palette = palette,
-                    onClick = onStartRadio,
-                    haptic = Haptic.Resume,
-                    size = circleSize,
-                )
-            }
-            CircleIconButton(
-                icon = BitChordIcons.Shuffle,
-                contentDescription = stringResource(R.string.shuffle),
-                palette = palette,
-                onClick = onShuffle,
-                haptic = Haptic.Resume,
-                size = circleSize,
-            )
-            PlayPill(
-                onClick = onPlay,
-                iconOnly = true,
-                size = circleSize,
-                containerColor = playFill,
-            )
-            if (subscription != null) {
-                CircleIconButton(
-                    icon = if (subscription.subscribed) Icons.Rounded.Star else Icons.Rounded.StarBorder,
-                    contentDescription = stringResource(
-                        if (subscription.subscribed) R.string.unsubscribe else R.string.subscribe,
-                    ),
-                    palette = palette,
-                    onClick = { onToggleSubscription?.invoke() },
-                    haptic = if (subscription.subscribed) Haptic.ToggleOff else Haptic.ToggleOn,
-                    size = circleSize,
-                )
-            }
-            if (onToggleLocal != null) {
-                LocalToggle(localOnly, onToggleLocal, palette, circleSize, lightFill = false)
-            }
-        }
-        Spacer(Modifier.height(bottomSpace))
-        return
-    }
-    // Five across is too wide for the three-button spacing on a narrow phone.
-    val crowded = onStartRadio != null || onToggleLocal != null
-    val side = if (crowded) ARTIST_SIDE_BUTTON_CROWDED else ARTIST_SIDE_BUTTON
+    // Always five slots — radio, shuffle, play, star, local — as on a release
+    // page. One this artist can't use stays in place, greyed out.
+    val side = if (compact) 46.dp else ARTIST_SIDE_BUTTON_CROWDED
+    val lightFill = !compact
     Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = HEADER_GUTTER),
         horizontalArrangement = Arrangement.spacedBy(
-            if (crowded) ARTIST_ACTION_GAP_CROWDED else ARTIST_ACTION_GAP,
+            if (compact) 8.dp else ARTIST_ACTION_GAP_CROWDED,
             Alignment.CenterHorizontally,
         ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (onStartRadio != null) {
-            CircleIconButton(
-                icon = Icons.Rounded.Radio,
-                contentDescription = stringResource(R.string.start_radio),
-                palette = palette,
-                onClick = onStartRadio,
-                haptic = Haptic.Resume,
-                size = side,
-                lightFill = true,
-            )
-        }
+        CircleIconButton(
+            icon = Icons.Rounded.Radio,
+            contentDescription = stringResource(R.string.start_radio),
+            palette = palette,
+            onClick = { onStartRadio?.invoke() },
+            haptic = Haptic.Resume,
+            size = side,
+            lightFill = lightFill,
+            enabled = onStartRadio != null,
+        )
         CircleIconButton(
             icon = BitChordIcons.Shuffle,
             contentDescription = stringResource(R.string.shuffle),
@@ -1790,35 +1732,41 @@ private fun ActionRow(
             onClick = onShuffle,
             haptic = Haptic.Resume,
             size = side,
-            lightFill = true,
+            lightFill = lightFill,
         )
-
         PlayPill(
             onClick = onPlay,
             iconOnly = true,
             size = ARTIST_PLAY_BUTTON,
             iconScale = ARTIST_PLAY_ICON_SCALE,
             containerColor = playFill,
-            cutout = true,
+            cutout = !compact,
         )
-
-        if (subscription != null) {
-            CircleIconButton(
-                icon = if (subscription.subscribed) Icons.Rounded.Star else Icons.Rounded.StarBorder,
-                contentDescription = stringResource(
-                    if (subscription.subscribed) R.string.unsubscribe else R.string.subscribe,
-                ),
-                palette = palette,
-                onClick = { onToggleSubscription?.invoke() },
-                haptic = if (subscription.subscribed) Haptic.ToggleOff else Haptic.ToggleOn,
-                size = side,
-                lightFill = true,
-            )
-        } else {
-            Spacer(Modifier.size(side))
-        }
+        val subscribed = subscription?.subscribed == true
+        CircleIconButton(
+            icon = if (subscribed) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+            contentDescription = stringResource(
+                if (subscribed) R.string.unsubscribe else R.string.subscribe,
+            ),
+            palette = palette,
+            onClick = { onToggleSubscription?.invoke() },
+            haptic = if (subscribed) Haptic.ToggleOff else Haptic.ToggleOn,
+            size = side,
+            lightFill = lightFill,
+            enabled = subscription != null,
+        )
         if (onToggleLocal != null) {
-            LocalToggle(localOnly, onToggleLocal, palette, side, lightFill = true)
+            LocalToggle(localOnly, onToggleLocal, palette, side, lightFill = lightFill)
+        } else {
+            CircleIconButton(
+                icon = Icons.Rounded.PhoneAndroid,
+                contentDescription = stringResource(R.string.local_only),
+                palette = palette,
+                onClick = {},
+                size = side,
+                lightFill = lightFill,
+                enabled = false,
+            )
         }
     }
     Spacer(Modifier.height(bottomSpace))
