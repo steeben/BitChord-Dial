@@ -93,6 +93,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import com.music.bitchord.ui.components.SlideDownBottomSheet
 import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.Surface
 import androidx.compose.material3.CircularProgressIndicator
@@ -5195,7 +5196,7 @@ private fun BitChordApp(
         // ---- Share the Replay ----
         if (showReplayShare) {
             replay.summary?.takeUnless { it.isEmpty }?.let { summary ->
-                ModalBottomSheet(
+                SlideDownBottomSheet(
                     onDismissRequest = { showReplayShare = false },
                     // Straight to full height. The sheet is a picture and two
                     // buttons, and half-open it showed the picture with both
@@ -5557,7 +5558,7 @@ private fun BitChordApp(
             )
         }
         songActions?.takeIf { songMenuOrigin == null }?.let { song ->
-            ModalBottomSheet(
+            SlideDownBottomSheet(
                 onDismissRequest = { songActions = null },
                 // The sheet paints itself in the track's own colours, corners
                 // and drag handle included — see SongActionsSheet.
@@ -5601,7 +5602,7 @@ private fun BitChordApp(
                 DownloadSession.markSeen()
             }
             BackHandler(onBack = closeDownloadManager)
-            ModalBottomSheet(
+            SlideDownBottomSheet(
                 onDismissRequest = closeDownloadManager,
                 containerColor = MaterialTheme.colorScheme.background,
             ) {
@@ -5619,7 +5620,7 @@ private fun BitChordApp(
                 playlistTarget = null
                 creatingPlaylist = false
             }
-            ModalBottomSheet(
+            SlideDownBottomSheet(
                 onDismissRequest = dismiss,
                 containerColor = MaterialTheme.colorScheme.background,
             ) {
@@ -5967,7 +5968,7 @@ private fun BitChordApp(
             )
         }
         albumArtPick?.let { target ->
-            ModalBottomSheet(
+            SlideDownBottomSheet(
                 onDismissRequest = { albumArtPick = null },
                 containerColor = MaterialTheme.colorScheme.background,
             ) {
@@ -5991,7 +5992,7 @@ private fun BitChordApp(
             }
         }
         browseActions?.takeIf { browseMenuOrigin == null }?.let { target ->
-            ModalBottomSheet(
+            SlideDownBottomSheet(
                 onDismissRequest = { browseActions = null },
                 containerColor = MaterialTheme.colorScheme.background,
             ) {
@@ -6045,7 +6046,7 @@ private fun BitChordApp(
                     override suspend fun onPostFling(consumed: Velocity, available: Velocity) = available
                 }
             }
-            ModalBottomSheet(
+            SlideDownBottomSheet(
                 onDismissRequest = close,
                 sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
                 containerColor = MaterialTheme.colorScheme.background,

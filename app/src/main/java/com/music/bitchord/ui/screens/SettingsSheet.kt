@@ -92,7 +92,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ModalBottomSheet
+import com.music.bitchord.ui.components.SlideDownBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -1778,7 +1778,7 @@ fun SettingsScreen(
     }
 
     picking?.let { target ->
-        ModalBottomSheet(
+        SlideDownBottomSheet(
             onDismissRequest = { picking = null },
             containerColor = MaterialTheme.colorScheme.background,
         ) {
@@ -1808,7 +1808,7 @@ fun SettingsScreen(
     }
 
     if (pickingDownloadQuality) {
-        ModalBottomSheet(
+        SlideDownBottomSheet(
             onDismissRequest = { pickingDownloadQuality = false },
             containerColor = MaterialTheme.colorScheme.background,
         ) {
@@ -1823,7 +1823,7 @@ fun SettingsScreen(
     }
 
     if (pickingAutomixPerformance) {
-        ModalBottomSheet(
+        SlideDownBottomSheet(
             onDismissRequest = { pickingAutomixPerformance = false },
             containerColor = MaterialTheme.colorScheme.background,
         ) {
