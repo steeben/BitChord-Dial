@@ -118,6 +118,7 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
@@ -3511,7 +3512,32 @@ fun NowPlayingScreen(
                                 scaleX = scale
                                 scaleY = scale
                                 transformOrigin = TransformOrigin(0f, 0.5f)
-                            },
+                            }
+                            // Over the queue the credits are the playing row's
+                            // label, not links: a tap anywhere on them takes the
+                            // list back to where it opened, as the sleeve does.
+                            // Taken on the way down, before the album and artist
+                            // links under it can claim the press.
+                            .then(
+                                if (queueOpen) {
+                                    Modifier.pointerInput(Unit) {
+                                        awaitEachGesture {
+                                            val down = awaitFirstDown(pass = PointerEventPass.Initial)
+                                            down.consume()
+                                            val up = waitForUpOrCancellation(PointerEventPass.Initial)
+                                                ?: return@awaitEachGesture
+                                            up.consume()
+                                            if ((up.position - down.position).getDistance() <=
+                                                viewConfiguration.touchSlop
+                                            ) {
+                                                queueRecenter.action?.invoke()
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Modifier
+                                },
+                            ),
                     ) {
                         // Only the title's own overflow gates the artist's stagger
                         // below — an artist line that's long on its own has no
