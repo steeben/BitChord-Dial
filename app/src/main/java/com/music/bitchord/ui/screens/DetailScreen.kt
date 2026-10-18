@@ -1169,9 +1169,12 @@ private fun ReleaseActions(
                 .fillMaxWidth()
                 .padding(horizontal = HEADER_GUTTER)
                 .graphicsLayer { alpha = 0.4f },
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         ) {
-            repeat(5) { ShimmerBox(Modifier.size(circleSize), CircleShape) }
+            repeat(5) { index ->
+                ShimmerBox(Modifier.size(if (index == 2) ARTIST_PLAY_BUTTON else circleSize), CircleShape)
+            }
         }
         return@AnimatedContent
     }
@@ -1218,7 +1221,9 @@ private fun ReleaseActions(
         PlayPill(
             onClick = onPlay,
             iconOnly = true,
-            size = circleSize,
+            // The artist page's big Play, so the two headers match.
+            size = ARTIST_PLAY_BUTTON,
+            iconScale = ARTIST_PLAY_ICON_SCALE,
             // The artwork's own colour, as on the artist page.
             containerColor = palette.accent,
         )
