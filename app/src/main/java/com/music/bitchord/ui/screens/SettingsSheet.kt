@@ -102,12 +102,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -116,8 +119,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
@@ -199,6 +206,17 @@ fun SettingsScreen(
     onShowUpdate: () -> Unit = {},
     /** Opens the page listing the All library's detected duplicates. */
     onLibraryDuplicates: () -> Unit = {},
+    /**
+     * What the rows are filtered by. Held by the caller, because the top bar
+     * shows a second copy of the field once this one has scrolled under it,
+     * and both have to be the same search.
+     */
+    searchQuery: String = "",
+    onSearchQueryChange: (String) -> Unit = {},
+    /** Whether the bar's copy of the field is the one showing. */
+    searchInBar: Boolean = false,
+    /** Told whether this page's own field has scrolled up under the bar. */
+    onSearchScrolledOff: (Boolean) -> Unit = {},
 ) {
     val context = LocalContext.current
 
@@ -298,9 +316,6 @@ fun SettingsScreen(
     // somebody open the screen to find out whether they are still in one.
     val party by ListenTogether.state.collectAsStateWithLifecycle()
 
-    // Filters the rows below — see [SettingsSearch]. Blank shows everything,
-    // exactly as if the field weren't there.
-    var searchQuery by remember { mutableStateOf("") }
     var picking by remember { mutableStateOf<QualityTarget?>(null) }
     var pickingDownloadQuality by remember { mutableStateOf(false) }
     var pickingAutomixPerformance by remember { mutableStateOf(false) }
@@ -389,6 +404,16 @@ fun SettingsScreen(
     // What is left after a keystroke is a different list, and the offset the
     // last one was scrolled to means nothing in it.
     val scrollState = rememberSaveable(saver = ScrollState.Saver) { ScrollState(0) }
+    // How far the page scrolls before the field's bottom edge passes under the
+    // top bar. Past it, the bar carries its own copy so search is always in reach.
+    val barLinePx = with(LocalDensity.current) { contentPadding.calculateTopPadding().toPx() }
+    var fieldScrolledOffAt by remember { mutableStateOf(Float.MAX_VALUE) }
+    val fieldScrolledOff by remember { derivedStateOf { scrollState.value > fieldScrolledOffAt } }
+    val reportScrolledOff by rememberUpdatedState(onSearchScrolledOff)
+    LaunchedEffect(Unit) {
+        snapshotFlow { fieldScrolledOff }.collect { reportScrolledOff(it) }
+    }
+    val typingInBar by rememberUpdatedState(searchInBar)
     var isFirstSearchComposition by remember { mutableStateOf(true) }
     LaunchedEffect(searchQuery) {
         if (isFirstSearchComposition && searchQuery.isEmpty()) {
@@ -397,7 +422,11 @@ fun SettingsScreen(
             isFirstSearchComposition = false
         } else {
             isFirstSearchComposition = false
-            scrollState.scrollTo(0)
+            // Typed into the bar: start the results just under it rather than
+            // back at the top, where the page's own field would show twice.
+            scrollState.scrollTo(
+                if (typingInBar) fieldScrolledOffAt.toInt().coerceAtMost(scrollState.maxValue) + 1 else 0,
+            )
         }
     }
 
@@ -415,11 +444,20 @@ fun SettingsScreen(
         )
         SearchField(
             query = searchQuery,
-            onQueryChange = { searchQuery = it },
+            onQueryChange = onSearchQueryChange,
             onSubmit = {},
             placeholder = stringResource(R.string.settings_search_hint),
             containerColor = frostedSurfaceColor(MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 4.dp),
+            modifier = Modifier
+                .padding(start = 20.dp, end = 20.dp, bottom = 4.dp)
+                .onGloballyPositioned { coordinates ->
+                    // Measured unclipped, so it still holds once the field is off screen.
+                    val bottom = coordinates.positionInRoot().y + coordinates.size.height
+                    fieldScrolledOffAt = bottom + scrollState.value - barLinePx
+                }
+                // Hidden rather than removed while the bar has it, so the page
+                // below keeps its place.
+                .graphicsLayer { alpha = if (searchInBar) 0f else 1f },
         )
 
         SearchableSettingsGroup(search) {
@@ -1715,20 +1753,8 @@ fun SettingsScreen(
                         textDecoration = TextDecoration.Underline,
                     ),
                 )
-                withLink(LinkAnnotation.Url("https://github.com/kushagrasinghx/BitChord", linkStyles)) {
+                withLink(LinkAnnotation.Url(FORK_AUTHOR_URL, linkStyles)) {
                     append("GitHub")
-                }
-                append("  ")
-                withLink(LinkAnnotation.Url("https://github.com/kushagrasinghx", linkStyles)) {
-                    append("Developer")
-                }
-                append("  ")
-                withLink(LinkAnnotation.Url("https://discord.gg/pDdKfrdHY6", linkStyles)) {
-                    append("Discord")
-                }
-                append("  ")
-                withLink(LinkAnnotation.Url("https://bitchord.kushagrasingh.in/", linkStyles)) {
-                    append("Website")
                 }
                 append("\n~YouTube Music & Listen Together Backend")
             },
@@ -1751,7 +1777,17 @@ fun SettingsScreen(
                         textDecoration = TextDecoration.Underline,
                     ),
                 )
-                append(forkNotice)
+                // The upstream app's name in the notice is the link to its site.
+                val upstream = forkNotice.indexOf(UPSTREAM_NAME)
+                if (upstream >= 0) {
+                    append(forkNotice.substring(0, upstream))
+                    withLink(LinkAnnotation.Url(UPSTREAM_WEBSITE_URL, linkStyles)) {
+                        append(UPSTREAM_NAME)
+                    }
+                    append(forkNotice.substring(upstream + UPSTREAM_NAME.length))
+                } else {
+                    append(forkNotice)
+                }
                 append("\n")
                 withLink(LinkAnnotation.Url(FORK_RELEASES_URL, linkStyles)) {
                     append(forkReleases)
@@ -2963,6 +2999,11 @@ internal fun SegmentedControl(
     }
 }
 
+/** Whoever keeps this fork. */
+private const val FORK_AUTHOR_URL = "https://github.com/steeben"
+/** The app this one was forked from, and its site. */
+private const val UPSTREAM_NAME = "BitChord"
+private const val UPSTREAM_WEBSITE_URL = "https://bitchord.kushagrasingh.in/"
 /** This fork's releases, for updates. */
 private const val FORK_RELEASES_URL = "https://github.com/steeben/BitChord-Dial/releases"
 private const val OBTAINX_GITHUB_URL = "https://github.com/bikram-agarwal/ObtainX"

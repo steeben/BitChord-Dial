@@ -96,7 +96,10 @@ import com.music.bitchord.ui.screens.LIBRARY_GROUP_PREFIX
 import com.music.bitchord.ui.screens.libraryGroupId
 import com.music.bitchord.data.AlbumArtChoices
 import com.music.bitchord.data.DuplicateGroup
+import com.music.bitchord.data.ArtistOnDevice
+import com.music.bitchord.data.DeviceArtists
 import com.music.bitchord.data.LibraryDuplicates
+import com.music.bitchord.data.LocalLinks
 import com.music.bitchord.data.settings.LibrarySource
 import com.music.bitchord.data.settings.CustomizationSettings
 import com.music.bitchord.ui.screens.matchesSearch
@@ -2856,11 +2859,25 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
         if (isCacheableDetail(browseId)) detailLoadedAt[browseId] = System.currentTimeMillis()
+        // An album opened from one of its tracks (the player, a song's menu)
+        // arrives with that track's cover, which for a single on the album is
+        // the single's sleeve. It is only a stand-in until the album's own
+        // cover is known: the download record's, here, or the page header's
+        // once it loads — see below.
+        val albumFromTrack = resolved == BrowseType.ALBUM && thumbnailUrl != null
+        val bare = browseId.removePrefix("VL")
+        val savedCover = if (resolved == BrowseType.ALBUM) {
+            Downloads.collections.value.entries
+                .firstOrNull { it.key.removePrefix("VL") == bare }
+                ?.value?.thumbnailUrl
+        } else {
+            null
+        }
         _detailStack.value += DetailPage(
             browseId = browseId,
             title = title,
             subtitle = subtitle,
-            thumbnailUrl = thumbnailUrl,
+            thumbnailUrl = savedCover ?: thumbnailUrl,
             songs = UiState.Loading,
             type = resolved,
         )
@@ -2985,16 +3002,21 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                                 } else if (subtitle.isBlank()) {
                                     credit = header.subtitle
                                 }
-                                if (thumbnailUrl == null) artwork = header.thumbnailUrl
+                                // An album always shows its own cover, not the
+                                // cover of whichever track it was opened from.
+                                if (thumbnailUrl == null || albumFromTrack) {
+                                    header.thumbnailUrl?.let { artwork = it }
+                                }
                             }
                             description = page.description
                             if (page.songs.isEmpty()) {
                                 UiState.Error(text(R.string.no_tracks_here))
                             } else {
                                 more = page.continuation
-                                suggested = page.suggested.withArtwork(thumbnailUrl ?: artwork)
+                                val fallbackArt = if (albumFromTrack) artwork ?: thumbnailUrl else thumbnailUrl ?: artwork
+                                suggested = page.suggested.withArtwork(fallbackArt)
                                 library = page.library
-                                UiState.Success(page.songs.withArtwork(thumbnailUrl ?: artwork))
+                                UiState.Success(page.songs.withArtwork(fallbackArt))
                             }
                         },
                         onFailure = { UiState.Error(it.friendly()) },
@@ -3011,7 +3033,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     it.copy(
                         songs = state,
                         sections = sections,
-                        thumbnailUrl = artwork ?: it.thumbnailUrl,
+                        thumbnailUrl = artwork ?: savedCover ?: it.thumbnailUrl,
                         title = name ?: it.title,
                         subtitle = credit ?: it.subtitle,
                         suggestedSongs = suggested,
@@ -3389,6 +3411,44 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         )
         songGroups[browseId] = page
         _detailStack.value += page
+    }
+
+    private val _deviceArtists = MutableStateFlow<Map<String, ArtistOnDevice>>(emptyMap())
+
+    /** What [loadDeviceArtist] found on the device for each artist page, by its browse id. */
+    val deviceArtists: StateFlow<Map<String, ArtistOnDevice>> = _deviceArtists.asStateFlow()
+
+    /**
+     * Looks the artist [name] up among the device's files and downloads, for
+     * the artist page [browseId]'s Local toggle. Each album found becomes a
+     * page of its own, opened as [openSongGroup]'s are.
+     */
+    fun loadDeviceArtist(browseId: String, name: String) {
+        viewModelScope.launch {
+            val context = getApplication<Application>()
+            val found = withContext(Dispatchers.IO) {
+                val downloads = runCatching { Downloads.getDownloadedSongs(context) }.getOrDefault(emptyList())
+                val local = runCatching { LocalMediaRepository.getLocalMusic(context) }.getOrDefault(emptyList())
+                val device = downloads + local
+                val songs = DeviceArtists.songs(device, browseId, name)
+                val albums = DeviceArtists.albums(device, songs, name).map { (album, tracks) ->
+                    val albumId = libraryGroupId(BrowseType.ALBUM, album, name)
+                    val cover = AlbumArtChoices.chosen(null, album)
+                        ?: tracks.firstNotNullOfOrNull { it.thumbnailUrl }
+                    songGroups[albumId] = DetailPage(
+                        browseId = albumId,
+                        title = album,
+                        subtitle = name,
+                        thumbnailUrl = cover,
+                        songs = UiState.Success(tracks),
+                        type = BrowseType.ALBUM,
+                    )
+                    ShelfItem(album, name, cover, null, albumId)
+                }
+                ArtistOnDevice(songs, albums)
+            }
+            _deviceArtists.update { it + (browseId to found) }
+        }
     }
 
     /** Pops one page; returns false when there was nothing to pop. */
@@ -3800,11 +3860,20 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun combinedLibraryState(withYouTube: Boolean): UiState<List<Song>> {
         val context = getApplication<Application>()
         var songs = combinedLibrarySongs(withYouTube)
-        if (withYouTube && AppSettings.hideCombinedDuplicates.value) {
-            val choices = AppSettings.duplicateChoices.value
-            songs = withContext(Dispatchers.Default) {
-                with(LibraryDuplicates) {
-                    songs.withDuplicatesMerged(choices) { file -> AlbumArtChoices.songArtFor(file.localUri) }
+        if (withYouTube) {
+            val all = songs
+            val groups = withContext(Dispatchers.Default) { LibraryDuplicates.detect(all) }
+            // A file found to be a YouTube Music track can open that track's
+            // artist and album from now on, wherever it is played from.
+            LocalLinks.learn(groups)
+            if (AppSettings.hideCombinedDuplicates.value) {
+                val choices = AppSettings.duplicateChoices.value
+                songs = withContext(Dispatchers.Default) {
+                    with(LibraryDuplicates) {
+                        all.withDuplicatesMerged(choices, groups = groups) { file ->
+                            AlbumArtChoices.songArtFor(file.localUri)
+                        }
+                    }
                 }
             }
         }

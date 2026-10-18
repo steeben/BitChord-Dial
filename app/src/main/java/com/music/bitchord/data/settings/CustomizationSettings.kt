@@ -317,7 +317,8 @@ object CustomizationSettings {
         fun shelf(title: String) = shelves.firstOrNull { it.title.equals(title, ignoreCase = true) }?.items.orEmpty()
         fun asPlayed(items: List<ShelfItem>) = items.map { PlayedCollections.collectionFor(it.videoId) ?: it }
         val official = asPlayed(shelf(SPEED_DIAL_TITLE))
-        val recents = asPlayed(shelf(RECENTS_TITLE))
+        // Tracks from the library and other files never reach YouTube's history.
+        val recents = asPlayed(DevicePlays.withDevicePlays(shelf(RECENTS_TITLE)))
         val rest = shelves
             .filterNot { it.title.equals(SPEED_DIAL_TITLE, true) || it.title.equals(RECENTS_TITLE, true) }
             .flatMap { it.items }

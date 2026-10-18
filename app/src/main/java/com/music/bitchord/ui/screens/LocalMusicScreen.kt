@@ -1667,13 +1667,33 @@ fun LibraryFolderSearchField(
     )
 }
 
+/**
+ * The library's search field on its own, without the view and sort buttons
+ * a folder's has — for a list that is only ever A to Z.
+ */
+@Composable
+fun LibrarySearchField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LocalSearchField(
+        query = query,
+        onQueryChange = onQueryChange,
+        onOpenSort = null,
+        viewType = LibraryViewType.LIST,
+        onViewTypeToggle = null,
+        modifier = modifier,
+    )
+}
+
 @Composable
 private fun LocalSearchField(
     query: String,
     onQueryChange: (String) -> Unit,
-    onOpenSort: () -> Unit,
+    onOpenSort: (() -> Unit)?,
     viewType: LibraryViewType,
-    onViewTypeToggle: () -> Unit,
+    onViewTypeToggle: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val haptics = rememberHaptics()
@@ -1729,39 +1749,43 @@ private fun LocalSearchField(
             }
             Spacer(Modifier.width(4.dp))
         }
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .clickable {
-                    haptics.play(Haptic.Select)
-                    onViewTypeToggle()
-                },
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = if (viewType == LibraryViewType.GRID) BitChordIcons.ListView else BitChordIcons.GridView,
-                contentDescription = stringResource(
-                    if (viewType == LibraryViewType.GRID) R.string.switch_to_list_view else R.string.switch_to_grid_view,
-                ),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(19.dp),
-            )
+        if (onViewTypeToggle != null) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .clickable {
+                        haptics.play(Haptic.Select)
+                        onViewTypeToggle()
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = if (viewType == LibraryViewType.GRID) BitChordIcons.ListView else BitChordIcons.GridView,
+                    contentDescription = stringResource(
+                        if (viewType == LibraryViewType.GRID) R.string.switch_to_list_view else R.string.switch_to_grid_view,
+                    ),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(19.dp),
+                )
+            }
+            Spacer(Modifier.width(2.dp))
         }
-        Spacer(Modifier.width(2.dp))
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .clickable(onClick = onOpenSort),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                Icons.Rounded.Sort,
-                contentDescription = stringResource(R.string.sort_music),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(19.dp),
-            )
+        if (onOpenSort != null) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = onOpenSort),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Rounded.Sort,
+                    contentDescription = stringResource(R.string.sort_music),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(19.dp),
+                )
+            }
         }
     }
 }

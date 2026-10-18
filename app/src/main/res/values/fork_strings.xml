@@ -86,6 +86,7 @@
     <string name="custom_cover_set">Cover updated on this device</string>
     <string name="custom_cover_failed">Couldn\'t use that image</string>
     <string name="choose_album_art">Choose album art</string>
+    <string name="change_album_art">Change album art</string>
     <string name="use_original_album_art">Use original album art</string>
     <string name="no_album_art_found">None of this album\'s songs carry artwork</string>
     <string name="stats">Stats</string>
@@ -118,12 +119,11 @@
     <string name="hide_combined_duplicates">Hide detected duplicates in the combined library</string>
     <string name="hide_combined_duplicates_subtitle">In the All library, a song that is both in YouTube Music and on this device shows once, with YouTube Music\'s details, and plays from this device</string>
     <string name="library_duplicates">Detected duplicates</string>
-    <string name="library_duplicates_about">Each song here is in your library more than once. The All library shows it once, with YouTube Music\'s details, playing the copy on this device. You can change that for any song, or show its copies separately.</string>
+    <string name="library_duplicates_about">Each song below is in your library more than once. The All library shows it once, with YouTube Music\'s details, playing the copy on this device. Tap a song to change that, or to show its copies separately.</string>
     <string name="library_duplicates_off">Hiding is off, so the All library shows every copy of these songs.</string>
     <string name="library_duplicates_loading">Looking for duplicates…</string>
     <string name="library_duplicates_none">No song is in your library more than once.</string>
-    <string name="library_duplicates_shown_once">Shown once</string>
-    <string name="library_duplicates_shown_apart">Shown separately</string>
+    <string name="library_duplicates_no_match">No duplicate matches your search.</string>
     <string name="duplicate_plays">Plays</string>
     <string name="duplicate_details">Details</string>
     <string name="duplicate_source_youtube">YouTube Music</string>
@@ -134,6 +134,12 @@
     <string name="duplicate_show_once">Show as one</string>
     <string name="duplicate_reset">Reset all choices</string>
     <string name="duplicate_play_copy">Play this copy</string>
+    <string name="link_to_youtube_music">Link to YouTube Music</string>
+    <string name="change_youtube_music_link">Change YouTube Music link</string>
+    <string name="link_to_youtube_music_about">Pick the track that is %1$s. Its artist and album then open on YouTube Music.</string>
+    <string name="link_to_youtube_music_failed">Couldn\'t reach YouTube Music. Try again in a moment.</string>
+    <string name="link_to_youtube_music_none">YouTube Music found nothing for this file\'s title and artist.</string>
+    <string name="remove_youtube_music_link">Remove link</string>
     <string name="import_from_spotify">Import from Spotify</string>
     <string name="library_radio">Radio</string>
     <string name="library_radio_named">%s Radio</string>

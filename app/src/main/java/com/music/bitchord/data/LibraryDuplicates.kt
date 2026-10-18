@@ -117,9 +117,10 @@ object LibraryDuplicates {
      */
     fun List<Song>.withDuplicatesMerged(
         choices: DuplicateChoices = DuplicateChoices(),
+        /** [detect] of this list, when the caller has it already. */
+        groups: List<DuplicateGroup> = detect(this),
         pickedArt: (Song) -> String? = { null },
     ): List<Song> {
-        val groups = detect(this)
         if (groups.isEmpty()) return this
         // By identity: two copies can be equal as data, and only one of them stands.
         val standIns = IdentityHashMap<Song, Song?>()
