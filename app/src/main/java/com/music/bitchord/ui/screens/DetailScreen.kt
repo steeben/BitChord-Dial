@@ -1149,12 +1149,11 @@ private fun ReleaseActions(
     // Only where YouTube said the release can be saved and the
     // caller is willing to take the write — see [onToggleLibrary].
     val library = page.library?.takeIf { onToggleLibrary != null }
-    // All release actions are circles. On a 360dp screen a full
-    // five-control row comes down 4dp so it stays inside the shared
-    // header gutter instead of running off the edge.
-    val circles = listOfNotNull(library, onMore).size + 2 // + Shuffle, Search
-    val full = circles >= 4
-    val circleSize = if (full) 46.dp else 50.dp
+    // Always five slots — save, shuffle, play, search, more — so the
+    // loading placeholders match and the row doesn't reflow between
+    // releases. A slot this release can't use stays, greyed out. 46dp
+    // keeps five circles inside the shared header gutter on 360dp.
+    val circleSize = 46.dp
     AnimatedContent(
         targetState = songs.isNotEmpty(),
         transitionSpec = {
@@ -1170,12 +1169,9 @@ private fun ReleaseActions(
                 .fillMaxWidth()
                 .padding(horizontal = HEADER_GUTTER)
                 .graphicsLayer { alpha = 0.4f },
-            horizontalArrangement = Arrangement.spacedBy(
-                if (full) 8.dp else 10.dp,
-                Alignment.CenterHorizontally,
-            ),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         ) {
-            repeat(circles + 1) { ShimmerBox(Modifier.size(circleSize), CircleShape) }
+            repeat(5) { ShimmerBox(Modifier.size(circleSize), CircleShape) }
         }
         return@AnimatedContent
     }
@@ -1183,13 +1179,19 @@ private fun ReleaseActions(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = HEADER_GUTTER),
-        horizontalArrangement = Arrangement.spacedBy(
-            if (full) 8.dp else 10.dp,
-            Alignment.CenterHorizontally,
-        ),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (library != null) {
+        if (library == null) {
+            CircleIconButton(
+                icon = BitChordIcons.Plus,
+                contentDescription = stringResource(R.string.add_to_library),
+                palette = palette,
+                onClick = {},
+                size = circleSize,
+                enabled = false,
+            )
+        } else {
             CircleIconButton(
                 // A tick, not a filled-in plus: the pair reads as
                 // "not yet / done", which is what the state is.
@@ -1234,15 +1236,14 @@ private fun ReleaseActions(
             onClick = onSearch,
             size = circleSize,
         )
-        onMore?.let { more ->
-            CircleIconButton(
-                icon = Icons.Rounded.MoreHoriz,
-                contentDescription = stringResource(R.string.more),
-                palette = palette,
-                onClick = { more(songs) },
-                size = circleSize,
-            )
-        }
+        CircleIconButton(
+            icon = Icons.Rounded.MoreHoriz,
+            contentDescription = stringResource(R.string.more),
+            palette = palette,
+            onClick = { onMore?.invoke(songs) },
+            size = circleSize,
+            enabled = onMore != null,
+        )
     }
     }
 }
@@ -1952,11 +1953,14 @@ private fun CircleIconButton(
     lightFill: Boolean = false,
     /** A toggle that is on: a solid white circle with a dark glyph. */
     lit: Boolean = false,
+    /** False keeps the circle in its slot, greyed out and inert. */
+    enabled: Boolean = true,
 ) {
     val haptics = rememberHaptics()
     Box(
         modifier = Modifier
             .size(size)
+            .graphicsLayer { alpha = if (enabled) 1f else 0.38f }
             .then(
                 if (lit) {
                     Modifier.clip(CircleShape).background(Color.White)
@@ -1969,7 +1973,7 @@ private fun CircleIconButton(
                     )
                 },
             )
-            .clickable {
+            .clickable(enabled = enabled) {
                 haptics.play(haptic)
                 onClick()
             },
