@@ -155,7 +155,8 @@ internal fun DrawScope.drawWaves(
 
 /** The playhead: a white bead with an accent core and a soft halo. */
 internal fun DrawScope.drawWaveThumb(center: Offset, scale: Float, accent: Color, alpha: Float) {
-    val halo = THUMB_HALO.toPx() * scale
+    // The halo keeps its size under the finger: it already fills the bar's inset at the ends.
+    val halo = THUMB_HALO.toPx() * min(scale, 1f)
     drawCircle(
         brush = Brush.radialGradient(
             colors = listOf(Color.White.copy(alpha = 0.45f * alpha), Color.Transparent),
@@ -201,7 +202,8 @@ private const val SWELL_MS = 600
 private const val MAX_WAVE_FRAME_NANOS = 100_000_000L
 private val THUMB_RADIUS = 5.dp
 private val THUMB_CORE = 3.dp
-private val THUMB_HALO = 11.dp
+/** Also how far the line is inset from the bar's ends, so the halo is never cut off there. */
+internal val THUMB_HALO = 10.dp
 
 
 private fun smoothstep(t: Float): Float {

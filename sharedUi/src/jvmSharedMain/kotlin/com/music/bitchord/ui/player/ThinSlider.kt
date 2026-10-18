@@ -317,7 +317,7 @@ private fun WaveTrack(
         val line = lineHeight.toPx()
         val top = size.height / 2f - line / 2f
         val radius = CornerRadius(line / 2f)
-        // The bead sits on the line's ends at 0 and 100%, so the line is inset by its radius.
+        // The bead sits on the line's ends at 0 and 100%, so the line is inset by its halo.
         val inset = THUMB_INSET.toPx()
         val width = size.width - inset * 2f
         drawRoundRect(
@@ -376,7 +376,7 @@ private fun WaveTrack(
 }
 
 private val WAVE_CANVAS_HEIGHT = 30.dp
-private val THUMB_INSET = 6.dp
+private val THUMB_INSET = THUMB_HALO
 
 /**
  * One beat clock for everything that pulses with an Automix blend — the seek bar's fill and
