@@ -172,7 +172,10 @@ fun DialLaunchPage(
             snapshotFlow { progress }.first { it <= LAND_AT }
             // Past the tile and back: not until the bounce has settled, or the
             // tile would show round the page while it is smaller than it.
-            snapshotFlow { progress }.first { it < 0f }
+            // Deep into the bounce first: a frame just under zero is already
+            // within [SETTLED], so waiting only for "below zero" let the tile
+            // back the moment the bounce began.
+            snapshotFlow { progress }.first { it <= -BOUNCED }
             snapshotFlow { progress }.first { it >= -SETTLED }
             DialLaunch.landed = true
         }
@@ -272,6 +275,9 @@ private const val LAND_AT = 0.04f
 
 /** How near its tile's own size a bouncing page has to be back to count as landed. */
 private const val SETTLED = 0.004f
+
+/** How far past its tile a closing page has to have gone for the bounce to be under way (it peaks near 0.07). */
+private const val BOUNCED = 0.02f
 
 private fun lerp(a: Float, b: Float, t: Float) = a + (b - a) * t
 
