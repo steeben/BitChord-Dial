@@ -262,7 +262,13 @@ fun DetailPage.withChosenAlbumArt(
     } else {
         state
     }
-    val own = if (type == BrowseType.ALBUM) AlbumArtChoices.chosen(browseId, title, choices) else null
+    // A device album matched to YouTube Music opens under the YouTube id, so a
+    // cover picked for it in the library (kept by name) counts there too.
+    val own = if (type == BrowseType.ALBUM) {
+        AlbumArtChoices.chosen(browseId, title, choices) ?: AlbumArtChoices.chosen(null, title, choices)
+    } else {
+        null
+    }
     val albumCards = sections.map { shelf ->
         shelf.copy(
             items = shelf.items.map { item ->

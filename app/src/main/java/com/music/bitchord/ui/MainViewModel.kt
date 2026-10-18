@@ -2857,11 +2857,25 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
         if (isCacheableDetail(browseId)) detailLoadedAt[browseId] = System.currentTimeMillis()
+        // An album opened from one of its tracks (the player, a song's menu)
+        // arrives with that track's cover, which for a single on the album is
+        // the single's sleeve. It is only a stand-in until the album's own
+        // cover is known: the download record's, here, or the page header's
+        // once it loads — see below.
+        val albumFromTrack = resolved == BrowseType.ALBUM && thumbnailUrl != null
+        val bare = browseId.removePrefix("VL")
+        val savedCover = if (resolved == BrowseType.ALBUM) {
+            Downloads.collections.value.entries
+                .firstOrNull { it.key.removePrefix("VL") == bare }
+                ?.value?.thumbnailUrl
+        } else {
+            null
+        }
         _detailStack.value += DetailPage(
             browseId = browseId,
             title = title,
             subtitle = subtitle,
-            thumbnailUrl = thumbnailUrl,
+            thumbnailUrl = savedCover ?: thumbnailUrl,
             songs = UiState.Loading,
             type = resolved,
         )
@@ -2986,16 +3000,21 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                                 } else if (subtitle.isBlank()) {
                                     credit = header.subtitle
                                 }
-                                if (thumbnailUrl == null) artwork = header.thumbnailUrl
+                                // An album always shows its own cover, not the
+                                // cover of whichever track it was opened from.
+                                if (thumbnailUrl == null || albumFromTrack) {
+                                    header.thumbnailUrl?.let { artwork = it }
+                                }
                             }
                             description = page.description
                             if (page.songs.isEmpty()) {
                                 UiState.Error(text(R.string.no_tracks_here))
                             } else {
                                 more = page.continuation
-                                suggested = page.suggested.withArtwork(thumbnailUrl ?: artwork)
+                                val fallbackArt = if (albumFromTrack) artwork ?: thumbnailUrl else thumbnailUrl ?: artwork
+                                suggested = page.suggested.withArtwork(fallbackArt)
                                 library = page.library
-                                UiState.Success(page.songs.withArtwork(thumbnailUrl ?: artwork))
+                                UiState.Success(page.songs.withArtwork(fallbackArt))
                             }
                         },
                         onFailure = { UiState.Error(it.friendly()) },
@@ -3012,7 +3031,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     it.copy(
                         songs = state,
                         sections = sections,
-                        thumbnailUrl = artwork ?: it.thumbnailUrl,
+                        thumbnailUrl = artwork ?: savedCover ?: it.thumbnailUrl,
                         title = name ?: it.title,
                         subtitle = credit ?: it.subtitle,
                         suggestedSongs = suggested,
