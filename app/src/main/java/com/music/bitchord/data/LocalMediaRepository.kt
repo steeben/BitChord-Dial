@@ -291,8 +291,10 @@ object LocalMediaRepository {
                     val artworkUrl = if (albumId > 0) ContentUris.withAppendedId(albumArtBaseUri, albumId).toString() else null
                     val durationText = durationMs.takeIf { it > 0 }?.let(::formatDuration)
 
+                    // With the artist and album ids of its YouTube Music
+                    // track, where it is linked to one — see LocalLinks.
                     songs.add(
-                        Song(
+                        LocalLinks.apply(Song(
                             videoId = videoIdByUri[contentUri] ?: contentUri,
                             title = title,
                             artist = artist,
@@ -305,7 +307,7 @@ object LocalMediaRepository {
                             localPath = path,
                             localDateAddedSeconds = cursor.getLong(dateAddedCol),
                             localDateModifiedSeconds = cursor.getLong(dateModifiedCol),
-                        )
+                        ))
                     )
                 }
             }

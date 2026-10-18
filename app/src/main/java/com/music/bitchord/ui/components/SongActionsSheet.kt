@@ -42,6 +42,7 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.HighQuality
+import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Radio
 import androidx.compose.material.icons.rounded.PlaylistRemove
@@ -203,6 +204,14 @@ fun SongActionsSheet(
      * as before — present when the id is there, absent when it never was.
      */
     resolvingLinks: Boolean = false,
+    /**
+     * Ties a file on the device to its track on YouTube Music by hand, for
+     * its artist and album. Null hides the row — offered only for a file of
+     * the listener's own. See [com.music.bitchord.data.LocalLinks].
+     */
+    onLinkToYouTube: (() -> Unit)? = null,
+    /** Whether that file is linked already, so the row offers to change it. */
+    linkedToYouTube: Boolean = false,
     /**
      * Where the rows are drawn. [SongActionsPresentation.Sheet] is the tinted
      * bottom sheet with its own track header; [SongActionsPresentation.Menu]
@@ -376,6 +385,16 @@ fun SongActionsSheet(
                 stringResource(R.string.open_artist),
                 accent = palette.accent,
             ) { onOpenArtist(id) }
+        }
+        onLinkToYouTube?.let {
+            ActionRow(
+                icon = Icons.Rounded.Link,
+                label = stringResource(
+                    if (linkedToYouTube) R.string.change_youtube_music_link else R.string.link_to_youtube_music,
+                ),
+                accent = palette.accent,
+                onClick = it,
+            )
         }
         if (showSleepTimer) {
             ActionRow(

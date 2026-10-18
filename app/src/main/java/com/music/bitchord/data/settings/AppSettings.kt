@@ -778,6 +778,7 @@ object AppSettings {
         com.music.bitchord.data.spotify.LocalPlaylistStore.init(context)
         com.music.bitchord.data.CustomCovers.init(context)
         com.music.bitchord.data.AlbumArtChoices.init(context)
+        com.music.bitchord.data.LocalLinks.init(context)
         LastPlayed.init(context)
         readAll()
         watchConnection(context)

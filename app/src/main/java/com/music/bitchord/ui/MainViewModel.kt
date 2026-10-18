@@ -97,6 +97,7 @@ import com.music.bitchord.ui.screens.libraryGroupId
 import com.music.bitchord.data.AlbumArtChoices
 import com.music.bitchord.data.DuplicateGroup
 import com.music.bitchord.data.LibraryDuplicates
+import com.music.bitchord.data.LocalLinks
 import com.music.bitchord.data.settings.LibrarySource
 import com.music.bitchord.data.settings.CustomizationSettings
 import com.music.bitchord.ui.screens.matchesSearch
@@ -3800,11 +3801,20 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun combinedLibraryState(withYouTube: Boolean): UiState<List<Song>> {
         val context = getApplication<Application>()
         var songs = combinedLibrarySongs(withYouTube)
-        if (withYouTube && AppSettings.hideCombinedDuplicates.value) {
-            val choices = AppSettings.duplicateChoices.value
-            songs = withContext(Dispatchers.Default) {
-                with(LibraryDuplicates) {
-                    songs.withDuplicatesMerged(choices) { file -> AlbumArtChoices.songArtFor(file.localUri) }
+        if (withYouTube) {
+            val all = songs
+            val groups = withContext(Dispatchers.Default) { LibraryDuplicates.detect(all) }
+            // A file found to be a YouTube Music track can open that track's
+            // artist and album from now on, wherever it is played from.
+            LocalLinks.learn(groups)
+            if (AppSettings.hideCombinedDuplicates.value) {
+                val choices = AppSettings.duplicateChoices.value
+                songs = withContext(Dispatchers.Default) {
+                    with(LibraryDuplicates) {
+                        all.withDuplicatesMerged(choices, groups = groups) { file ->
+                            AlbumArtChoices.songArtFor(file.localUri)
+                        }
+                    }
                 }
             }
         }

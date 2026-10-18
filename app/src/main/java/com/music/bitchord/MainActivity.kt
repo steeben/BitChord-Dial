@@ -232,6 +232,10 @@ import com.music.bitchord.ui.screens.LibraryHomeScreen
 import com.music.bitchord.ui.screens.LibraryMenu
 import com.music.bitchord.ui.screens.LibraryChoiceMenu
 import com.music.bitchord.ui.screens.LibraryDuplicatesScreen
+import com.music.bitchord.data.LocalLinks
+import com.music.bitchord.data.linkedTo
+import com.music.bitchord.ui.components.LinkToYouTubeSheet
+import com.music.bitchord.ui.screens.LibrarySearchField
 import com.music.bitchord.ui.screens.LibraryFolderSortMenu
 import com.music.bitchord.ui.screens.LibraryFeed
 import com.music.bitchord.ui.screens.LibrarySuggestion
@@ -766,6 +770,8 @@ private fun BitChordApp(
     var librarySortMenuOpen by remember { mutableStateOf(false) }
     // The library folder whose sort menu is up, if one is.
     var folderSortMenuFor by remember { mutableStateOf<String?>(null) }
+    // What the detected duplicates page is searched for, from the field in the bar.
+    var duplicatesQuery by remember { mutableStateOf("") }
     var showLyricsSources by remember { mutableStateOf(false) }
     var showAppLanguage by remember { mutableStateOf(false) }
     var showTranslationLanguage by remember { mutableStateOf(false) }
@@ -791,6 +797,9 @@ private fun BitChordApp(
     var showDiscordLogin by remember { mutableStateOf(false) }
     var discordDialog by remember { mutableStateOf<DiscordDialog?>(null) }
     var songActions by remember { mutableStateOf<Song?>(null) }
+    // A device file being linked to its YouTube Music track by hand — see LocalLinks.
+    var linkingFile by remember { mutableStateOf<Song?>(null) }
+    val localLinks by LocalLinks.links.collectAsStateWithLifecycle()
     var showLyricsOffset by remember { mutableStateOf(false) }
     /**
      * Whether the track menu that is up was opened from the player.
@@ -2522,10 +2531,18 @@ private fun BitChordApp(
         val current = player.song ?: return@LaunchedEffect
         if (current.albumId != null && current.artistId != null) return@LaunchedEffect
         linksLoading = true
-        links = YtMusicRepository.trackLinks(current.videoId).getOrNull()
+        if (LocalLinks.keyOf(current) != null) {
+            // A file of the listener's own has no YouTube id to ask after:
+            // it is looked up instead, and its link is applied below.
+            LocalLinks.resolve(current)
+        } else {
+            links = YtMusicRepository.trackLinks(current.videoId).getOrNull()
+        }
         linksLoading = false
     }
-    val playerSong = player.song?.let { current ->
+    val playerSong = player.song?.let { playing ->
+        // A device file opens its linked track's artist and album.
+        val current = LocalLinks.keyOf(playing)?.let { localLinks[it] }?.let { playing.linkedTo(it) } ?: playing
         val extra = links?.takeIf { it.videoId == current.videoId } ?: return@let current
         current.copy(
             artistId = current.artistId ?: extra.artistId,
@@ -4344,8 +4361,11 @@ private fun BitChordApp(
                             LaunchedEffect(Unit) { viewModel.loadLibraryDuplicates() }
                             val duplicates by viewModel.libraryDuplicates.collectAsStateWithLifecycle()
                             val duplicatesTitle = stringResource(R.string.library_duplicates)
+                            // A fresh page each time it opens, unfiltered.
+                            DisposableEffect(Unit) { onDispose { duplicatesQuery = "" } }
                             LibraryDuplicatesScreen(
                                 state = duplicates,
+                                query = duplicatesQuery,
                                 contentPadding = listPadding,
                                 onPlayCopy = { song ->
                                     playFrom(listOf(song), 0, QueueSource(duplicatesTitle, PlaybackSourceType.BROWSE))
@@ -4482,6 +4502,18 @@ private fun BitChordApp(
                         )
                     }
                 }
+                // The detected duplicates page is searched from the bar too.
+                val duplicatesSearch: (@Composable () -> Unit)? =
+                    if (settingsSubScreen == LIBRARY_DUPLICATES_SCREEN && !showDiscord && !showSpotify) {
+                        @Composable {
+                            LibrarySearchField(
+                                query = duplicatesQuery,
+                                onQueryChange = { duplicatesQuery = it },
+                            )
+                        }
+                    } else {
+                        null
+                    }
                 FrostedTopBar(
                     title = when {
                         homeRoot -> ""
@@ -4593,7 +4625,7 @@ private fun BitChordApp(
                             )
                         }
                     } else {
-                        folderSearch
+                        folderSearch ?: duplicatesSearch
                     },
                     actions = {
                         // This is intentionally scoped to Listen together: the
@@ -5225,7 +5257,20 @@ private fun BitChordApp(
         // One body for both presentations of the track menu: the sheet the ⋮
         // and the player open, and the popup a held row lifts into. Every
         // callback below is the same in either; only the frame differs.
-        val songMenuBody: @Composable (Song, SongActionsPresentation) -> Unit = { song, presentation ->
+        val songMenuBody: @Composable (Song, SongActionsPresentation) -> Unit = { menuSong, presentation ->
+            // A device file carries its linked track's artist and album, and
+            // is looked up once when it has no link yet — see LocalLinks.
+            val song = LocalLinks.keyOf(menuSong)?.let { localLinks[it] }?.let { menuSong.linkedTo(it) } ?: menuSong
+            var resolvingFile by remember(menuSong.videoId) { mutableStateOf(false) }
+            LaunchedEffect(menuSong.videoId) {
+                if (LocalLinks.keyOf(menuSong) != null && LocalLinks.linkFor(menuSong) == null &&
+                    (menuSong.albumId == null || menuSong.artistId == null)
+                ) {
+                    resolvingFile = true
+                    LocalLinks.resolve(menuSong)
+                    resolvingFile = false
+                }
+            }
             // Set by whoever opened it — see [menuFromPlayer]. It cannot be
             // read off the player's own visibility any more, because on a
             // tablet the player is visible whatever the menu was opened from.
@@ -5479,7 +5524,16 @@ private fun BitChordApp(
                 // Only the player's copy of a track is ever missing these
                 // and backfilling — a row opened from a list already has
                 // whatever ids it's ever going to have.
-                resolvingLinks = fromPlayer && linksLoading,
+                resolvingLinks = (fromPlayer && linksLoading) || resolvingFile,
+                onLinkToYouTube = if (LocalLinks.keyOf(song) != null) {
+                    {
+                        linkingFile = song
+                        songActions = null
+                    }
+                } else {
+                    null
+                },
+                linkedToYouTube = LocalLinks.keyOf(song)?.let { it in localLinks } == true,
                 showSleepTimer = fromPlayer,
                 // Offered for every playing track with a YouTube upload
                 // behind it, not only for one an upgrade visibly swapped:
@@ -6243,6 +6297,15 @@ private fun BitChordApp(
                         showUpdateDialog = false
                     },
                 )
+            }
+        }
+
+        linkingFile?.let { file ->
+            ModalBottomSheet(
+                onDismissRequest = { linkingFile = null },
+                containerColor = MaterialTheme.colorScheme.background,
+            ) {
+                LinkToYouTubeSheet(file = file, onDone = { linkingFile = null })
             }
         }
 
