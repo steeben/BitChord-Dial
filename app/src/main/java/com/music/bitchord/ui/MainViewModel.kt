@@ -96,6 +96,8 @@ import com.music.bitchord.ui.screens.LIBRARY_GROUP_PREFIX
 import com.music.bitchord.ui.screens.libraryGroupId
 import com.music.bitchord.data.AlbumArtChoices
 import com.music.bitchord.data.DuplicateGroup
+import com.music.bitchord.data.ArtistOnDevice
+import com.music.bitchord.data.DeviceArtists
 import com.music.bitchord.data.LibraryDuplicates
 import com.music.bitchord.data.LocalLinks
 import com.music.bitchord.data.settings.LibrarySource
@@ -3409,6 +3411,44 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         )
         songGroups[browseId] = page
         _detailStack.value += page
+    }
+
+    private val _deviceArtists = MutableStateFlow<Map<String, ArtistOnDevice>>(emptyMap())
+
+    /** What [loadDeviceArtist] found on the device for each artist page, by its browse id. */
+    val deviceArtists: StateFlow<Map<String, ArtistOnDevice>> = _deviceArtists.asStateFlow()
+
+    /**
+     * Looks the artist [name] up among the device's files and downloads, for
+     * the artist page [browseId]'s Local toggle. Each album found becomes a
+     * page of its own, opened as [openSongGroup]'s are.
+     */
+    fun loadDeviceArtist(browseId: String, name: String) {
+        viewModelScope.launch {
+            val context = getApplication<Application>()
+            val found = withContext(Dispatchers.IO) {
+                val downloads = runCatching { Downloads.getDownloadedSongs(context) }.getOrDefault(emptyList())
+                val local = runCatching { LocalMediaRepository.getLocalMusic(context) }.getOrDefault(emptyList())
+                val device = downloads + local
+                val songs = DeviceArtists.songs(device, browseId, name)
+                val albums = DeviceArtists.albums(device, songs, name).map { (album, tracks) ->
+                    val albumId = libraryGroupId(BrowseType.ALBUM, album, name)
+                    val cover = AlbumArtChoices.chosen(null, album)
+                        ?: tracks.firstNotNullOfOrNull { it.thumbnailUrl }
+                    songGroups[albumId] = DetailPage(
+                        browseId = albumId,
+                        title = album,
+                        subtitle = name,
+                        thumbnailUrl = cover,
+                        songs = UiState.Success(tracks),
+                        type = BrowseType.ALBUM,
+                    )
+                    ShelfItem(album, name, cover, null, albumId)
+                }
+                ArtistOnDevice(songs, albums)
+            }
+            _deviceArtists.update { it + (browseId to found) }
+        }
     }
 
     /** Pops one page; returns false when there was nothing to pop. */

@@ -1036,6 +1036,7 @@ private fun BitChordApp(
     val searchScrollReset by viewModel.searchScrollReset.collectAsStateWithLifecycle()
     val detailStack by viewModel.detailStack.collectAsStateWithLifecycle()
     val releaseLibrary by viewModel.releaseLibrary.collectAsStateWithLifecycle()
+    val deviceArtists by viewModel.deviceArtists.collectAsStateWithLifecycle()
     val detail = detailStack.lastOrNull()
     // Local Music has no artwork to wash the top inset in, so it renders with
     // the ordinary bounded status bar rather than the artwork gradient used by
@@ -3863,6 +3864,8 @@ private fun BitChordApp(
                             isLocalRelease = { item ->
                                 item.browseId?.let { it.startsWith(LIBRARY_GROUP_PREFIX) || downloadIdFor(it) != null } == true
                             },
+                            deviceArtist = deviceArtists[page.browseId],
+                            onLoadDeviceArtist = viewModel::loadDeviceArtist,
                             releaseLibrary = releaseLibrary,
                             onLoadReleaseLibrary = viewModel::loadReleaseLibrary,
                             onToggleReleaseLibrary = if (signedIn) {

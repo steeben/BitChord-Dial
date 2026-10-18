@@ -128,6 +128,8 @@ import com.music.bitchord.data.model.DetailPage
 import com.music.bitchord.data.model.CARD_ART_PX
 import com.music.bitchord.data.model.HEADER_ART_PX
 import com.music.bitchord.data.model.ROW_ART_PX
+import com.music.bitchord.data.ArtistOnDevice
+import com.music.bitchord.data.LibraryDuplicates
 import com.music.bitchord.data.model.HomeShelf
 import com.music.bitchord.data.model.ShelfItem
 import com.music.bitchord.data.settings.SongSort
@@ -337,6 +339,15 @@ fun DetailScreen(
     isLocalSong: (Song) -> Boolean = { it.localUri != null || it.localPath != null },
     /** Whether a release card on an artist page is on this device. */
     isLocalRelease: (ShelfItem) -> Boolean = { false },
+    /**
+     * The artist's songs and albums among the device's files and downloads,
+     * which the Local toggle lists beside what it keeps of the page: a file
+     * is never one of the tracks YouTube Music's page lists. Null until
+     * [onLoadDeviceArtist] has looked.
+     */
+    deviceArtist: ArtistOnDevice? = null,
+    /** Looks the artist up on the device, by the page's browse id and the artist's name. */
+    onLoadDeviceArtist: ((String, String) -> Unit)? = null,
     /** Library state of releases shown as cards on this page, by browse id. */
     releaseLibrary: Map<String, LibraryState> = emptyMap(),
     onLoadReleaseLibrary: ((String) -> Unit)? = null,
@@ -362,19 +373,29 @@ fun DetailScreen(
     // An artist page's Local toggle: only what is on this device, both the top
     // songs and the release shelves.
     var localOnly by rememberSaveable(page.browseId) { mutableStateOf(isArtist && localOnlyByDefault) }
-    val shownSections = remember(page.sections, localOnly, isLocalRelease) {
+    val albumsTitle = stringResource(R.string.albums)
+    val shownSections = remember(page.sections, localOnly, isLocalRelease, deviceArtist, albumsTitle) {
         if (!localOnly) {
             page.sections
         } else {
             page.sections
                 .map { shelf -> shelf.copy(items = shelf.items.filter(isLocalRelease)) }
                 .filter { it.items.isNotEmpty() }
+                .withDeviceAlbums(deviceArtist?.albums.orEmpty(), albumsTitle)
         }
     }
     // What the artist page plays and lists: everything, or with Local on, only
-    // the tracks on this device.
-    val artistSongs = remember(songs, localOnly, isLocalSong) {
-        if (localOnly) songs.filter(isLocalSong) else songs
+    // the tracks on this device, the page's own and the artist's other files.
+    val artistSongs = remember(songs, localOnly, isLocalSong, deviceArtist) {
+        if (localOnly) {
+            val kept = songs.filter(isLocalSong)
+            val ids = kept.mapTo(HashSet()) { it.videoId }
+            kept + deviceArtist?.songs.orEmpty().filter { file ->
+                file.videoId !in ids && kept.none { LibraryDuplicates.sameSong(it, file) }
+            }
+        } else {
+            songs
+        }
     }
     // Whether the top release card's album is already saved isn't on the shelf
     // item; it is read off the album once, as soon as the card is known.
@@ -390,6 +411,10 @@ fun DetailScreen(
     // nobody, so a title that reads as several artists waits for that swap; any
     // other name starts the moment the page opens.
     val nameSettled = !page.title.looksLikeCredit() || page.songs !is UiState.Loading
+    // The device is looked up by the artist's name too, so it waits the same way.
+    LaunchedEffect(localOnly, page.browseId, page.title, nameSettled) {
+        if (isArtist && localOnly && nameSettled) onLoadDeviceArtist?.invoke(page.browseId, page.title)
+    }
     LaunchedEffect(page.browseId, page.title, nameSettled) {
         if (isArtist && nameSettled) appleArt = AppleArtistArtRepository.artFor(page.title) ?: appleArt
     }
@@ -775,15 +800,18 @@ fun DetailScreen(
                 is UiState.Loading -> detailSkeleton(isArtist)
                 is UiState.Error -> item { MessageState(state.message) }
                 is UiState.Success -> if (isArtist) {
-                    if (localOnly && artistSongs.isEmpty() && shownSections.isEmpty()) {
+                    // Said only once the device has been looked through, not while it is.
+                    val deviceLooked = deviceArtist != null || onLoadDeviceArtist == null
+                    if (localOnly && deviceLooked && artistSongs.isEmpty() && shownSections.isEmpty()) {
                         item(key = "nothing-local") { MessageState(stringResource(R.string.nothing_on_device_for_artist)) }
                     }
                     // An artist's full song list would bury the album shelves, so
-                    // it pages sideways four at a time and stops at twenty.
+                    // it pages sideways four at a time and stops at twenty. What is
+                    // on the device is listed whole: it is the listener's own.
                     if (artistSongs.isNotEmpty()) item {
-                        val top = artistSongs.take(MAX_ARTIST_SONGS)
+                        val top = if (localOnly) artistSongs else artistSongs.take(MAX_ARTIST_SONGS)
                         SectionHeading(
-                            title = stringResource(R.string.top_songs),
+                            title = stringResource(if (localOnly) R.string.songs else R.string.top_songs),
                             palette = palette,
                             horizontalPadding = ARTIST_CONTENT_GUTTER,
                         )
@@ -2250,6 +2278,21 @@ private fun SuggestedSongRow(
             )
         }
     }
+}
+
+/**
+ * These shelves with the artist's [albums] on the device added, under
+ * [title]: on the shelf of that name if one is left, or a shelf of their own
+ * first. An album already on a shelf (a release downloaded whole) is left
+ * where it is.
+ */
+private fun List<HomeShelf>.withDeviceAlbums(albums: List<ShelfItem>, title: String): List<HomeShelf> {
+    val shown = flatMapTo(HashSet()) { shelf -> shelf.items.map { it.title.lowercase(Locale.ROOT) } }
+    val added = albums.filter { it.title.lowercase(Locale.ROOT) !in shown }
+    if (added.isEmpty()) return this
+    val shelf = indexOfFirst { it.title.equals(title, ignoreCase = true) }
+    if (shelf < 0) return listOf(HomeShelf(title, added)) + this
+    return toMutableList().also { it[shelf] = it[shelf].copy(items = it[shelf].items + added) }
 }
 
 /**
