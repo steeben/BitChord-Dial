@@ -22,6 +22,7 @@ import androidx.core.content.ContextCompat
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.FastOutLinearInEasing
@@ -35,6 +36,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -125,6 +127,7 @@ import androidx.compose.ui.graphics.BlurEffect
 import kotlinx.coroutines.NonCancellable
 import androidx.compose.animation.core.Animatable
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -338,6 +341,7 @@ import com.music.bitchord.ui.components.QueueActionNoticeHost
 import com.music.bitchord.ui.components.TopBarAccountButton
 import com.music.bitchord.ui.screens.SegmentedControl
 import com.music.bitchord.ui.components.SearchField
+import com.music.bitchord.ui.components.frostedSurfaceColor
 import com.music.bitchord.sharedui.resources.Res as SharedRes
 import com.music.bitchord.sharedui.resources.search_hint
 import com.music.bitchord.sharedui.resources.search_library_hint
@@ -772,6 +776,11 @@ private fun BitChordApp(
     var folderSortMenuFor by remember { mutableStateOf<String?>(null) }
     // What the detected duplicates page is searched for, from the field in the bar.
     var duplicatesQuery by remember { mutableStateOf("") }
+    // Settings' search, held here so the bar can carry a copy of the field
+    // once the page's own has scrolled up under it.
+    var settingsQuery by remember { mutableStateOf("") }
+    var settingsFieldScrolledOff by remember { mutableStateOf(false) }
+    var settingsBarFieldFocused by remember { mutableStateOf(false) }
     var showLyricsSources by remember { mutableStateOf(false) }
     var showAppLanguage by remember { mutableStateOf(false) }
     var showTranslationLanguage by remember { mutableStateOf(false) }
@@ -3163,6 +3172,10 @@ private fun BitChordApp(
                     else -> "$TAB_KEY$selectedTab"
                 }
                 val pageKey = pageKeyFor()
+                // Settings itself, with nothing of its own pushed over it.
+                val settingsRoot = pageKey == "settings" && settingsSubScreen == null &&
+                    !showDiscord && !showSpotify
+                val settingsSearchInBar = settingsRoot && (settingsFieldScrolledOff || settingsBarFieldFocused)
                 // How deep into the Library tab's own pages this one is: the
                 // tab itself, then what its menu opens (Playlists, Spotify, a
                 // library's Songs / Artists / Albums, the song history), then
@@ -3583,6 +3596,14 @@ private fun BitChordApp(
                     } else if (key == "equalizer") {
                         EqualizerScreen(contentPadding = listPadding)
                     } else if (key == "settings") {
+                        // A fresh, unfiltered page each time Settings opens.
+                        DisposableEffect(Unit) {
+                            onDispose {
+                                settingsQuery = ""
+                                settingsFieldScrolledOff = false
+                                settingsBarFieldFocused = false
+                            }
+                        }
                         SettingsScreen(
                             windowWidth = windowWidth,
                             signedIn = signedIn,
@@ -3620,6 +3641,10 @@ private fun BitChordApp(
                             contentPadding = listPadding,
                             onShowUpdate = { showUpdateDialog = true },
                             onLibraryDuplicates = { settingsSubScreen = LIBRARY_DUPLICATES_SCREEN },
+                            searchQuery = settingsQuery,
+                            onSearchQueryChange = { settingsQuery = it },
+                            searchInBar = settingsSearchInBar,
+                            onSearchScrolledOff = { settingsFieldScrolledOff = it },
                         )
                     } else if (page != null && page.browseId.isDeviceFolder()) {
                         // Local Music and Downloads — both the tabbed Songs / Artists /
@@ -4514,6 +4539,32 @@ private fun BitChordApp(
                     } else {
                         null
                     }
+                // Settings' search, once the page's own field has scrolled up
+                // under the bar, comes along beside the back button and stays.
+                val settingsSearch: (@Composable () -> Unit)? =
+                    if (settingsRoot) {
+                        @Composable {
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = settingsSearchInBar,
+                                enter = fadeIn() + expandHorizontally(expandFrom = Alignment.Start),
+                                exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.Start),
+                            ) {
+                                SearchField(
+                                    query = settingsQuery,
+                                    onQueryChange = { settingsQuery = it },
+                                    onSubmit = {},
+                                    placeholder = stringResource(R.string.settings_search_hint),
+                                    containerColor = frostedSurfaceColor(MaterialTheme.colorScheme.surfaceVariant),
+                                    // Kept up while it is being typed into, even when
+                                    // the results are short enough to bring the
+                                    // page's own field back into view.
+                                    modifier = Modifier.onFocusChanged { settingsBarFieldFocused = it.hasFocus },
+                                )
+                            }
+                        }
+                    } else {
+                        null
+                    }
                 FrostedTopBar(
                     title = when {
                         homeRoot -> ""
@@ -4625,7 +4676,7 @@ private fun BitChordApp(
                             )
                         }
                     } else {
-                        folderSearch ?: duplicatesSearch
+                        folderSearch ?: duplicatesSearch ?: settingsSearch
                     },
                     actions = {
                         // This is intentionally scoped to Listen together: the
