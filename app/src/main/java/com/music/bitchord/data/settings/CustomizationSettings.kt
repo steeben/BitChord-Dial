@@ -95,6 +95,9 @@ object CustomizationSettings {
      */
     val compactCanvasControls = MutableStateFlow(true)
 
+    /** One UI 9's wave progress on the player's seek bar. Off, the plain thin bar. */
+    val wavyProgressBar = MutableStateFlow(true)
+
     private val DEFAULT_TAB_VIEWS = listOf(LibraryViewType.LIST, LibraryViewType.LIST, LibraryViewType.GRID)
 
     /** List or grid for each folder tab — songs, artists, albums — on its own. */
@@ -140,6 +143,7 @@ object CustomizationSettings {
         miniPlayerShape.value = MiniPlayerShape.entries
             .firstOrNull { it.name == p.getString(KEY_MINI_PLAYER_SHAPE, null) } ?: MiniPlayerShape.CIRCULAR
         compactCanvasControls.value = p.getBoolean(KEY_COMPACT_CANVAS_CONTROLS, true)
+        wavyProgressBar.value = p.getBoolean(KEY_WAVY_PROGRESS_BAR, true)
         libraryTabViews.value = p.getString(KEY_LIBRARY_TAB_VIEWS, null)
             ?.split(",")
             ?.mapNotNull { name -> LibraryViewType.entries.firstOrNull { it.name == name } }
@@ -397,6 +401,11 @@ object CustomizationSettings {
         prefs?.edit()?.putBoolean(KEY_AMBIENT_FOLLOWS_ARTWORK, value)?.apply()
     }
 
+    fun setWavyProgressBar(value: Boolean) {
+        wavyProgressBar.value = value
+        prefs?.edit()?.putBoolean(KEY_WAVY_PROGRESS_BAR, value)?.apply()
+    }
+
     fun setCompactCanvasControls(value: Boolean) {
         compactCanvasControls.value = value
         prefs?.edit()?.putBoolean(KEY_COMPACT_CANVAS_CONTROLS, value)?.apply()
@@ -453,6 +462,7 @@ object CustomizationSettings {
 
     private const val KEY_NAV_TABS = "custom_nav_tabs"
     private const val KEY_COMPACT_CANVAS_CONTROLS = "custom_compact_canvas_controls"
+    private const val KEY_WAVY_PROGRESS_BAR = "custom_wavy_progress_bar"
     private const val KEY_AMBIENT_BACKGROUND = "custom_ambient_background"
     private const val KEY_LIBRARY_TAB_VIEWS = "custom_library_tab_views"
     private const val KEY_AMBIENT_FOLLOWS_ARTWORK = "custom_ambient_follows_artwork"

@@ -58,6 +58,8 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
         override val hideVolumeBar get() = AppSettings.hideVolumeBar
         override val compactCanvasControls
             get() = com.music.bitchord.data.settings.CustomizationSettings.compactCanvasControls
+        override val wavyProgressBar
+            get() = com.music.bitchord.data.settings.CustomizationSettings.wavyProgressBar
         override val lastPlayerScreen get() = AppSettings.lastPlayerScreen
         override val legacyMeshGradient get() = AppSettings.legacyMeshGradient
         override val lyricsBlur get() = AppSettings.lyricsBlur

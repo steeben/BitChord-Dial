@@ -145,6 +145,8 @@ interface PlayerSettingsSource {
     val hideVolumeBar: StateFlow<Boolean>
     /** Over a Spotify Canvas, shrink the controls to the foot of the screen rather than hide them. */
     val compactCanvasControls: StateFlow<Boolean> get() = CompactCanvasControlsOff
+    /** One UI 9's wave progress on the player's seek bar; off, the plain bar. */
+    val wavyProgressBar: StateFlow<Boolean> get() = WavyProgressBarOn
     val lastPlayerScreen: StateFlow<LastPlayerScreen>
     val legacyMeshGradient: StateFlow<Boolean>
     val lyricsBlur: StateFlow<Boolean>
@@ -330,4 +332,5 @@ internal fun AudioPipelineDialog(hazeState: HazeState, isPlaying: Boolean, onDis
     PlayerPlatform.host.AudioPipelineDialog(hazeState, isPlaying, onDismiss)
 
 private val CompactCanvasControlsOff: StateFlow<Boolean> = kotlinx.coroutines.flow.MutableStateFlow(false)
+private val WavyProgressBarOn: StateFlow<Boolean> = kotlinx.coroutines.flow.MutableStateFlow(true)
 private val NoPreferredLyricsSource: StateFlow<LyricsSource?> = kotlinx.coroutines.flow.MutableStateFlow(null)

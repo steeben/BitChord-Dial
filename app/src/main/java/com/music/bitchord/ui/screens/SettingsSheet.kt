@@ -250,6 +250,7 @@ fun SettingsScreen(
     val navTabs by CustomizationSettings.navTabs.collectAsStateWithLifecycle()
     val keepNavBarExpanded by CustomizationSettings.keepNavBarExpanded.collectAsStateWithLifecycle()
     val miniPlayerNextButton by CustomizationSettings.miniPlayerNextButton.collectAsStateWithLifecycle()
+    val wavyProgressBar by CustomizationSettings.wavyProgressBar.collectAsStateWithLifecycle()
     val cropThumbnails by CustomizationSettings.cropThumbnails.collectAsStateWithLifecycle()
     val artistDial by CustomizationSettings.artistDial.collectAsStateWithLifecycle()
 
@@ -1181,6 +1182,25 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { CustomizationSettings.setMiniPlayerNextButton(!miniPlayerNextButton) },
+                )
+            }
+            val wavyProgressTitle = stringResource(R.string.wavy_progress_bar)
+            row(wavyProgressTitle, "player", "progress", "seek", "bar", "wave", "one ui", "samsung") {
+                SettingsRow(
+                    icon = Icons.Rounded.Waves,
+                    title = wavyProgressTitle,
+                    subtitle = stringResource(R.string.wavy_progress_bar_subtitle),
+                    trailing = {
+                        Switch(
+                            checked = wavyProgressBar,
+                            onCheckedChange = CustomizationSettings::setWavyProgressBar,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { CustomizationSettings.setWavyProgressBar(!wavyProgressBar) },
                 )
             }
             val cropThumbnailsTitle = stringResource(R.string.crop_thumbnails)

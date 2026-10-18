@@ -950,6 +950,8 @@ fun NowPlayingScreen(
     val meshRefreshMs = MESH_REFRESH_MS
 
     val scrub = rememberPlayerScrub(song.videoId, position, durationMs)
+    // One UI 9's wave progress, coloured off this sleeve — see [rememberWaveAccents].
+    val wavyProgressBar by PlayerSettings.wavyProgressBar.collectAsStateWithLifecycle()
     // Read by the scrubber itself — see [PlayerScrubber.shown].
     val shown: () -> Float = { scrub.shown(position.positionMs, durationMs) }
     // Back restarts the track rather than stepping back once it is a few
@@ -2087,6 +2089,9 @@ fun NowPlayingScreen(
                                     ?.let { it.start..it.end },
                                 onScrub = onScrub,
                                 onScrubFinished = onScrubFinished,
+                                waves = wavyProgressBar,
+                                waveArtwork = remoteArt,
+                                playing = isPlaying && position.advancing,
                             ) {
                                 PlaybackQualityLabel(
                                     song = song,
@@ -3897,6 +3902,9 @@ fun NowPlayingScreen(
                     ?.let { it.start..it.end },
                 onScrub = onScrub,
                 onScrubFinished = onScrubFinished,
+                waves = wavyProgressBar,
+                waveArtwork = remoteArt,
+                playing = isPlaying && position.advancing,
             ) {
                 PlaybackQualityLabel(
                     song = song,

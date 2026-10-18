@@ -44,6 +44,8 @@
     <string name="speed_dial_grid">Speed dial grid</string>
     <string name="mini_player_next_button">Show next button on miniplayer</string>
     <string name="mini_player_next_button_subtitle">Swiping the miniplayer sideways skips either way</string>
+    <string name="wavy_progress_bar">Wave progress bar</string>
+    <string name="wavy_progress_bar_subtitle">Waves in the accent colours rise from the player\'s seek bar as the song plays</string>
     <string name="crop_thumbnails">Crop thumbnails</string>
     <string name="crop_thumbnails_subtitle">Fill artwork that isn\'t square instead of showing bars</string>
     <string name="dial_page_artists">Artists</string>

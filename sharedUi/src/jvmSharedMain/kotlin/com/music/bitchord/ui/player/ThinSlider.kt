@@ -41,6 +41,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.unit.Dp
@@ -100,10 +101,24 @@ fun ThinSlider(
     inactiveColor: Color = Color.White.copy(alpha = 0.26f),
     /** Halfway between the two track colours: visible against unplayed, invisible under played. */
     markerColor: Color = Color.White.copy(alpha = 0.5f),
+    /**
+     * Draws One UI 9's wave progress instead of the plain capsule: a hairline with white,
+     * secondary and primary waves rising out of its played part — see [drawWaves].
+     */
+    waves: WaveAccents? = null,
+    /** Whether the waves drift and stand up; paused, they settle back into the line. */
+    wavesPlaying: Boolean = false,
+    /** Off under "Reduce animation": the waves stand still. */
+    animateWaves: Boolean = true,
 ) {
     var dragging by remember { mutableStateOf(false) }
+    val waveStyle = rememberUpdatedState(waves != null)
     val height by animateDpAsState(
-        targetValue = if (dragging) activeHeight else idleHeight,
+        targetValue = when {
+            waves == null -> if (dragging) activeHeight else idleHeight
+            dragging -> WAVE_LINE_ACTIVE
+            else -> WAVE_LINE_IDLE
+        },
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMediumLow,
@@ -148,9 +163,12 @@ fun ThinSlider(
             // detector took the pointer and a tap has no drag to report.
             .pointerInput(Unit) {
                 awaitEachGesture {
+                    // The wave style's line is inset for its bead; map the finger onto it.
+                    val inset = if (waveStyle.value) THUMB_INSET.toPx() else 0f
+                    fun at(x: Float) = ((x - inset) / (size.width - inset * 2f)).coerceIn(0f, 1f)
                     val down = awaitFirstDown(requireUnconsumed = false)
                     dragging = true
-                    onValueChange((down.position.x / size.width).coerceIn(0f, 1f))
+                    onValueChange(at(down.position.x))
 
                     while (true) {
                         val event = awaitPointerEvent()
@@ -160,7 +178,7 @@ fun ThinSlider(
                             break
                         }
                         if (pointer.positionChanged()) {
-                            onValueChange((pointer.position.x / size.width).coerceIn(0f, 1f))
+                            onValueChange(at(pointer.position.x))
                             pointer.consume()
                         }
                     }
@@ -171,7 +189,22 @@ fun ThinSlider(
             },
         contentAlignment = Alignment.Center,
     ) {
-        Canvas(
+        if (waves != null) {
+            WaveTrack(
+                value = value,
+                lineHeight = height,
+                dragging = dragging,
+                fillFactor = { fillFactor },
+                mixPulse = mixPulse,
+                transitionWindow = transitionWindow,
+                accents = waves,
+                playing = wavesPlaying,
+                animate = animateWaves,
+                activeColor = activeColor,
+                inactiveColor = inactiveColor,
+                markerColor = markerColor,
+            )
+        } else Canvas(
             Modifier
                 .fillMaxWidth()
                 .height(height),
@@ -243,6 +276,106 @@ fun ThinSlider(
 }
 
 private const val SHEEN_BAND_FRACTION = 0.34f
+
+private val WAVE_LINE_IDLE = 3.dp
+private val WAVE_LINE_ACTIVE = 5.dp
+
+/**
+ * The wave style's bar. Taller than the line itself so the waves have room to rise, and laid
+ * out on the same centre line as the plain capsule, so swapping styles moves nothing around it.
+ */
+@Composable
+private fun WaveTrack(
+    value: Float,
+    lineHeight: Dp,
+    dragging: Boolean,
+    fillFactor: () -> Float,
+    mixPulse: MixPulse?,
+    transitionWindow: ClosedFloatingPointRange<Float>?,
+    accents: WaveAccents,
+    playing: Boolean,
+    animate: Boolean,
+    activeColor: Color,
+    inactiveColor: Color,
+    markerColor: Color,
+) {
+    val motion = rememberWaveMotion(playing = playing && !dragging, animate = animate)
+    val thumbScale by animateFloatAsState(
+        targetValue = if (dragging) 1.3f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow,
+        ),
+        label = "waveThumb",
+    )
+    val path = remember { androidx.compose.ui.graphics.Path() }
+    Canvas(
+        Modifier
+            .fillMaxWidth()
+            .height(WAVE_CANVAS_HEIGHT),
+    ) {
+        val line = lineHeight.toPx()
+        val top = size.height / 2f - line / 2f
+        val radius = CornerRadius(line / 2f)
+        // The bead sits on the line's ends at 0 and 100%, so the line is inset by its radius.
+        val inset = THUMB_INSET.toPx()
+        val width = size.width - inset * 2f
+        drawRoundRect(
+            color = inactiveColor,
+            topLeft = Offset(inset, top),
+            size = Size(width, line),
+            cornerRadius = radius,
+        )
+        transitionWindow?.let { window ->
+            val from = width * window.start.coerceIn(0f, 1f)
+            val to = width * window.endInclusive.coerceIn(0f, 1f)
+            if (to > from) {
+                drawRoundRect(
+                    color = markerColor,
+                    topLeft = Offset(inset + from, top),
+                    size = Size(to - from, line),
+                    cornerRadius = radius,
+                )
+            }
+        }
+        val factor = fillFactor()
+        val cover = if (dragging) 0f else mixPulse?.cover ?: 0f
+        val base = value.coerceIn(0f, 1f)
+        val played = width * (base + (1f - base) * cover) * factor
+        val alpha = if (dragging) 1f else mixPulse?.alpha(1f) ?: 1f
+        // Waves, then the line over their feet, then the bead: the waves rise out of the line.
+        translate(left = inset) {
+            drawWaves(
+                path = path,
+                played = played,
+                baseline = top + line / 2f,
+                time = motion.time,
+                swell = motion.swell.value * factor,
+                accents = accents,
+                alpha = alpha,
+            )
+        }
+        if (played > 0f) {
+            drawRoundRect(
+                color = activeColor.copy(alpha = activeColor.alpha * alpha),
+                topLeft = Offset(inset, top),
+                size = Size(played.coerceAtLeast(line * factor).coerceAtMost(width), line),
+                cornerRadius = radius,
+            )
+        }
+        if (factor > 0f) {
+            drawWaveThumb(
+                center = Offset(inset + played, size.height / 2f),
+                scale = thumbScale * factor,
+                accent = accents.primary,
+                alpha = factor,
+            )
+        }
+    }
+}
+
+private val WAVE_CANVAS_HEIGHT = 30.dp
+private val THUMB_INSET = 6.dp
 
 /**
  * One beat clock for everything that pulses with an Automix blend — the seek bar's fill and

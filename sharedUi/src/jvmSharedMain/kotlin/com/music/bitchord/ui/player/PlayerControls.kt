@@ -197,6 +197,11 @@ internal fun PlayerScrubber(
     transitionWindow: ClosedFloatingPointRange<Float>?,
     onScrub: (Float) -> Unit,
     onScrubFinished: () -> Unit,
+    /** One UI 9's wave style instead of the plain bar, coloured off [waveArtwork]. */
+    waves: Boolean = false,
+    waveArtwork: String? = null,
+    /** Whether the music is moving, so the waves drift; paused, they settle into the line. */
+    playing: Boolean = false,
     centerLabel: @Composable BoxScope.() -> Unit = {},
 ) {
     val shown = shown()
@@ -208,6 +213,8 @@ internal fun PlayerScrubber(
     val reduceAnimation by PlayerSettings.reduceAnimation.collectAsStateWithLifecycle()
     // One clock for the bar and the "Mixing" label, so they breathe on the same beat.
     val mixPulse = rememberMixPulse({ mixBlend.value }, enabled = !reduceAnimation)
+    // Read here rather than in the player around the bar: the accent crossfades on every skip.
+    val waveAccents = rememberWaveAccents(waveArtwork.takeIf { waves }).takeIf { waves }
     Column(Modifier.fillMaxWidth()) {
         ThinSlider(
             value = shown,
@@ -217,6 +224,9 @@ internal fun PlayerScrubber(
             mixing = mixing,
             mixPulse = mixPulse,
             transitionWindow = transitionWindow,
+            waves = waveAccents,
+            wavesPlaying = playing,
+            animateWaves = !reduceAnimation,
         )
         Box(
             modifier = Modifier
