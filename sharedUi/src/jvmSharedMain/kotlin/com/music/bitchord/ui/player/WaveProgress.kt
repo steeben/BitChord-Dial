@@ -27,32 +27,37 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 
-/** The two coloured waves' colours: the app's accent and a second colour off the same sleeve. */
-data class WaveAccents(val primary: Color, val secondary: Color)
+/** The three waves' colours: a light tint of the accent, the accent, a darker shade of it. */
+data class WaveAccents(val light: Color, val accent: Color, val dark: Color)
 
 /**
- * The accent the rest of the app wears for this song ([LocalNowPlayingTint]) and the artwork
- * colour furthest round the hue wheel from it, both lifted to a bright, saturated tone so the
- * waves read over any backdrop. A grey sleeve has no second hue to offer, so the secondary is
- * then the accent turned part way round the wheel. Changes crossfade with the track.
+ * The accent the rest of the app wears for this song ([LocalNowPlayingTint]), lifted to a
+ * bright, saturated tone so it reads over any backdrop, with a lighter tint and a darker shade
+ * of the same hue for the other two waves. Without a tint, the artwork's most colourful swatch
+ * stands in. Changes crossfade with the track.
  */
 @Composable
 fun rememberWaveAccents(artworkUrl: String?): WaveAccents {
-    val palette = rememberArtworkColors(artworkUrl)
     val tint = LocalNowPlayingTint.current
+    // The artwork is only read when there is no tint to follow.
+    val palette = rememberArtworkColors(artworkUrl.takeIf { tint == null })
     val target = remember(palette, tint) {
-        val candidates = (palette.art + palette.colors).map { it.toHsl() }
-        val primary = (tint?.toHsl() ?: candidates.maxByOrNull { it.s } ?: Hsl(25f, 0.9f, 0.6f))
-        val secondary = candidates
-            .filter { it.s > MIN_SECONDARY_SATURATION && hueDistance(it.h, primary.h) > MIN_SECONDARY_HUE_GAP }
-            .maxByOrNull { hueDistance(it.h, primary.h) * it.s }
-            ?: primary.copy(h = (primary.h + FALLBACK_HUE_TURN) % 360f)
-        WaveAccents(primary.vivid(), secondary.vivid())
+        val base = tint?.toHsl()
+            ?: (palette.art + palette.colors).map { it.toHsl() }.maxByOrNull { it.s }
+            ?: Hsl(25f, 0.9f, 0.6f)
+        // A grey sleeve's tint has no hue worth saturating; its waves stay grey.
+        val s = if (base.s < GREY_SATURATION) 0f else base.s.coerceAtLeast(0.6f)
+        WaveAccents(
+            light = Color.hsl(base.h, s * 0.75f, 0.8f),
+            accent = Color.hsl(base.h, s, base.l.coerceIn(0.56f, 0.66f)),
+            dark = Color.hsl(base.h, s, 0.36f),
+        )
     }
     val spec = tween<Color>(durationMillis = 900, easing = FastOutSlowInEasing)
     return WaveAccents(
-        primary = animateColorAsState(target.primary, spec, label = "wavePrimary").value,
-        secondary = animateColorAsState(target.secondary, spec, label = "waveSecondary").value,
+        light = animateColorAsState(target.light, spec, label = "waveLight").value,
+        accent = animateColorAsState(target.accent, spec, label = "waveAccent").value,
+        dark = animateColorAsState(target.dark, spec, label = "waveDark").value,
     )
 }
 
@@ -100,7 +105,7 @@ internal fun rememberWaveMotion(playing: Boolean, animate: Boolean): WaveMotion 
 
 /**
  * One UI 9's media progress: three soft ranges of humps rising out of the played part of the
- * line and drifting toward the playhead — a white one, the secondary and the primary accent,
+ * line and drifting toward the playhead — a light tint of the accent, a dark shade of it and the accent,
  * blended additively, so where they cross their colours add up and brighten. The whole set
  * tapers to nothing at the start of the bar and again where it meets the playhead.
  *
@@ -138,9 +143,9 @@ internal fun DrawScope.drawWaves(
         path.lineTo(played, baseline)
         path.close()
         val color = when (layer.tone) {
-            WaveTone.WHITE -> Color.White
-            WaveTone.SECONDARY -> accents.secondary
-            WaveTone.PRIMARY -> accents.primary
+            WaveTone.LIGHT -> accents.light
+            WaveTone.DARK -> accents.dark
+            WaveTone.ACCENT -> accents.accent
         }
         // Additive: overlaps add up toward white, the way coloured light does, rather than the
         // front wave covering the ones behind it.
@@ -164,7 +169,7 @@ internal fun DrawScope.drawWaveThumb(center: Offset, scale: Float, accent: Color
     drawCircle(accent.copy(alpha = alpha), radius = THUMB_CORE.toPx() * scale, center = center)
 }
 
-private enum class WaveTone { WHITE, SECONDARY, PRIMARY }
+private enum class WaveTone { LIGHT, DARK, ACCENT }
 
 private class WaveLayer(
     val tone: WaveTone,
@@ -181,9 +186,9 @@ private class WaveLayer(
 // Back to front. Different wavelengths and speeds, so the humps slide past one another and
 // the overlaps keep changing rather than marching in lockstep.
 private val WAVE_LAYERS = listOf(
-    WaveLayer(WaveTone.WHITE, height = 0.55f, wavelength = 92.dp, speed = 30.dp, phase = 0.35f, alpha = 0.85f, unevenness = 0.35f),
-    WaveLayer(WaveTone.SECONDARY, height = 0.72f, wavelength = 128.dp, speed = 40.dp, phase = 0.5f, alpha = 0.72f, unevenness = 0.3f),
-    WaveLayer(WaveTone.PRIMARY, height = 1f, wavelength = 150.dp, speed = 48.dp, phase = 0f, alpha = 0.72f, unevenness = 0.25f),
+    WaveLayer(WaveTone.LIGHT, height = 0.55f, wavelength = 92.dp, speed = 30.dp, phase = 0.35f, alpha = 0.85f, unevenness = 0.35f),
+    WaveLayer(WaveTone.DARK, height = 0.72f, wavelength = 128.dp, speed = 40.dp, phase = 0.5f, alpha = 0.72f, unevenness = 0.3f),
+    WaveLayer(WaveTone.ACCENT, height = 1f, wavelength = 150.dp, speed = 48.dp, phase = 0f, alpha = 0.72f, unevenness = 0.25f),
 )
 
 private val WAVE_HEIGHT = 9.dp
@@ -198,24 +203,15 @@ private val THUMB_RADIUS = 5.dp
 private val THUMB_CORE = 3.dp
 private val THUMB_HALO = 11.dp
 
-private const val MIN_SECONDARY_SATURATION = 0.18f
-private const val MIN_SECONDARY_HUE_GAP = 40f
-private const val FALLBACK_HUE_TURN = 150f
 
 private fun smoothstep(t: Float): Float {
     val x = t.coerceIn(0f, 1f)
     return x * x * (3f - 2f * x)
 }
 
-private data class Hsl(val h: Float, val s: Float, val l: Float) {
-    /** Bright and saturated enough to glow over the player's backdrop. */
-    fun vivid(): Color = Color.hsl(h, s.coerceAtLeast(0.6f), l.coerceIn(0.56f, 0.68f))
-}
+private const val GREY_SATURATION = 0.08f
 
-private fun hueDistance(a: Float, b: Float): Float {
-    val d = abs(a - b) % 360f
-    return if (d > 180f) 360f - d else d
-}
+private data class Hsl(val h: Float, val s: Float, val l: Float)
 
 private fun Color.toHsl(): Hsl {
     val r = red
