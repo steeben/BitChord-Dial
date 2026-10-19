@@ -53,6 +53,8 @@ import androidx.media3.exoplayer.audio.SilenceSkippingAudioProcessor
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.mediacodec.MediaCodecUtil
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.source.LoadEventInfo
+import androidx.media3.exoplayer.source.MediaLoadData
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.TransferListener
@@ -649,6 +651,9 @@ class PlaybackService : MediaLibraryService() {
      */
     private var audibleMediaId: String? = null
 
+    /** When the session player went from playing to rebuffering; 0 while it isn't. */
+    private var stalledAt = 0L
+
     /**
      * How many tracks in a row have been skipped for a plain playback error,
      * reset the moment anything actually plays — see [MAX_CONSECUTIVE_SKIPS].
@@ -999,6 +1004,27 @@ class PlaybackService : MediaLibraryService() {
             // The player this fired on, which is by definition the one the
             // session is currently pointed at.
             val exoPlayer = player ?: return
+            // A track going quiet mid-song with no error behind it is a
+            // rebuffer, and nothing else in the copied log says so: the loader
+            // retries quietly and the line that would explain the silence
+            // never appears. Seeks land here too, which is cheap to read past.
+            val mediaId = exoPlayer.currentMediaItem?.mediaId
+            if (state == Player.STATE_BUFFERING && exoPlayer.playWhenReady) {
+                stalledAt = SystemClock.elapsedRealtime()
+                TrackLog.d(
+                    "BitChord",
+                    "buffering at ${exoPlayer.currentPosition}ms of ${exoPlayer.duration}ms, " +
+                        "buffered to ${exoPlayer.bufferedPosition}ms",
+                    about = mediaId,
+                )
+            } else if (stalledAt != 0L) {
+                TrackLog.d(
+                    "BitChord",
+                    "buffering over after ${SystemClock.elapsedRealtime() - stalledAt}ms (state $state)",
+                    about = mediaId,
+                )
+                stalledAt = 0L
+            }
             if (state == Player.STATE_ENDED) {
                 SleepTimer.cancel()
                 // The queue ran dry, so no transition will ever close the last
@@ -1171,6 +1197,25 @@ class PlaybackService : MediaLibraryService() {
                 "BitChord",
                 "swap leg: $decoderName stood up in ${initializationDurationMs}ms, " +
                     "${SystemClock.elapsedRealtime() - cutAt}ms after the cut",
+                about = eventTime.mediaId(),
+            )
+        }
+
+        // Every load error the player retries without surfacing — a read
+        // timeout, a reset connection, a range the server cut short. Only the
+        // last of a run ever reaches onPlayerError, so a stream that limps
+        // through on retries left no trace of why it went quiet.
+        override fun onLoadError(
+            eventTime: AnalyticsListener.EventTime,
+            loadEventInfo: LoadEventInfo,
+            mediaLoadData: MediaLoadData,
+            error: java.io.IOException,
+            wasCanceled: Boolean,
+        ) {
+            TrackLog.w(
+                "BitChord",
+                "load error from ${loadEventInfo.uri.host ?: "?"} after ${loadEventInfo.bytesLoaded} bytes " +
+                    "(${error.javaClass.simpleName}: ${error.message})",
                 about = eventTime.mediaId(),
             )
         }

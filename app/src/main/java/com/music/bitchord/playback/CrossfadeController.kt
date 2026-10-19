@@ -9,6 +9,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import com.music.bitchord.data.TrackLog
 import com.music.bitchord.data.listentogether.ListenTogether
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.MixBlend
@@ -444,6 +445,9 @@ class CrossfadeController(
     }
 
     private var fadeStartedAt = 0L
+
+    /** When the incoming player ran dry mid-blend, before the handoff; 0 while it is playing. */
+    private var incomingStalledAt = 0L
 
     /**
      * Both tracks' analyses as the blend began, for the beat the scrubber
@@ -1223,7 +1227,7 @@ class CrossfadeController(
         val items = (0 until out.mediaItemCount).map { out.getMediaItemAt(it) }
         queuedItemCount = items.size
 
-        Log.d(
+        TrackLog.d(
             TAG,
             "arm ${if (smart) "smart" else "standard"} fade=${fade}ms end=${endMs}ms " +
                 "cue=${incomingCueTimeMs}ms rate=$incomingPlaybackRate at=${out.currentPosition}ms " +
@@ -1231,6 +1235,7 @@ class CrossfadeController(
                 "advanced=${render.advanced} lock=${render.phaseLock} handoff=${render.handoffAt} " +
                 "echo=${if (render.echo) "${render.echoSecondsF}s@${render.echoAt}" else "off"} " +
                 "sweep=${render.filterSweep}",
+            about = null,
         )
 
         holdAtEnd(out)
@@ -1308,7 +1313,11 @@ class CrossfadeController(
         if (duration == C.TIME_UNSET || duration <= 0L) return
         val left = duration - out.currentPosition
         if (left <= maxReadAheadMs(out)) {
-            Log.d(TAG, "end not held: ${left}ms left, may already be reading on (${maxReadAheadMs(out)}ms)")
+            TrackLog.d(
+                TAG,
+                "end not held: ${left}ms left, may already be reading on (${maxReadAheadMs(out)}ms)",
+                about = null,
+            )
             return
         }
         releaseHold()
@@ -1421,6 +1430,7 @@ class CrossfadeController(
         into.volume = 0f
         into.playWhenReady = true
         fadeStartedAt = SystemClock.elapsedRealtime()
+        incomingStalledAt = 0L
         nudgeUntil = 0L
         lockCount = 0
         outClock.reset()
@@ -1436,7 +1446,7 @@ class CrossfadeController(
         outgoingAnalysis = out.currentMediaItem?.let(analysisFor) ?: TrackAnalysis()
         incomingAnalysis = into.currentMediaItem?.let(analysisFor) ?: TrackAnalysis()
 
-        Log.d(TAG, "blend start at cue=${into.currentPosition}ms out=${out.currentPosition}ms")
+        TrackLog.d(TAG, "blend start at cue=${into.currentPosition}ms out=${out.currentPosition}ms", about = null)
 
         // Published before the mix flag, in the same tick: the scrubber shows
         // the old sheen for a mix flag with no blend beside it, and would flash
@@ -1465,7 +1475,7 @@ class CrossfadeController(
         // otherwise be lost at the swap.
         reconcileQueue(out, into)
 
-        Log.d(TAG, "handoff at in=${into.currentPosition}ms out=${out.currentPosition}ms")
+        TrackLog.d(TAG, "handoff at in=${into.currentPosition}ms out=${out.currentPosition}ms", about = null)
 
         // Before the swap, so the listener follows the session rather than
         // firing on a player this class is about to demote.
@@ -1572,6 +1582,35 @@ class CrossfadeController(
         // stops, the blend parks at whatever mix it had reached, and the
         // outgoing track runs out under it.
         if (!handedOff && player.playbackState == Player.STATE_IDLE) return bail()
+
+        // Nor does it go IDLE when it simply runs out of data: it rebuffers,
+        // silent, while everything below carries on as if it were rising. The
+        // outgoing fader is driven by its own track's end as well as by the
+        // incoming one's progress, so it went on falling — and the handoff then
+        // put the session on a player with nothing to play. What the listener
+        // heard was the song they were on dying away a dozen seconds early into
+        // silence — which a cold stream can do: READY on its first couple of
+        // seconds, then starved. So the mix holds while the incoming track is starved, and if
+        // it stays that way the blend is dropped: the outgoing track comes back
+        // up and plays out, and its own queue moves on as it would have without
+        // a crossfade. Not in the last moments of the outgoing track, though:
+        // the handoff guard below has to stay free to act there.
+        val outgoingEnding = outRemaining != null && outRemaining <= HANDOFF_GUARD_MS
+        if (!handedOff && !outgoingEnding && player.playbackState == Player.STATE_BUFFERING) {
+            val now = SystemClock.elapsedRealtime()
+            if (incomingStalledAt == 0L) incomingStalledAt = now
+            if (now - incomingStalledAt >= INCOMING_STALL_MS) {
+                TrackLog.w(
+                    TAG,
+                    "incoming ${player.currentMediaItem?.mediaId} starved at ${player.currentPosition}ms " +
+                        "for ${now - incomingStalledAt}ms; dropping the blend, out=${out.currentPosition}ms",
+                    about = null,
+                )
+                return bail()
+            }
+            return
+        }
+        incomingStalledAt = 0L
 
         // Faders act at the speaker; everything in the DSP chain — the filters
         // and the headroom trim — acts where each sink is writing, its lead
@@ -1779,7 +1818,7 @@ class CrossfadeController(
      */
     private fun bail() {
         if (phase == Phase.IDLE || phase == Phase.BAILING) return
-        Log.d(TAG, "bail from $phase")
+        TrackLog.d(TAG, "bail from $phase", about = null)
         AppSettings.smartMixInProgress.value = false
         AppSettings.smartMixBlend.value = null
         if (!handedOff && phase != Phase.FADING) {
@@ -1804,7 +1843,7 @@ class CrossfadeController(
 
     private fun finish() {
         if (phase != Phase.IDLE) {
-            Log.d(TAG, "finish from $phase")
+            TrackLog.d(TAG, "finish from $phase", about = null)
             // Stamped under this guard rather than beside the assignment at the
             // bottom, because this function is idempotent and gets called with
             // nothing in flight: marking every one of those as a transition
@@ -2684,6 +2723,13 @@ class CrossfadeController(
          * structure instead and this is never read.
          */
         const val DEFAULT_SMART_FALLBACK_SECONDS = 6.0
+
+        /**
+         * How long the incoming track may sit rebuffering before the handoff
+         * before the blend is dropped. Long enough for a hiccup, short enough
+         * that the outgoing track is still there to come back to.
+         */
+        const val INCOMING_STALL_MS = 1_500L
 
         /** Ramp used when a fade is interrupted. */
         const val BAIL_MS = 120L
