@@ -1302,4 +1302,6 @@
     <string name="unpin_artist_from_speed_dial">Desafixar artista da discagem rápida</string>
     <string name="pin_artist_radio_to_speed_dial">Fixar rádio do artista na discagem rápida</string>
     <string name="unpin_artist_radio_from_speed_dial">Desafixar rádio do artista da discagem rápida</string>
+    <string name="app_icon">Ícone do app</string>
+    <string name="app_icon_default">Padrão</string>
 </resources>

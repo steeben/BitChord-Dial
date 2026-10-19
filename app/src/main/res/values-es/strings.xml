@@ -1269,4 +1269,6 @@
     <string name="unpin_artist_from_speed_dial">Quitar artista de la marcación rápida</string>
     <string name="pin_artist_radio_to_speed_dial">Fijar radio del artista en la marcación rápida</string>
     <string name="unpin_artist_radio_from_speed_dial">Quitar radio del artista de la marcación rápida</string>
+    <string name="app_icon">Icono de la app</string>
+    <string name="app_icon_default">Predeterminado</string>
 </resources>

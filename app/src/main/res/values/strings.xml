@@ -318,8 +318,8 @@
     <string name="liquid_glass">Liquid Glass</string>
     <string name="app_icon">App icon</string>
     <string name="app_icon_default">Default</string>
-    <string name="app_icon_glass_light">Glass</string>
-    <string name="app_icon_glass_dark">Glass Dark</string>
+    <string name="app_icon_glass_light" translatable="false">Glass</string>
+    <string name="app_icon_glass_dark" translatable="false">Glass Dark</string>
     <string name="liquid_glass_subtitle">Real refracting glass on the floating nav bar. Android 12+ only; uses more GPU.</string>
     <string name="liquid_glass_unavailable">Requires Android 12 or newer</string>
     <string name="full_screen_cover_art">Full-screen cover art</string>

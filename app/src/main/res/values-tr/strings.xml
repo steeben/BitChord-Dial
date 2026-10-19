@@ -1254,4 +1254,6 @@
     <string name="unpin_artist_from_speed_dial">Sanatçıyı hızlı aramadan kaldır</string>
     <string name="pin_artist_radio_to_speed_dial">Sanatçı radyosunu hızlı aramaya sabitle</string>
     <string name="unpin_artist_radio_from_speed_dial">Sanatçı radyosunu hızlı aramadan kaldır</string>
+    <string name="app_icon">Uygulama simgesi</string>
+    <string name="app_icon_default">Varsayılan</string>
 </resources>

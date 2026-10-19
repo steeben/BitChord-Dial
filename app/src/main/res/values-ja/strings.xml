@@ -1275,4 +1275,6 @@
     <string name="unpin_artist_from_speed_dial">アーティストをスピードダイヤルから外す</string>
     <string name="pin_artist_radio_to_speed_dial">アーティストのラジオをスピードダイヤルに固定</string>
     <string name="unpin_artist_radio_from_speed_dial">アーティストのラジオをスピードダイヤルから外す</string>
+    <string name="app_icon">アプリアイコン</string>
+    <string name="app_icon_default">デフォルト</string>
 </resources>

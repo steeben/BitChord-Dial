@@ -1297,4 +1297,6 @@
     <string name="unpin_artist_from_speed_dial">कलाकार को स्पीड डायल से अनपिन करें</string>
     <string name="pin_artist_radio_to_speed_dial">कलाकार रेडियो को स्पीड डायल पर पिन करें</string>
     <string name="unpin_artist_radio_from_speed_dial">कलाकार रेडियो को स्पीड डायल से अनपिन करें</string>
+    <string name="app_icon">ऐप आइकन</string>
+    <string name="app_icon_default">डिफ़ॉल्ट</string>
 </resources>
