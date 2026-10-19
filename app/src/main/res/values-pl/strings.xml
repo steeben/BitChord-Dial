@@ -1342,6 +1342,11 @@
     <string name="unpin_artist_from_speed_dial">Odepnij wykonawcę od szybkiego wybierania</string>
     <string name="pin_artist_radio_to_speed_dial">Przypnij radio wykonawcy do szybkiego wybierania</string>
     <string name="unpin_artist_radio_from_speed_dial">Odepnij radio wykonawcy od szybkiego wybierania</string>
+    <string name="show_queue_history">Pokaż historię kolejki</string>
+    <string name="show_queue_history_subtitle">Pokazuje do 25 wcześniej odtworzonych utworów nad pozycją „Teraz odtwarzane” w kolejce</string>
+    <string name="search_source_addons">Dodatki</string>
+    <string name="search_addons_none">Brak włączonych dodatków. Dodaj jeden w Ustawienia → Źródła.</string>
+    <string name="search_addons_hint">Search your addons</string>
     <string name="app_icon">Ikona aplikacji</string>
     <string name="app_icon_default">Domyślna</string>
     <string name="song_info">Informacje o utworze</string>

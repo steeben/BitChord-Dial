@@ -1280,6 +1280,11 @@
     <string name="unpin_artist_from_speed_dial">アーティストをスピードダイヤルから外す</string>
     <string name="pin_artist_radio_to_speed_dial">アーティストのラジオをスピードダイヤルに固定</string>
     <string name="unpin_artist_radio_from_speed_dial">アーティストのラジオをスピードダイヤルから外す</string>
+    <string name="show_queue_history">キューの履歴を表示</string>
+    <string name="show_queue_history_subtitle">キューの「再生中」の上に、再生済みの曲を最大25曲表示します</string>
+    <string name="search_source_addons">アドオン</string>
+    <string name="search_addons_none">有効なアドオンがありません。設定 → ソースで追加してください。</string>
+    <string name="search_addons_hint">Search your addons</string>
     <string name="app_icon">アプリアイコン</string>
     <string name="app_icon_default">デフォルト</string>
     <string name="song_info">曲の情報</string>

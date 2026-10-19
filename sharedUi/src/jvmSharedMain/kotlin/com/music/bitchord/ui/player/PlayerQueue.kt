@@ -50,6 +50,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.first
 import androidx.compose.ui.Alignment
@@ -174,7 +175,7 @@ private class QueueTracks(
     }
 }
 
-private fun splitQueue(queue: List<Song>, currentIndex: Int): QueueTracks {
+private fun splitQueue(queue: List<Song>, currentIndex: Int, showHistory: Boolean = true): QueueTracks {
     if (currentIndex !in queue.indices) return QueueTracks.EMPTY
     // Keyed by the entry's own id, so a row keeps its identity through a reorder.
     // Entries without one (a party's tracks, a queue restored from before ids
@@ -197,7 +198,7 @@ private fun splitQueue(queue: List<Song>, currentIndex: Int): QueueTracks {
         while (!usedKeys.add(key)) key = base + "~" + repeat++
         return QueueTrack(index, song, key)
     }
-    val history = (0 until currentIndex).map { track(it, "played") }
+    val history = if (showHistory) (0 until currentIndex).map { track(it, "played") } else emptyList()
     val user = ArrayList<QueueTrack>()
     val context = ArrayList<QueueTrack>()
     val autoplay = ArrayList<QueueTrack>()
@@ -263,7 +264,8 @@ internal fun InlineQueue(
         onReveal = onRevealPlayer,
         onHide = onHidePlayer,
     )
-    val tracks = remember(queue, currentIndex) { splitQueue(queue, currentIndex) }
+    val showHistory by PlayerSettings.showQueueHistory.collectAsStateWithLifecycle()
+    val tracks = remember(queue, currentIndex, showHistory) { splitQueue(queue, currentIndex, showHistory) }
     val drag = rememberQueueDrag(listState, tracks, onMove, onDragActiveChange)
     val nowPlaying = tracks.nowPlaying
     val contextSong = tracks.context.firstOrNull()?.song
@@ -290,7 +292,8 @@ internal fun InlineQueue(
     // Back to that point on a track change — snapped the first time, animated
     // after — but never mid-drag, which would pull the list from under the finger.
     var hasScrolledOnce by remember { mutableStateOf(false) }
-    LaunchedEffect(currentIndex) {
+    // Keyed on the entry too, because trimming history can leave the index unchanged.
+    LaunchedEffect(currentIndex, nowPlaying?.key, showHistory) {
         val scrolledAway = listState.firstVisibleItemIndex != anchor || listState.firstVisibleItemScrollOffset != 0
         if (drag.held == null && nowPlaying != null && (scrolledAway || !hasScrolledOnce)) {
             if (hasScrolledOnce) {

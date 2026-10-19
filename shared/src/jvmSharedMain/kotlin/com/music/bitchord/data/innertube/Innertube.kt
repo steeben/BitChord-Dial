@@ -609,10 +609,22 @@ object Innertube {
         put("params", Base64.getEncoder().encodeToString(bytes))
     }
 
-    suspend fun search(query: String, params: String? = null): JsonObject =
-        postMusic("search") {
-            put("query", query)
-            params?.let { put("params", it) }
+    /**
+     * Anonymous unless [anonymous] is false: a signed-in search lands in the
+     * account's YouTube Music search history, which only a search the
+     * listener actually submitted should do.
+     */
+    suspend fun search(query: String, params: String? = null, anonymous: Boolean = true): JsonObject =
+        if (anonymous) {
+            postMusicAnonymous("search") {
+                put("query", query)
+                params?.let { put("params", it) }
+            }
+        } else {
+            postMusic("search") {
+                put("query", query)
+                params?.let { put("params", it) }
+            }
         }
 
     /** The next page of a filtered search result. */

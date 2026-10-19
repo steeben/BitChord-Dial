@@ -1280,6 +1280,11 @@
     <string name="unpin_artist_from_speed_dial">將藝人從快速撥號取消釘選</string>
     <string name="pin_artist_radio_to_speed_dial">將藝人電台釘選到快速撥號</string>
     <string name="unpin_artist_radio_from_speed_dial">將藝人電台從快速撥號取消釘選</string>
+    <string name="show_queue_history">顯示佇列記錄</string>
+    <string name="show_queue_history_subtitle">在佇列中「正在播放」上方顯示最多 25 首已播放的歌曲</string>
+    <string name="search_source_addons">外掛</string>
+    <string name="search_addons_none">尚未啟用任何外掛。請在「設定 → 來源」中新增。</string>
+    <string name="search_addons_hint">Search your addons</string>
     <string name="app_icon">應用程式圖示</string>
     <string name="app_icon_default">預設</string>
     <string name="song_info">歌曲資訊</string>

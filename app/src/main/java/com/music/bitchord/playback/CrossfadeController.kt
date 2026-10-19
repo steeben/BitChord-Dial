@@ -193,6 +193,8 @@ class CrossfadeController(
      * [Phase.IDLE] is the only phase that can still be preempted for free.
      */
     private val versionSwapActive: () -> Boolean = { false },
+    /** Invoked after [finish] has completed cleanup and returned to IDLE. */
+    private val onSettled: () -> Unit = {},
 ) {
 
     private enum class Phase {
@@ -1842,6 +1844,7 @@ class CrossfadeController(
     private fun leavingOnBail(): ExoPlayer? = if (handedOff) outgoing else incoming
 
     private fun finish() {
+        val wasTransitioning = phase != Phase.IDLE
         if (phase != Phase.IDLE) {
             TrackLog.d(TAG, "finish from $phase", about = null)
             // Stamped under this guard rather than beside the assignment at the
@@ -1909,6 +1912,7 @@ class CrossfadeController(
         outgoingAnalysis = TrackAnalysis()
         incomingAnalysis = TrackAnalysis()
         phase = Phase.IDLE
+        if (wasTransitioning) onSettled()
     }
 
     /** Still a next track, still playing, still switched on — by whichever setting armed this one. */

@@ -142,6 +142,8 @@ interface PlayerSettingsSource {
     val canvasOverCellular: StateFlow<Boolean>
     val fullBleedArtwork: StateFlow<Boolean>
     val hideSongStatus: StateFlow<Boolean>
+    /** Whether the queue lists what has already played above the playing track. */
+    val showQueueHistory: StateFlow<Boolean>
     val hideVolumeBar: StateFlow<Boolean>
     /** Over a Spotify Canvas, shrink the controls to the foot of the screen rather than hide them. */
     val compactCanvasControls: StateFlow<Boolean> get() = CompactCanvasControlsOff
