@@ -868,14 +868,18 @@ object StreamResolver {
     private fun probe(url: String): Probe {
         val length = url.toHttpUrlOrNull()?.queryParameter("clen")?.toLongOrNull()
         val start = if (length != null && length > AUTH_BOUNDARY_BYTES + PROBE_READ_BYTES) AUTH_BOUNDARY_BYTES else 0L
-        // rangeBytesFor() answers Long.MAX_VALUE for hosts it doesn't recognise (e.g.
-        // *.c.youtube.com), and adding to that wraps negative, giving a nonsense
-        // "bytes=1048576--9223372036853727234" that the server answers with 416.
-        // Cap the window at the probe size instead, so the sum can't overflow.
-        val window = minOf(PlayerClient.rangeBytesFor(url), PROBE_READ_BYTES)
-        val end = minOf(start + window, length ?: Long.MAX_VALUE) - 1
+        // A host with no range cap of its own reports Long.MAX_VALUE, which
+        // must not be added to [start]: that overflowed into a negative end
+        // and a 416 read as a refusal. Its real fetch asks for the rest of
+        // the file, so the probe does too.
+        val window = PlayerClient.rangeBytesFor(url)
+        val range = when {
+            window != Long.MAX_VALUE -> "bytes=$start-${minOf(start + window, length ?: Long.MAX_VALUE) - 1}"
+            length != null -> "bytes=$start-${length - 1}"
+            else -> "bytes=$start-"
+        }
         val builder = okhttp3.Request.Builder().url(url)
-            .header("Range", "bytes=$start-$end")
+            .header("Range", range)
         val sentHeaders = mediaHeadersFor(url)
         sentHeaders.forEach { (name, value) -> builder.header(name, value) }
         return try {
@@ -901,7 +905,7 @@ object StreamResolver {
                     TrackLog.w(
                         TAG,
                         "probe $verdict: HTTP ${response.code} type=$contentType " +
-                            "range=bytes=$start-$end ${describeMediaUrl(url)} " +
+                            "range=$range ${describeMediaUrl(url)} " +
                             "sent=${sentHeaders.keys.sorted()}",
                     )
                 }

@@ -4,6 +4,8 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,6 +34,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -120,13 +125,21 @@ fun ReplayScreen(
     // corresponding chart rather than making the user find it again. Wait for
     // a loaded summary because the loading/empty layouts do not contain these
     // keyed sections yet.
+    //
+    // Once only per opening, though. Back from an artist or album opened off
+    // this page composes it again, and landing a second time threw away
+    // wherever it had been scrolled to. Saveable, so it outlives that trip —
+    // the page's state is kept while it is on the back stack.
+    var landed by rememberSaveable(landingPage, state.period) { mutableStateOf(false) }
     LaunchedEffect(landingPage, state.period, summary == null) {
+        if (landed) return@LaunchedEffect
         val target = when {
             landingPage == ReplayStoryPage.INTRO || landingPage == ReplayStoryPage.MINUTES -> 0
             summary == null || summary.isEmpty -> 0
             else -> replayChartIndex(summary, landingPage)
         }
         listState.scrollToItem(target)
+        if (summary != null) landed = true
     }
 
     Box(modifier.fillMaxSize()) {
@@ -324,6 +337,7 @@ internal fun PeriodPicker(selected: ReplayPeriod, onSelect: (ReplayPeriod) -> Un
  * where each half of Replay belongs — but it is defined alongside the page it
  * summarises, because the two have to keep saying the same thing.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun ReplayCardRow(
     cards: List<ReplayHeroCard>,
@@ -333,10 +347,13 @@ internal fun ReplayCardRow(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(horizontal = PAGE_GUTTER + 4.dp),
 ) {
+    val rowState = rememberLazyListState()
     LazyRow(
         modifier = modifier,
+        state = rowState,
         contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
+        flingBehavior = rememberSnapFlingBehavior(lazyListState = rowState),
     ) {
         items(cards, key = { it.label }) { card ->
             ReplayCreditCard(

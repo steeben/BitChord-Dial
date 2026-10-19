@@ -15,6 +15,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import com.music.bitchord.ui.components.longPressMenuClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -872,9 +873,12 @@ fun DetailScreen(
                         )
                         BoxWithConstraints {
                             val columnWidth = trackColumnWidth(maxWidth)
+                            val topSongsState = rememberLazyListState()
                             LazyRow(
+                                state = topSongsState,
                                 contentPadding = PaddingValues(horizontal = ARTIST_CONTENT_GUTTER),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                flingBehavior = rememberSnapFlingBehavior(lazyListState = topSongsState),
                             ) {
                                 items(top.chunked(SONGS_PER_COLUMN)) { column ->
                                     Column(Modifier.width(columnWidth)) {
@@ -1004,9 +1008,12 @@ fun DetailScreen(
                         onShowAll = if (canShowAll) { { onActiveShelfChange(shelf) } } else null,
                         horizontalPadding = ARTIST_CONTENT_GUTTER,
                     )
+                    val carouselState = rememberLazyListState()
                     LazyRow(
+                        state = carouselState,
                         contentPadding = PaddingValues(horizontal = ARTIST_CONTENT_GUTTER),
                         horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        flingBehavior = rememberSnapFlingBehavior(lazyListState = carouselState),
                     ) {
                         items(displayItems) { item ->
                             SectionCard(

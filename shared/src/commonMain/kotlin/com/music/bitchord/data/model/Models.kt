@@ -92,6 +92,16 @@ data class Song(
     val localDateAddedSeconds: Long? = null,
     val localDateModifiedSeconds: Long? = null,
     /**
+     * Track number within its album, from the file's own tags (`TRACK` in
+     * MediaStore, `CD_TRACK_NUMBER` via retriever). Null when the tags don't
+     * say — remote catalogue rows never carry one.
+     *
+     * Lets a local album list in release order instead of whatever the library
+     * sort left standing, and lets its rows show the release's own numbers
+     * rather than their position in that list.
+     */
+    val trackNumber: Int? = null,
+    /**
      * What a non-YouTube source says it can serve this recording at, as one of
      * `LOSSLESS`, `HIGH` or `LOW` — null for every row that didn't come from
      * one.
@@ -144,6 +154,7 @@ data class Song(
         localPath: String? = null,
         localDateAddedSeconds: Long? = null,
         localDateModifiedSeconds: Long? = null,
+        trackNumber: Int? = null,
         sourceQuality: String? = null,
         isExplicit: Boolean? = null,
         playbackSource: String? = null,
@@ -170,6 +181,7 @@ data class Song(
         localPath = localPath,
         localDateAddedSeconds = localDateAddedSeconds,
         localDateModifiedSeconds = localDateModifiedSeconds,
+        trackNumber = trackNumber,
         sourceQuality = sourceQuality,
         isExplicit = isExplicit,
         playbackSource = playbackSource,
@@ -248,9 +260,29 @@ fun String?.durationMillis(): Long {
 }
 
 /** As [Song.artworkAt], for artwork that isn't a track's. */
-fun String?.artworkAt(px: Int): String? = this?.replace(SIZE_HINT, "w$px-h$px")
+fun String?.artworkAt(px: Int): String? {
+    if (this == null) return null
+    val sized = this.replace(SIZE_HINT, "w$px-h$px")
+    return if (isGoogleImageHost(this)) {
+        sized.replace(PARAM_SIZE_HINT, "=s$px")
+    } else {
+        sized
+    }
+}
+
+private fun isGoogleImageHost(url: String): Boolean {
+    val host = url.substringAfter("://", "")
+        .ifEmpty { url.substringAfter("//", "") }
+        .substringBefore('/')
+        .substringBefore(':')
+        .substringBefore('?')
+        .lowercase()
+    return host == "ggpht.com" || host.endsWith(".ggpht.com") ||
+        host == "googleusercontent.com" || host.endsWith(".googleusercontent.com")
+}
 
 private val SIZE_HINT = Regex("""w\d+-h\d+""")
+private val PARAM_SIZE_HINT = Regex("""=s\d+""")
 
 /**
  * Artwork for a list row — 52dp at most, so about 140px on a 3x screen.
