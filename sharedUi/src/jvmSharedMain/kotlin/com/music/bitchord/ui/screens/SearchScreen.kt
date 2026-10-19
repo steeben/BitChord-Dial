@@ -470,6 +470,7 @@ private fun LazyListScope.librarySearchResults(
                     isPlaying = isPlaying && isCurrentRow(song),
                     searchPlayingStyle = true,
                     activeTint = PlayingAccent,
+                    showSourceQuality = addons,
                 )
                 if (index < tracks.lastIndex) {
                     HorizontalDivider(
