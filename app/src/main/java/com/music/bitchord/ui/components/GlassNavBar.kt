@@ -145,8 +145,9 @@ fun GlassNavBar(
 
     // A factory, not a value — see the note in FloatingTabBar's header. Each of
     // the three surfaces gets its own glass modifier and so its own shape cache.
-    val glassSurface: @Composable () -> Modifier = { Modifier.liquidGlass(shape = pillShape) }
-    val accessoryGlass: @Composable () -> Modifier = { Modifier.liquidGlass(shape = accessoryShape) }
+    val barTint = glassBarTint()
+    val glassSurface: @Composable () -> Modifier = { Modifier.liquidGlass(shape = pillShape, surfaceTint = barTint) }
+    val accessoryGlass: @Composable () -> Modifier = { Modifier.liquidGlass(shape = accessoryShape, surfaceTint = barTint) }
 
     FloatingTabBar(
         selectedTabKey = selectedIndex,
@@ -210,7 +211,7 @@ fun GlassNavBar(
         colors = FloatingTabBarDefaults.colors(
             backgroundColor = Color.Transparent,
             accessoryBackgroundColor = Color.Transparent,
-            indicatorColor = glassIndicatorColor().copy(alpha = 0.5f),
+            indicatorColor = glassIndicatorColor(),
         ),
         // Flat, because the glass is not. Every surface here already draws its
         // own [Shadow.Default] as part of the backdrop pass, and the library's
@@ -411,6 +412,9 @@ private fun GlassNowPlaying(
                 .clipToBounds()
                 .miniPlayerSwipeContent(swipe),
           ) {
+            // A round bar gets a round cover; half the side, so the player
+            // also flies into a circle.
+            val artCorner = if (circular) artSize / 2 else if (isInline) 6.dp else 8.dp
             AsyncImage(
                 model = artUrl?.artworkAt(ROW_ART_PX),
                 contentDescription = null,
@@ -418,8 +422,8 @@ private fun GlassNowPlaying(
                     .size(artSize)
                     // Whichever of the two densities is on screen is the one
                     // the player flies to: only one is composed at rest.
-                    .playerDockArt(dock, if (isInline) 6.dp else 8.dp)
-                    .clip(RoundedCornerShape(if (isInline) 6.dp else 8.dp))
+                    .playerDockArt(dock, artCorner)
+                    .clip(RoundedCornerShape(artCorner))
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentScale = com.music.bitchord.ui.components.thumbnailContentScale(),
             )

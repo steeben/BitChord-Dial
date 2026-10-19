@@ -48,7 +48,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
+import com.music.bitchord.ui.components.SlideDownBottomSheet
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -344,7 +344,7 @@ fun ListenTogetherScreen(
     }
 
     sheet?.let { open ->
-        ModalBottomSheet(
+        SlideDownBottomSheet(
             onDismissRequest = {
                 sheet = null
                 // Closed with the message unread is still read: leaving it set

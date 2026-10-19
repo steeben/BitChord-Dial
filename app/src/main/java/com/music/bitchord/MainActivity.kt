@@ -22,6 +22,7 @@ import androidx.core.content.ContextCompat
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.FastOutLinearInEasing
@@ -35,6 +36,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -56,6 +58,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -93,6 +96,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import com.music.bitchord.ui.components.SlideDownBottomSheet
 import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.Surface
 import androidx.compose.material3.CircularProgressIndicator
@@ -113,6 +117,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -125,6 +130,7 @@ import androidx.compose.ui.graphics.BlurEffect
 import kotlinx.coroutines.NonCancellable
 import androidx.compose.animation.core.Animatable
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -165,6 +171,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.music.bitchord.auth.DiscordLoginScreen
+import com.music.bitchord.auth.SpotifyLoginScreen
 import com.music.bitchord.auth.WebSessionMode
 import com.music.bitchord.auth.YtMusicLoginScreen
 import com.music.bitchord.data.AppUpdateChecker
@@ -202,6 +209,7 @@ import com.music.bitchord.data.scrobbling.LastFM
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.CustomizationSettings
 import com.music.bitchord.data.settings.PlayedCollections
+import com.music.bitchord.data.settings.DevicePlays
 import com.music.bitchord.data.settings.OrderedToggle
 import com.music.bitchord.data.settings.LibrarySource
 import com.music.bitchord.data.settings.speedDialId
@@ -231,6 +239,10 @@ import com.music.bitchord.ui.screens.LibraryHomeScreen
 import com.music.bitchord.ui.screens.LibraryMenu
 import com.music.bitchord.ui.screens.LibraryChoiceMenu
 import com.music.bitchord.ui.screens.LibraryDuplicatesScreen
+import com.music.bitchord.data.LocalLinks
+import com.music.bitchord.data.linkedTo
+import com.music.bitchord.ui.components.LinkToYouTubeSheet
+import com.music.bitchord.ui.screens.LibrarySearchField
 import com.music.bitchord.ui.screens.LibraryFolderSortMenu
 import com.music.bitchord.ui.screens.LibraryFeed
 import com.music.bitchord.ui.screens.LibrarySuggestion
@@ -246,6 +258,7 @@ import com.music.bitchord.ui.screens.ALL_LIBRARY_BROWSE_ID
 import com.music.bitchord.ui.screens.CACHE_FOLDER_BROWSE_ID
 import com.music.bitchord.ui.screens.ListenTogetherScreen
 import com.music.bitchord.ui.screens.PartyServerEditor
+import com.music.bitchord.ui.screens.SignatureApiEditor
 import com.music.bitchord.ui.screens.SettingsScreen
 import com.music.bitchord.ui.screens.SourceEditorAlert
 import com.music.bitchord.ui.screens.SourcesScreen
@@ -333,6 +346,7 @@ import com.music.bitchord.ui.components.QueueActionNoticeHost
 import com.music.bitchord.ui.components.TopBarAccountButton
 import com.music.bitchord.ui.screens.SegmentedControl
 import com.music.bitchord.ui.components.SearchField
+import com.music.bitchord.ui.components.frostedSurfaceColor
 import com.music.bitchord.sharedui.resources.Res as SharedRes
 import com.music.bitchord.sharedui.resources.search_hint
 import com.music.bitchord.sharedui.resources.search_library_hint
@@ -750,6 +764,7 @@ private fun BitChordApp(
     var editingSource by remember { mutableStateOf<SourceConfig?>(null) }
     var confirmJioSaavn by remember { mutableStateOf(false) }
     var editingPartyServer by remember { mutableStateOf(false) }
+    var editingSignatureApi by remember { mutableStateOf(false) }
     var showHistory by remember { mutableStateOf(false) }
     /**
      * Which history the History page shows: YouTube's (the Library tab's
@@ -765,6 +780,13 @@ private fun BitChordApp(
     var librarySortMenuOpen by remember { mutableStateOf(false) }
     // The library folder whose sort menu is up, if one is.
     var folderSortMenuFor by remember { mutableStateOf<String?>(null) }
+    // What the detected duplicates page is searched for, from the field in the bar.
+    var duplicatesQuery by remember { mutableStateOf("") }
+    // Settings' search, held here so the bar can carry a copy of the field
+    // once the page's own has scrolled up under it.
+    var settingsQuery by remember { mutableStateOf("") }
+    var settingsFieldScrolledOff by remember { mutableStateOf(false) }
+    var settingsBarFieldFocused by remember { mutableStateOf(false) }
     var showLyricsSources by remember { mutableStateOf(false) }
     var showAppLanguage by remember { mutableStateOf(false) }
     var showTranslationLanguage by remember { mutableStateOf(false) }
@@ -788,8 +810,12 @@ private fun BitChordApp(
     var showDiscord by remember { mutableStateOf(false) }
     var showSpotify by remember { mutableStateOf(false) }
     var showDiscordLogin by remember { mutableStateOf(false) }
+    var showSpotifyLogin by remember { mutableStateOf(false) }
     var discordDialog by remember { mutableStateOf<DiscordDialog?>(null) }
     var songActions by remember { mutableStateOf<Song?>(null) }
+    // A device file being linked to its YouTube Music track by hand — see LocalLinks.
+    var linkingFile by remember { mutableStateOf<Song?>(null) }
+    val localLinks by LocalLinks.links.collectAsStateWithLifecycle()
     var showLyricsOffset by remember { mutableStateOf(false) }
     /**
      * Whether the track menu that is up was opened from the player.
@@ -836,6 +862,8 @@ private fun BitChordApp(
     var browseMenuOrigin by remember { mutableStateOf<HeldItem?>(null) }
     /** The album whose cover is being chosen, or null when that sheet is shut. */
     var albumArtPick by remember { mutableStateOf<BrowseTarget?>(null) }
+    /** One song whose art is being chosen, with the album it picks from. */
+    var songArtPick by remember { mutableStateOf<Pair<Song, BrowseTarget>?>(null) }
     /**
      * The dial tile the open menu was held on, or null when the menu came from
      * anywhere else — what gives the menu its "Remove from dial" row.
@@ -1015,6 +1043,7 @@ private fun BitChordApp(
     val searchScrollReset by viewModel.searchScrollReset.collectAsStateWithLifecycle()
     val detailStack by viewModel.detailStack.collectAsStateWithLifecycle()
     val releaseLibrary by viewModel.releaseLibrary.collectAsStateWithLifecycle()
+    val deviceArtists by viewModel.deviceArtists.collectAsStateWithLifecycle()
     val detail = detailStack.lastOrNull()
     // Local Music has no artwork to wash the top inset in, so it renders with
     // the ordinary bounded status bar rather than the artwork gradient used by
@@ -2100,7 +2129,9 @@ private fun BitChordApp(
      * downstream read.
      */
     val shelfSong: (ShelfItem) -> Song? = { item ->
-        item.videoId?.let { videoId ->
+        // A track played from the library comes back with its file, so it
+        // plays from there rather than being looked for on YouTube.
+        DevicePlays.song(item.videoId) ?: item.videoId?.let { videoId ->
             Song(
                 videoId = videoId,
                 title = item.title,
@@ -2369,7 +2400,11 @@ private fun BitChordApp(
         // after this check for the connection to have changed under it. This is
         // the one place that knows the tap was for forty tracks and can say so
         // once, rather than leaving forty identical failed rows to be read.
-        val blocked = songs.isNotEmpty() && !AppSettings.downloadsAllowedNow
+        // A copy out of the song cache spends no data, so Wi-Fi only does not
+        // refuse a batch that has one — [Downloads.enqueue] still refuses the
+        // tracks in it that would need the network.
+        val blocked = songs.isNotEmpty() && !AppSettings.downloadsAllowedNow &&
+            songs.none { Downloads.servableFromCache(it.videoId) }
         if (songs.isNotEmpty() && !blocked) {
             val needsStorage = AppSettings.exportDownloads.value && DownloadStore.needsLegacyPermission() &&
                 ContextCompat.checkSelfPermission(
@@ -2438,6 +2473,25 @@ private fun BitChordApp(
                 }
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+    // The Cached songs folder's download buttons. The song cache already holds
+    // these tracks, so they are saved from its copy — no data spent, no
+    // connection needed — rather than fetched afresh at the Download quality
+    // setting. See [Downloads.preferCachedCopy]. The folder's own second line
+    // ("YouTube · 4.2 MB") is the cache's, not the file's, and stays behind.
+    val downloadFromCache: (List<Song>) -> Unit = { songs ->
+        val cleaned = songs.map { it.copy(downloadFormat = null, localDateAddedSeconds = null) }
+        Downloads.preferCachedCopy(cleaned.map { it.videoId })
+        startDownload(cleaned, null)
+    }
+    val removedFromCacheMessage = stringResource(R.string.removed_from_cache)
+    // Takes tracks out of the song cache — the folder's selection, or one
+    // song's menu. The open folder re-reads itself off [AudioCache.contentsChanged].
+    val removeFromCache: (List<Song>) -> Unit = { songs ->
+        scope.launch {
+            val removed = songs.sumOf { AudioCache.remove(it.videoId) }
+            if (removed > 0) showQueueNotice(removedFromCacheMessage)
         }
     }
     /**
@@ -2517,10 +2571,18 @@ private fun BitChordApp(
         val current = player.song ?: return@LaunchedEffect
         if (current.albumId != null && current.artistId != null) return@LaunchedEffect
         linksLoading = true
-        links = YtMusicRepository.trackLinks(current.videoId).getOrNull()
+        if (LocalLinks.keyOf(current) != null) {
+            // A file of the listener's own has no YouTube id to ask after:
+            // it is looked up instead, and its link is applied below.
+            LocalLinks.resolve(current)
+        } else {
+            links = YtMusicRepository.trackLinks(current.videoId).getOrNull()
+        }
         linksLoading = false
     }
-    val playerSong = player.song?.let { current ->
+    val playerSong = player.song?.let { playing ->
+        // A device file opens its linked track's artist and album.
+        val current = LocalLinks.keyOf(playing)?.let { localLinks[it] }?.let { playing.linkedTo(it) } ?: playing
         val extra = links?.takeIf { it.videoId == current.videoId } ?: return@let current
         current.copy(
             artistId = current.artistId ?: extra.artistId,
@@ -2922,8 +2984,11 @@ private fun BitChordApp(
         // leaves the tab bar and mini player in place.
         // Replay's three layers unwind in the order they were opened. Ahead of
         // every other handler because they are drawn over everything else.
-        BackHandler(enabled = showReplayShare) { showReplayShare = false }
-        BackHandler(enabled = replayStory != null && !showReplayShare) { replayStory = null }
+        // Only while there is a summary to draw them from — otherwise back
+        // would spend a step closing something that never appeared.
+        val replayDrawable = replay.summary?.isEmpty == false
+        BackHandler(enabled = replayDrawable && showReplayShare) { showReplayShare = false }
+        BackHandler(enabled = replayDrawable && replayStory != null && !showReplayShare) { replayStory = null }
         BackHandler(
             enabled = showReplay && replayStory == null && !showReplayShare,
         ) {
@@ -3002,6 +3067,7 @@ private fun BitChordApp(
         BackHandler(enabled = discordDialog != null) { discordDialog = null }
         BackHandler(enabled = editingSource != null) { editingSource = null }
         BackHandler(enabled = editingPartyServer) { editingPartyServer = false }
+        BackHandler(enabled = editingSignatureApi) { editingSignatureApi = false }
         BackHandler(enabled = showHistory) { showHistory = false }
         // Disabled while a detail page is open over the grid: that one's own
         // BackHandler below has to close first, or back would skip past it
@@ -3141,6 +3207,10 @@ private fun BitChordApp(
                     else -> "$TAB_KEY$selectedTab"
                 }
                 val pageKey = pageKeyFor()
+                // Settings itself, with nothing of its own pushed over it.
+                val settingsRoot = pageKey == "settings" && settingsSubScreen == null &&
+                    !showDiscord && !showSpotify
+                val settingsSearchInBar = settingsRoot && (settingsFieldScrolledOff || settingsBarFieldFocused)
                 // How deep into the Library tab's own pages this one is: the
                 // tab itself, then what its menu opens (Playlists, Spotify, a
                 // library's Songs / Artists / Albums, the song history), then
@@ -3161,7 +3231,14 @@ private fun BitChordApp(
                 val libraryDepths = remember { HashMap<String, Int>() }
                 if (libraryDepth != null) libraryDepths[pageKey] = libraryDepth else libraryDepths.remove(pageKey)
                 // What one back step from a Library page shows, and the step.
+                // A page opened from a dial tile, straight off Home: the swipe
+                // runs its close, shrinking it back toward its tile as the
+                // finger goes, in place of the blur the other pages get.
+                val dialBack = !reduceAnimationSetting && detail != null && detailStack.size == 1 &&
+                    pageKey == detail.browseId && DialLaunch.origin?.key == pageKey &&
+                    pageKeyFor(top = null) == HOME_PAGE_KEY
                 val libraryBack: Pair<String, () -> Unit>? = when {
+                    dialBack -> HOME_PAGE_KEY to { viewModel.closeDetail(); Unit }
                     libraryDepth == null || libraryDepth == 0 || detailActiveShelf != null -> null
                     pageKey == "history" -> pageKeyFor(history = false) to { showHistory = false }
                     pageKey == "spotify" -> pageKeyFor(spotify = false) to { showSpotify = false }
@@ -3201,16 +3278,22 @@ private fun BitChordApp(
                 // Library pages: the swipe slides this page off to the right and
                 // the one under it in from the left, following the finger;
                 // letting go finishes the slide, cancelling slides it back.
+                // A dial tile's page shrinks toward its tile the same way.
                 PredictiveBackHandler(
                     enabled = libraryBack != null && !showSettings && !showAccountScrobbling && !showSources &&
                         !showListenTogether && !showEqualizer && !showReplay && !showStats && !showDiscord,
                 ) { events ->
                     val back = currentLibraryBack
+                    val dialing = dialBack
                     val leaving = pageKey
                     try {
                         events.collect { event ->
                             if (back != null) {
-                                pageTransitionState.seekTo(event.progress.coerceIn(0f, 1f), back.first)
+                                val progress = event.progress.coerceIn(0f, 1f)
+                                pageTransitionState.seekTo(
+                                    if (dialing) DialLaunch.backFraction(progress) else progress,
+                                    back.first,
+                                )
                             }
                         }
                         back?.second?.invoke()
@@ -3501,6 +3584,8 @@ private fun BitChordApp(
                                     type = BrowseType.PLAYLIST,
                                 )
                             },
+                            onOpenLogin = { showSpotifyLogin = true },
+                            onOpenTokenSetup = { showSpotifyCanvasAuth = true },
                             contentPadding = listPadding,
                         )
                     } else if (key == "discord") {
@@ -3561,6 +3646,14 @@ private fun BitChordApp(
                     } else if (key == "equalizer") {
                         EqualizerScreen(contentPadding = listPadding)
                     } else if (key == "settings") {
+                        // A fresh, unfiltered page each time Settings opens.
+                        DisposableEffect(Unit) {
+                            onDispose {
+                                settingsQuery = ""
+                                settingsFieldScrolledOff = false
+                                settingsBarFieldFocused = false
+                            }
+                        }
                         SettingsScreen(
                             windowWidth = windowWidth,
                             signedIn = signedIn,
@@ -3594,10 +3687,15 @@ private fun BitChordApp(
                                 showListenTogether = true
                             },
                             onSpotifyCanvasAuth = { showSpotifyCanvasAuth = true },
+                            onEditSignatureApi = { editingSignatureApi = true },
                             onAppLanguage = { showAppLanguage = true },
                             contentPadding = listPadding,
                             onShowUpdate = { showUpdateDialog = true },
                             onLibraryDuplicates = { settingsSubScreen = LIBRARY_DUPLICATES_SCREEN },
+                            searchQuery = settingsQuery,
+                            onSearchQueryChange = { settingsQuery = it },
+                            searchInBar = settingsSearchInBar,
+                            onSearchScrolledOff = { settingsFieldScrolledOff = it },
                         )
                     } else if (page != null && page.browseId.isDeviceFolder()) {
                         // Local Music and Downloads — both the tabbed Songs / Artists /
@@ -3647,6 +3745,10 @@ private fun BitChordApp(
                                 } else {
                                     null
                                 },
+                            // The song cache's own copies go to Downloads from
+                            // disk, and its selection comes out of the cache.
+                            onDownload = downloadFromCache.takeIf { page.browseId == CACHE_FOLDER_BROWSE_ID },
+                            onRemoveFromCache = removeFromCache.takeIf { page.browseId == CACHE_FOLDER_BROWSE_ID },
                             onSongClick = { songs, index ->
                                 playFrom(
                                     songs,
@@ -3816,6 +3918,8 @@ private fun BitChordApp(
                             isLocalRelease = { item ->
                                 item.browseId?.let { it.startsWith(LIBRARY_GROUP_PREFIX) || downloadIdFor(it) != null } == true
                             },
+                            deviceArtist = deviceArtists[page.browseId],
+                            onLoadDeviceArtist = viewModel::loadDeviceArtist,
                             releaseLibrary = releaseLibrary,
                             onLoadReleaseLibrary = viewModel::loadReleaseLibrary,
                             onToggleReleaseLibrary = if (signedIn) {
@@ -4339,8 +4443,11 @@ private fun BitChordApp(
                             LaunchedEffect(Unit) { viewModel.loadLibraryDuplicates() }
                             val duplicates by viewModel.libraryDuplicates.collectAsStateWithLifecycle()
                             val duplicatesTitle = stringResource(R.string.library_duplicates)
+                            // A fresh page each time it opens, unfiltered.
+                            DisposableEffect(Unit) { onDispose { duplicatesQuery = "" } }
                             LibraryDuplicatesScreen(
                                 state = duplicates,
+                                query = duplicatesQuery,
                                 contentPadding = listPadding,
                                 onPlayCopy = { song ->
                                     playFrom(listOf(song), 0, QueueSource(duplicatesTitle, PlaybackSourceType.BROWSE))
@@ -4477,6 +4584,44 @@ private fun BitChordApp(
                         )
                     }
                 }
+                // The detected duplicates page is searched from the bar too.
+                val duplicatesSearch: (@Composable () -> Unit)? =
+                    if (settingsSubScreen == LIBRARY_DUPLICATES_SCREEN && !showDiscord && !showSpotify) {
+                        @Composable {
+                            LibrarySearchField(
+                                query = duplicatesQuery,
+                                onQueryChange = { duplicatesQuery = it },
+                            )
+                        }
+                    } else {
+                        null
+                    }
+                // Settings' search, once the page's own field has scrolled up
+                // under the bar, comes along beside the back button and stays.
+                val settingsSearch: (@Composable () -> Unit)? =
+                    if (settingsRoot) {
+                        @Composable {
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = settingsSearchInBar,
+                                enter = fadeIn() + expandHorizontally(expandFrom = Alignment.Start),
+                                exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.Start),
+                            ) {
+                                SearchField(
+                                    query = settingsQuery,
+                                    onQueryChange = { settingsQuery = it },
+                                    onSubmit = {},
+                                    placeholder = stringResource(R.string.settings_search_hint),
+                                    containerColor = frostedSurfaceColor(MaterialTheme.colorScheme.surfaceVariant),
+                                    // Kept up while it is being typed into, even when
+                                    // the results are short enough to bring the
+                                    // page's own field back into view.
+                                    modifier = Modifier.onFocusChanged { settingsBarFieldFocused = it.hasFocus },
+                                )
+                            }
+                        }
+                    } else {
+                        null
+                    }
                 FrostedTopBar(
                     title = when {
                         homeRoot -> ""
@@ -4588,7 +4733,7 @@ private fun BitChordApp(
                             )
                         }
                     } else {
-                        folderSearch
+                        folderSearch ?: duplicatesSearch ?: settingsSearch
                     },
                     actions = {
                         // This is intentionally scoped to Listen together: the
@@ -4925,6 +5070,10 @@ private fun BitChordApp(
                     showStats = false
                     settingsSubScreen = null
                     showHistory = false
+                    // Spotify and Discord are pages too; left open, they sat
+                    // over every tab and the bar seemed to stop switching.
+                    showSpotify = false
+                    showDiscord = false
                     libraryShowAll = null
                     selectedTab = index
 
@@ -5195,7 +5344,7 @@ private fun BitChordApp(
         // ---- Share the Replay ----
         if (showReplayShare) {
             replay.summary?.takeUnless { it.isEmpty }?.let { summary ->
-                ModalBottomSheet(
+                SlideDownBottomSheet(
                     onDismissRequest = { showReplayShare = false },
                     // Straight to full height. The sheet is a picture and two
                     // buttons, and half-open it showed the picture with both
@@ -5220,7 +5369,20 @@ private fun BitChordApp(
         // One body for both presentations of the track menu: the sheet the ⋮
         // and the player open, and the popup a held row lifts into. Every
         // callback below is the same in either; only the frame differs.
-        val songMenuBody: @Composable (Song, SongActionsPresentation) -> Unit = { song, presentation ->
+        val songMenuBody: @Composable (Song, SongActionsPresentation) -> Unit = { menuSong, presentation ->
+            // A device file carries its linked track's artist and album, and
+            // is looked up once when it has no link yet — see LocalLinks.
+            val song = LocalLinks.keyOf(menuSong)?.let { localLinks[it] }?.let { menuSong.linkedTo(it) } ?: menuSong
+            var resolvingFile by remember(menuSong.videoId) { mutableStateOf(false) }
+            LaunchedEffect(menuSong.videoId) {
+                if (LocalLinks.keyOf(menuSong) != null && LocalLinks.linkFor(menuSong) == null &&
+                    (menuSong.albumId == null || menuSong.artistId == null)
+                ) {
+                    resolvingFile = true
+                    LocalLinks.resolve(menuSong)
+                    resolvingFile = false
+                }
+            }
             // Set by whoever opened it — see [menuFromPlayer]. It cannot be
             // read off the player's own visibility any more, because on a
             // tablet the player is visible whatever the menu was opened from.
@@ -5348,6 +5510,15 @@ private fun BitChordApp(
             // carries the per-entry id a removal is expressed in.
             val editable = viewModel.editablePlaylist(detail?.browseId)
                 ?.takeIf { !fromPlayer && song.setVideoId != null }
+            // Asked of the cache's index off the main thread as the menu opens,
+            // so "Remove from cache" is only offered for a track it holds.
+            // Re-asked when the cache changes, which is what drops the row
+            // once the track has gone.
+            val cacheVersion by AudioCache.contentsChanged.collectAsStateWithLifecycle()
+            val inCache by produceState(false, song.videoId, cacheVersion) {
+                value = song.localUri == null &&
+                    withContext(Dispatchers.IO) { AudioCache.holds(song.videoId) }
+            }
             SongActionsSheet(
                 song = song,
                 presentation = presentation,
@@ -5395,7 +5566,15 @@ private fun BitChordApp(
                 // Stays open: the row it replaces itself with is the
                 // progress, and closing the sheet would hide the only
                 // answer to "did that work?".
-                onDownload = { downloadSong(song) },
+                // From the Cached songs folder, the cache's own copy is the
+                // download — the same as the row's download button there.
+                onDownload = {
+                    if (!fromPlayer && detail?.browseId == CACHE_FOLDER_BROWSE_ID) {
+                        downloadFromCache(listOf(song))
+                    } else {
+                        downloadSong(song)
+                    }
+                },
                 // The other direction: a device file going up to the
                 // server. Closed first, unlike a download — progress and
                 // the summary notice live outside the sheet.
@@ -5409,6 +5588,29 @@ private fun BitChordApp(
                         }
                     } else {
                         null
+                    },
+                // A device file with an album: its art can be picked from
+                // the covers the album's other files carry.
+                onChangeAlbumArt = song.albumName
+                    ?.takeIf { it.isNotBlank() && song.localUri?.startsWith("content://") == true }
+                    ?.let { album ->
+                        {
+                            songActions = null
+                            scope.launch {
+                                val mates = runCatching {
+                                    com.music.bitchord.data.LocalMediaRepository.getLocalMusic(context)
+                                }.getOrDefault(emptyList())
+                                    .filter { it.albumName.equals(album, ignoreCase = true) }
+                                    .ifEmpty { listOf(song) }
+                                songArtPick = song to BrowseTarget(
+                                    browseId = null,
+                                    title = album,
+                                    subtitle = song.artist,
+                                    type = BrowseType.ALBUM,
+                                    songs = mates,
+                                )
+                            }
+                        }
                     },
                 // The sheet stays up for a rating: it shows the new state
                 // in place, and people often thumb a song and then queue it.
@@ -5437,6 +5639,14 @@ private fun BitChordApp(
                         viewModel.removeFromPlaylist(it.browseId, song)
                     }
                 },
+                onRemoveFromCache = if (inCache) {
+                    {
+                        songActions = null
+                        removeFromCache(listOf(song))
+                    }
+                } else {
+                    null
+                },
                 onOpenAlbum = { id ->
                     openPage(
                         id,
@@ -5451,7 +5661,16 @@ private fun BitChordApp(
                 // Only the player's copy of a track is ever missing these
                 // and backfilling — a row opened from a list already has
                 // whatever ids it's ever going to have.
-                resolvingLinks = fromPlayer && linksLoading,
+                resolvingLinks = (fromPlayer && linksLoading) || resolvingFile,
+                onLinkToYouTube = if (LocalLinks.keyOf(song) != null) {
+                    {
+                        linkingFile = song
+                        songActions = null
+                    }
+                } else {
+                    null
+                },
+                linkedToYouTube = LocalLinks.keyOf(song)?.let { it in localLinks } == true,
                 showSleepTimer = fromPlayer,
                 // Offered for every playing track with a YouTube upload
                 // behind it, not only for one an upgrade visibly swapped:
@@ -5557,7 +5776,7 @@ private fun BitChordApp(
             )
         }
         songActions?.takeIf { songMenuOrigin == null }?.let { song ->
-            ModalBottomSheet(
+            SlideDownBottomSheet(
                 onDismissRequest = { songActions = null },
                 // The sheet paints itself in the track's own colours, corners
                 // and drag handle included — see SongActionsSheet.
@@ -5601,7 +5820,7 @@ private fun BitChordApp(
                 DownloadSession.markSeen()
             }
             BackHandler(onBack = closeDownloadManager)
-            ModalBottomSheet(
+            SlideDownBottomSheet(
                 onDismissRequest = closeDownloadManager,
                 containerColor = MaterialTheme.colorScheme.background,
             ) {
@@ -5619,7 +5838,7 @@ private fun BitChordApp(
                 playlistTarget = null
                 creatingPlaylist = false
             }
-            ModalBottomSheet(
+            SlideDownBottomSheet(
                 onDismissRequest = dismiss,
                 containerColor = MaterialTheme.colorScheme.background,
             ) {
@@ -5734,6 +5953,13 @@ private fun BitChordApp(
                 ?.takeIf { signedIn && ownedPlaylists[it] == true }
                 ?.let { id -> playlists.firstOrNull { it.browseId == id } }
             val remote = target.browseId?.startsWith("local:") == false
+            // Spotify playlists saved on this device ("local:playlist:sp_local_…")
+            // carry real YouTube video ids, so they download like a remote
+            // playlist — but they have no YouTube Music page, so Share stays
+            // on [remote] alone. The device-folder ids ("local:downloads",
+            // "local:all", …) are neither.
+            val downloadable = remote ||
+                target.browseId?.startsWith("local:playlist:sp_local_") == true
             val pinnedPlaylists by AppSettings.pinnedPlaylists.collectAsStateWithLifecycle()
             val pinnableId = target.browseId?.takeIf { target.type == BrowseType.PLAYLIST }
             // The artist's star, asked for as the menu opens (signed in only:
@@ -5814,7 +6040,7 @@ private fun BitChordApp(
                                 )
                             },
                     )
-                }.takeIf { remote },
+                }.takeIf { downloadable },
                 // The same link a share off YouTube Music's own overflow
                 // gives — built from the browse id rather than fetched,
                 // since nothing about it depends on the tracks or the
@@ -5966,8 +6192,31 @@ private fun BitChordApp(
                 dialLabelHidden = dialLabels == (target.browseId in dialHiddenLabels),
             )
         }
+        songArtPick?.let { (song, album) ->
+            SlideDownBottomSheet(
+                onDismissRequest = { songArtPick = null },
+                containerColor = MaterialTheme.colorScheme.background,
+            ) {
+                com.music.bitchord.ui.components.AlbumArtPickerSheet(
+                    target = album,
+                    song = song,
+                    onPick = { url ->
+                        songArtPick = null
+                        scope.launch {
+                            if (url == null) {
+                                com.music.bitchord.data.AlbumArtChoices.clearSong(song)
+                            } else {
+                                com.music.bitchord.data.AlbumArtChoices.pickForSong(context, song, url)
+                            }
+                            // The library's rows were read with the old art.
+                            viewModel.loadLibrarySongs()
+                        }
+                    },
+                )
+            }
+        }
         albumArtPick?.let { target ->
-            ModalBottomSheet(
+            SlideDownBottomSheet(
                 onDismissRequest = { albumArtPick = null },
                 containerColor = MaterialTheme.colorScheme.background,
             ) {
@@ -5991,7 +6240,7 @@ private fun BitChordApp(
             }
         }
         browseActions?.takeIf { browseMenuOrigin == null }?.let { target ->
-            ModalBottomSheet(
+            SlideDownBottomSheet(
                 onDismissRequest = { browseActions = null },
                 containerColor = MaterialTheme.colorScheme.background,
             ) {
@@ -6045,7 +6294,7 @@ private fun BitChordApp(
                     override suspend fun onPostFling(consumed: Velocity, available: Velocity) = available
                 }
             }
-            ModalBottomSheet(
+            SlideDownBottomSheet(
                 onDismissRequest = close,
                 sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
                 containerColor = MaterialTheme.colorScheme.background,
@@ -6192,6 +6441,15 @@ private fun BitChordApp(
                         showUpdateDialog = false
                     },
                 )
+            }
+        }
+
+        linkingFile?.let { file ->
+            SlideDownBottomSheet(
+                onDismissRequest = { linkingFile = null },
+                containerColor = MaterialTheme.colorScheme.background,
+            ) {
+                LinkToYouTubeSheet(file = file, onDone = { linkingFile = null })
             }
         }
 
@@ -6623,6 +6881,44 @@ private fun BitChordApp(
             }
         }
 
+        // ---- Spotify sign-in (full screen WebView) ----
+        // Out here with Discord's rather than on the Spotify page itself: see
+        // SpotifyLoginScreen for what the blurred content tree does to a WebView.
+        if (showSpotifyLogin) {
+            BackHandler { showSpotifyLogin = false }
+            Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                Column(Modifier.fillMaxSize()) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        IconButton(onClick = { showSpotifyLogin = false }) {
+                            Icon(
+                                Icons.Rounded.Close,
+                                contentDescription = stringResource(R.string.close),
+                                tint = MaterialTheme.colorScheme.onBackground,
+                            )
+                        }
+                        Text(
+                            stringResource(R.string.spotify_sign_in),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                    }
+                    SpotifyLoginScreen(
+                        modifier = Modifier.navigationBarsPadding(),
+                        onConnected = { token ->
+                            AppSettings.setSpotifySpdcToken(token)
+                            showSpotifyLogin = false
+                        },
+                    )
+                }
+            }
+        }
+
         if (showSpotifyCanvasAuth) {
             BackHandler { showSpotifyCanvasAuth = false }
             SpotifyCanvasAuthScreen(
@@ -6645,6 +6941,13 @@ private fun BitChordApp(
             PartyServerEditor(
                 hazeState = hazeState,
                 onDismiss = { editingPartyServer = false },
+            )
+        }
+
+        if (editingSignatureApi) {
+            SignatureApiEditor(
+                hazeState = hazeState,
+                onDismiss = { editingSignatureApi = false },
             )
         }
 
@@ -7049,9 +7352,12 @@ private fun rememberHomeFeed(
     val lastSpeedDial by CustomizationSettings.lastSpeedDial.collectAsStateWithLifecycle()
     val homeFresh by viewModel.homeFresh.collectAsStateWithLifecycle()
     val holdSavedDial = !homeFresh && lastSpeedDial.isNotEmpty()
+    // A track from the library has started: YouTube's history won't move for
+    // it, so the dial is built again here instead.
+    val devicePlays by DevicePlays.version.collectAsStateWithLifecycle()
     // The feed as Home draws it: the speed dial, then YouTube Music's shelves
     // in the order it gives them.
-    val baseHomeState = remember(homeState, speedDialPins, holdSavedDial, lastSpeedDial, hiddenFromDial) {
+    val baseHomeState = remember(homeState, speedDialPins, holdSavedDial, lastSpeedDial, hiddenFromDial, devicePlays) {
         val savedDial = if (holdSavedDial) {
             CustomizationSettings.buildSpeedDial(
                 speedDialPins,

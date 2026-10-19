@@ -102,8 +102,8 @@ fun ThinSlider(
     /** Halfway between the two track colours: visible against unplayed, invisible under played. */
     markerColor: Color = Color.White.copy(alpha = 0.5f),
     /**
-     * Draws One UI 9's wave progress instead of the plain capsule: a hairline with white,
-     * secondary and primary waves rising out of its played part — see [drawWaves].
+     * Draws One UI 9's wave progress instead of the plain capsule: a hairline with light,
+     * dark and plain accent waves rising out of its played part — see [drawWaves].
      */
     waves: WaveAccents? = null,
     /** Whether the waves drift and stand up; paused, they settle back into the line. */
@@ -317,7 +317,7 @@ private fun WaveTrack(
         val line = lineHeight.toPx()
         val top = size.height / 2f - line / 2f
         val radius = CornerRadius(line / 2f)
-        // The bead sits on the line's ends at 0 and 100%, so the line is inset by its radius.
+        // The bead sits on the line's ends at 0 and 100%, so the line is inset by its halo.
         val inset = THUMB_INSET.toPx()
         val width = size.width - inset * 2f
         drawRoundRect(
@@ -357,7 +357,8 @@ private fun WaveTrack(
         }
         if (played > 0f) {
             drawRoundRect(
-                color = activeColor.copy(alpha = activeColor.alpha * alpha),
+                // The played part of the line is in the accent, like the bead's core.
+                color = accents.accent.copy(alpha = activeColor.alpha * alpha),
                 topLeft = Offset(inset, top),
                 size = Size(played.coerceAtLeast(line * factor).coerceAtMost(width), line),
                 cornerRadius = radius,
@@ -367,7 +368,7 @@ private fun WaveTrack(
             drawWaveThumb(
                 center = Offset(inset + played, size.height / 2f),
                 scale = thumbScale * factor,
-                accent = accents.primary,
+                accent = accents.accent,
                 alpha = factor,
             )
         }
@@ -375,7 +376,7 @@ private fun WaveTrack(
 }
 
 private val WAVE_CANVAS_HEIGHT = 30.dp
-private val THUMB_INSET = 6.dp
+private val THUMB_INSET = THUMB_HALO
 
 /**
  * One beat clock for everything that pulses with an Automix blend — the seek bar's fill and

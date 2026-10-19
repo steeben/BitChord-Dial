@@ -3198,6 +3198,18 @@ class PlaybackService : MediaLibraryService() {
     }
 
     /**
+     * Whether [error] was the connection's fault rather than the bytes': the
+     * network failed or timed out, a URL had expired, or there was no
+     * connection to begin with. Such a failure says nothing against what is
+     * cached, so recovery keeps every complete entry — see [AudioCache.discard].
+     */
+    private fun isNetworkFault(error: PlaybackException): Boolean =
+        error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
+            error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ||
+            error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ||
+            AudioCache.isOffline()
+
+    /**
      * Puts a track that died mid-read back on its feet.
      *
      * Two things get thrown away before trying again, because both have been
@@ -3252,7 +3264,7 @@ class PlaybackService : MediaLibraryService() {
         // again. Rebuild it as an explicit YouTube request instead. This also
         // clears a DASH/HLS MIME left on an upgraded item, which otherwise makes
         // Media3 parse YouTube's WebM bytes as a manifest forever.
-        if (fallbackFailedAlternativeToYouTube(item, uri, position)) return
+        if (fallbackFailedAlternativeToYouTube(item, uri, position, error)) return
         // A manifest read as audio is not a broken stream, and everything below
         // this line would treat it as one. Ahead of the verdict and the attempt
         // budget for the same reason as the local-file case above: this is not
@@ -3360,11 +3372,14 @@ class PlaybackService : MediaLibraryService() {
                 QualityUpgrade.refuseUpgrades(videoId)
             }
         uri?.getQueryParameter("v")?.let(StreamChoice::forget)
+        // Read now, not after the delay: it describes the failure, and the
+        // connection may be back by then.
+        val networkFault = isNetworkFault(error)
         scope.launch(TrackLog.about(mediaId)) {
             // Long enough for the released source to let go of the cache keys
             // about to be removed, short enough to read as a stutter.
             delay(RECOVERY_DELAY_MS)
-            uri?.let { withContext(Dispatchers.IO) { AudioCache.discard(it) } }
+            uri?.let { withContext(Dispatchers.IO) { AudioCache.discard(it, keepComplete = networkFault) } }
             // The bytes go even when nothing is going to be prepared after
             // them. A half-filled entry whose owner has just been forgotten is
             // the seam this file's [StreamChoice] note is about: the next play
@@ -3406,6 +3421,7 @@ class PlaybackService : MediaLibraryService() {
         item: MediaItem,
         uri: Uri?,
         position: Long,
+        error: PlaybackException,
     ): Boolean {
         val playbackUri = uri ?: return false
         val videoId = playbackUri.getQueryParameter("v")
@@ -3428,9 +3444,10 @@ class PlaybackService : MediaLibraryService() {
             about = mediaId,
         )
 
+        val networkFault = isNetworkFault(error)
         scope.launch(TrackLog.about(mediaId)) {
             delay(RECOVERY_DELAY_MS)
-            withContext(Dispatchers.IO) { AudioCache.discard(playbackUri) }
+            withContext(Dispatchers.IO) { AudioCache.discard(playbackUri, keepComplete = networkFault) }
             withContext(Dispatchers.Main) {
                 val live = this@PlaybackService.player ?: return@withContext
                 if (live.currentMediaItem?.mediaId != mediaId) return@withContext

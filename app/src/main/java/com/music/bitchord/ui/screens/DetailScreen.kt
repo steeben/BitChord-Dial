@@ -15,6 +15,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import com.music.bitchord.ui.components.longPressMenuClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -94,6 +95,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -112,6 +116,7 @@ import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.compose.AsyncImagePainter
 import coil3.request.ImageRequest
+import coil3.request.transformations
 import androidx.compose.runtime.mutableIntStateOf
 import kotlinx.coroutines.delay
 import androidx.compose.ui.layout.layout
@@ -128,6 +133,8 @@ import com.music.bitchord.data.model.DetailPage
 import com.music.bitchord.data.model.CARD_ART_PX
 import com.music.bitchord.data.model.HEADER_ART_PX
 import com.music.bitchord.data.model.ROW_ART_PX
+import com.music.bitchord.data.ArtistOnDevice
+import com.music.bitchord.data.LibraryDuplicates
 import com.music.bitchord.data.model.HomeShelf
 import com.music.bitchord.data.model.ShelfItem
 import com.music.bitchord.data.settings.SongSort
@@ -138,6 +145,9 @@ import com.music.bitchord.data.model.artworkAt
 import com.music.bitchord.data.model.durationMillis
 import com.music.bitchord.data.model.isSameTrackAs
 import com.music.bitchord.data.settings.AppSettings
+import com.music.bitchord.data.canvas.ArtistSignature
+import com.music.bitchord.data.canvas.ArtistSignatureRepository
+import com.music.bitchord.data.canvas.SignatureInkTransformation
 import com.music.bitchord.ui.components.DownloadedBadge
 import com.music.bitchord.ui.components.ExplicitSongTitle
 import com.music.bitchord.ui.components.LIBRARY_GRID_SPACING
@@ -245,21 +255,28 @@ private const val ROW_REVEAL_WINDOW_MS = 800L
 /** How far the artist name/logo and everything under it sit above the usual [HEADER_DROP]. */
 private val ARTIST_HEADER_LIFT = 64.dp
 
-/** The artist action row: a large Play flanked by two smaller glass circles. */
+/** The artist action row: a large Play flanked by smaller glass circles. */
 private val ARTIST_PLAY_BUTTON = 70.dp
 
 /** A larger share of a smaller circle than the release headers' 0.44. */
 private const val ARTIST_PLAY_ICON_SCALE = 0.56f
-private val ARTIST_SIDE_BUTTON = 52.dp
-private val ARTIST_ACTION_GAP = 24.dp
 
-/** With Start radio and the pin either side as well: five across. */
+/** Radio and Shuffle, then the star and the pin: five across. */
 private val ARTIST_SIDE_BUTTON_CROWDED = 46.dp
 private val ARTIST_ACTION_GAP_CROWDED = 12.dp
 
 /** The title logo's widest share of the page, and tallest share of the photo. */
 private const val ARTIST_LOGO_WIDTH = 0.82f
 private const val ARTIST_LOGO_MAX_HEIGHT = 0.30f
+
+/** The signature closing the About section. */
+private val ABOUT_LOGO_HEIGHT = 56.dp
+
+/** A signature is drawn at this share of a title logo's size. */
+private const val SIGNATURE_SCALE = 0.7f
+
+/** Vector signatures decode at this width so small files stay crisp laid out large. */
+private const val SVG_DECODE_WIDTH = 1600
 
 private const val LOGO_RETRIES = 2
 private const val LOGO_RETRY_DELAY_MS = 800L
@@ -339,6 +356,15 @@ fun DetailScreen(
     isLocalSong: (Song) -> Boolean = { it.localUri != null || it.localPath != null },
     /** Whether a release card on an artist page is on this device. */
     isLocalRelease: (ShelfItem) -> Boolean = { false },
+    /**
+     * The artist's songs and albums among the device's files and downloads,
+     * which the Local toggle lists beside what it keeps of the page: a file
+     * is never one of the tracks YouTube Music's page lists. Null until
+     * [onLoadDeviceArtist] has looked.
+     */
+    deviceArtist: ArtistOnDevice? = null,
+    /** Looks the artist up on the device, by the page's browse id and the artist's name. */
+    onLoadDeviceArtist: ((String, String) -> Unit)? = null,
     /** Library state of releases shown as cards on this page, by browse id. */
     releaseLibrary: Map<String, LibraryState> = emptyMap(),
     onLoadReleaseLibrary: ((String) -> Unit)? = null,
@@ -364,19 +390,29 @@ fun DetailScreen(
     // An artist page's Local toggle: only what is on this device, both the top
     // songs and the release shelves.
     var localOnly by rememberSaveable(page.browseId) { mutableStateOf(isArtist && localOnlyByDefault) }
-    val shownSections = remember(page.sections, localOnly, isLocalRelease) {
+    val albumsTitle = stringResource(R.string.albums)
+    val shownSections = remember(page.sections, localOnly, isLocalRelease, deviceArtist, albumsTitle) {
         if (!localOnly) {
             page.sections
         } else {
             page.sections
                 .map { shelf -> shelf.copy(items = shelf.items.filter(isLocalRelease)) }
                 .filter { it.items.isNotEmpty() }
+                .withDeviceAlbums(deviceArtist?.albums.orEmpty(), albumsTitle)
         }
     }
     // What the artist page plays and lists: everything, or with Local on, only
-    // the tracks on this device.
-    val artistSongs = remember(songs, localOnly, isLocalSong) {
-        if (localOnly) songs.filter(isLocalSong) else songs
+    // the tracks on this device, the page's own and the artist's other files.
+    val artistSongs = remember(songs, localOnly, isLocalSong, deviceArtist) {
+        if (localOnly) {
+            val kept = songs.filter(isLocalSong)
+            val ids = kept.mapTo(HashSet()) { it.videoId }
+            kept + deviceArtist?.songs.orEmpty().filter { file ->
+                file.videoId !in ids && kept.none { LibraryDuplicates.sameSong(it, file) }
+            }
+        } else {
+            songs
+        }
     }
     // Whether the top release card's album is already saved isn't on the shelf
     // item; it is read off the album once, as soon as the card is known.
@@ -392,8 +428,38 @@ fun DetailScreen(
     // nobody, so a title that reads as several artists waits for that swap; any
     // other name starts the moment the page opens.
     val nameSettled = !page.title.looksLikeCredit() || page.songs !is UiState.Loading
+    // The device is looked up by the artist's name too, so it waits the same way.
+    LaunchedEffect(localOnly, page.browseId, page.title, nameSettled) {
+        if (isArtist && localOnly && nameSettled) onLoadDeviceArtist?.invoke(page.browseId, page.title)
+    }
     LaunchedEffect(page.browseId, page.title, nameSettled) {
         if (isArtist && nameSettled) appleArt = AppleArtistArtRepository.artFor(page.title) ?: appleArt
+    }
+    // Secondary provider: a handwritten signature from the artist-signature
+    // API in Settings. In the header when Apple has no title logo, otherwise
+    // at the foot of the About section.
+    val signatureEnabled by AppSettings.signatureApiEnabled.collectAsStateWithLifecycle()
+    val signatureBaseUrl by AppSettings.signatureApiUrl.collectAsStateWithLifecycle()
+    val signatureUpdates by ArtistSignatureRepository.updates.collectAsStateWithLifecycle()
+    var signature by remember(page.browseId) { mutableStateOf<ArtistSignature?>(null) }
+    LaunchedEffect(page.browseId, page.title, nameSettled, signatureEnabled, signatureBaseUrl, signatureUpdates) {
+        if (!isArtist || !nameSettled) return@LaunchedEffect
+        val base = ArtistSignatureRepository.effectiveBaseUrl(signatureEnabled, signatureBaseUrl)
+        if (base == null) {
+            signature = null
+            return@LaunchedEffect
+        }
+        // Bounded retries with backoff: a sleeping self-hosted API can take
+        // ~30-60s to wake, and a single miss would otherwise stand until the
+        // page is reopened. Misses aren't cached, so retrying is cheap.
+        val backoff = listOf(0L, 5_000L, 15_000L, 30_000L)
+        for (wait in backoff) {
+            if (wait > 0) delay(wait)
+            signature = ArtistSignatureRepository.cached(page.title, base)
+                ?: ArtistSignatureRepository.signatureFor(page.title, base)
+                ?: signature
+            if (signature != null) return@LaunchedEffect
+        }
     }
     val palette = rememberArtworkPalette(
         imageUrl = appleArt?.heroUrl ?: page.thumbnailUrl,
@@ -658,6 +724,7 @@ fun DetailScreen(
                             palette = palette,
                             artHeight = artHeight,
                             appleArt = appleArt,
+                            signature = signature,
                             onNamePlaced = { controlsLead = it },
                         )
                     }
@@ -742,8 +809,10 @@ fun DetailScreen(
             // empty still gets the section for them.
             val hasStats = isArtist &&
                 (page.subscriberCountText != null || page.monthlyListenerCount != null)
+            // The header holds Apple's logo here, so the ink goes at the foot of the page instead.
+            val aboutSignature = if (isArtist && appleArt?.logoUrl != null) signature else null
             val showAbout = (!description.isNullOrBlank() &&
-                (page.type == BrowseType.ALBUM || isArtist)) || hasStats
+                (page.type == BrowseType.ALBUM || isArtist)) || hasStats || aboutSignature != null
             fun LazyListScope.aboutItem() {
                 if (!showAbout) return
                 item(key = "about") {
@@ -767,6 +836,16 @@ fun DetailScreen(
                         } else {
                             null
                         },
+                        footer = aboutSignature?.let { sig ->
+                            {
+                                AboutSignature(
+                                    signature = sig,
+                                    name = page.title,
+                                    palette = palette,
+                                    horizontalPadding = ARTIST_CONTENT_GUTTER,
+                                )
+                            }
+                        },
                     )
                     }
                 }
@@ -777,23 +856,29 @@ fun DetailScreen(
                 is UiState.Loading -> detailSkeleton(isArtist)
                 is UiState.Error -> item { MessageState(state.message) }
                 is UiState.Success -> if (isArtist) {
-                    if (localOnly && artistSongs.isEmpty() && shownSections.isEmpty()) {
+                    // Said only once the device has been looked through, not while it is.
+                    val deviceLooked = deviceArtist != null || onLoadDeviceArtist == null
+                    if (localOnly && deviceLooked && artistSongs.isEmpty() && shownSections.isEmpty()) {
                         item(key = "nothing-local") { MessageState(stringResource(R.string.nothing_on_device_for_artist)) }
                     }
                     // An artist's full song list would bury the album shelves, so
-                    // it pages sideways four at a time and stops at twenty.
+                    // it pages sideways four at a time and stops at twenty. What is
+                    // on the device is listed whole: it is the listener's own.
                     if (artistSongs.isNotEmpty()) item {
-                        val top = artistSongs.take(MAX_ARTIST_SONGS)
+                        val top = if (localOnly) artistSongs else artistSongs.take(MAX_ARTIST_SONGS)
                         SectionHeading(
-                            title = stringResource(R.string.top_songs),
+                            title = stringResource(if (localOnly) R.string.songs else R.string.top_songs),
                             palette = palette,
                             horizontalPadding = ARTIST_CONTENT_GUTTER,
                         )
                         BoxWithConstraints {
                             val columnWidth = trackColumnWidth(maxWidth)
+                            val topSongsState = rememberLazyListState()
                             LazyRow(
+                                state = topSongsState,
                                 contentPadding = PaddingValues(horizontal = ARTIST_CONTENT_GUTTER),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                flingBehavior = rememberSnapFlingBehavior(lazyListState = topSongsState),
                             ) {
                                 items(top.chunked(SONGS_PER_COLUMN)) { column ->
                                     Column(Modifier.width(columnWidth)) {
@@ -923,9 +1008,12 @@ fun DetailScreen(
                         onShowAll = if (canShowAll) { { onActiveShelfChange(shelf) } } else null,
                         horizontalPadding = ARTIST_CONTENT_GUTTER,
                     )
+                    val carouselState = rememberLazyListState()
                     LazyRow(
+                        state = carouselState,
                         contentPadding = PaddingValues(horizontal = ARTIST_CONTENT_GUTTER),
                         horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        flingBehavior = rememberSnapFlingBehavior(lazyListState = carouselState),
                     ) {
                         items(displayItems) { item ->
                             SectionCard(
@@ -960,6 +1048,7 @@ fun DetailScreen(
                                     palette = palette,
                                     artHeight = artHeight,
                                     appleArt = appleArt,
+                                    signature = signature,
                                 )
                                 artistActions(Modifier, 0.dp)
                             }
@@ -1149,12 +1238,11 @@ private fun ReleaseActions(
     // Only where YouTube said the release can be saved and the
     // caller is willing to take the write — see [onToggleLibrary].
     val library = page.library?.takeIf { onToggleLibrary != null }
-    // All release actions are circles. On a 360dp screen a full
-    // five-control row comes down 4dp so it stays inside the shared
-    // header gutter instead of running off the edge.
-    val circles = listOfNotNull(library, onMore).size + 2 // + Shuffle, Search
-    val full = circles >= 4
-    val circleSize = if (full) 46.dp else 50.dp
+    // Always five slots — save, shuffle, play, search, more — so the
+    // loading placeholders match and the row doesn't reflow between
+    // releases. A slot this release can't use stays, greyed out. 46dp
+    // keeps five circles inside the shared header gutter on 360dp.
+    val circleSize = 46.dp
     AnimatedContent(
         targetState = songs.isNotEmpty(),
         transitionSpec = {
@@ -1170,12 +1258,12 @@ private fun ReleaseActions(
                 .fillMaxWidth()
                 .padding(horizontal = HEADER_GUTTER)
                 .graphicsLayer { alpha = 0.4f },
-            horizontalArrangement = Arrangement.spacedBy(
-                if (full) 8.dp else 10.dp,
-                Alignment.CenterHorizontally,
-            ),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         ) {
-            repeat(circles + 1) { ShimmerBox(Modifier.size(circleSize), CircleShape) }
+            repeat(5) { index ->
+                ShimmerBox(Modifier.size(if (index == 2) ARTIST_PLAY_BUTTON else circleSize), CircleShape)
+            }
         }
         return@AnimatedContent
     }
@@ -1183,13 +1271,19 @@ private fun ReleaseActions(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = HEADER_GUTTER),
-        horizontalArrangement = Arrangement.spacedBy(
-            if (full) 8.dp else 10.dp,
-            Alignment.CenterHorizontally,
-        ),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (library != null) {
+        if (library == null) {
+            CircleIconButton(
+                icon = BitChordIcons.Plus,
+                contentDescription = stringResource(R.string.add_to_library),
+                palette = palette,
+                onClick = {},
+                size = circleSize,
+                enabled = false,
+            )
+        } else {
             CircleIconButton(
                 // A tick, not a filled-in plus: the pair reads as
                 // "not yet / done", which is what the state is.
@@ -1216,7 +1310,9 @@ private fun ReleaseActions(
         PlayPill(
             onClick = onPlay,
             iconOnly = true,
-            size = circleSize,
+            // The artist page's big Play, so the two headers match.
+            size = ARTIST_PLAY_BUTTON,
+            iconScale = ARTIST_PLAY_ICON_SCALE,
             // The artwork's own colour, as on the artist page.
             containerColor = palette.accent,
         )
@@ -1234,15 +1330,14 @@ private fun ReleaseActions(
             onClick = onSearch,
             size = circleSize,
         )
-        onMore?.let { more ->
-            CircleIconButton(
-                icon = Icons.Rounded.MoreHoriz,
-                contentDescription = stringResource(R.string.more),
-                palette = palette,
-                onClick = { more(songs) },
-                size = circleSize,
-            )
-        }
+        CircleIconButton(
+            icon = Icons.Rounded.MoreHoriz,
+            contentDescription = stringResource(R.string.more),
+            palette = palette,
+            onClick = { onMore?.invoke(songs) },
+            size = circleSize,
+            enabled = onMore != null,
+        )
     }
     }
 }
@@ -1391,6 +1486,8 @@ private fun ArtistHeader(
     palette: ArtworkPalette,
     artHeight: Dp,
     appleArt: AppleArtistArt?,
+    /** Drawn in place of the name when Apple has no title logo. */
+    signature: ArtistSignature? = null,
     /** How far the name (or logo) starts above the foot of this header, in px. */
     onNamePlaced: (Int) -> Unit = {},
 ) {
@@ -1402,25 +1499,43 @@ private fun ArtistHeader(
     Box(Modifier.fillMaxWidth().onPlaced { headerCoords[0] = it }) {
         Spacer(Modifier.fillMaxWidth().height(artHeight + HEADER_DROP - ARTIST_HEADER_LIFT))
         val logoUrl = appleArt?.logoUrl
+        // Secondary provider: drawn only when Apple has no title logo.
+        val isSignature = logoUrl == null && signature != null
+        val imageUrl = logoUrl ?: signature?.imageUrl
+        // Signature vectors are dark ink on transparency, so they are tinted
+        // to the page's text colour. Scans (jpeg/png) go through the ink
+        // transformation instead: tinting an opaque scan would flatten it.
+        val isSignatureSvg = isSignature && signature?.format == "svg"
+        val isSignatureScan = isSignature && !isSignatureSvg
         // Whether the logo has actually been drawn. Until it has — a first fetch
         // of an Apple logo is a few hundred KB the CDN may still be resizing — the
         // name stands in for it, so the header is never left with nothing in it.
-        var logoShown by remember(logoUrl) { mutableStateOf(false) }
+        var logoShown by remember(imageUrl) { mutableStateOf(false) }
         // The logo fades in over the name rather than replacing it outright.
         val logoIn by animateFloatAsState(
             targetValue = if (logoShown) 1f else 0f,
             animationSpec = tween(ART_CROSSFADE_MS, easing = FastOutSlowInEasing),
             label = "logoIn",
         )
-        if (appleArt != null && logoUrl != null) {
+        if (imageUrl != null) {
             val context = LocalPlatformContext.current
-            var attempt by remember(logoUrl) { mutableIntStateOf(0) }
-            var failed by remember(logoUrl) { mutableStateOf(false) }
+            var attempt by remember(imageUrl) { mutableIntStateOf(0) }
+            var failed by remember(imageUrl) { mutableStateOf(false) }
+            val aspect = (if (logoUrl != null) appleArt?.logoAspect else signature?.aspect)
+                ?.coerceIn(0.4f, 6f) ?: 1f
             // Remembered, and at the size the URL already names: nothing about the
             // load waits on layout to decide how big to decode, and a recomposition
             // can't hand Coil a new request that cancels the one in flight.
-            val request = remember(logoUrl, attempt) {
-                ImageRequest.Builder(context).data(logoUrl).size(coil3.size.Size.ORIGINAL).build()
+            // Vectors decode small and would upscale into a blur, so SVGs render large.
+            val request = remember(imageUrl, attempt) {
+                ImageRequest.Builder(context).data(imageUrl).apply {
+                    if (isSignatureSvg) {
+                        size(SVG_DECODE_WIDTH, (SVG_DECODE_WIDTH / aspect).roundToInt())
+                    } else {
+                        size(coil3.size.Size.ORIGINAL)
+                    }
+                    if (isSignatureScan) transformations(SignatureInkTransformation)
+                }.build()
             }
             // A dropped fetch gets two more tries before the name is left in place.
             LaunchedEffect(failed) {
@@ -1433,35 +1548,49 @@ private fun ArtistHeader(
             // Apple's own title logo stands in for the name, laid over its photo.
             // Capped in height as well as width: a logo set on two or three
             // lines is nearly square, and by width alone it would swallow the
-            // photograph it is meant to sit on.
-            val aspect = appleArt.logoAspect.coerceIn(0.4f, 6f)
-            val maxLogoHeight = artHeight * ARTIST_LOGO_MAX_HEIGHT
-            AsyncImage(
-                model = request,
-                contentDescription = page.title,
-                contentScale = ContentScale.Fit,
-                onState = { state ->
-                    when (state) {
-                        is AsyncImagePainter.State.Success -> logoShown = true
-                        is AsyncImagePainter.State.Error -> failed = true
-                        else -> Unit
-                    }
-                },
+            // photograph it is meant to sit on. A signature is a panoramic ink
+            // strip and reads best smaller than a title logo.
+            val sizeFactor = if (isSignature) SIGNATURE_SCALE else 1f
+            val maxLogoHeight = artHeight * ARTIST_LOGO_MAX_HEIGHT * sizeFactor
+            Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .graphicsLayer { alpha = logoIn }
-                    .onGloballyPositioned { if (logoShown) reportName(it) }
-                    .padding(top = 14.dp, bottom = 20.dp)
-                    // Sized from the incoming width in layout rather than through a
-                    // BoxWithConstraints, which would subcompose the image.
-                    .layout { measurable, constraints ->
-                        val widest = constraints.maxWidth * ARTIST_LOGO_WIDTH
-                        val height = minOf(widest / aspect, maxLogoHeight.toPx()).roundToInt()
-                        val width = (height * aspect).roundToInt()
-                        val placeable = measurable.measure(Constraints.fixed(width, height))
-                        layout(width, height) { placeable.place(0, 0) }
+                    .onGloballyPositioned { if (logoShown) reportName(it) },
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                AsyncImage(
+                    model = request,
+                    contentDescription = page.title,
+                    contentScale = ContentScale.Fit,
+                    colorFilter = if (isSignatureSvg) ColorFilter.tint(palette.onBackground) else null,
+                    onState = { state ->
+                        when (state) {
+                            is AsyncImagePainter.State.Success -> logoShown = true
+                            is AsyncImagePainter.State.Error -> failed = true
+                            else -> Unit
+                        }
                     },
-            )
+                    modifier = Modifier
+                        .padding(top = 14.dp, bottom = if (isSignature) 6.dp else 20.dp)
+                        // Sized from the incoming width in layout rather than through a
+                        // BoxWithConstraints, which would subcompose the image.
+                        .layout { measurable, constraints ->
+                            val widest = constraints.maxWidth * ARTIST_LOGO_WIDTH * sizeFactor
+                            val height = minOf(widest / aspect, maxLogoHeight.toPx()).roundToInt()
+                            val width = (height * aspect).roundToInt()
+                            val placeable = measurable.measure(Constraints.fixed(width, height))
+                            layout(width, height) { placeable.place(0, 0) }
+                        },
+                )
+                if (isSignature) {
+                    SignedByCaption(
+                        name = page.title,
+                        palette = palette,
+                        modifier = Modifier.padding(horizontal = HEADER_GUTTER).padding(bottom = 20.dp),
+                    )
+                }
+            }
         }
         if (logoIn < 1f) Text(
             text = page.title,
@@ -1670,11 +1799,12 @@ private val SOFT_FOOT_BLUR = 48.dp
  * Radio • Shuffle • Play • Star • Local — the artist page's action row, as
  * Apple Music lays it out: a large Play circle with small circles either side.
  *
- * The star is the page's existing subscribe toggle. Where the page offers none
- * (a guest) an empty slot of the same size keeps Play in the middle.
+ * The star is the page's existing subscribe toggle. Any of the four small
+ * circles the page can't offer (no radio, a guest's star) stays, greyed out,
+ * so every page's row is five across.
  *
- * [compact] is the album pages' row instead — every circle the same size, the
- * group centred — for an artist that is a grouping of library tracks.
+ * [compact] is the album pages' look instead — dark glass circles, a solid
+ * Play — for an artist that is a grouping of library tracks.
  */
 @Composable
 private fun ActionRow(
@@ -1689,94 +1819,37 @@ private fun ActionRow(
     playColor: Color? = null,
     /** Left of Shuffle: a radio built off the artist. */
     onStartRadio: (() -> Unit)? = null,
-    /** Right of the star: the Local toggle, lit while on. Null hides it. */
+    /** Right of the star: the Local toggle, lit while on. Null greys it out. */
     localOnly: Boolean = false,
     onToggleLocal: (() -> Unit)? = null,
     compact: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val playFill = playColor ?: palette.accent
-    if (compact) {
-        val circles = listOfNotNull(onStartRadio, subscription, onToggleLocal).size + 2 // + Shuffle, Play
-        val full = circles >= 5
-        val circleSize = if (full) 46.dp else 50.dp
-        Row(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(horizontal = HEADER_GUTTER),
-            horizontalArrangement = Arrangement.spacedBy(
-                if (full) 8.dp else 10.dp,
-                Alignment.CenterHorizontally,
-            ),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (onStartRadio != null) {
-                CircleIconButton(
-                    icon = Icons.Rounded.Radio,
-                    contentDescription = stringResource(R.string.start_radio),
-                    palette = palette,
-                    onClick = onStartRadio,
-                    haptic = Haptic.Resume,
-                    size = circleSize,
-                )
-            }
-            CircleIconButton(
-                icon = BitChordIcons.Shuffle,
-                contentDescription = stringResource(R.string.shuffle),
-                palette = palette,
-                onClick = onShuffle,
-                haptic = Haptic.Resume,
-                size = circleSize,
-            )
-            PlayPill(
-                onClick = onPlay,
-                iconOnly = true,
-                size = circleSize,
-                containerColor = playFill,
-            )
-            if (subscription != null) {
-                CircleIconButton(
-                    icon = if (subscription.subscribed) Icons.Rounded.Star else Icons.Rounded.StarBorder,
-                    contentDescription = stringResource(
-                        if (subscription.subscribed) R.string.unsubscribe else R.string.subscribe,
-                    ),
-                    palette = palette,
-                    onClick = { onToggleSubscription?.invoke() },
-                    haptic = if (subscription.subscribed) Haptic.ToggleOff else Haptic.ToggleOn,
-                    size = circleSize,
-                )
-            }
-            if (onToggleLocal != null) {
-                LocalToggle(localOnly, onToggleLocal, palette, circleSize, lightFill = false)
-            }
-        }
-        Spacer(Modifier.height(bottomSpace))
-        return
-    }
-    // Five across is too wide for the three-button spacing on a narrow phone.
-    val crowded = onStartRadio != null || onToggleLocal != null
-    val side = if (crowded) ARTIST_SIDE_BUTTON_CROWDED else ARTIST_SIDE_BUTTON
+    // Always five slots — radio, shuffle, play, star, local — as on a release
+    // page. One this artist can't use stays in place, greyed out.
+    val side = if (compact) 46.dp else ARTIST_SIDE_BUTTON_CROWDED
+    val lightFill = !compact
     Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = HEADER_GUTTER),
         horizontalArrangement = Arrangement.spacedBy(
-            if (crowded) ARTIST_ACTION_GAP_CROWDED else ARTIST_ACTION_GAP,
+            if (compact) 8.dp else ARTIST_ACTION_GAP_CROWDED,
             Alignment.CenterHorizontally,
         ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (onStartRadio != null) {
-            CircleIconButton(
-                icon = Icons.Rounded.Radio,
-                contentDescription = stringResource(R.string.start_radio),
-                palette = palette,
-                onClick = onStartRadio,
-                haptic = Haptic.Resume,
-                size = side,
-                lightFill = true,
-            )
-        }
+        CircleIconButton(
+            icon = Icons.Rounded.Radio,
+            contentDescription = stringResource(R.string.start_radio),
+            palette = palette,
+            onClick = { onStartRadio?.invoke() },
+            haptic = Haptic.Resume,
+            size = side,
+            lightFill = lightFill,
+            enabled = onStartRadio != null,
+        )
         CircleIconButton(
             icon = BitChordIcons.Shuffle,
             contentDescription = stringResource(R.string.shuffle),
@@ -1784,35 +1857,41 @@ private fun ActionRow(
             onClick = onShuffle,
             haptic = Haptic.Resume,
             size = side,
-            lightFill = true,
+            lightFill = lightFill,
         )
-
         PlayPill(
             onClick = onPlay,
             iconOnly = true,
             size = ARTIST_PLAY_BUTTON,
             iconScale = ARTIST_PLAY_ICON_SCALE,
             containerColor = playFill,
-            cutout = true,
+            cutout = !compact,
         )
-
-        if (subscription != null) {
-            CircleIconButton(
-                icon = if (subscription.subscribed) Icons.Rounded.Star else Icons.Rounded.StarBorder,
-                contentDescription = stringResource(
-                    if (subscription.subscribed) R.string.unsubscribe else R.string.subscribe,
-                ),
-                palette = palette,
-                onClick = { onToggleSubscription?.invoke() },
-                haptic = if (subscription.subscribed) Haptic.ToggleOff else Haptic.ToggleOn,
-                size = side,
-                lightFill = true,
-            )
-        } else {
-            Spacer(Modifier.size(side))
-        }
+        val subscribed = subscription?.subscribed == true
+        CircleIconButton(
+            icon = if (subscribed) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+            contentDescription = stringResource(
+                if (subscribed) R.string.unsubscribe else R.string.subscribe,
+            ),
+            palette = palette,
+            onClick = { onToggleSubscription?.invoke() },
+            haptic = if (subscribed) Haptic.ToggleOff else Haptic.ToggleOn,
+            size = side,
+            lightFill = lightFill,
+            enabled = subscription != null,
+        )
         if (onToggleLocal != null) {
-            LocalToggle(localOnly, onToggleLocal, palette, side, lightFill = true)
+            LocalToggle(localOnly, onToggleLocal, palette, side, lightFill = lightFill)
+        } else {
+            CircleIconButton(
+                icon = Icons.Rounded.PhoneAndroid,
+                contentDescription = stringResource(R.string.local_only),
+                palette = palette,
+                onClick = {},
+                size = side,
+                lightFill = lightFill,
+                enabled = false,
+            )
         }
     }
     Spacer(Modifier.height(bottomSpace))
@@ -1952,11 +2031,14 @@ private fun CircleIconButton(
     lightFill: Boolean = false,
     /** A toggle that is on: a solid white circle with a dark glyph. */
     lit: Boolean = false,
+    /** False keeps the circle in its slot, greyed out and inert. */
+    enabled: Boolean = true,
 ) {
     val haptics = rememberHaptics()
     Box(
         modifier = Modifier
             .size(size)
+            .graphicsLayer { alpha = if (enabled) 1f else 0.38f }
             .then(
                 if (lit) {
                     Modifier.clip(CircleShape).background(Color.White)
@@ -1969,7 +2051,7 @@ private fun CircleIconButton(
                     )
                 },
             )
-            .clickable {
+            .clickable(enabled = enabled) {
                 haptics.play(haptic)
                 onClick()
             },
@@ -2080,6 +2162,8 @@ private fun AboutSection(
     horizontalPadding: Dp = ABOUT_GUTTER,
     /** Drawn under the text. */
     stats: (@Composable () -> Unit)? = null,
+    /** Drawn last, under the stats. */
+    footer: (@Composable () -> Unit)? = null,
 ) {
     var expanded by remember(text) { mutableStateOf(false) }
     var clipped by remember(text) { mutableStateOf(false) }
@@ -2123,6 +2207,77 @@ private fun AboutSection(
             Spacer(Modifier.height(if (text != null) 12.dp else 4.dp))
             stats()
         }
+        footer?.invoke()
+    }
+}
+
+/** "Signed by **Name**" — the artist's name in bold, whatever order the language puts it in. */
+@Composable
+private fun SignedByCaption(
+    name: String,
+    palette: ArtworkPalette,
+    modifier: Modifier = Modifier,
+    textAlign: TextAlign = TextAlign.Center,
+) {
+    val signed = stringResource(R.string.signed_by, name)
+    val nameAt = signed.indexOf(name)
+    Text(
+        text = buildAnnotatedString {
+            append(signed)
+            if (nameAt >= 0) {
+                addStyle(SpanStyle(fontWeight = FontWeight.Bold), nameAt, nameAt + name.length)
+            }
+        },
+        style = MaterialTheme.typography.bodyMedium,
+        color = palette.onBackground.copy(alpha = 0.8f),
+        textAlign = textAlign,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier,
+    )
+}
+
+/**
+ * The handwritten signature with its signed-by line, closing the About section of an artist whose
+ * header already carries Apple's title logo.
+ */
+@Composable
+private fun AboutSignature(
+    signature: ArtistSignature,
+    name: String,
+    palette: ArtworkPalette,
+    horizontalPadding: Dp,
+) {
+    val context = LocalPlatformContext.current
+    val isSvg = signature.format == "svg"
+    val aspect = signature.aspect.coerceIn(0.4f, 6f)
+    val request = remember(signature.imageUrl) {
+        ImageRequest.Builder(context).data(signature.imageUrl).apply {
+            if (isSvg) {
+                size(SVG_DECODE_WIDTH, (SVG_DECODE_WIDTH / aspect).roundToInt())
+            } else {
+                size(coil3.size.Size.ORIGINAL)
+                transformations(SignatureInkTransformation)
+            }
+        }.build()
+    }
+    var loaded by remember(signature.imageUrl) { mutableStateOf(false) }
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = horizontalPadding),
+        horizontalAlignment = Alignment.Start,
+    ) {
+        AsyncImage(
+            model = request,
+            contentDescription = name,
+            contentScale = ContentScale.Fit,
+            colorFilter = if (isSvg) ColorFilter.tint(palette.onBackground) else null,
+            onState = { if (it is AsyncImagePainter.State.Success) loaded = true },
+            modifier = Modifier
+                .padding(top = 20.dp, bottom = 6.dp)
+                .height(ABOUT_LOGO_HEIGHT)
+                .aspectRatio(aspect),
+        )
+        if (loaded) SignedByCaption(name = name, palette = palette, textAlign = TextAlign.Start)
     }
 }
 
@@ -2293,6 +2448,21 @@ private fun SuggestedSongRow(
             )
         }
     }
+}
+
+/**
+ * These shelves with the artist's [albums] on the device added, under
+ * [title]: on the shelf of that name if one is left, or a shelf of their own
+ * first. An album already on a shelf (a release downloaded whole) is left
+ * where it is.
+ */
+private fun List<HomeShelf>.withDeviceAlbums(albums: List<ShelfItem>, title: String): List<HomeShelf> {
+    val shown = flatMapTo(HashSet()) { shelf -> shelf.items.map { it.title.lowercase(Locale.ROOT) } }
+    val added = albums.filter { it.title.lowercase(Locale.ROOT) !in shown }
+    if (added.isEmpty()) return this
+    val shelf = indexOfFirst { it.title.equals(title, ignoreCase = true) }
+    if (shelf < 0) return listOf(HomeShelf(title, added)) + this
+    return toMutableList().also { it[shelf] = it[shelf].copy(items = it[shelf].items + added) }
 }
 
 /**

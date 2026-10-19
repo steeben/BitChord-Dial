@@ -461,7 +461,7 @@
     <string name="upgrade_length_slack_footer">Eine größere Toleranz akzeptiert mehr Treffer aus Quellen, eine kleinere ist strenger. Standard sind 3 Sekunden.</string>
     <string name="seconds_short">%1$d s</string>
     <string name="spdc_token">sp_dc-Token</string>
-    <string name="spotify_canvas_setup">Spotify-Canvas-Einrichtung</string>
+    <string name="spotify_canvas_setup">Spotify einrichten</string>
     <string name="spotify_canvas_setup_description">Um Spotify Canvas zu nutzen, gib dein Spotify-sp_dc-Cookie an.</string>
     <string name="spotify_canvas_setup_steps">1. Melde dich in einem Browser bei open.spotify.com an.\n2. Öffne die Entwicklertools, dann Anwendung und Cookies.\n3. Kopiere den Wert des sp_dc-Cookies.\n4. Füge ihn unten ein.</string>
     <string name="spotify_canvas_auto_hide">Player-Steuerung automatisch ausblenden</string>
@@ -1252,6 +1252,10 @@
     <string name="cached_songs">Zwischengespeicherte Songs</string>
     <string name="cached_songs_subtitle">Songs von YouTube und JioSaavn im Song-Cache</string>
     <string name="cached_songs_empty">Noch keine zwischengespeicherten Songs. Songs, die du von YouTube oder JioSaavn abspielst, erscheinen hier.</string>
+    <string name="cached_song_partial">Teilweise</string>
+    <string name="remove_from_cache">Aus dem Cache entfernen</string>
+    <string name="cached_song_remove">Entfernen</string>
+    <string name="removed_from_cache">Aus dem Song-Cache entfernt</string>
     <string name="show_cache_folder">Ordner für zwischengespeicherte Songs anzeigen</string>
     <string name="show_cache_folder_subtitle">Fügt der Mediathek einen Ordner mit den YouTube- und JioSaavn-Songs im Song-Cache hinzu</string>
     <string name="song_cache_unlimited">Unbegrenzt</string>
@@ -1287,6 +1291,7 @@
     <string name="spotify_import_unmatched">%1$d Titel wurden auf YouTube Music nicht gefunden</string>
     <string name="spotify_library_subtitle">Deine Spotify-Playlists</string>
     <string name="spotify_sign_in">Bei Spotify anmelden</string>
+    <string name="spotify_use_spdc_token">sp_dc-Token verwenden</string>
     <string name="spotify_track_unavailable">Diesen Titel gab es nicht auf YouTube Music</string>
     <string name="chinese_simplified">中文（简体）</string>
     <string name="chinese_traditional">中文（繁體）</string>
@@ -1297,4 +1302,21 @@
     <string name="unpin_artist_from_speed_dial">Künstler von Kurzwahl lösen</string>
     <string name="pin_artist_radio_to_speed_dial">Künstlerradio an Kurzwahl anheften</string>
     <string name="unpin_artist_radio_from_speed_dial">Künstlerradio von Kurzwahl lösen</string>
+    <string name="app_icon">App-Symbol</string>
+    <string name="app_icon_default">Standard</string>
+    <string name="song_info">Titelinformationen</string>
+    <string name="song_info_album">Album</string>
+    <string name="song_info_release_date">Veröffentlichungsdatum</string>
+    <string name="song_info_views">Wiedergaben / Aufrufe</string>
+    <string name="song_info_likes">Gefällt mir</string>
+    <string name="song_info_comments">Kommentare</string>
+    <string name="song_info_unavailable">Nicht verfügbar</string>
+    <string name="song_info_error">Einige Informationen konnten nicht geladen werden.</string>
+    <string name="song_info_retry">Erneut versuchen</string>
+    <string name="artist_signatures">Künstlersignaturen</string>
+    <string name="artist_signatures_subtitle">Zeigt eine handschriftliche Signatur, wenn Apple Music kein Titellogo hat</string>
+    <string name="artist_signatures_url">Signatur-API-URL</string>
+    <string name="artist_signatures_unconfigured">Nicht konfiguriert — tippen, um die API-URL festzulegen</string>
+    <string name="artist_signatures_test_failed">Die API war unter dieser URL nicht erreichbar</string>
+    <string name="signed_by">Signiert von %1$s</string>
 </resources>

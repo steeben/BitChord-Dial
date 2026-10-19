@@ -1785,7 +1785,7 @@ internal fun LyricsPanel(
     }
 
     if (lines.isEmpty()) {
-        val empty = modifier.revealLyricsControlsOnTap(!controlsOpen, onBottomHalfTap)
+        val empty = modifier.revealLyricsControlsOnTap(!controlsOpen, onBottomHalfTap, anywhere = true)
         // "None" is a finding, and it is only worth reporting once the lookup
         // has actually come back with it.
         if (looking && !instrumental) {
@@ -2665,27 +2665,44 @@ private fun CurrentLyricLine(
             }
             if (breakSpan != null) {
                 val (from, until) = breakSpan
+                // Sized by an invisible line of the strip's own type, so the
+                // break is exactly as tall as a sung line and nothing under the
+                // strip moves when one hands over to the other.
                 Box(
+                    contentAlignment = Alignment.CenterStart,
                     modifier = Modifier
-                        .padding(vertical = 9.dp)
-                        .size(width = BREAK_BAR_WIDTH, height = BREAK_BAR_HEIGHT)
-                        .semantics { contentDescription = lineText }
-                        // Read in the draw pass, so the bar filling costs a
-                        // redraw of two rounded rects, not a recomposition.
-                        .drawBehind {
-                            val radius = CornerRadius(size.height / 2f)
-                            drawRoundRect(Color.White.copy(alpha = 0.22f), cornerRadius = radius)
-                            val through = ((clock.longValue - from).toFloat() / (until - from))
-                                .coerceIn(0f, 1f)
-                            if (through > 0f) {
-                                drawRoundRect(
-                                    Color.White.copy(alpha = 0.85f),
-                                    size = Size(size.width * through, size.height),
-                                    cornerRadius = radius,
-                                )
-                            }
-                        },
-                )
+                        .width(BREAK_BAR_WIDTH)
+                        .semantics { contentDescription = lineText },
+                ) {
+                    Text(
+                        text = lineText,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.Transparent,
+                        maxLines = 1,
+                        overflow = TextOverflow.Clip,
+                        softWrap = false,
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(BREAK_BAR_HEIGHT)
+                            // Read in the draw pass, so the bar filling costs a
+                            // redraw of two rounded rects, not a recomposition.
+                            .drawBehind {
+                                val radius = CornerRadius(size.height / 2f)
+                                drawRoundRect(Color.White.copy(alpha = 0.22f), cornerRadius = radius)
+                                val through = ((clock.longValue - from).toFloat() / (until - from))
+                                    .coerceIn(0f, 1f)
+                                if (through > 0f) {
+                                    drawRoundRect(
+                                        Color.White.copy(alpha = 0.85f),
+                                        size = Size(size.width * through, size.height),
+                                        cornerRadius = radius,
+                                    )
+                                }
+                            },
+                    )
+                }
             } else if (swept != null) {
                 SweptLyricLine(
                     line = swept,

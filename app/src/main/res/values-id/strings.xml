@@ -447,7 +447,7 @@
     <string name="upgrade_length_slack_footer">Toleransi lebih besar menerima lebih banyak kecocokan sumber; toleransi lebih kecil lebih ketat. Bawaannya 3 detik.</string>
     <string name="seconds_short">%1$d dtk</string>
     <string name="spdc_token">Token sp_dc</string>
-    <string name="spotify_canvas_setup">Penyiapan Spotify Canvas</string>
+    <string name="spotify_canvas_setup">Siapkan Spotify</string>
     <string name="spotify_canvas_setup_description">Untuk menggunakan Spotify Canvas, berikan cookie sp_dc Spotify Anda.</string>
     <string name="spotify_canvas_setup_steps">1. Masuk di open.spotify.com melalui browser.\n2. Buka Developer Tools, lalu Application dan Cookies.\n3. Salin nilai cookie sp_dc.\n4. Tempel di bawah ini.</string>
     <string name="spotify_canvas_auto_hide">Sembunyikan kontrol otomatis</string>
@@ -1229,6 +1229,10 @@
     <string name="cached_songs">Lagu dalam cache</string>
     <string name="cached_songs_subtitle">Lagu dari YouTube dan JioSaavn di cache lagu</string>
     <string name="cached_songs_empty">Belum ada lagu dalam cache. Lagu yang kamu putar dari YouTube atau JioSaavn akan muncul di sini.</string>
+    <string name="cached_song_partial">Sebagian</string>
+    <string name="remove_from_cache">Hapus dari cache</string>
+    <string name="cached_song_remove">Hapus</string>
+    <string name="removed_from_cache">Dihapus dari cache lagu</string>
     <string name="show_cache_folder">Tampilkan folder lagu dalam cache</string>
     <string name="show_cache_folder_subtitle">Menambahkan folder di Pustaka berisi lagu YouTube dan JioSaavn yang disimpan di cache lagu</string>
     <string name="song_cache_unlimited">Tanpa batas</string>
@@ -1264,6 +1268,7 @@
     <string name="spotify_import_unmatched">%1$d lagu tidak ditemukan di YouTube Music</string>
     <string name="spotify_library_subtitle">Playlist Spotify Anda</string>
     <string name="spotify_sign_in">Masuk dengan Spotify</string>
+    <string name="spotify_use_spdc_token">Gunakan token sp_dc</string>
     <string name="spotify_track_unavailable">Lagu itu tidak ditemukan di YouTube Music</string>
     <string name="chinese_simplified">中文（简体）</string>
     <string name="chinese_traditional">中文（繁體）</string>
@@ -1274,4 +1279,21 @@
     <string name="unpin_artist_from_speed_dial">Lepas sematan artis dari panggilan cepat</string>
     <string name="pin_artist_radio_to_speed_dial">Sematkan radio artis ke panggilan cepat</string>
     <string name="unpin_artist_radio_from_speed_dial">Lepas sematan radio artis dari panggilan cepat</string>
+    <string name="app_icon">Ikon aplikasi</string>
+    <string name="app_icon_default">Default</string>
+    <string name="song_info">Info lagu</string>
+    <string name="song_info_album">Album</string>
+    <string name="song_info_release_date">Tanggal rilis</string>
+    <string name="song_info_views">Pemutaran / penayangan</string>
+    <string name="song_info_likes">Suka</string>
+    <string name="song_info_comments">Komentar</string>
+    <string name="song_info_unavailable">Tidak tersedia</string>
+    <string name="song_info_error">Sebagian informasi tidak dapat dimuat.</string>
+    <string name="song_info_retry">Coba lagi</string>
+    <string name="artist_signatures">Tanda tangan artis</string>
+    <string name="artist_signatures_subtitle">Menampilkan tanda tangan tulisan tangan saat Apple Music tidak memiliki logo judul</string>
+    <string name="artist_signatures_url">URL API tanda tangan</string>
+    <string name="artist_signatures_unconfigured">Belum dikonfigurasi — ketuk untuk mengatur URL API</string>
+    <string name="artist_signatures_test_failed">Tidak dapat menjangkau API di URL tersebut</string>
+    <string name="signed_by">Ditandatangani oleh %1$s</string>
 </resources>

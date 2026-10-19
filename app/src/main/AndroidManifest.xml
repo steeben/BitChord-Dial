@@ -113,9 +113,11 @@
             android:theme="@style/Theme.BitChord">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
                 <!--
-                  What makes the system call this a music app. "Play music" from
+                  No LAUNCHER category here: the home-screen entry is one of the
+                  activity-aliases below, so the icon can be swapped in Settings.
+
+                  APP_MUSIC is what makes the system call this a music app. "Play music" from
                   the assistant, Android Auto's media list and the OEM pickers
                   that put up "Complete action using" all ask for
                   MAIN/APP_MUSIC by name and list whoever answers — a launcher
@@ -231,6 +233,51 @@
                 <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
+
+        <!--
+          The home-screen entries, one per app icon. Settings swaps the icon by
+          enabling one alias and disabling the rest (see AppIcon); exactly one is
+          enabled at a time, and Default is the one that ships enabled. No label of
+          their own, so each shows the application's (the dev flavour renames it).
+        -->
+        <activity-alias
+            android:name=".LauncherDefault"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherGlassLight"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_glass_light"
+            android:roundIcon="@mipmap/ic_launcher_glass_light"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherGlassDark"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_glass_dark"
+            android:roundIcon="@mipmap/ic_launcher_glass_dark"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <service
             android:name=".playback.PlaybackService"

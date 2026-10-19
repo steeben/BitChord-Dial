@@ -1151,23 +1151,12 @@ private fun BottomGlyph(
     // costs no recomposition. Starts a full window in the past so the first tap
     // is never the one that gets swallowed.
     val lastTap = remember { mutableLongStateOf(-tapWindowMs) }
-    val glass = LocalPlayerGlass.current
     Box(
         modifier = Modifier
             .size(BOTTOM_ACTION_SIZE)
-            .let { sized ->
-                // Lit, it is a glass disc like the capsule beside it, with a
-                // faint tint so it still reads as on; unlit, just the glyph.
-                if (highlighted && glass != null) {
-                    glass.surface(sized, CircleShape)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.06f))
-                } else {
-                    sized.clip(CircleShape).background(
-                        if (highlighted) Color.White.copy(alpha = 0.20f) else Color.Transparent,
-                    )
-                }
-            }
+            // No disc behind it, lit or not: being lit is the glyph going
+            // from dimmed to full white.
+            .clip(CircleShape)
             .combinedClickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,

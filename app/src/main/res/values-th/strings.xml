@@ -475,7 +475,7 @@
     <string name="upgrade_length_slack_footer">ค่าคลาดเคลื่อนที่มากขึ้นจะยอมรับการจับคู่ได้มากขึ้น ค่าที่น้อยลงจะเข้มงวดกว่า ค่าเริ่มต้นคือ 3 วินาที</string>
     <string name="seconds_short">%1$d วิ</string>
     <string name="spdc_token">โทเคน sp_dc</string>
-    <string name="spotify_canvas_setup">ตั้งค่า Spotify Canvas</string>
+    <string name="spotify_canvas_setup">ตั้งค่า Spotify</string>
     <string name="spotify_canvas_setup_description">หากต้องการใช้ Spotify Canvas ให้ระบุคุกกี้ sp_dc ของ Spotify</string>
     <string name="spotify_canvas_setup_steps">1. ลงชื่อเข้าใช้ที่ open.spotify.com ในเบราว์เซอร์\n2. เปิดเครื่องมือสำหรับนักพัฒนา จากนั้นไปที่ Application และ Cookies\n3. คัดลอกค่าของคุกกี้ sp_dc\n4. วางไว้ด้านล่าง</string>
     <string name="spotify_canvas_auto_hide">ซ่อนปุ่มควบคุมอัตโนมัติ</string>
@@ -1235,6 +1235,10 @@
     <string name="cached_songs">เพลงในแคช</string>
     <string name="cached_songs_subtitle">เพลงจาก YouTube และ JioSaavn ในแคชเพลง</string>
     <string name="cached_songs_empty">ยังไม่มีเพลงในแคช เพลงที่คุณเล่นจาก YouTube หรือ JioSaavn จะแสดงที่นี่</string>
+    <string name="cached_song_partial">บางส่วน</string>
+    <string name="remove_from_cache">นำออกจากแคช</string>
+    <string name="cached_song_remove">นำออก</string>
+    <string name="removed_from_cache">นำออกจากแคชเพลงแล้ว</string>
     <string name="show_cache_folder">แสดงโฟลเดอร์เพลงในแคช</string>
     <string name="show_cache_folder_subtitle">เพิ่มโฟลเดอร์ในคลังเพลงที่มีเพลงจาก YouTube และ JioSaavn ที่เก็บไว้ในแคช</string>
     <string name="song_cache_unlimited">ไม่จำกัด</string>
@@ -1270,6 +1274,7 @@
     <string name="spotify_import_unmatched">ไม่พบเพลง %1$d เพลงบน YouTube Music</string>
     <string name="spotify_library_subtitle">เพลย์ลิสต์ Spotify ของคุณ</string>
     <string name="spotify_sign_in">ลงชื่อเข้าใช้ด้วย Spotify</string>
+    <string name="spotify_use_spdc_token">ใช้โทเค็น sp_dc</string>
     <string name="spotify_track_unavailable">หาเพลงนั้นบน YouTube Music ไม่พบ</string>
     <string name="chinese_simplified">中文（简体）</string>
     <string name="chinese_traditional">中文（繁體）</string>
@@ -1280,4 +1285,21 @@
     <string name="unpin_artist_from_speed_dial">เลิกปักหมุดศิลปินจากโทรด่วน</string>
     <string name="pin_artist_radio_to_speed_dial">ปักหมุดวิทยุศิลปินไว้ที่โทรด่วน</string>
     <string name="unpin_artist_radio_from_speed_dial">เลิกปักหมุดวิทยุศิลปินจากโทรด่วน</string>
+    <string name="app_icon">ไอคอนแอป</string>
+    <string name="app_icon_default">ค่าเริ่มต้น</string>
+    <string name="song_info">ข้อมูลเพลง</string>
+    <string name="song_info_album">อัลบั้ม</string>
+    <string name="song_info_release_date">วันที่เผยแพร่</string>
+    <string name="song_info_views">จำนวนการเล่น / การดู</string>
+    <string name="song_info_likes">การกดชอบ</string>
+    <string name="song_info_comments">ความคิดเห็น</string>
+    <string name="song_info_unavailable">ไม่มีข้อมูล</string>
+    <string name="song_info_error">ไม่สามารถโหลดข้อมูลบางส่วนได้</string>
+    <string name="song_info_retry">ลองอีกครั้ง</string>
+    <string name="artist_signatures">ลายเซ็นศิลปิน</string>
+    <string name="artist_signatures_subtitle">แสดงลายเซ็นลายมือเมื่อ Apple Music ไม่มีโลโก้ชื่อเรื่อง</string>
+    <string name="artist_signatures_url">URL API ลายเซ็น</string>
+    <string name="artist_signatures_unconfigured">ยังไม่ได้กำหนดค่า — แตะเพื่อตั้งค่า URL API</string>
+    <string name="artist_signatures_test_failed">ไม่สามารถเข้าถึง API ที่ URL นี้ได้</string>
+    <string name="signed_by">ลงนามโดย %1$s</string>
 </resources>

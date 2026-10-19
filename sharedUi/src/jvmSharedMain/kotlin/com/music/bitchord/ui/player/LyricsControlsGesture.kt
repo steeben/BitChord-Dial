@@ -43,19 +43,25 @@ private const val TAP_SLOP_FACTOR = 2.5f
  * nothing visible, and lines only started seeking once the scrubber had been
  * used. So a mouse click goes to the line, and only a click no row claimed
  * brings the controls back.
+ *
+ * [anywhere] takes taps over the whole area instead of the lower half. The
+ * half rule exists so the upper lines stay tappable to seek; a panel with no
+ * lines has nothing to seek to, and its message sits in the middle, which is
+ * exactly where people tap to get the controls back.
  */
 @Composable
 internal fun Modifier.revealLyricsControlsOnTap(
     enabled: Boolean,
     onReveal: () -> Unit,
+    anywhere: Boolean = false,
 ): Modifier {
     val currentOnReveal = rememberUpdatedState(onReveal)
-    return pointerInput(enabled) {
+    return pointerInput(enabled, anywhere) {
         if (!enabled) return@pointerInput
         val tapSlop = viewConfiguration.touchSlop * TAP_SLOP_FACTOR
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-            if (down.position.y < size.height / 2f) return@awaitEachGesture
+            if (!anywhere && down.position.y < size.height / 2f) return@awaitEachGesture
             if (down.type == PointerType.Mouse) {
                 var claimed = down.isConsumed
                 do {

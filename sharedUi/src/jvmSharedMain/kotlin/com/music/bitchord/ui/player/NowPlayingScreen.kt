@@ -118,6 +118,7 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
@@ -126,7 +127,6 @@ import androidx.compose.ui.input.pointer.util.addPointerInputChange
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
@@ -290,7 +290,10 @@ private fun Modifier.trimBy(top: Dp, bottom: Dp, fraction: () -> Float): Modifie
 }
 
 /** Folds this away to no height as [fraction] runs from 0 to 1, fading as it goes. */
-private fun Modifier.collapseBy(slide: Boolean = false, fraction: () -> Float): Modifier = clipToBounds()
+private fun Modifier.collapseBy(slide: Boolean = false, fraction: () -> Float): Modifier =
+    // Clipped only while folding: at rest a control may draw past its box, as the seek bar's
+    // playhead glow does at either end of the bar.
+    graphicsLayer { clip = fraction() > 0f }
     .layout { measurable, constraints ->
         val placeable = measurable.measure(constraints)
         val f = fraction().coerceIn(0f, 1f)
@@ -3509,7 +3512,32 @@ fun NowPlayingScreen(
                                 scaleX = scale
                                 scaleY = scale
                                 transformOrigin = TransformOrigin(0f, 0.5f)
-                            },
+                            }
+                            // Over the queue the credits are the playing row's
+                            // label, not links: a tap anywhere on them takes the
+                            // list back to where it opened, as the sleeve does.
+                            // Taken on the way down, before the album and artist
+                            // links under it can claim the press.
+                            .then(
+                                if (queueOpen) {
+                                    Modifier.pointerInput(Unit) {
+                                        awaitEachGesture {
+                                            val down = awaitFirstDown(pass = PointerEventPass.Initial)
+                                            down.consume()
+                                            val up = waitForUpOrCancellation(PointerEventPass.Initial)
+                                                ?: return@awaitEachGesture
+                                            up.consume()
+                                            if ((up.position - down.position).getDistance() <=
+                                                viewConfiguration.touchSlop
+                                            ) {
+                                                queueRecenter.action?.invoke()
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Modifier
+                                },
+                            ),
                     ) {
                         // Only the title's own overflow gates the artist's stagger
                         // below — an artist line that's long on its own has no

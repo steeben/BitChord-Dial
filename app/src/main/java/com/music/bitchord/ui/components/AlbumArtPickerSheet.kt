@@ -40,6 +40,7 @@ import coil3.compose.AsyncImage
 import com.music.bitchord.R
 import com.music.bitchord.data.AlbumArtChoices
 import com.music.bitchord.data.model.CARD_ART_PX
+import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.model.artworkAt
 
 /**
@@ -52,22 +53,32 @@ fun AlbumArtPickerSheet(
     target: BrowseTarget,
     /** The cover picked, or null to go back to the original. */
     onPick: (String?) -> Unit,
+    /**
+     * Set when the pick is for this one song rather than the whole album
+     * [target] stands for; [target]'s songs are still where the covers come from.
+     */
+    song: Song? = null,
 ) {
     val context = LocalContext.current
     val choices by AlbumArtChoices.choices.collectAsStateWithLifecycle()
-    val current = choices.let { AlbumArtChoices.pickedCandidate(target.browseId, target.title) }
+    val songArt by AlbumArtChoices.songArt.collectAsStateWithLifecycle()
+    val current = if (song != null) {
+        songArt.let { AlbumArtChoices.pickedCandidateForSong(song.localUri) }
+    } else {
+        choices.let { AlbumArtChoices.pickedCandidate(target.browseId, target.title) }
+    }
     val candidates by produceState<List<String>?>(null, target) {
         value = AlbumArtChoices.candidates(context, target.songs)
     }
     Column(Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
         Text(
-            text = stringResource(R.string.choose_album_art),
+            text = stringResource(if (song != null) R.string.change_album_art else R.string.choose_album_art),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onBackground,
         )
         Text(
-            text = target.title,
+            text = song?.title ?: target.title,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,

@@ -10,6 +10,7 @@ import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -32,6 +34,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.automirrored.rounded.VolumeOff
 import androidx.compose.material.icons.rounded.Animation
+import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.BlurOff
@@ -51,6 +54,7 @@ import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.Dns
+import androidx.compose.material.icons.rounded.Draw
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FileUpload
@@ -92,7 +96,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ModalBottomSheet
+import com.music.bitchord.ui.components.SlideDownBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -102,12 +106,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -116,8 +123,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
@@ -127,14 +138,17 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
+import com.music.bitchord.AppIcon
 import com.music.bitchord.ui.components.isGlassSupported
 import com.music.bitchord.ui.components.languageDisplayNameRes
 import com.music.bitchord.ui.components.MessageState
@@ -192,6 +206,7 @@ fun SettingsScreen(
     onSources: () -> Unit,
     onListenTogether: () -> Unit,
     onSpotifyCanvasAuth: () -> Unit,
+    onEditSignatureApi: () -> Unit,
     onAppLanguage: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
@@ -199,6 +214,17 @@ fun SettingsScreen(
     onShowUpdate: () -> Unit = {},
     /** Opens the page listing the All library's detected duplicates. */
     onLibraryDuplicates: () -> Unit = {},
+    /**
+     * What the rows are filtered by. Held by the caller, because the top bar
+     * shows a second copy of the field once this one has scrolled under it,
+     * and both have to be the same search.
+     */
+    searchQuery: String = "",
+    onSearchQueryChange: (String) -> Unit = {},
+    /** Whether the bar's copy of the field is the one showing. */
+    searchInBar: Boolean = false,
+    /** Told whether this page's own field has scrolled up under the bar. */
+    onSearchScrolledOff: (Boolean) -> Unit = {},
 ) {
     val context = LocalContext.current
 
@@ -222,6 +248,8 @@ fun SettingsScreen(
     val liquidGlassSupported = isGlassSupported()
     val lyricsBlur by AppSettings.lyricsBlur.collectAsStateWithLifecycle()
     val animatedCanvas by AppSettings.animatedCanvas.collectAsStateWithLifecycle()
+    val signatureApiEnabled by AppSettings.signatureApiEnabled.collectAsStateWithLifecycle()
+    val signatureApiUrl by AppSettings.signatureApiUrl.collectAsStateWithLifecycle()
     val canvasOverCellular by AppSettings.canvasOverCellular.collectAsStateWithLifecycle()
     val fullBleedArtwork by AppSettings.fullBleedArtwork.collectAsStateWithLifecycle()
     val legacyMeshGradient by AppSettings.legacyMeshGradient.collectAsStateWithLifecycle()
@@ -298,9 +326,6 @@ fun SettingsScreen(
     // somebody open the screen to find out whether they are still in one.
     val party by ListenTogether.state.collectAsStateWithLifecycle()
 
-    // Filters the rows below — see [SettingsSearch]. Blank shows everything,
-    // exactly as if the field weren't there.
-    var searchQuery by remember { mutableStateOf("") }
     var picking by remember { mutableStateOf<QualityTarget?>(null) }
     var pickingDownloadQuality by remember { mutableStateOf(false) }
     var pickingAutomixPerformance by remember { mutableStateOf(false) }
@@ -389,6 +414,16 @@ fun SettingsScreen(
     // What is left after a keystroke is a different list, and the offset the
     // last one was scrolled to means nothing in it.
     val scrollState = rememberSaveable(saver = ScrollState.Saver) { ScrollState(0) }
+    // How far the page scrolls before the field's bottom edge passes under the
+    // top bar. Past it, the bar carries its own copy so search is always in reach.
+    val barLinePx = with(LocalDensity.current) { contentPadding.calculateTopPadding().toPx() }
+    var fieldScrolledOffAt by remember { mutableStateOf(Float.MAX_VALUE) }
+    val fieldScrolledOff by remember { derivedStateOf { scrollState.value > fieldScrolledOffAt } }
+    val reportScrolledOff by rememberUpdatedState(onSearchScrolledOff)
+    LaunchedEffect(Unit) {
+        snapshotFlow { fieldScrolledOff }.collect { reportScrolledOff(it) }
+    }
+    val typingInBar by rememberUpdatedState(searchInBar)
     var isFirstSearchComposition by remember { mutableStateOf(true) }
     LaunchedEffect(searchQuery) {
         if (isFirstSearchComposition && searchQuery.isEmpty()) {
@@ -397,7 +432,11 @@ fun SettingsScreen(
             isFirstSearchComposition = false
         } else {
             isFirstSearchComposition = false
-            scrollState.scrollTo(0)
+            // Typed into the bar: start the results just under it rather than
+            // back at the top, where the page's own field would show twice.
+            scrollState.scrollTo(
+                if (typingInBar) fieldScrolledOffAt.toInt().coerceAtMost(scrollState.maxValue) + 1 else 0,
+            )
         }
     }
 
@@ -415,11 +454,20 @@ fun SettingsScreen(
         )
         SearchField(
             query = searchQuery,
-            onQueryChange = { searchQuery = it },
+            onQueryChange = onSearchQueryChange,
             onSubmit = {},
             placeholder = stringResource(R.string.settings_search_hint),
             containerColor = frostedSurfaceColor(MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 4.dp),
+            modifier = Modifier
+                .padding(start = 20.dp, end = 20.dp, bottom = 4.dp)
+                .onGloballyPositioned { coordinates ->
+                    // Measured unclipped, so it still holds once the field is off screen.
+                    val bottom = coordinates.positionInRoot().y + coordinates.size.height
+                    fieldScrolledOffAt = bottom + scrollState.value - barLinePx
+                }
+                // Hidden rather than removed while the bar has it, so the page
+                // below keeps its place.
+                .graphicsLayer { alpha = if (searchInBar) 0f else 1f },
         )
 
         SearchableSettingsGroup(search) {
@@ -784,6 +832,65 @@ fun SettingsScreen(
                     modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, bottom = 14.dp),
                 )
             }
+            val appIconTitle = stringResource(R.string.app_icon)
+            row(appIconTitle, "icon", "launcher", "logo", "glass") {
+                // Read from the package manager rather than a setting, so it is
+                // whatever the launcher is really showing.
+                var selectedIcon by remember { mutableStateOf(AppIcon.current(context)) }
+                SettingsRow(icon = Icons.Rounded.Apps, title = appIconTitle)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(start = ROW_INSET, end = ROW_INSET, bottom = 14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    AppIcon.entries.forEach { option ->
+                        val selected = option == selectedIcon
+                        Column(
+                            modifier = Modifier
+                                .width(84.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .clickable {
+                                    if (option != selectedIcon) {
+                                        selectedIcon = option
+                                        AppIcon.apply(context, option)
+                                    }
+                                }
+                                .padding(vertical = 6.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            // An ImageView draws the adaptive icon through the
+                            // device's own mask, the shape the launcher will use.
+                            AndroidView(
+                                factory = { ctx ->
+                                    android.widget.ImageView(ctx).apply { setImageResource(option.iconRes) }
+                                },
+                                modifier = Modifier
+                                    .size(60.dp)
+                                    .then(
+                                        if (selected) {
+                                            Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(18.dp))
+                                        } else {
+                                            Modifier
+                                        },
+                                    )
+                                    .padding(4.dp),
+                            )
+                            Text(
+                                text = stringResource(option.labelRes),
+                                textAlign = TextAlign.Center,
+                                maxLines = 2,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = if (selected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                                modifier = Modifier.padding(top = 6.dp),
+                            )
+                        }
+                    }
+                }
+            }
             val reduceAnimationTitle = stringResource(R.string.reduce_animation)
             row(reduceAnimationTitle, "motion") {
                 SettingsRow(
@@ -980,6 +1087,49 @@ fun SettingsScreen(
                     ) {
                         Text(
                             text = spotifyCanvasTitle,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Chevron()
+                    }
+                }
+            }
+            val artistSignaturesTitle = stringResource(R.string.artist_signatures)
+            row(artistSignaturesTitle, "signature", "artist", "logo") {
+                SettingsRow(
+                    icon = Icons.Rounded.Draw,
+                    title = artistSignaturesTitle,
+                    subtitle = stringResource(R.string.artist_signatures_subtitle),
+                    trailing = {
+                        Switch(
+                            checked = signatureApiEnabled,
+                            onCheckedChange = AppSettings::setSignatureApiEnabled,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { AppSettings.setSignatureApiEnabled(!signatureApiEnabled) },
+                )
+            }
+            if (signatureApiEnabled) {
+                val signatureUrlTitle = stringResource(R.string.artist_signatures_url)
+                row(signatureUrlTitle, "signature", "api", "url", divided = false) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = onEditSignatureApi)
+                            .padding(start = ROW_INSET, end = ROW_INSET, top = 4.dp, bottom = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = signatureApiUrl.ifBlank {
+                                stringResource(R.string.artist_signatures_unconfigured)
+                            },
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onBackground,
                             modifier = Modifier.weight(1f),
@@ -1715,20 +1865,8 @@ fun SettingsScreen(
                         textDecoration = TextDecoration.Underline,
                     ),
                 )
-                withLink(LinkAnnotation.Url("https://github.com/kushagrasinghx/BitChord", linkStyles)) {
+                withLink(LinkAnnotation.Url(FORK_AUTHOR_URL, linkStyles)) {
                     append("GitHub")
-                }
-                append("  ")
-                withLink(LinkAnnotation.Url("https://github.com/kushagrasinghx", linkStyles)) {
-                    append("Developer")
-                }
-                append("  ")
-                withLink(LinkAnnotation.Url("https://discord.gg/pDdKfrdHY6", linkStyles)) {
-                    append("Discord")
-                }
-                append("  ")
-                withLink(LinkAnnotation.Url("https://bitchord.kushagrasingh.in/", linkStyles)) {
-                    append("Website")
                 }
                 append("\n~YouTube Music & Listen Together Backend")
             },
@@ -1751,7 +1889,17 @@ fun SettingsScreen(
                         textDecoration = TextDecoration.Underline,
                     ),
                 )
-                append(forkNotice)
+                // The upstream app's name in the notice is the link to its site.
+                val upstream = forkNotice.indexOf(UPSTREAM_NAME)
+                if (upstream >= 0) {
+                    append(forkNotice.substring(0, upstream))
+                    withLink(LinkAnnotation.Url(UPSTREAM_WEBSITE_URL, linkStyles)) {
+                        append(UPSTREAM_NAME)
+                    }
+                    append(forkNotice.substring(upstream + UPSTREAM_NAME.length))
+                } else {
+                    append(forkNotice)
+                }
                 append("\n")
                 withLink(LinkAnnotation.Url(FORK_RELEASES_URL, linkStyles)) {
                     append(forkReleases)
@@ -1778,7 +1926,7 @@ fun SettingsScreen(
     }
 
     picking?.let { target ->
-        ModalBottomSheet(
+        SlideDownBottomSheet(
             onDismissRequest = { picking = null },
             containerColor = MaterialTheme.colorScheme.background,
         ) {
@@ -1808,7 +1956,7 @@ fun SettingsScreen(
     }
 
     if (pickingDownloadQuality) {
-        ModalBottomSheet(
+        SlideDownBottomSheet(
             onDismissRequest = { pickingDownloadQuality = false },
             containerColor = MaterialTheme.colorScheme.background,
         ) {
@@ -1823,7 +1971,7 @@ fun SettingsScreen(
     }
 
     if (pickingAutomixPerformance) {
-        ModalBottomSheet(
+        SlideDownBottomSheet(
             onDismissRequest = { pickingAutomixPerformance = false },
             containerColor = MaterialTheme.colorScheme.background,
         ) {
@@ -2963,6 +3111,11 @@ internal fun SegmentedControl(
     }
 }
 
+/** Whoever keeps this fork. */
+private const val FORK_AUTHOR_URL = "https://github.com/steeben"
+/** The app this one was forked from, and its site. */
+private const val UPSTREAM_NAME = "BitChord"
+private const val UPSTREAM_WEBSITE_URL = "https://bitchord.kushagrasingh.in/"
 /** This fork's releases, for updates. */
 private const val FORK_RELEASES_URL = "https://github.com/steeben/BitChord-Dial/releases"
 private const val OBTAINX_GITHUB_URL = "https://github.com/bikram-agarwal/ObtainX"

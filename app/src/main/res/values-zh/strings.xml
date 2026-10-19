@@ -449,7 +449,7 @@
     <string name="upgrade_length_slack_footer">容差越大，接受的来源匹配越多；容差越小则越严格。默认为 3 秒。</string>
     <string name="seconds_short">%1$d 秒</string>
     <string name="spdc_token">sp_dc 令牌</string>
-    <string name="spotify_canvas_setup">Spotify Canvas 设置</string>
+    <string name="spotify_canvas_setup">设置 Spotify</string>
     <string name="spotify_canvas_setup_description">要使用 Spotify Canvas，请提供你的 Spotify sp_dc cookie。</string>
     <string name="spotify_canvas_setup_steps">1. 在浏览器中登录 open.spotify.com。\n2. 打开开发者工具，然后进入“应用程序”和“Cookie”。\n3. 复制 sp_dc cookie 的值。\n4. 将其粘贴到下方。</string>
     <string name="spotify_canvas_auto_hide">自动隐藏播放控件</string>
@@ -1231,6 +1231,10 @@
     <string name="cached_songs">已缓存的歌曲</string>
     <string name="cached_songs_subtitle">歌曲缓存中的 YouTube 和 JioSaavn 歌曲</string>
     <string name="cached_songs_empty">还没有已缓存的歌曲。你从 YouTube 或 JioSaavn 播放的歌曲会显示在这里。</string>
+    <string name="cached_song_partial">部分</string>
+    <string name="remove_from_cache">从缓存中移除</string>
+    <string name="cached_song_remove">移除</string>
+    <string name="removed_from_cache">已从歌曲缓存中移除</string>
     <string name="show_cache_folder">显示已缓存歌曲文件夹</string>
     <string name="show_cache_folder_subtitle">在资料库中添加一个文件夹，列出歌曲缓存中保存的 YouTube 和 JioSaavn 歌曲</string>
     <string name="song_cache_unlimited">无限制</string>
@@ -1266,6 +1270,7 @@
     <string name="spotify_import_unmatched">%1$d 首歌曲未在 YouTube Music 上找到</string>
     <string name="spotify_library_subtitle">你的 Spotify 播放列表</string>
     <string name="spotify_sign_in">使用 Spotify 登录</string>
+    <string name="spotify_use_spdc_token">使用 sp_dc 令牌</string>
     <string name="spotify_track_unavailable">在 YouTube Music 上找不到该歌曲</string>
     <string name="local_only">本地</string>
     <string name="nothing_on_device_for_artist">此设备上还没有该艺人的内容</string>
@@ -1274,4 +1279,21 @@
     <string name="unpin_artist_from_speed_dial">将艺人从快速拨号取消固定</string>
     <string name="pin_artist_radio_to_speed_dial">将艺人电台固定到快速拨号</string>
     <string name="unpin_artist_radio_from_speed_dial">将艺人电台从快速拨号取消固定</string>
+    <string name="app_icon">应用图标</string>
+    <string name="app_icon_default">默认</string>
+    <string name="song_info">歌曲信息</string>
+    <string name="song_info_album">专辑</string>
+    <string name="song_info_release_date">发行日期</string>
+    <string name="song_info_views">播放 / 观看次数</string>
+    <string name="song_info_likes">点赞数</string>
+    <string name="song_info_comments">评论数</string>
+    <string name="song_info_unavailable">暂无信息</string>
+    <string name="song_info_error">部分信息无法加载。</string>
+    <string name="song_info_retry">重试</string>
+    <string name="artist_signatures">艺术家签名</string>
+    <string name="artist_signatures_subtitle">当 Apple Music 没有标题标志时显示手写签名</string>
+    <string name="artist_signatures_url">签名 API URL</string>
+    <string name="artist_signatures_unconfigured">未配置 — 点击设置 API URL</string>
+    <string name="artist_signatures_test_failed">无法访问该 URL 的 API</string>
+    <string name="signed_by">由 %1$s 签名</string>
 </resources>

@@ -34,6 +34,7 @@ import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.DownloadDone
 import androidx.compose.material.icons.rounded.Downloading
@@ -42,9 +43,12 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.HighQuality
+import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Radio
 import androidx.compose.material.icons.rounded.PlaylistRemove
+import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.ThumbDown
 import androidx.compose.material.icons.rounded.ThumbDownOffAlt
@@ -146,6 +150,11 @@ fun SongActionsSheet(
     onOpenArtist: (String) -> Unit,
     modifier: Modifier = Modifier,
     onRemoveFromPlaylist: (() -> Unit)? = null,
+    /**
+     * Takes this track out of the song cache. Null hides the row — the caller
+     * passes one only while the cache actually holds some of it.
+     */
+    onRemoveFromCache: (() -> Unit)? = null,
     showSleepTimer: Boolean = false,
     /**
      * Sends the playing track back to YouTube's own upload, and keeps it there.
@@ -175,6 +184,11 @@ fun SongActionsSheet(
     isAudioVersion: Boolean = false,
     onShare: (() -> Unit)? = null,
     /**
+     * Picks this one song's art from the covers its album's files carry — see
+     * [com.music.bitchord.data.AlbumArtChoices]. Null hides the row.
+     */
+    onChangeAlbumArt: (() -> Unit)? = null,
+    /**
      * Copies what the app logged while starting this track. Null everywhere
      * except the player, where "this track" means something.
      */
@@ -198,6 +212,14 @@ fun SongActionsSheet(
      */
     resolvingLinks: Boolean = false,
     /**
+     * Ties a file on the device to its track on YouTube Music by hand, for
+     * its artist and album. Null hides the row — offered only for a file of
+     * the listener's own. See [com.music.bitchord.data.LocalLinks].
+     */
+    onLinkToYouTube: (() -> Unit)? = null,
+    /** Whether that file is linked already, so the row offers to change it. */
+    linkedToYouTube: Boolean = false,
+    /**
      * Where the rows are drawn. [SongActionsPresentation.Sheet] is the tinted
      * bottom sheet with its own track header; [SongActionsPresentation.Menu]
      * is only the rows, compact and in the theme's own colours, for the
@@ -206,8 +228,11 @@ fun SongActionsSheet(
      */
     presentation: SongActionsPresentation = SongActionsPresentation.Sheet,
 ) {
+    var showingSongInfo by remember(song.videoId) { mutableStateOf(false) }
     var pickingSleepTimer by remember { mutableStateOf(false) }
     val menu = presentation == SongActionsPresentation.Menu
+    // The held-row menu has no pages to swap, so there Song Info opens as a dialog.
+    if (menu && showingSongInfo) SongInfoDialog(song) { showingSongInfo = false }
     // Read from the thumbnail the row that opened this sheet was already
     // showing, not a larger copy of it: the tint is a blur and a handful of
     // swatches, neither of which a bigger image improves, and going back for
@@ -306,6 +331,14 @@ fun SongActionsSheet(
         }
 
         DownloadRow(song, palette, isOffline, onDownload)
+        onRemoveFromCache?.let {
+            ActionRow(
+                icon = Icons.Rounded.DeleteSweep,
+                label = stringResource(R.string.remove_from_cache),
+                accent = palette.accent,
+                onClick = it,
+            )
+        }
         WebDavUploadRow(song, palette, isOffline, onUploadToWebDav)
         ActionRow(
             icon = Icons.Rounded.Radio,
@@ -371,6 +404,19 @@ fun SongActionsSheet(
                 accent = palette.accent,
             ) { onOpenArtist(id) }
         }
+        ActionRow(Icons.Rounded.Info, stringResource(R.string.song_info), accent = palette.accent) {
+            showingSongInfo = true
+        }
+        onLinkToYouTube?.let {
+            ActionRow(
+                icon = Icons.Rounded.Link,
+                label = stringResource(
+                    if (linkedToYouTube) R.string.change_youtube_music_link else R.string.link_to_youtube_music,
+                ),
+                accent = palette.accent,
+                onClick = it,
+            )
+        }
         if (showSleepTimer) {
             ActionRow(
                 icon = Icons.Rounded.Bedtime,
@@ -390,6 +436,9 @@ fun SongActionsSheet(
                 accent = palette.accent,
                 onClick = it,
             )
+        }
+        onChangeAlbumArt?.let {
+            ActionRow(Icons.Rounded.Image, stringResource(R.string.change_album_art), accent = palette.accent, onClick = it)
         }
         if (!isOffline) {
             onShare?.let {
@@ -414,6 +463,10 @@ fun SongActionsSheet(
     TintedSheet(palette = palette, imageUrl = song.thumbnailUrl, modifier = modifier) {
         if (pickingSleepTimer) {
             SleepTimerPicker(palette = palette, onBack = { pickingSleepTimer = false })
+            return@TintedSheet
+        }
+        if (showingSongInfo) {
+            SongInfoPage(song = song, palette = palette, onBack = { showingSongInfo = false })
             return@TintedSheet
         }
 

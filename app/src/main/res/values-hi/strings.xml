@@ -461,7 +461,7 @@
     <string name="upgrade_length_slack_footer">ज़्यादा छूट से ज़्यादा स्रोत मिलान स्वीकार होते हैं; कम छूट ज़्यादा सख़्त है। डिफ़ॉल्ट 3 सेकंड है।</string>
     <string name="seconds_short">%1$d से.</string>
     <string name="spdc_token">sp_dc टोकन</string>
-    <string name="spotify_canvas_setup">Spotify Canvas सेटअप</string>
+    <string name="spotify_canvas_setup">Spotify सेट अप करें</string>
     <string name="spotify_canvas_setup_description">Spotify Canvas इस्तेमाल करने के लिए, अपनी Spotify sp_dc कुकी दें।</string>
     <string name="spotify_canvas_setup_steps">1. ब्राउज़र में open.spotify.com पर साइन इन करें।\n2. Developer Tools खोलें, फिर Application और Cookies पर जाएं।\n3. sp_dc कुकी की वैल्यू कॉपी करें।\n4. इसे नीचे पेस्ट करें।</string>
     <string name="spotify_canvas_auto_hide">प्लेयर कंट्रोल अपने-आप छिपाएँ</string>
@@ -1252,6 +1252,10 @@
     <string name="cached_songs">कैश किए गए गाने</string>
     <string name="cached_songs_subtitle">सॉन्ग कैश में YouTube और JioSaavn के गाने</string>
     <string name="cached_songs_empty">अभी कोई कैश किया गया गाना नहीं है। YouTube या JioSaavn से चलाए गए गाने यहाँ दिखेंगे।</string>
+    <string name="cached_song_partial">आंशिक</string>
+    <string name="remove_from_cache">कैश से हटाएँ</string>
+    <string name="cached_song_remove">हटाएँ</string>
+    <string name="removed_from_cache">गाने के कैश से हटाया गया</string>
     <string name="show_cache_folder">कैश किए गए गानों का फ़ोल्डर दिखाएँ</string>
     <string name="show_cache_folder_subtitle">लाइब्रेरी में सॉन्ग कैश में रखे YouTube और JioSaavn गानों का फ़ोल्डर जोड़ता है</string>
     <string name="song_cache_unlimited">असीमित</string>
@@ -1287,6 +1291,7 @@
     <string name="spotify_import_unmatched">%1$d गाने YouTube Music पर नहीं मिले</string>
     <string name="spotify_library_subtitle">आपकी Spotify प्लेलिस्ट</string>
     <string name="spotify_sign_in">Spotify से साइन इन करें</string>
+    <string name="spotify_use_spdc_token">sp_dc टोकन इस्तेमाल करें</string>
     <string name="spotify_track_unavailable">वह गाना YouTube Music पर नहीं मिला</string>
     <string name="chinese_simplified">中文（简体）</string>
     <string name="chinese_traditional">中文（繁體）</string>
@@ -1297,4 +1302,21 @@
     <string name="unpin_artist_from_speed_dial">कलाकार को स्पीड डायल से अनपिन करें</string>
     <string name="pin_artist_radio_to_speed_dial">कलाकार रेडियो को स्पीड डायल पर पिन करें</string>
     <string name="unpin_artist_radio_from_speed_dial">कलाकार रेडियो को स्पीड डायल से अनपिन करें</string>
+    <string name="app_icon">ऐप आइकन</string>
+    <string name="app_icon_default">डिफ़ॉल्ट</string>
+    <string name="song_info">गाने की जानकारी</string>
+    <string name="song_info_album">एल्बम</string>
+    <string name="song_info_release_date">रिलीज़ की तारीख</string>
+    <string name="song_info_views">प्ले / व्यू</string>
+    <string name="song_info_likes">पसंद</string>
+    <string name="song_info_comments">टिप्पणियाँ</string>
+    <string name="song_info_unavailable">उपलब्ध नहीं</string>
+    <string name="song_info_error">कुछ जानकारी लोड नहीं हो सकी।</string>
+    <string name="song_info_retry">फिर से कोशिश करें</string>
+    <string name="artist_signatures">कलाकारों के हस्ताक्षर</string>
+    <string name="artist_signatures_subtitle">Apple Music में शीर्षक लोगो न होने पर हस्तलिखित हस्ताक्षर दिखाता है</string>
+    <string name="artist_signatures_url">हस्ताक्षर API URL</string>
+    <string name="artist_signatures_unconfigured">कॉन्फ़िगर नहीं है — API URL सेट करने के लिए टैप करें</string>
+    <string name="artist_signatures_test_failed">उस URL पर API तक नहीं पहुंचा जा सका</string>
+    <string name="signed_by">%1$s द्वारा हस्ताक्षरित</string>
 </resources>
