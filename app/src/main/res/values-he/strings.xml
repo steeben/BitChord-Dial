@@ -1307,6 +1307,8 @@
     <string name="unpin_artist_from_speed_dial">ביטול הצמדת האמן מהחיוג המהיר</string>
     <string name="pin_artist_radio_to_speed_dial">הצמדת הרדיו של האמן לחיוג המהיר</string>
     <string name="unpin_artist_radio_from_speed_dial">ביטול הצמדת הרדיו של האמן מהחיוג המהיר</string>
+    <string name="app_icon">סמל האפליקציה</string>
+    <string name="app_icon_default">ברירת מחדל</string>
     <string name="song_info">מידע על השיר</string>
     <string name="song_info_album">אלבום</string>
     <string name="song_info_release_date">תאריך יציאה</string>

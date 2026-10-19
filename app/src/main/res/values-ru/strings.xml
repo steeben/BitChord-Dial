@@ -1334,6 +1334,8 @@
     <string name="unpin_artist_from_speed_dial">Открепить исполнителя из быстрого набора</string>
     <string name="pin_artist_radio_to_speed_dial">Закрепить радио исполнителя в быстром наборе</string>
     <string name="unpin_artist_radio_from_speed_dial">Открепить радио исполнителя из быстрого набора</string>
+    <string name="app_icon">Значок приложения</string>
+    <string name="app_icon_default">По умолчанию</string>
     <string name="song_info">Информация о песне</string>
     <string name="song_info_album">Альбом</string>
     <string name="song_info_release_date">Дата выпуска</string>

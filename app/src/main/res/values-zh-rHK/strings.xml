@@ -1280,6 +1280,8 @@
     <string name="unpin_artist_from_speed_dial">將藝人從快速撥號取消釘選</string>
     <string name="pin_artist_radio_to_speed_dial">將藝人電台釘選到快速撥號</string>
     <string name="unpin_artist_radio_from_speed_dial">將藝人電台從快速撥號取消釘選</string>
+    <string name="app_icon">應用程式圖示</string>
+    <string name="app_icon_default">預設</string>
     <string name="song_info">歌曲資訊</string>
     <string name="song_info_album">專輯</string>
     <string name="song_info_release_date">發行日期</string>

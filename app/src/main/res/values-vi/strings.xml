@@ -1219,6 +1219,8 @@
     <string name="unpin_artist_from_speed_dial">Bỏ ghim nghệ sĩ khỏi quay số nhanh</string>
     <string name="pin_artist_radio_to_speed_dial">Ghim radio nghệ sĩ vào quay số nhanh</string>
     <string name="unpin_artist_radio_from_speed_dial">Bỏ ghim radio nghệ sĩ khỏi quay số nhanh</string>
+    <string name="app_icon">Biểu tượng ứng dụng</string>
+    <string name="app_icon_default">Mặc định</string>
     <string name="song_info">Thông tin bài hát</string>
     <string name="song_info_album">Album</string>
     <string name="song_info_release_date">Ngày phát hành</string>

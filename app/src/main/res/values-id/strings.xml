@@ -1279,6 +1279,8 @@
     <string name="unpin_artist_from_speed_dial">Lepas sematan artis dari panggilan cepat</string>
     <string name="pin_artist_radio_to_speed_dial">Sematkan radio artis ke panggilan cepat</string>
     <string name="unpin_artist_radio_from_speed_dial">Lepas sematan radio artis dari panggilan cepat</string>
+    <string name="app_icon">Ikon aplikasi</string>
+    <string name="app_icon_default">Default</string>
     <string name="song_info">Info lagu</string>
     <string name="song_info_album">Album</string>
     <string name="song_info_release_date">Tanggal rilis</string>

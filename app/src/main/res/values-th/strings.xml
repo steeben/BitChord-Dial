@@ -1285,6 +1285,8 @@
     <string name="unpin_artist_from_speed_dial">เลิกปักหมุดศิลปินจากโทรด่วน</string>
     <string name="pin_artist_radio_to_speed_dial">ปักหมุดวิทยุศิลปินไว้ที่โทรด่วน</string>
     <string name="unpin_artist_radio_from_speed_dial">เลิกปักหมุดวิทยุศิลปินจากโทรด่วน</string>
+    <string name="app_icon">ไอคอนแอป</string>
+    <string name="app_icon_default">ค่าเริ่มต้น</string>
     <string name="song_info">ข้อมูลเพลง</string>
     <string name="song_info_album">อัลบั้ม</string>
     <string name="song_info_release_date">วันที่เผยแพร่</string>
