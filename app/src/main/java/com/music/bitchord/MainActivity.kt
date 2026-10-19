@@ -5067,6 +5067,10 @@ private fun BitChordApp(
                     showStats = false
                     settingsSubScreen = null
                     showHistory = false
+                    // Spotify and Discord are pages too; left open, they sat
+                    // over every tab and the bar seemed to stop switching.
+                    showSpotify = false
+                    showDiscord = false
                     libraryShowAll = null
                     selectedTab = index
 
