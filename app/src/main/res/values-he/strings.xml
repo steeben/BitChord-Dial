@@ -1311,4 +1311,21 @@
     <string name="show_queue_history_subtitle">מציג עד 25 שירים שהושמעו מעל \"מתנגן עכשיו\" בתור</string>
     <string name="search_source_addons">תוספים</string>
     <string name="search_addons_none">אין תוספים מופעלים. אפשר להוסיף אחד בהגדרות ← מקורות.</string>
+    <string name="app_icon">סמל האפליקציה</string>
+    <string name="app_icon_default">ברירת מחדל</string>
+    <string name="song_info">מידע על השיר</string>
+    <string name="song_info_album">אלבום</string>
+    <string name="song_info_release_date">תאריך יציאה</string>
+    <string name="song_info_views">השמעות / צפיות</string>
+    <string name="song_info_likes">לייקים</string>
+    <string name="song_info_comments">תגובות</string>
+    <string name="song_info_unavailable">לא זמין</string>
+    <string name="song_info_error">לא ניתן לטעון חלק מהמידע.</string>
+    <string name="song_info_retry">ניסיון חוזר</string>
+    <string name="artist_signatures">חתימות של אמנים</string>
+    <string name="artist_signatures_subtitle">מציג חתימה בכתב יד כאשר ל-Apple Music אין לוגו כותרת</string>
+    <string name="artist_signatures_url">כתובת API של חתימות</string>
+    <string name="artist_signatures_unconfigured">לא מוגדר — הקש כדי להגדיר את כתובת ה-API</string>
+    <string name="artist_signatures_test_failed">לא ניתן היה להתחבר ל-API בכתובת זו</string>
+    <string name="signed_by">נחתם על ידי %1$s</string>
 </resources>

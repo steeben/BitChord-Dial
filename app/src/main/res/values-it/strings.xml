@@ -1245,4 +1245,21 @@
     <string name="show_queue_history_subtitle">Mostra fino a 25 brani riprodotti sopra «In riproduzione» nella coda</string>
     <string name="search_source_addons">Addon</string>
     <string name="search_addons_none">Nessun addon attivo. Aggiungine uno in Impostazioni → Fonti.</string>
+    <string name="app_icon">Icona dell’app</string>
+    <string name="app_icon_default">Predefinita</string>
+    <string name="song_info">Informazioni sul brano</string>
+    <string name="song_info_album">Album</string>
+    <string name="song_info_release_date">Data di uscita</string>
+    <string name="song_info_views">Riproduzioni / visualizzazioni</string>
+    <string name="song_info_likes">Mi piace</string>
+    <string name="song_info_comments">Commenti</string>
+    <string name="song_info_unavailable">Non disponibile</string>
+    <string name="song_info_error">Impossibile caricare alcune informazioni.</string>
+    <string name="song_info_retry">Riprova</string>
+    <string name="artist_signatures">Firme degli artisti</string>
+    <string name="artist_signatures_subtitle">Mostra una firma a mano quando Apple Music non ha un logo del titolo</string>
+    <string name="artist_signatures_url">URL dell\'API delle firme</string>
+    <string name="artist_signatures_unconfigured">Non configurato — tocca per impostare l\'URL dell\'API</string>
+    <string name="artist_signatures_test_failed">Impossibile raggiungere l\'API a questo URL</string>
+    <string name="signed_by">Firmato da %1$s</string>
 </resources>
