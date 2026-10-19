@@ -339,6 +339,11 @@ fun SongRow(
     searchPlayingStyle: Boolean = false,
     /** True while a Downloads row belongs to the current multi-selection. */
     selected: Boolean = false,
+    /**
+     * A control of the page's own, drawn just ahead of the ⋮ — the Cached
+     * songs folder's per-track download button. Null on every other list.
+     */
+    trailing: (@Composable () -> Unit)? = null,
 ) {
     val haptics = rememberHaptics()
     val swipeStateHolder = remember { mutableStateOf<SwipeToDismissBoxState?>(null) }
@@ -380,6 +385,7 @@ fun SongRow(
             activeTint = activeTint,
             searchPlayingStyle = searchPlayingStyle,
             selected = selected,
+            trailing = trailing,
         )
         return
     }
@@ -428,6 +434,7 @@ fun SongRow(
             activeTint = activeTint,
             searchPlayingStyle = searchPlayingStyle,
             selected = selected,
+            trailing = trailing,
         )
     }
 }
@@ -497,6 +504,7 @@ private fun SongRowContent(
     activeTint: Color = MaterialTheme.colorScheme.primary,
     searchPlayingStyle: Boolean = false,
     selected: Boolean = false,
+    trailing: (@Composable () -> Unit)? = null,
 ) {
     val titleColor by animateColorAsState(
         targetValue = if (isCurrent) activeTint else MaterialTheme.colorScheme.onBackground,
@@ -622,6 +630,10 @@ private fun SongRowContent(
                     color = subtitleColor,
                 )
             }
+        }
+        if (trailing != null && !matching && !unavailable) {
+            Spacer(Modifier.width(4.dp))
+            trailing()
         }
         // Same sheet the long-press opens, for anyone who doesn't think to hold.
         if (onMore != null && !matching && !unavailable) {

@@ -10,6 +10,9 @@ import coil3.disk.DiskCache
 import coil3.disk.directory
 import coil3.memory.MemoryCache
 import coil3.request.crossfade
+import coil3.svg.SvgDecoder
+import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import okhttp3.OkHttpClient
 import com.music.bitchord.auth.AuthStore
 import com.music.bitchord.data.DebugLog
 import com.music.bitchord.data.lyrics.LyricsTranslation
@@ -147,12 +150,16 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory {
         // one to hand — see SpotifyToken's doc for why.
         SpotifyToken.init(this)
         // A sideloaded update is just a new APK over the old one, so app data —
-        // including whatever the old build left in these caches — survives it
-        // untouched. Wipe both on the first launch of a higher versionCode so a
-        // format or key change between builds can't serve stale or mismatched
-        // bytes from a cache the new code didn't write.
+        // including whatever the old build left in the image cache — survives
+        // it untouched. Wipe that on the first launch of a higher versionCode so
+        // a format change between builds can't serve stale bytes.
+        //
+        // The song cache is deliberately *not* wiped here any more. It is the
+        // Cached songs folder and what plays offline, and clearing it on every
+        // update is what made the whole folder disappear overnight whenever a
+        // new build was installed. A build that really does change its keys or
+        // its bytes says so through AudioCache's own cache format instead.
         if (AppSettings.consumeVersionUpdate(BuildConfig.VERSION_CODE)) {
-            AudioCache.clear()
             SingletonImageLoader.get(this).let { loader ->
                 loader.memoryCache?.clear()
                 loader.diskCache?.clear()
@@ -174,6 +181,29 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory {
      * Naming a directory alongside it keeps that cache somewhere identifiable
      * rather than in the process's temp dir.
      */
+    /**
+     * Coil's own transport, separate from [Http][com.music.bitchord.data.Http]'s
+     * playback-tuned client.
+     *
+     * Wikimedia (which serves signature art) answers generic clients with
+     * HTTP 403 under its User-Agent policy, so every image request carries an
+     * identifying agent.
+     */
+    private val coilHttpClient: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                chain.proceed(
+                    chain.request().newBuilder()
+                        .header(
+                            "User-Agent",
+                            "BitChordDial/${BuildConfig.VERSION_NAME} (Android; +https://github.com/steeben/BitChord-Dial)",
+                        )
+                        .build(),
+                )
+            }
+            .build()
+    }
+
     override fun newImageLoader(context: PlatformContext): ImageLoader =
         ImageLoader.Builder(context)
             // Covers on the WebDAV server need the credential or every one
@@ -192,6 +222,11 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory {
                 // cover. See AlbumArtChoices.
                 add(com.music.bitchord.data.TrackArtFetcher.Factory())
                 add(com.music.bitchord.data.TrackArtFetcher.StringFactory())
+                // Artist signatures are usually SVG, which Coil can't
+                // decode without this. See ArtistSignatureRepository.
+                add(SvgDecoder.Factory())
+                // Wikimedia 403s Coil's default client; see [coilHttpClient].
+                add(OkHttpNetworkFetcherFactory(callFactory = { coilHttpClient }))
             }
             .memoryCache {
                 MemoryCache.Builder()

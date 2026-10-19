@@ -508,7 +508,7 @@
     <string name="upgrade_length_slack_footer">Una tolleranza più ampia accetta più corrispondenze; una più stretta è più severa. Il valore predefinito è 3 secondi.</string>
     <string name="seconds_short">%1$d s</string>
     <string name="spdc_token">Token sp_dc</string>
-    <string name="spotify_canvas_setup">Configurazione Spotify Canvas</string>
+    <string name="spotify_canvas_setup">Configura Spotify</string>
     <string name="spotify_canvas_setup_description">Per usare Spotify Canvas, fornisci il tuo cookie sp_dc di Spotify.</string>
     <string name="spotify_canvas_setup_steps">1. Accedi su open.spotify.com in un browser.\n2. Apri gli Strumenti per sviluppatori, poi Applicazione e Cookie.\n3. Copia il valore del cookie sp_dc.\n4. Incollalo qui sotto.</string>
     <string name="spotify_canvas_auto_hide">Nascondi automaticamente i controlli</string>
@@ -1191,6 +1191,10 @@
     <string name="cached_songs">Brani in cache</string>
     <string name="cached_songs_subtitle">Brani di YouTube e JioSaavn nella cache dei brani</string>
     <string name="cached_songs_empty">Ancora nessun brano in cache. I brani che riproduci da YouTube o JioSaavn appariranno qui.</string>
+    <string name="cached_song_partial">Parziale</string>
+    <string name="remove_from_cache">Rimuovi dalla cache</string>
+    <string name="cached_song_remove">Rimuovi</string>
+    <string name="removed_from_cache">Rimosso dalla cache dei brani</string>
     <string name="show_cache_folder">Mostra cartella dei brani in cache</string>
     <string name="show_cache_folder_subtitle">Aggiunge alla Libreria una cartella con i brani di YouTube e JioSaavn conservati nella cache</string>
     <string name="song_cache_unlimited">Illimitata</string>
@@ -1226,6 +1230,7 @@
     <string name="spotify_import_unmatched">%1$d brani non sono stati trovati su YouTube Music</string>
     <string name="spotify_library_subtitle">Le tue playlist Spotify</string>
     <string name="spotify_sign_in">Accedi con Spotify</string>
+    <string name="spotify_use_spdc_token">Usa token sp_dc</string>
     <string name="spotify_track_unavailable">Impossibile trovare quel brano su YouTube Music</string>
     <string name="chinese_simplified">中文（简体）</string>
     <string name="chinese_traditional">中文（繁體）</string>

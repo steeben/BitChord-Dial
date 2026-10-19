@@ -58,6 +58,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -116,6 +117,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -169,6 +171,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.music.bitchord.auth.DiscordLoginScreen
+import com.music.bitchord.auth.SpotifyLoginScreen
 import com.music.bitchord.auth.WebSessionMode
 import com.music.bitchord.auth.YtMusicLoginScreen
 import com.music.bitchord.data.AppUpdateChecker
@@ -255,6 +258,7 @@ import com.music.bitchord.ui.screens.ALL_LIBRARY_BROWSE_ID
 import com.music.bitchord.ui.screens.CACHE_FOLDER_BROWSE_ID
 import com.music.bitchord.ui.screens.ListenTogetherScreen
 import com.music.bitchord.ui.screens.PartyServerEditor
+import com.music.bitchord.ui.screens.SignatureApiEditor
 import com.music.bitchord.ui.screens.SettingsScreen
 import com.music.bitchord.ui.screens.SourceEditorAlert
 import com.music.bitchord.ui.screens.SourcesScreen
@@ -760,6 +764,7 @@ private fun BitChordApp(
     var editingSource by remember { mutableStateOf<SourceConfig?>(null) }
     var confirmJioSaavn by remember { mutableStateOf(false) }
     var editingPartyServer by remember { mutableStateOf(false) }
+    var editingSignatureApi by remember { mutableStateOf(false) }
     var showHistory by remember { mutableStateOf(false) }
     /**
      * Which history the History page shows: YouTube's (the Library tab's
@@ -805,6 +810,7 @@ private fun BitChordApp(
     var showDiscord by remember { mutableStateOf(false) }
     var showSpotify by remember { mutableStateOf(false) }
     var showDiscordLogin by remember { mutableStateOf(false) }
+    var showSpotifyLogin by remember { mutableStateOf(false) }
     var discordDialog by remember { mutableStateOf<DiscordDialog?>(null) }
     var songActions by remember { mutableStateOf<Song?>(null) }
     // A device file being linked to its YouTube Music track by hand — see LocalLinks.
@@ -2394,7 +2400,11 @@ private fun BitChordApp(
         // after this check for the connection to have changed under it. This is
         // the one place that knows the tap was for forty tracks and can say so
         // once, rather than leaving forty identical failed rows to be read.
-        val blocked = songs.isNotEmpty() && !AppSettings.downloadsAllowedNow
+        // A copy out of the song cache spends no data, so Wi-Fi only does not
+        // refuse a batch that has one — [Downloads.enqueue] still refuses the
+        // tracks in it that would need the network.
+        val blocked = songs.isNotEmpty() && !AppSettings.downloadsAllowedNow &&
+            songs.none { Downloads.servableFromCache(it.videoId) }
         if (songs.isNotEmpty() && !blocked) {
             val needsStorage = AppSettings.exportDownloads.value && DownloadStore.needsLegacyPermission() &&
                 ContextCompat.checkSelfPermission(
@@ -2463,6 +2473,25 @@ private fun BitChordApp(
                 }
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+    // The Cached songs folder's download buttons. The song cache already holds
+    // these tracks, so they are saved from its copy — no data spent, no
+    // connection needed — rather than fetched afresh at the Download quality
+    // setting. See [Downloads.preferCachedCopy]. The folder's own second line
+    // ("YouTube · 4.2 MB") is the cache's, not the file's, and stays behind.
+    val downloadFromCache: (List<Song>) -> Unit = { songs ->
+        val cleaned = songs.map { it.copy(downloadFormat = null, localDateAddedSeconds = null) }
+        Downloads.preferCachedCopy(cleaned.map { it.videoId })
+        startDownload(cleaned, null)
+    }
+    val removedFromCacheMessage = stringResource(R.string.removed_from_cache)
+    // Takes tracks out of the song cache — the folder's selection, or one
+    // song's menu. The open folder re-reads itself off [AudioCache.contentsChanged].
+    val removeFromCache: (List<Song>) -> Unit = { songs ->
+        scope.launch {
+            val removed = songs.sumOf { AudioCache.remove(it.videoId) }
+            if (removed > 0) showQueueNotice(removedFromCacheMessage)
         }
     }
     /**
@@ -3035,6 +3064,7 @@ private fun BitChordApp(
         BackHandler(enabled = discordDialog != null) { discordDialog = null }
         BackHandler(enabled = editingSource != null) { editingSource = null }
         BackHandler(enabled = editingPartyServer) { editingPartyServer = false }
+        BackHandler(enabled = editingSignatureApi) { editingSignatureApi = false }
         BackHandler(enabled = showHistory) { showHistory = false }
         // Disabled while a detail page is open over the grid: that one's own
         // BackHandler below has to close first, or back would skip past it
@@ -3551,6 +3581,8 @@ private fun BitChordApp(
                                     type = BrowseType.PLAYLIST,
                                 )
                             },
+                            onOpenLogin = { showSpotifyLogin = true },
+                            onOpenTokenSetup = { showSpotifyCanvasAuth = true },
                             contentPadding = listPadding,
                         )
                     } else if (key == "discord") {
@@ -3652,6 +3684,7 @@ private fun BitChordApp(
                                 showListenTogether = true
                             },
                             onSpotifyCanvasAuth = { showSpotifyCanvasAuth = true },
+                            onEditSignatureApi = { editingSignatureApi = true },
                             onAppLanguage = { showAppLanguage = true },
                             contentPadding = listPadding,
                             onShowUpdate = { showUpdateDialog = true },
@@ -3709,6 +3742,10 @@ private fun BitChordApp(
                                 } else {
                                     null
                                 },
+                            // The song cache's own copies go to Downloads from
+                            // disk, and its selection comes out of the cache.
+                            onDownload = downloadFromCache.takeIf { page.browseId == CACHE_FOLDER_BROWSE_ID },
+                            onRemoveFromCache = removeFromCache.takeIf { page.browseId == CACHE_FOLDER_BROWSE_ID },
                             onSongClick = { songs, index ->
                                 playFrom(
                                     songs,
@@ -5466,6 +5503,15 @@ private fun BitChordApp(
             // carries the per-entry id a removal is expressed in.
             val editable = viewModel.editablePlaylist(detail?.browseId)
                 ?.takeIf { !fromPlayer && song.setVideoId != null }
+            // Asked of the cache's index off the main thread as the menu opens,
+            // so "Remove from cache" is only offered for a track it holds.
+            // Re-asked when the cache changes, which is what drops the row
+            // once the track has gone.
+            val cacheVersion by AudioCache.contentsChanged.collectAsStateWithLifecycle()
+            val inCache by produceState(false, song.videoId, cacheVersion) {
+                value = song.localUri == null &&
+                    withContext(Dispatchers.IO) { AudioCache.holds(song.videoId) }
+            }
             SongActionsSheet(
                 song = song,
                 presentation = presentation,
@@ -5513,7 +5559,15 @@ private fun BitChordApp(
                 // Stays open: the row it replaces itself with is the
                 // progress, and closing the sheet would hide the only
                 // answer to "did that work?".
-                onDownload = { downloadSong(song) },
+                // From the Cached songs folder, the cache's own copy is the
+                // download — the same as the row's download button there.
+                onDownload = {
+                    if (!fromPlayer && detail?.browseId == CACHE_FOLDER_BROWSE_ID) {
+                        downloadFromCache(listOf(song))
+                    } else {
+                        downloadSong(song)
+                    }
+                },
                 // The other direction: a device file going up to the
                 // server. Closed first, unlike a download — progress and
                 // the summary notice live outside the sheet.
@@ -5577,6 +5631,14 @@ private fun BitChordApp(
                         songActions = null
                         viewModel.removeFromPlaylist(it.browseId, song)
                     }
+                },
+                onRemoveFromCache = if (inCache) {
+                    {
+                        songActions = null
+                        removeFromCache(listOf(song))
+                    }
+                } else {
+                    null
                 },
                 onOpenAlbum = { id ->
                     openPage(
@@ -5884,6 +5946,13 @@ private fun BitChordApp(
                 ?.takeIf { signedIn && ownedPlaylists[it] == true }
                 ?.let { id -> playlists.firstOrNull { it.browseId == id } }
             val remote = target.browseId?.startsWith("local:") == false
+            // Spotify playlists saved on this device ("local:playlist:sp_local_…")
+            // carry real YouTube video ids, so they download like a remote
+            // playlist — but they have no YouTube Music page, so Share stays
+            // on [remote] alone. The device-folder ids ("local:downloads",
+            // "local:all", …) are neither.
+            val downloadable = remote ||
+                target.browseId?.startsWith("local:playlist:sp_local_") == true
             val pinnedPlaylists by AppSettings.pinnedPlaylists.collectAsStateWithLifecycle()
             val pinnableId = target.browseId?.takeIf { target.type == BrowseType.PLAYLIST }
             // The artist's star, asked for as the menu opens (signed in only:
@@ -5964,7 +6033,7 @@ private fun BitChordApp(
                                 )
                             },
                     )
-                }.takeIf { remote },
+                }.takeIf { downloadable },
                 // The same link a share off YouTube Music's own overflow
                 // gives — built from the browse id rather than fetched,
                 // since nothing about it depends on the tracks or the
@@ -6805,6 +6874,44 @@ private fun BitChordApp(
             }
         }
 
+        // ---- Spotify sign-in (full screen WebView) ----
+        // Out here with Discord's rather than on the Spotify page itself: see
+        // SpotifyLoginScreen for what the blurred content tree does to a WebView.
+        if (showSpotifyLogin) {
+            BackHandler { showSpotifyLogin = false }
+            Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                Column(Modifier.fillMaxSize()) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        IconButton(onClick = { showSpotifyLogin = false }) {
+                            Icon(
+                                Icons.Rounded.Close,
+                                contentDescription = stringResource(R.string.close),
+                                tint = MaterialTheme.colorScheme.onBackground,
+                            )
+                        }
+                        Text(
+                            stringResource(R.string.spotify_sign_in),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                    }
+                    SpotifyLoginScreen(
+                        modifier = Modifier.navigationBarsPadding(),
+                        onConnected = { token ->
+                            AppSettings.setSpotifySpdcToken(token)
+                            showSpotifyLogin = false
+                        },
+                    )
+                }
+            }
+        }
+
         if (showSpotifyCanvasAuth) {
             BackHandler { showSpotifyCanvasAuth = false }
             SpotifyCanvasAuthScreen(
@@ -6827,6 +6934,13 @@ private fun BitChordApp(
             PartyServerEditor(
                 hazeState = hazeState,
                 onDismiss = { editingPartyServer = false },
+            )
+        }
+
+        if (editingSignatureApi) {
+            SignatureApiEditor(
+                hazeState = hazeState,
+                onDismiss = { editingSignatureApi = false },
             )
         }
 
