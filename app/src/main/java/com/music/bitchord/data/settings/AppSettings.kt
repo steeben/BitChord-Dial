@@ -446,6 +446,14 @@ object AppSettings {
     val prioritizeSpotifyCanvas = MutableStateFlow(false)
 
     /**
+     * Secondary artist art: an artist-signature API used only when Apple Music
+     * has no title logo. On by default against [DEFAULT_SIGNATURE_API_URL];
+     * a blank URL means the user removed it and the lookup is skipped.
+     */
+    val signatureApiEnabled = MutableStateFlow(true)
+    val signatureApiUrl = MutableStateFlow(DEFAULT_SIGNATURE_API_URL)
+
+    /**
      * Blows the player's cover art out to a full-bleed banner running off the
      * top of the screen, rather than sitting it in a square card.
      *
@@ -875,6 +883,10 @@ object AppSettings {
         canvasOverCellular.value = prefs.getBoolean(KEY_CANVAS_OVER_CELLULAR, false)
         spotifyCanvasAutoHide.value = prefs.getBoolean(KEY_SPOTIFY_CANVAS_AUTO_HIDE, true)
         prioritizeSpotifyCanvas.value = prefs.getBoolean(KEY_PRIORITIZE_SPOTIFY_CANVAS, false)
+        signatureApiEnabled.value = prefs.getBoolean(KEY_SIGNATURE_API_ENABLED, true)
+        signatureApiUrl.value = normalizeSignatureApiUrl(
+            prefs.getString(KEY_SIGNATURE_API_URL, DEFAULT_SIGNATURE_API_URL).orEmpty(),
+        )
         fullBleedArtwork.value = prefs.getBoolean(KEY_FULL_BLEED_ARTWORK, true)
         legacyMeshGradient.value = prefs.getBoolean(KEY_LEGACY_MESH_GRADIENT, false)
         lastPlayerScreen.value = runCatching {
@@ -1442,6 +1454,22 @@ object AppSettings {
         prioritizeSpotifyCanvas.value = value
         prefs.edit().putBoolean(KEY_PRIORITIZE_SPOTIFY_CANVAS, value).apply()
     }
+
+    fun setSignatureApiEnabled(value: Boolean) {
+        signatureApiEnabled.value = value
+        prefs.edit().putBoolean(KEY_SIGNATURE_API_ENABLED, value).apply()
+    }
+
+    fun setSignatureApiUrl(value: String) {
+        val normalized = normalizeSignatureApiUrl(value)
+        signatureApiUrl.value = normalized
+        prefs.edit().putString(KEY_SIGNATURE_API_URL, normalized).apply()
+    }
+
+    fun normalizeSignatureApiUrl(raw: String): String =
+        raw.trim().trimEnd('/').take(500)
+
+    const val DEFAULT_SIGNATURE_API_URL = "https://proud-cascade-1654.de.deplexo.com"
 
     fun setFullBleedArtwork(value: Boolean) {
         fullBleedArtwork.value = value
@@ -2100,6 +2128,8 @@ object AppSettings {
     private const val KEY_DISCORD_BUTTON_2_VISIBLE = "discord_button_2_visible"
     private const val KEY_DISCORD_INFO_DISMISSED = "discord_info_dismissed"
     private const val KEY_LAST_VERSION_CODE = "last_version_code"
+    private const val KEY_SIGNATURE_API_ENABLED = "signature_api_enabled"
+    private const val KEY_SIGNATURE_API_URL = "signature_api_url"
 }
 
 

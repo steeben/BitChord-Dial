@@ -1136,4 +1136,19 @@
     <string name="unpin_artist_from_speed_dial">Unpin artist from speed dial</string>
     <string name="pin_artist_radio_to_speed_dial">Pin artist radio to speed dial</string>
     <string name="unpin_artist_radio_from_speed_dial">Unpin artist radio from speed dial</string>
+    <string name="song_info">Song Info</string>
+    <string name="song_info_album">Album</string>
+    <string name="song_info_release_date">Release date</string>
+    <string name="song_info_views">Plays / views</string>
+    <string name="song_info_likes">Likes</string>
+    <string name="song_info_comments">Comments</string>
+    <string name="song_info_unavailable">Not available</string>
+    <string name="song_info_error">Some information could not be loaded.</string>
+    <string name="song_info_retry">Retry</string>
+    <string name="artist_signatures">Artist signatures</string>
+    <string name="artist_signatures_subtitle">Shows the artist\'s handwritten signature on their page</string>
+    <string name="artist_signatures_url">Signature API URL</string>
+    <string name="artist_signatures_unconfigured">Not configured — tap to set the API URL</string>
+    <string name="artist_signatures_test_failed">Could not reach the API at that URL</string>
+    <string name="signed_by">Signed by %1$s</string>
 </resources>

@@ -255,6 +255,7 @@ import com.music.bitchord.ui.screens.ALL_LIBRARY_BROWSE_ID
 import com.music.bitchord.ui.screens.CACHE_FOLDER_BROWSE_ID
 import com.music.bitchord.ui.screens.ListenTogetherScreen
 import com.music.bitchord.ui.screens.PartyServerEditor
+import com.music.bitchord.ui.screens.SignatureApiEditor
 import com.music.bitchord.ui.screens.SettingsScreen
 import com.music.bitchord.ui.screens.SourceEditorAlert
 import com.music.bitchord.ui.screens.SourcesScreen
@@ -760,6 +761,7 @@ private fun BitChordApp(
     var editingSource by remember { mutableStateOf<SourceConfig?>(null) }
     var confirmJioSaavn by remember { mutableStateOf(false) }
     var editingPartyServer by remember { mutableStateOf(false) }
+    var editingSignatureApi by remember { mutableStateOf(false) }
     var showHistory by remember { mutableStateOf(false) }
     /**
      * Which history the History page shows: YouTube's (the Library tab's
@@ -3035,6 +3037,7 @@ private fun BitChordApp(
         BackHandler(enabled = discordDialog != null) { discordDialog = null }
         BackHandler(enabled = editingSource != null) { editingSource = null }
         BackHandler(enabled = editingPartyServer) { editingPartyServer = false }
+        BackHandler(enabled = editingSignatureApi) { editingSignatureApi = false }
         BackHandler(enabled = showHistory) { showHistory = false }
         // Disabled while a detail page is open over the grid: that one's own
         // BackHandler below has to close first, or back would skip past it
@@ -3652,6 +3655,7 @@ private fun BitChordApp(
                                 showListenTogether = true
                             },
                             onSpotifyCanvasAuth = { showSpotifyCanvasAuth = true },
+                            onEditSignatureApi = { editingSignatureApi = true },
                             onAppLanguage = { showAppLanguage = true },
                             contentPadding = listPadding,
                             onShowUpdate = { showUpdateDialog = true },
@@ -6827,6 +6831,13 @@ private fun BitChordApp(
             PartyServerEditor(
                 hazeState = hazeState,
                 onDismiss = { editingPartyServer = false },
+            )
+        }
+
+        if (editingSignatureApi) {
+            SignatureApiEditor(
+                hazeState = hazeState,
+                onDismiss = { editingSignatureApi = false },
             )
         }
 

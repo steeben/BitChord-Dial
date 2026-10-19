@@ -94,6 +94,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -140,6 +143,9 @@ import com.music.bitchord.data.model.artworkAt
 import com.music.bitchord.data.model.durationMillis
 import com.music.bitchord.data.model.isSameTrackAs
 import com.music.bitchord.data.settings.AppSettings
+import com.music.bitchord.data.canvas.ArtistSignature
+import com.music.bitchord.data.canvas.ArtistSignatureRepository
+import com.music.bitchord.data.canvas.SignatureInkTransformation
 import com.music.bitchord.ui.components.DownloadedBadge
 import com.music.bitchord.ui.components.ExplicitSongTitle
 import com.music.bitchord.ui.components.LIBRARY_GRID_SPACING
@@ -260,6 +266,15 @@ private val ARTIST_ACTION_GAP_CROWDED = 12.dp
 /** The title logo's widest share of the page, and tallest share of the photo. */
 private const val ARTIST_LOGO_WIDTH = 0.82f
 private const val ARTIST_LOGO_MAX_HEIGHT = 0.30f
+
+/** The signature closing the About section. */
+private val ABOUT_LOGO_HEIGHT = 56.dp
+
+/** A signature is drawn at this share of a title logo's size. */
+private const val SIGNATURE_SCALE = 0.7f
+
+/** Vector signatures decode at this width so small files stay crisp laid out large. */
+private const val SVG_DECODE_WIDTH = 1600
 
 private const val LOGO_RETRIES = 2
 private const val LOGO_RETRY_DELAY_MS = 800L
@@ -417,6 +432,32 @@ fun DetailScreen(
     }
     LaunchedEffect(page.browseId, page.title, nameSettled) {
         if (isArtist && nameSettled) appleArt = AppleArtistArtRepository.artFor(page.title) ?: appleArt
+    }
+    // Secondary provider: a handwritten signature from the artist-signature
+    // API in Settings. In the header when Apple has no title logo, otherwise
+    // at the foot of the About section.
+    val signatureEnabled by AppSettings.signatureApiEnabled.collectAsStateWithLifecycle()
+    val signatureBaseUrl by AppSettings.signatureApiUrl.collectAsStateWithLifecycle()
+    val signatureUpdates by ArtistSignatureRepository.updates.collectAsStateWithLifecycle()
+    var signature by remember(page.browseId) { mutableStateOf<ArtistSignature?>(null) }
+    LaunchedEffect(page.browseId, page.title, nameSettled, signatureEnabled, signatureBaseUrl, signatureUpdates) {
+        if (!isArtist || !nameSettled) return@LaunchedEffect
+        val base = ArtistSignatureRepository.effectiveBaseUrl(signatureEnabled, signatureBaseUrl)
+        if (base == null) {
+            signature = null
+            return@LaunchedEffect
+        }
+        // Bounded retries with backoff: a sleeping self-hosted API can take
+        // ~30-60s to wake, and a single miss would otherwise stand until the
+        // page is reopened. Misses aren't cached, so retrying is cheap.
+        val backoff = listOf(0L, 5_000L, 15_000L, 30_000L)
+        for (wait in backoff) {
+            if (wait > 0) delay(wait)
+            signature = ArtistSignatureRepository.cached(page.title, base)
+                ?: ArtistSignatureRepository.signatureFor(page.title, base)
+                ?: signature
+            if (signature != null) return@LaunchedEffect
+        }
     }
     val palette = rememberArtworkPalette(
         imageUrl = appleArt?.heroUrl ?: page.thumbnailUrl,
@@ -681,6 +722,7 @@ fun DetailScreen(
                             palette = palette,
                             artHeight = artHeight,
                             appleArt = appleArt,
+                            signature = signature,
                             onNamePlaced = { controlsLead = it },
                         )
                     }
@@ -765,8 +807,10 @@ fun DetailScreen(
             // empty still gets the section for them.
             val hasStats = isArtist &&
                 (page.subscriberCountText != null || page.monthlyListenerCount != null)
+            // The header holds Apple's logo here, so the ink goes at the foot of the page instead.
+            val aboutSignature = if (isArtist && appleArt?.logoUrl != null) signature else null
             val showAbout = (!description.isNullOrBlank() &&
-                (page.type == BrowseType.ALBUM || isArtist)) || hasStats
+                (page.type == BrowseType.ALBUM || isArtist)) || hasStats || aboutSignature != null
             fun LazyListScope.aboutItem() {
                 if (!showAbout) return
                 item(key = "about") {
@@ -789,6 +833,16 @@ fun DetailScreen(
                             }
                         } else {
                             null
+                        },
+                        footer = aboutSignature?.let { sig ->
+                            {
+                                AboutSignature(
+                                    signature = sig,
+                                    name = page.title,
+                                    palette = palette,
+                                    horizontalPadding = ARTIST_CONTENT_GUTTER,
+                                )
+                            }
                         },
                     )
                     }
@@ -986,6 +1040,7 @@ fun DetailScreen(
                                     palette = palette,
                                     artHeight = artHeight,
                                     appleArt = appleArt,
+                                    signature = signature,
                                 )
                                 artistActions(Modifier, 0.dp)
                             }
@@ -1423,6 +1478,8 @@ private fun ArtistHeader(
     palette: ArtworkPalette,
     artHeight: Dp,
     appleArt: AppleArtistArt?,
+    /** Drawn in place of the name when Apple has no title logo. */
+    signature: ArtistSignature? = null,
     /** How far the name (or logo) starts above the foot of this header, in px. */
     onNamePlaced: (Int) -> Unit = {},
 ) {
@@ -1434,25 +1491,43 @@ private fun ArtistHeader(
     Box(Modifier.fillMaxWidth().onPlaced { headerCoords[0] = it }) {
         Spacer(Modifier.fillMaxWidth().height(artHeight + HEADER_DROP - ARTIST_HEADER_LIFT))
         val logoUrl = appleArt?.logoUrl
+        // Secondary provider: drawn only when Apple has no title logo.
+        val isSignature = logoUrl == null && signature != null
+        val imageUrl = logoUrl ?: signature?.imageUrl
+        // Signature vectors are dark ink on transparency, so they are tinted
+        // to the page's text colour. Scans (jpeg/png) go through the ink
+        // transformation instead: tinting an opaque scan would flatten it.
+        val isSignatureSvg = isSignature && signature?.format == "svg"
+        val isSignatureScan = isSignature && !isSignatureSvg
         // Whether the logo has actually been drawn. Until it has — a first fetch
         // of an Apple logo is a few hundred KB the CDN may still be resizing — the
         // name stands in for it, so the header is never left with nothing in it.
-        var logoShown by remember(logoUrl) { mutableStateOf(false) }
+        var logoShown by remember(imageUrl) { mutableStateOf(false) }
         // The logo fades in over the name rather than replacing it outright.
         val logoIn by animateFloatAsState(
             targetValue = if (logoShown) 1f else 0f,
             animationSpec = tween(ART_CROSSFADE_MS, easing = FastOutSlowInEasing),
             label = "logoIn",
         )
-        if (appleArt != null && logoUrl != null) {
+        if (imageUrl != null) {
             val context = LocalPlatformContext.current
-            var attempt by remember(logoUrl) { mutableIntStateOf(0) }
-            var failed by remember(logoUrl) { mutableStateOf(false) }
+            var attempt by remember(imageUrl) { mutableIntStateOf(0) }
+            var failed by remember(imageUrl) { mutableStateOf(false) }
+            val aspect = (if (logoUrl != null) appleArt?.logoAspect else signature?.aspect)
+                ?.coerceIn(0.4f, 6f) ?: 1f
             // Remembered, and at the size the URL already names: nothing about the
             // load waits on layout to decide how big to decode, and a recomposition
             // can't hand Coil a new request that cancels the one in flight.
-            val request = remember(logoUrl, attempt) {
-                ImageRequest.Builder(context).data(logoUrl).size(coil3.size.Size.ORIGINAL).build()
+            // Vectors decode small and would upscale into a blur, so SVGs render large.
+            val request = remember(imageUrl, attempt) {
+                ImageRequest.Builder(context).data(imageUrl).apply {
+                    if (isSignatureSvg) {
+                        size(SVG_DECODE_WIDTH, (SVG_DECODE_WIDTH / aspect).roundToInt())
+                    } else {
+                        size(coil3.size.Size.ORIGINAL)
+                    }
+                    if (isSignatureScan) transformations(SignatureInkTransformation)
+                }.build()
             }
             // A dropped fetch gets two more tries before the name is left in place.
             LaunchedEffect(failed) {
@@ -1465,35 +1540,49 @@ private fun ArtistHeader(
             // Apple's own title logo stands in for the name, laid over its photo.
             // Capped in height as well as width: a logo set on two or three
             // lines is nearly square, and by width alone it would swallow the
-            // photograph it is meant to sit on.
-            val aspect = appleArt.logoAspect.coerceIn(0.4f, 6f)
-            val maxLogoHeight = artHeight * ARTIST_LOGO_MAX_HEIGHT
-            AsyncImage(
-                model = request,
-                contentDescription = page.title,
-                contentScale = ContentScale.Fit,
-                onState = { state ->
-                    when (state) {
-                        is AsyncImagePainter.State.Success -> logoShown = true
-                        is AsyncImagePainter.State.Error -> failed = true
-                        else -> Unit
-                    }
-                },
+            // photograph it is meant to sit on. A signature is a panoramic ink
+            // strip and reads best smaller than a title logo.
+            val sizeFactor = if (isSignature) SIGNATURE_SCALE else 1f
+            val maxLogoHeight = artHeight * ARTIST_LOGO_MAX_HEIGHT * sizeFactor
+            Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .graphicsLayer { alpha = logoIn }
-                    .onGloballyPositioned { if (logoShown) reportName(it) }
-                    .padding(top = 14.dp, bottom = 20.dp)
-                    // Sized from the incoming width in layout rather than through a
-                    // BoxWithConstraints, which would subcompose the image.
-                    .layout { measurable, constraints ->
-                        val widest = constraints.maxWidth * ARTIST_LOGO_WIDTH
-                        val height = minOf(widest / aspect, maxLogoHeight.toPx()).roundToInt()
-                        val width = (height * aspect).roundToInt()
-                        val placeable = measurable.measure(Constraints.fixed(width, height))
-                        layout(width, height) { placeable.place(0, 0) }
+                    .onGloballyPositioned { if (logoShown) reportName(it) },
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                AsyncImage(
+                    model = request,
+                    contentDescription = page.title,
+                    contentScale = ContentScale.Fit,
+                    colorFilter = if (isSignatureSvg) ColorFilter.tint(palette.onBackground) else null,
+                    onState = { state ->
+                        when (state) {
+                            is AsyncImagePainter.State.Success -> logoShown = true
+                            is AsyncImagePainter.State.Error -> failed = true
+                            else -> Unit
+                        }
                     },
-            )
+                    modifier = Modifier
+                        .padding(top = 14.dp, bottom = if (isSignature) 6.dp else 20.dp)
+                        // Sized from the incoming width in layout rather than through a
+                        // BoxWithConstraints, which would subcompose the image.
+                        .layout { measurable, constraints ->
+                            val widest = constraints.maxWidth * ARTIST_LOGO_WIDTH * sizeFactor
+                            val height = minOf(widest / aspect, maxLogoHeight.toPx()).roundToInt()
+                            val width = (height * aspect).roundToInt()
+                            val placeable = measurable.measure(Constraints.fixed(width, height))
+                            layout(width, height) { placeable.place(0, 0) }
+                        },
+                )
+                if (isSignature) {
+                    SignedByCaption(
+                        name = page.title,
+                        palette = palette,
+                        modifier = Modifier.padding(horizontal = HEADER_GUTTER).padding(bottom = 20.dp),
+                    )
+                }
+            }
         }
         if (logoIn < 1f) Text(
             text = page.title,
@@ -2065,6 +2154,8 @@ private fun AboutSection(
     horizontalPadding: Dp = ABOUT_GUTTER,
     /** Drawn under the text. */
     stats: (@Composable () -> Unit)? = null,
+    /** Drawn last, under the stats. */
+    footer: (@Composable () -> Unit)? = null,
 ) {
     var expanded by remember(text) { mutableStateOf(false) }
     var clipped by remember(text) { mutableStateOf(false) }
@@ -2108,6 +2199,77 @@ private fun AboutSection(
             Spacer(Modifier.height(if (text != null) 12.dp else 4.dp))
             stats()
         }
+        footer?.invoke()
+    }
+}
+
+/** "Signed by **Name**" — the artist's name in bold, whatever order the language puts it in. */
+@Composable
+private fun SignedByCaption(
+    name: String,
+    palette: ArtworkPalette,
+    modifier: Modifier = Modifier,
+    textAlign: TextAlign = TextAlign.Center,
+) {
+    val signed = stringResource(R.string.signed_by, name)
+    val nameAt = signed.indexOf(name)
+    Text(
+        text = buildAnnotatedString {
+            append(signed)
+            if (nameAt >= 0) {
+                addStyle(SpanStyle(fontWeight = FontWeight.Bold), nameAt, nameAt + name.length)
+            }
+        },
+        style = MaterialTheme.typography.bodyMedium,
+        color = palette.onBackground.copy(alpha = 0.8f),
+        textAlign = textAlign,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier,
+    )
+}
+
+/**
+ * The handwritten signature with its signed-by line, closing the About section of an artist whose
+ * header already carries Apple's title logo.
+ */
+@Composable
+private fun AboutSignature(
+    signature: ArtistSignature,
+    name: String,
+    palette: ArtworkPalette,
+    horizontalPadding: Dp,
+) {
+    val context = LocalPlatformContext.current
+    val isSvg = signature.format == "svg"
+    val aspect = signature.aspect.coerceIn(0.4f, 6f)
+    val request = remember(signature.imageUrl) {
+        ImageRequest.Builder(context).data(signature.imageUrl).apply {
+            if (isSvg) {
+                size(SVG_DECODE_WIDTH, (SVG_DECODE_WIDTH / aspect).roundToInt())
+            } else {
+                size(coil3.size.Size.ORIGINAL)
+                transformations(SignatureInkTransformation)
+            }
+        }.build()
+    }
+    var loaded by remember(signature.imageUrl) { mutableStateOf(false) }
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = horizontalPadding),
+        horizontalAlignment = Alignment.Start,
+    ) {
+        AsyncImage(
+            model = request,
+            contentDescription = name,
+            contentScale = ContentScale.Fit,
+            colorFilter = if (isSvg) ColorFilter.tint(palette.onBackground) else null,
+            onState = { if (it is AsyncImagePainter.State.Success) loaded = true },
+            modifier = Modifier
+                .padding(top = 20.dp, bottom = 6.dp)
+                .height(ABOUT_LOGO_HEIGHT)
+                .aspectRatio(aspect),
+        )
+        if (loaded) SignedByCaption(name = name, palette = palette, textAlign = TextAlign.Start)
     }
 }
 

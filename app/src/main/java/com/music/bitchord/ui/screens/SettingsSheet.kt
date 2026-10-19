@@ -51,6 +51,7 @@ import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.Dns
+import androidx.compose.material.icons.rounded.Draw
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FileUpload
@@ -199,6 +200,7 @@ fun SettingsScreen(
     onSources: () -> Unit,
     onListenTogether: () -> Unit,
     onSpotifyCanvasAuth: () -> Unit,
+    onEditSignatureApi: () -> Unit,
     onAppLanguage: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
@@ -240,6 +242,8 @@ fun SettingsScreen(
     val liquidGlassSupported = isGlassSupported()
     val lyricsBlur by AppSettings.lyricsBlur.collectAsStateWithLifecycle()
     val animatedCanvas by AppSettings.animatedCanvas.collectAsStateWithLifecycle()
+    val signatureApiEnabled by AppSettings.signatureApiEnabled.collectAsStateWithLifecycle()
+    val signatureApiUrl by AppSettings.signatureApiUrl.collectAsStateWithLifecycle()
     val canvasOverCellular by AppSettings.canvasOverCellular.collectAsStateWithLifecycle()
     val fullBleedArtwork by AppSettings.fullBleedArtwork.collectAsStateWithLifecycle()
     val legacyMeshGradient by AppSettings.legacyMeshGradient.collectAsStateWithLifecycle()
@@ -1018,6 +1022,49 @@ fun SettingsScreen(
                     ) {
                         Text(
                             text = spotifyCanvasTitle,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Chevron()
+                    }
+                }
+            }
+            val artistSignaturesTitle = stringResource(R.string.artist_signatures)
+            row(artistSignaturesTitle, "signature", "artist", "logo") {
+                SettingsRow(
+                    icon = Icons.Rounded.Draw,
+                    title = artistSignaturesTitle,
+                    subtitle = stringResource(R.string.artist_signatures_subtitle),
+                    trailing = {
+                        Switch(
+                            checked = signatureApiEnabled,
+                            onCheckedChange = AppSettings::setSignatureApiEnabled,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { AppSettings.setSignatureApiEnabled(!signatureApiEnabled) },
+                )
+            }
+            if (signatureApiEnabled) {
+                val signatureUrlTitle = stringResource(R.string.artist_signatures_url)
+                row(signatureUrlTitle, "signature", "api", "url", divided = false) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = onEditSignatureApi)
+                            .padding(start = ROW_INSET, end = ROW_INSET, top = 4.dp, bottom = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = signatureApiUrl.ifBlank {
+                                stringResource(R.string.artist_signatures_unconfigured)
+                            },
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onBackground,
                             modifier = Modifier.weight(1f),
