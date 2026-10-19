@@ -1307,4 +1307,19 @@
     <string name="unpin_artist_from_speed_dial">Desafixar artista da discagem rápida</string>
     <string name="pin_artist_radio_to_speed_dial">Fixar rádio do artista na discagem rápida</string>
     <string name="unpin_artist_radio_from_speed_dial">Desafixar rádio do artista da discagem rápida</string>
+    <string name="song_info">Informações da música</string>
+    <string name="song_info_album">Álbum</string>
+    <string name="song_info_release_date">Data de lançamento</string>
+    <string name="song_info_views">Reproduções / visualizações</string>
+    <string name="song_info_likes">Curtidas</string>
+    <string name="song_info_comments">Comentários</string>
+    <string name="song_info_unavailable">Não disponível</string>
+    <string name="song_info_error">Não foi possível carregar algumas informações.</string>
+    <string name="song_info_retry">Tentar novamente</string>
+    <string name="artist_signatures">Assinaturas de artistas</string>
+    <string name="artist_signatures_subtitle">Mostra uma assinatura manuscrita quando o Apple Music não tem logotipo de título</string>
+    <string name="artist_signatures_url">URL da API de assinaturas</string>
+    <string name="artist_signatures_unconfigured">Não configurado — toque para definir a URL da API</string>
+    <string name="artist_signatures_test_failed">Não foi possível alcançar a API nesse URL</string>
+    <string name="signed_by">Assinado por %1$s</string>
 </resources>

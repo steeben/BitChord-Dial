@@ -1285,4 +1285,19 @@
     <string name="unpin_artist_from_speed_dial">เลิกปักหมุดศิลปินจากโทรด่วน</string>
     <string name="pin_artist_radio_to_speed_dial">ปักหมุดวิทยุศิลปินไว้ที่โทรด่วน</string>
     <string name="unpin_artist_radio_from_speed_dial">เลิกปักหมุดวิทยุศิลปินจากโทรด่วน</string>
+    <string name="song_info">ข้อมูลเพลง</string>
+    <string name="song_info_album">อัลบั้ม</string>
+    <string name="song_info_release_date">วันที่เผยแพร่</string>
+    <string name="song_info_views">จำนวนการเล่น / การดู</string>
+    <string name="song_info_likes">การกดชอบ</string>
+    <string name="song_info_comments">ความคิดเห็น</string>
+    <string name="song_info_unavailable">ไม่มีข้อมูล</string>
+    <string name="song_info_error">ไม่สามารถโหลดข้อมูลบางส่วนได้</string>
+    <string name="song_info_retry">ลองอีกครั้ง</string>
+    <string name="artist_signatures">ลายเซ็นศิลปิน</string>
+    <string name="artist_signatures_subtitle">แสดงลายเซ็นลายมือเมื่อ Apple Music ไม่มีโลโก้ชื่อเรื่อง</string>
+    <string name="artist_signatures_url">URL API ลายเซ็น</string>
+    <string name="artist_signatures_unconfigured">ยังไม่ได้กำหนดค่า — แตะเพื่อตั้งค่า URL API</string>
+    <string name="artist_signatures_test_failed">ไม่สามารถเข้าถึง API ที่ URL นี้ได้</string>
+    <string name="signed_by">ลงนามโดย %1$s</string>
 </resources>

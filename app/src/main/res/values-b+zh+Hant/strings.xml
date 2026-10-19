@@ -1280,4 +1280,19 @@
     <string name="unpin_artist_from_speed_dial">將藝人從快速撥號取消釘選</string>
     <string name="pin_artist_radio_to_speed_dial">將藝人電台釘選到快速撥號</string>
     <string name="unpin_artist_radio_from_speed_dial">將藝人電台從快速撥號取消釘選</string>
+    <string name="song_info">歌曲資訊</string>
+    <string name="song_info_album">專輯</string>
+    <string name="song_info_release_date">發行日期</string>
+    <string name="song_info_views">播放 / 觀看次數</string>
+    <string name="song_info_likes">喜歡次數</string>
+    <string name="song_info_comments">留言數</string>
+    <string name="song_info_unavailable">暫無資訊</string>
+    <string name="song_info_error">部分資訊無法載入。</string>
+    <string name="song_info_retry">重試</string>
+    <string name="artist_signatures">演出者簽名</string>
+    <string name="artist_signatures_subtitle">當 Apple Music 沒有標題標誌時顯示手寫簽名</string>
+    <string name="artist_signatures_url">簽名 API URL</string>
+    <string name="artist_signatures_unconfigured">尚未設定 — 點選設定 API URL</string>
+    <string name="artist_signatures_test_failed">無法連接該 URL 的 API</string>
+    <string name="signed_by">由 %1$s 簽名</string>
 </resources>

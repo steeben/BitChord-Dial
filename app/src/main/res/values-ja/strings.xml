@@ -1280,4 +1280,19 @@
     <string name="unpin_artist_from_speed_dial">アーティストをスピードダイヤルから外す</string>
     <string name="pin_artist_radio_to_speed_dial">アーティストのラジオをスピードダイヤルに固定</string>
     <string name="unpin_artist_radio_from_speed_dial">アーティストのラジオをスピードダイヤルから外す</string>
+    <string name="song_info">曲の情報</string>
+    <string name="song_info_album">アルバム</string>
+    <string name="song_info_release_date">リリース日</string>
+    <string name="song_info_views">再生回数 / 視聴回数</string>
+    <string name="song_info_likes">高評価</string>
+    <string name="song_info_comments">コメント</string>
+    <string name="song_info_unavailable">情報なし</string>
+    <string name="song_info_error">一部の情報を読み込めませんでした。</string>
+    <string name="song_info_retry">再試行</string>
+    <string name="artist_signatures">アーティストの署名</string>
+    <string name="artist_signatures_subtitle">Apple Musicにタイトルロゴがない場合に手書きの署名を表示します</string>
+    <string name="artist_signatures_url">署名APIのURL</string>
+    <string name="artist_signatures_unconfigured">未設定 — APIのURLを設定するにはタップしてください</string>
+    <string name="artist_signatures_test_failed">そのURLでAPIに到達できませんでした</string>
+    <string name="signed_by">%1$s のサイン</string>
 </resources>

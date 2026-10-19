@@ -1274,4 +1274,19 @@
     <string name="unpin_artist_from_speed_dial">Quitar artista de la marcación rápida</string>
     <string name="pin_artist_radio_to_speed_dial">Fijar radio del artista en la marcación rápida</string>
     <string name="unpin_artist_radio_from_speed_dial">Quitar radio del artista de la marcación rápida</string>
+    <string name="song_info">Información de la canción</string>
+    <string name="song_info_album">Álbum</string>
+    <string name="song_info_release_date">Fecha de lanzamiento</string>
+    <string name="song_info_views">Reproducciones / visualizaciones</string>
+    <string name="song_info_likes">Me gusta</string>
+    <string name="song_info_comments">Comentarios</string>
+    <string name="song_info_unavailable">No disponible</string>
+    <string name="song_info_error">No se pudo cargar parte de la información.</string>
+    <string name="song_info_retry">Reintentar</string>
+    <string name="artist_signatures">Firmas de artistas</string>
+    <string name="artist_signatures_subtitle">Muestra una firma manuscrita cuando Apple Music no tiene logotipo de título</string>
+    <string name="artist_signatures_url">URL de la API de firmas</string>
+    <string name="artist_signatures_unconfigured">Sin configurar — toca para establecer la URL de la API</string>
+    <string name="artist_signatures_test_failed">No se pudo contactar con la API en esa URL</string>
+    <string name="signed_by">Firmado por %1$s</string>
 </resources>

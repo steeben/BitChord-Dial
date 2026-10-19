@@ -1334,4 +1334,19 @@
     <string name="unpin_artist_from_speed_dial">Открепить исполнителя из быстрого набора</string>
     <string name="pin_artist_radio_to_speed_dial">Закрепить радио исполнителя в быстром наборе</string>
     <string name="unpin_artist_radio_from_speed_dial">Открепить радио исполнителя из быстрого набора</string>
+    <string name="song_info">Информация о песне</string>
+    <string name="song_info_album">Альбом</string>
+    <string name="song_info_release_date">Дата выпуска</string>
+    <string name="song_info_views">Прослушивания / просмотры</string>
+    <string name="song_info_likes">Отметки «Нравится»</string>
+    <string name="song_info_comments">Комментарии</string>
+    <string name="song_info_unavailable">Недоступно</string>
+    <string name="song_info_error">Не удалось загрузить часть информации.</string>
+    <string name="song_info_retry">Повторить</string>
+    <string name="artist_signatures">Подписи исполнителей</string>
+    <string name="artist_signatures_subtitle">Показывает подпись от руки, если в Apple Music нет заголовочного логотипа</string>
+    <string name="artist_signatures_url">URL API подписей</string>
+    <string name="artist_signatures_unconfigured">Не настроено — нажмите, чтобы задать URL API</string>
+    <string name="artist_signatures_test_failed">Не удалось связаться с API по этому URL</string>
+    <string name="signed_by">Подпись: %1$s</string>
 </resources>
