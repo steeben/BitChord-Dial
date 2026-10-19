@@ -1157,7 +1157,7 @@
     <string name="song_info_error">Some information could not be loaded.</string>
     <string name="song_info_retry">Retry</string>
     <string name="artist_signatures">Artist signatures</string>
-    <string name="artist_signatures_subtitle">Shows the artist\'s handwritten signature on their page</string>
+    <string name="artist_signatures_subtitle">Shows a handwritten signature when Apple Music has no title logo</string>
     <string name="artist_signatures_url">Signature API URL</string>
     <string name="artist_signatures_unconfigured">Not configured — tap to set the API URL</string>
     <string name="artist_signatures_test_failed">Could not reach the API at that URL</string>

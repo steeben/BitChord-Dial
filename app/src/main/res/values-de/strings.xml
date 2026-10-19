@@ -1304,4 +1304,19 @@
     <string name="unpin_artist_radio_from_speed_dial">Künstlerradio von Kurzwahl lösen</string>
     <string name="app_icon">App-Symbol</string>
     <string name="app_icon_default">Standard</string>
+    <string name="song_info">Titelinformationen</string>
+    <string name="song_info_album">Album</string>
+    <string name="song_info_release_date">Veröffentlichungsdatum</string>
+    <string name="song_info_views">Wiedergaben / Aufrufe</string>
+    <string name="song_info_likes">Gefällt mir</string>
+    <string name="song_info_comments">Kommentare</string>
+    <string name="song_info_unavailable">Nicht verfügbar</string>
+    <string name="song_info_error">Einige Informationen konnten nicht geladen werden.</string>
+    <string name="song_info_retry">Erneut versuchen</string>
+    <string name="artist_signatures">Künstlersignaturen</string>
+    <string name="artist_signatures_subtitle">Zeigt eine handschriftliche Signatur, wenn Apple Music kein Titellogo hat</string>
+    <string name="artist_signatures_url">Signatur-API-URL</string>
+    <string name="artist_signatures_unconfigured">Nicht konfiguriert — tippen, um die API-URL festzulegen</string>
+    <string name="artist_signatures_test_failed">Die API war unter dieser URL nicht erreichbar</string>
+    <string name="signed_by">Signiert von %1$s</string>
 </resources>

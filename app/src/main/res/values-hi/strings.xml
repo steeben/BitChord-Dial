@@ -1304,4 +1304,19 @@
     <string name="unpin_artist_radio_from_speed_dial">कलाकार रेडियो को स्पीड डायल से अनपिन करें</string>
     <string name="app_icon">ऐप आइकन</string>
     <string name="app_icon_default">डिफ़ॉल्ट</string>
+    <string name="song_info">गाने की जानकारी</string>
+    <string name="song_info_album">एल्बम</string>
+    <string name="song_info_release_date">रिलीज़ की तारीख</string>
+    <string name="song_info_views">प्ले / व्यू</string>
+    <string name="song_info_likes">पसंद</string>
+    <string name="song_info_comments">टिप्पणियाँ</string>
+    <string name="song_info_unavailable">उपलब्ध नहीं</string>
+    <string name="song_info_error">कुछ जानकारी लोड नहीं हो सकी।</string>
+    <string name="song_info_retry">फिर से कोशिश करें</string>
+    <string name="artist_signatures">कलाकारों के हस्ताक्षर</string>
+    <string name="artist_signatures_subtitle">Apple Music में शीर्षक लोगो न होने पर हस्तलिखित हस्ताक्षर दिखाता है</string>
+    <string name="artist_signatures_url">हस्ताक्षर API URL</string>
+    <string name="artist_signatures_unconfigured">कॉन्फ़िगर नहीं है — API URL सेट करने के लिए टैप करें</string>
+    <string name="artist_signatures_test_failed">उस URL पर API तक नहीं पहुंचा जा सका</string>
+    <string name="signed_by">%1$s द्वारा हस्ताक्षरित</string>
 </resources>
