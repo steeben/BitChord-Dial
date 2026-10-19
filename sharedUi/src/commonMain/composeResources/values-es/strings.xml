@@ -200,4 +200,7 @@
     <string name="search_library_empty">Busca las canciones de tu carpeta de Música local.</string>
     <string name="search_library_hint">Canciones, artistas y álbumes</string>
     <string name="search_library_no_results">Nada en Música local coincide con “%1$s”.</string>
+    <string name="search_addons_hint">Search your addons</string>
+    <string name="search_addons_empty">Search every enabled addon at once. Tracks play straight from the addon.</string>
+    <string name="search_addons_no_results">No addon has “%1$s”.</string>
 </resources>

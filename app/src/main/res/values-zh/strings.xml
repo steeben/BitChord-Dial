@@ -1279,4 +1279,8 @@
     <string name="unpin_artist_from_speed_dial">将艺人从快速拨号取消固定</string>
     <string name="pin_artist_radio_to_speed_dial">将艺人电台固定到快速拨号</string>
     <string name="unpin_artist_radio_from_speed_dial">将艺人电台从快速拨号取消固定</string>
+    <string name="show_queue_history">显示队列历史</string>
+    <string name="show_queue_history_subtitle">在队列中“正在播放”上方显示最多 25 首已播放的歌曲</string>
+    <string name="search_source_addons">插件</string>
+    <string name="search_addons_none">未启用任何插件。请在“设置 → 音源”中添加。</string>
 </resources>

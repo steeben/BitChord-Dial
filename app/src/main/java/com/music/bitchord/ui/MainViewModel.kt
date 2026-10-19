@@ -59,6 +59,8 @@ import android.util.LruCache
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -82,11 +84,14 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import com.music.bitchord.data.sources.AddonSource
 import com.music.bitchord.data.sources.SourceKind
 import com.music.bitchord.data.sources.SourceRegistry
 import com.music.bitchord.data.sources.SourceResolver
 import com.music.bitchord.data.sources.TrackMatcher
 import com.music.bitchord.playback.AudioCache
+import com.music.bitchord.playback.BoundedContextRequests
+import com.music.bitchord.playback.contextEntryKey
 import com.music.bitchord.playback.StreamChoice
 import com.music.bitchord.ui.screens.CACHE_FOLDER_BROWSE_ID
 import com.music.bitchord.ui.screens.YT_MUSIC_LIBRARY_BROWSE_ID
@@ -108,7 +113,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
 /** What the Search tab searches: YouTube Music, or the Local Music folder on this device. */
-enum class SearchSource { YOUTUBE, LIBRARY }
+enum class SearchSource { YOUTUBE, LIBRARY, ADDONS }
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -236,6 +241,23 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** Where the Search tab looks — see [setSearchSource]. */
     private val _searchSource = MutableStateFlow(SearchSource.YOUTUBE)
     val searchSource: StateFlow<SearchSource> = _searchSource.asStateFlow()
+
+    /**
+     * The Addons source's answer for the submitted query: every enabled addon
+     * searched at once and their rows interleaved. Null until something has
+     * been submitted. These songs carry source track keys, so a tap plays the
+     * addon's own stream with no YouTube lookup in between.
+     */
+    private val _addonResults = MutableStateFlow<UiState<List<Song>>?>(null)
+    val addonResults: StateFlow<UiState<List<Song>>?> = _addonResults.asStateFlow()
+    private var addonSearchJob: Job? = null
+
+    /** The words typed into the Addons search before, newest first. */
+    val addonSearchHistory: StateFlow<List<String>> = SearchHistory.addonRecent
+
+    fun removeAddonSearch(query: String) = SearchHistory.removeAddonQuery(query)
+
+    fun clearAddonSearchHistory() = SearchHistory.clearAddonQueries()
 
     /** Every track in the Local Music folder, read when the Library source is picked. */
     private val _librarySongs = MutableStateFlow<UiState<List<Song>>>(UiState.Loading)
@@ -695,6 +717,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      */
     private val _detailStack = MutableStateFlow<List<DetailPage>>(emptyList())
     val detailStack: StateFlow<List<DetailPage>> = _detailStack.asStateFlow()
+
+    /** UI-side continuation fetches that can be handed to the playback service. */
+    private val fillInJobs = mutableMapOf<String, Job>()
 
     private val _releaseLibrary = MutableStateFlow<Map<String, LibraryState>>(emptyMap())
 
@@ -1693,6 +1718,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             PlaybackTracker.registeredPlays.drop(1).collect { homeStale = true }
         }
         viewModelScope.launch {
+            BoundedContextRequests.snapshot.collect { snapshot ->
+                snapshot?.let(::applyBoundedContextSnapshot)
+            }
+        }
+        viewModelScope.launch {
             AppSettings.filterNonMusicAudio.drop(1).collect {
                 listOf("local:all", LOCAL_LIBRARY_BROWSE_ID, ALL_LIBRARY_BROWSE_ID).forEach { id ->
                     if (_detailStack.value.any { page -> page.browseId == id }) reloadLocalDetail(id)
@@ -2300,7 +2330,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         searchSubmitted = true
         _suggestions.value = emptyList()
         _typeaheadResults.value = emptyList()
-        runSearch()
+        // Picking a suggestion or history item is deliberate, but it must not
+        // land in the account's YouTube Music search history — only an
+        // explicit keyboard submission should do that.
+        runSearch(anonymous = true)
     }
 
     fun removeSearch(id: String) = SearchHistory.remove(id)
@@ -2314,6 +2347,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             _suggestions.value = emptyList()
             _typeaheadResults.value = emptyList()
             _results.value = null
+            addonSearchJob?.cancel()
+            _addonResults.value = null
             // The list is about to switch from search results to recent
             // searches (or the empty state) — without this it can keep
             // whatever scroll offset the results list was left at, landing
@@ -2325,7 +2360,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         searchSubmitted = false
         // The Library source answers from the device on every keystroke (see
         // [libraryResults]); YouTube's completions have nothing to add to it.
-        if (_searchSource.value == SearchSource.LIBRARY) return
+        if (_searchSource.value != SearchSource.YOUTUBE) return
         // While typing, surface text completions — the pipeline already feeds
         // them through [suggestRequests] and publishes results via typeahead.
         suggestRequests.tryEmit(newValue)
@@ -2341,7 +2376,44 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         searchSubmitted = true
         _suggestions.value = emptyList()
         _typeaheadResults.value = emptyList()
-        runSearch()
+        if (_searchSource.value == SearchSource.ADDONS) {
+            runAddonSearch(q)
+            return
+        }
+        runSearch(anonymous = false)
+    }
+
+    /**
+     * Asks every enabled addon for [q] in parallel. A slow or failing addon
+     * only costs its own rows; the list is the rest of them, round-robin so
+     * no single catalogue buries the others.
+     */
+    private fun runAddonSearch(q: String) {
+        SearchHistory.recordAddonQuery(q)
+        addonSearchJob?.cancel()
+        _searchScrollReset.value += 1
+        val addons = SourceRegistry.active().filterIsInstance<AddonSource>()
+        if (addons.isEmpty()) {
+            _addonResults.value = UiState.Error(text(R.string.search_addons_none))
+            return
+        }
+        _addonResults.value = UiState.Loading
+        addonSearchJob = viewModelScope.launch {
+            val perAddon = coroutineScope {
+                addons.map { addon ->
+                    async {
+                        withTimeoutOrNull(ADDON_SEARCH_TIMEOUT_MS) {
+                            runCatching { addon.search(q, limit = ADDON_SEARCH_LIMIT) }.getOrDefault(emptyList())
+                        } ?: emptyList()
+                    }
+                }.map { it.await() }
+            }
+            val merged = buildList {
+                val longest = perAddon.maxOfOrNull { it.size } ?: 0
+                for (i in 0 until longest) perAddon.forEach { rows -> rows.getOrNull(i)?.let(::add) }
+            }
+            _addonResults.value = UiState.Success(merged)
+        }
     }
 
     /**
@@ -2360,6 +2432,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         when (source) {
             SearchSource.LIBRARY -> loadLibrarySongs()
             SearchSource.YOUTUBE -> submitSearch()
+            SearchSource.ADDONS -> if (_query.value.isNotBlank()) submitSearch()
         }
     }
 
@@ -2403,6 +2476,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val query: String,
         val filter: SearchFilter,
         val requestId: Long,
+        val anonymous: Boolean = true,
     )
 
     private fun cacheKey(query: String, filter: SearchFilter) = "${filter.name}:$query"
@@ -2420,7 +2494,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             ?.rows
     }
 
-    private fun runSearch() {
+    private fun runSearch(anonymous: Boolean = true) {
         val query = _query.value
         if (query.isBlank()) {
             // Nothing in flight can still be waiting to overwrite this: the
@@ -2435,7 +2509,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _searchScrollReset.value += 1
         searchSession = null
         _searchLoadingMore.value = false
-        searchRequests.tryEmit(SearchRequest(query, _filter.value, id))
+        searchRequests.tryEmit(SearchRequest(query, _filter.value, id, anonymous))
     }
 
     /**
@@ -2467,7 +2541,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 val exact = searchCache.get(key)
                 val cached = exact?.rows ?: prefixMatch(request.query, request.filter)
                 _results.value = cached?.let { UiState.Success(it) } ?: UiState.Loading
-                if (exact != null) {
+                // An explicit submit still has to reach the server even when
+                // an anonymous lookup cached the same query: that call is what
+                // records it in the account's history.
+                if (exact != null && request.anonymous) {
                     searchSession = SearchSession(key, request.requestId, request.filter, exact.continuation)
                     return@collectLatest
                 }
@@ -2481,7 +2558,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 // see [SourceResolver.substituteForYouTube] — which upgrades
                 // the ones it holds without any of them having to be a
                 // separate row to pick between.
-                val result = YtMusicRepository.searchPage(request.query, request.filter)
+                val result = YtMusicRepository.searchPage(request.query, request.filter, request.anonymous)
                 // A search that has been superseded shouldn't land on screen,
                 // whether it succeeded or failed.
                 if (request.requestId != newestRequestId.get()) return@collectLatest
@@ -2712,6 +2789,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     companion object {
         /** How many Spotify tracks are looked up on YouTube Music at once. */
+        /** Per-addon budget for the Addons search tab; a slow addon is left out, not waited on. */
+        private const val ADDON_SEARCH_TIMEOUT_MS = 12_000L
+        private const val ADDON_SEARCH_LIMIT = 20
+
         private const val SPOTIFY_MATCH_PARALLELISM = 6
 
         /**
@@ -3037,6 +3118,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                         title = name ?: it.title,
                         subtitle = credit ?: it.subtitle,
                         suggestedSongs = suggested,
+                        continuation = more,
                         library = library,
                         description = description,
                         subscriberCountText = subscriberCountText,
@@ -3231,7 +3313,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * that loops back on itself instead of running dry.
      */
     private fun fillIn(browseId: String, token: String, artworkFallback: String?) {
-        viewModelScope.launch {
+        fillInJobs[browseId]?.cancel()
+        fillInJobs[browseId] = viewModelScope.launch {
             // Publish and draw the first response before spending the shared
             // connection on page two. On a long playlist the continuation can
             // otherwise start in the same main-loop turn as the state update,
@@ -3240,35 +3323,114 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             var next: String? = token
             while (next != null) {
                 val fetched = YtMusicRepository.moreSongs(next).getOrNull() ?: return@launch
+                // Repository calls may finish after cancellation. Do not let
+                // an in-flight UI page append after the playback service has
+                // taken the continuation over.
+                currentCoroutineContext().ensureActive()
+                // The same page can be on the stack twice (opened again from
+                // inside itself). One walk per browseId grows every copy; a
+                // second walk replaces the first, so each copy merges by key
+                // and only takes a token from a page that taught it something.
                 val stack = _detailStack.value
-                val index = stack.indexOfFirst { it.browseId == browseId }
-                if (index < 0) return@launch
-                val current = stack[index]
-                val existing = (current.songs as? UiState.Success)?.data ?: return@launch
-                val known = existing.mapTo(HashSet()) { it.videoId }
-                val added = fetched.songs
-                    .filter { known.add(it.videoId) }
-                    .withArtwork(artworkFallback)
-                // Suggestions can arrive on a later page than the real
-                // tracks, once the playlist's own continuation runs dry —
-                // see parsePlaylistShelf — so they're tracked separately
-                // rather than folded into [known].
-                val knownSuggested = current.suggestedSongs.mapTo(HashSet()) { it.videoId }
-                val addedSuggested = fetched.suggested
-                    .filter { it.videoId !in known && knownSuggested.add(it.videoId) }
-                    .withArtwork(artworkFallback)
-                // A page with nothing new on it means the feed has looped back
-                // rather than run dry with a token still attached.
-                if (added.isEmpty() && addedSuggested.isEmpty()) return@launch
-                _detailStack.value = stack.toMutableList().also {
-                    it[index] = current.copy(
+                if (stack.none { it.browseId == browseId }) return@launch
+                var progressed = false
+                val updated = stack.map { current ->
+                    if (current.browseId != browseId) return@map current
+                    val existing = (current.songs as? UiState.Success)?.data ?: return@map current
+                    val known = existing.mapTo(HashSet()) { it.contextEntryKey() }
+                    val added = fetched.songs
+                        .filter { known.add(it.contextEntryKey()) }
+                        .withArtwork(artworkFallback)
+                    val knownVideoIds = (existing + added).mapTo(HashSet()) { it.videoId }
+                    // Suggestions can arrive on a later page than the real
+                    // tracks, once the playlist's own continuation runs dry —
+                    // see parsePlaylistShelf — so they're tracked separately
+                    // rather than folded into [known].
+                    val knownSuggested = current.suggestedSongs.mapTo(HashSet()) { it.videoId }
+                    val addedSuggested = fetched.suggested
+                        .filter { it.videoId !in knownVideoIds && knownSuggested.add(it.videoId) }
+                        .withArtwork(artworkFallback)
+                    if (added.isEmpty() && addedSuggested.isEmpty()) return@map current
+                    progressed = true
+                    current.copy(
                         songs = UiState.Success(existing + added),
                         suggestedSongs = current.suggestedSongs + addedSuggested,
+                        continuation = fetched.continuation,
                     )
                 }
+                // A page with nothing new for any copy means the feed has looped
+                // back rather than run dry with a token still attached.
+                if (!progressed) return@launch
+                _detailStack.value = updated
                 next = fetched.continuation
             }
+        }.also { job ->
+            job.invokeOnCompletion {
+                if (fillInJobs[browseId] === job) fillInJobs.remove(browseId)
+            }
         }
+    }
+
+    /**
+     * Applies the service-owned canonical context to its matching open page.
+     *
+     * The service only materialises a small queue window, while its registry
+     * keeps the complete canonical list. Mirroring that registry here avoids a
+     * page that appears to stop growing as soon as playback starts.
+     */
+    private fun applyBoundedContextSnapshot(snapshot: BoundedContextRequests.Snapshot) {
+        val browseId = snapshot.request.source.id ?: return
+        val stack = _detailStack.value
+        val index = stack.indexOfLast { it.browseId == browseId }
+        if (index < 0) return
+        val page = stack[index]
+        if (page.type != BrowseType.ALBUM && page.type != BrowseType.PLAYLIST) return
+        // Exactly one loader walks the continuation. While the service owns
+        // it the page's own fill-in stops; when the service gives up (or never
+        // took it — a party, a Cast race) the page resumes from the newest token.
+        if (snapshot.serviceOwned) {
+            if (snapshot.continuationToken != null) fillInJobs.remove(browseId)?.cancel()
+        } else if (snapshot.released && snapshot.continuationToken != null &&
+            fillInJobs[browseId]?.isActive != true
+        ) {
+            fillIn(browseId, snapshot.continuationToken, page.thumbnailUrl)
+        }
+        val existing = (page.songs as? UiState.Success)?.data ?: return
+        val known = existing.mapTo(HashSet()) { it.contextEntryKey() }
+        val added = snapshot.songs
+            .filter { known.add(it.contextEntryKey()) }
+            .withArtwork(page.thumbnailUrl)
+        // Never move the page's token backwards: a page whose own fill-in is
+        // ahead of the service would otherwise hand a later tap a token for
+        // songs it already has, which the registry rejects as a duplicate page.
+        val continuation = if (snapshot.songs.size >= existing.size) snapshot.continuationToken else page.continuation
+        if (added.isEmpty() && page.continuation == continuation) return
+        _detailStack.value = stack.toMutableList().also {
+            it[index] = page.copy(
+                songs = UiState.Success(existing + added),
+                continuation = continuation,
+            )
+        }
+    }
+
+    /**
+     * Returns the newest page snapshot for a bounded playback handoff. The
+     * page's own fill-in keeps running until the service reports that it has
+     * taken the continuation over (see [applyBoundedContextSnapshot]); the
+     * tap may yet go down another path, and cancelling here left the page
+     * permanently cut short whenever it did.
+     */
+    fun takePlaybackContext(browseId: String): DetailPage? {
+        val stack = _detailStack.value
+        val index = stack.indexOfLast { it.browseId == browseId }
+        if (index < 0) return null
+        val mirrored = BoundedContextRequests.snapshot.value
+            ?.takeIf { it.request.source.id == browseId }
+        if (mirrored != null) {
+            applyBoundedContextSnapshot(mirrored)
+            return _detailStack.value.getOrNull(index)
+        }
+        return stack[index]
     }
 
     /**

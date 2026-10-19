@@ -200,4 +200,7 @@
     <string name="search_library_empty">Cari lagu di folder Musik Lokal Anda.</string>
     <string name="search_library_hint">Lagu, Artis, dan Album</string>
     <string name="search_library_no_results">Tidak ada di Musik Lokal yang cocok dengan “%1$s”.</string>
+    <string name="search_addons_hint">Search your addons</string>
+    <string name="search_addons_empty">Search every enabled addon at once. Tracks play straight from the addon.</string>
+    <string name="search_addons_no_results">No addon has “%1$s”.</string>
 </resources>

@@ -125,6 +125,7 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory {
         ListenTogether.init(this)
         SearchHistory.init(this)
         LastPlayed.init(this)
+        com.music.bitchord.playback.BoundedContextPersistence.init(this)
         com.music.bitchord.data.settings.PlayedCollections.init(this)
         com.music.bitchord.data.settings.DevicePlays.init(this)
         com.music.bitchord.playback.PartyPersonalQueueStash.init(this)

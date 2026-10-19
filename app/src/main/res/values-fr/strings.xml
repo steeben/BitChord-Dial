@@ -1303,4 +1303,8 @@
     <string name="unpin_artist_from_speed_dial">Retirer l’artiste de la numérotation rapide</string>
     <string name="pin_artist_radio_to_speed_dial">Épingler la radio de l’artiste à la numérotation rapide</string>
     <string name="unpin_artist_radio_from_speed_dial">Retirer la radio de l’artiste de la numérotation rapide</string>
+    <string name="show_queue_history">Afficher l\'historique de la file</string>
+    <string name="show_queue_history_subtitle">Affiche jusqu\'à 25 titres déjà écoutés au-dessus de « En cours de lecture » dans la file</string>
+    <string name="search_source_addons">Addons</string>
+    <string name="search_addons_none">Aucun addon n\'est activé. Ajoutez-en un dans Réglages → Sources.</string>
 </resources>

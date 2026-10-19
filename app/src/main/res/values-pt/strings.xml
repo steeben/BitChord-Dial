@@ -1307,4 +1307,8 @@
     <string name="unpin_artist_from_speed_dial">Desafixar artista da discagem rápida</string>
     <string name="pin_artist_radio_to_speed_dial">Fixar rádio do artista na discagem rápida</string>
     <string name="unpin_artist_radio_from_speed_dial">Desafixar rádio do artista da discagem rápida</string>
+    <string name="show_queue_history">Mostrar histórico da fila</string>
+    <string name="show_queue_history_subtitle">Mostra até 25 músicas já tocadas acima de «Tocando agora» na fila</string>
+    <string name="search_source_addons">Addons</string>
+    <string name="search_addons_none">Nenhum addon ativado. Adicione um em Configurações → Fontes.</string>
 </resources>
