@@ -468,14 +468,17 @@ fun MiniPlayer(
                 .miniPlayerSwipeContent(swipe),
             verticalAlignment = Alignment.CenterVertically,
           ) {
+            // A round bar gets a round cover; half the side, so the player
+            // also flies into a circle.
+            val artCorner = if (shapeChoice == MiniPlayerShape.CIRCULAR) 20.dp else ART_CORNER
             AsyncImage(
                 model = artUrl?.artworkAt(ROW_ART_PX),
                 contentDescription = null,
                 modifier = Modifier
                     .size(40.dp)
-                    .playerDockArt(dock, ART_CORNER)
-                    .clip(RoundedCornerShape(ART_CORNER))
-                    .thumbnailBorder(RoundedCornerShape(ART_CORNER))
+                    .playerDockArt(dock, artCorner)
+                    .clip(RoundedCornerShape(artCorner))
+                    .thumbnailBorder(RoundedCornerShape(artCorner))
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentScale = com.music.bitchord.ui.components.thumbnailContentScale(),
             )
