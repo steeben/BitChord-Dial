@@ -1284,6 +1284,7 @@
     <string name="show_queue_history_subtitle">Show up to 25 previously played songs above Now playing in the queue</string>
     <string name="search_source_addons">Addons</string>
     <string name="search_addons_none">No addons are enabled. Add one in Settings → Sources.</string>
+    <string name="search_addons_hint">Search your addons</string>
     <string name="app_icon">應用程式圖示</string>
     <string name="app_icon_default">預設</string>
     <string name="song_info">歌曲資訊</string>

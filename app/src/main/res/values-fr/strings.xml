@@ -1307,6 +1307,7 @@
     <string name="show_queue_history_subtitle">Affiche jusqu\'à 25 titres déjà écoutés au-dessus de « En cours de lecture » dans la file</string>
     <string name="search_source_addons">Addons</string>
     <string name="search_addons_none">Aucun addon n\'est activé. Ajoutez-en un dans Réglages → Sources.</string>
+    <string name="search_addons_hint">Search your addons</string>
     <string name="app_icon">Icône de l’app</string>
     <string name="app_icon_default">Par défaut</string>
     <string name="song_info">Informations sur le titre</string>

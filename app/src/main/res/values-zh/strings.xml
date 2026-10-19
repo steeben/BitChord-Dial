@@ -1283,6 +1283,7 @@
     <string name="show_queue_history_subtitle">在队列中“正在播放”上方显示最多 25 首已播放的歌曲</string>
     <string name="search_source_addons">插件</string>
     <string name="search_addons_none">未启用任何插件。请在“设置 → 音源”中添加。</string>
+    <string name="search_addons_hint">Search your addons</string>
     <string name="app_icon">应用图标</string>
     <string name="app_icon_default">默认</string>
     <string name="song_info">歌曲信息</string>

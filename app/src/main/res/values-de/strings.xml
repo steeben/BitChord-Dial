@@ -1306,6 +1306,7 @@
     <string name="show_queue_history_subtitle">Bis zu 25 zuletzt gespielte Songs über „Aktuelle Wiedergabe“ in der Warteschlange anzeigen</string>
     <string name="search_source_addons">Addons</string>
     <string name="search_addons_none">Es sind keine Addons aktiviert. Füge eines unter Einstellungen → Quellen hinzu.</string>
+    <string name="search_addons_hint">Search your addons</string>
     <string name="app_icon">App-Symbol</string>
     <string name="app_icon_default">Standard</string>
     <string name="song_info">Titelinformationen</string>

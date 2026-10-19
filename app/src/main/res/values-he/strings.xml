@@ -1311,6 +1311,7 @@
     <string name="show_queue_history_subtitle">מציג עד 25 שירים שהושמעו מעל \"מתנגן עכשיו\" בתור</string>
     <string name="search_source_addons">תוספים</string>
     <string name="search_addons_none">אין תוספים מופעלים. אפשר להוסיף אחד בהגדרות ← מקורות.</string>
+    <string name="search_addons_hint">Search your addons</string>
     <string name="app_icon">סמל האפליקציה</string>
     <string name="app_icon_default">ברירת מחדל</string>
     <string name="song_info">מידע על השיר</string>

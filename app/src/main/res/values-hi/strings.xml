@@ -1306,6 +1306,7 @@
     <string name="show_queue_history_subtitle">कतार में “अभी चल रहा है” के ऊपर पहले चले 25 तक गाने दिखाएँ</string>
     <string name="search_source_addons">ऐडऑन</string>
     <string name="search_addons_none">कोई ऐडऑन चालू नहीं है। सेटिंग → स्रोत में जाकर एक जोड़ें।</string>
+    <string name="search_addons_hint">Search your addons</string>
     <string name="app_icon">ऐप आइकन</string>
     <string name="app_icon_default">डिफ़ॉल्ट</string>
     <string name="song_info">गाने की जानकारी</string>

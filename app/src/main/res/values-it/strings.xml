@@ -1245,6 +1245,7 @@
     <string name="show_queue_history_subtitle">Mostra fino a 25 brani riprodotti sopra «In riproduzione» nella coda</string>
     <string name="search_source_addons">Addon</string>
     <string name="search_addons_none">Nessun addon attivo. Aggiungine uno in Impostazioni → Fonti.</string>
+    <string name="search_addons_hint">Search your addons</string>
     <string name="app_icon">Icona dell’app</string>
     <string name="app_icon_default">Predefinita</string>
     <string name="song_info">Informazioni sul brano</string>

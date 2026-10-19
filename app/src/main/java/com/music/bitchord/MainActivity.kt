@@ -4803,15 +4803,17 @@ private fun BitChordApp(
                                 onQueryChange = viewModel::onQueryChange,
                                 onSubmit = viewModel::submitSearch,
                                 focusRequester = searchFieldFocus,
-                                placeholder = org.jetbrains.compose.resources.stringResource(
-                                    if (searchSource == SearchSource.LIBRARY) {
-                                        SharedRes.string.search_library_hint
-                                    } else if (searchSource == SearchSource.ADDONS) {
-                                        SharedRes.string.search_addons_hint
-                                    } else {
-                                        SharedRes.string.search_hint
-                                    },
-                                ),
+                                placeholder = if (searchSource == SearchSource.ADDONS) {
+                                    stringResource(R.string.search_addons_hint)
+                                } else {
+                                    org.jetbrains.compose.resources.stringResource(
+                                        if (searchSource == SearchSource.LIBRARY) {
+                                            SharedRes.string.search_library_hint
+                                        } else {
+                                            SharedRes.string.search_hint
+                                        },
+                                    )
+                                },
                             )
                         }
                     } else {
