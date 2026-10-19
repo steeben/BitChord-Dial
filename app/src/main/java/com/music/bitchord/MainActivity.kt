@@ -5893,6 +5893,13 @@ private fun BitChordApp(
                 ?.takeIf { signedIn && ownedPlaylists[it] == true }
                 ?.let { id -> playlists.firstOrNull { it.browseId == id } }
             val remote = target.browseId?.startsWith("local:") == false
+            // Spotify playlists saved on this device ("local:playlist:sp_local_…")
+            // carry real YouTube video ids, so they download like a remote
+            // playlist — but they have no YouTube Music page, so Share stays
+            // on [remote] alone. The device-folder ids ("local:downloads",
+            // "local:all", …) are neither.
+            val downloadable = remote ||
+                target.browseId?.startsWith("local:playlist:sp_local_") == true
             val pinnedPlaylists by AppSettings.pinnedPlaylists.collectAsStateWithLifecycle()
             val pinnableId = target.browseId?.takeIf { target.type == BrowseType.PLAYLIST }
             // The artist's star, asked for as the menu opens (signed in only:
@@ -5973,7 +5980,7 @@ private fun BitChordApp(
                                 )
                             },
                     )
-                }.takeIf { remote },
+                }.takeIf { downloadable },
                 // The same link a share off YouTube Music's own overflow
                 // gives — built from the browse id rather than fetched,
                 // since nothing about it depends on the tracks or the
