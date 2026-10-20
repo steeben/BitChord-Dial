@@ -331,7 +331,6 @@ import com.music.bitchord.ui.components.floatingtabbar.FloatingTabBarInlineBehav
 import com.music.bitchord.ui.components.floatingtabbar.rememberFloatingTabBarScrollConnection
 import com.music.bitchord.ui.components.FrostedTopBar
 import com.music.bitchord.ui.components.HomeStickyLogo
-import com.music.bitchord.ui.components.TopFadeBlur
 import com.music.bitchord.ui.components.LastfmLoginAlert
 import com.music.bitchord.ui.components.LocalAppBackdrop
 import com.music.bitchord.ui.components.LocalLiquidGlassEnabled
@@ -433,7 +432,6 @@ private const val TOP_FADE_START = 0.55f
 private const val TOP_FADE_RAMP = 0.3f
 
 /** How long the blur along Explore's top takes to come and go. */
-private const val EXPLORE_VEIL_MS = 360
 
 private const val INITIAL_RADIO_TRACKS = 24
 
@@ -4625,26 +4623,6 @@ private fun BitChordApp(
                 // The Library with nothing opened over it, whose heading carries
                 // the same mark and the same pull as Home's.
                 val libraryRoot = pageKey == "$TAB_KEY$TAB_LIBRARY"
-                // Explore scrolls under the bar and the mark beside it: a soft
-                // blur with a touch of shade along the top, eased in as the
-                // page comes up and out again on the way back to the dials.
-                val exploreVeil by animateFloatAsState(
-                    targetValue = if (homeRoot && homePage == HomePage.EXPLORE) 1f else 0f,
-                    animationSpec = tween(EXPLORE_VEIL_MS),
-                    label = "exploreVeil",
-                )
-                if (exploreVeil > 0f) {
-                    TopFadeBlur(
-                        hazeState = hazeState,
-                        pageColor = chromePageColor,
-                        scrimColor = Color.Black,
-                        scrimPeak = 0.16f,
-                        run = 56.dp,
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .graphicsLayer { alpha = exploreVeil },
-                    )
-                }
                 // A library folder's search, sort and view controls sit up in
                 // the bar between the back button and the account photo,
                 // giving the list below that height back.

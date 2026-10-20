@@ -6,6 +6,7 @@ import com.music.bitchord.sharedui.resources.*
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.DrawableResource
 import androidx.compose.foundation.Image
+import androidx.compose.animation.rememberSplineBasedDecay
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -240,10 +241,11 @@ fun HomeScreen(
             (state as? UiState.Success)?.data?.getOrNull(1)?.title == ARTIST_DIAL_SHELF_TITLE,
         )
         val defaultFling = ScrollableDefaults.flingBehavior()
-        val dialFling = remember(listState, defaultFling, density) {
+        val decay = rememberSplineBasedDecay<Float>()
+        val dialFling = remember(listState, decay, density) {
             DialPageFling(
                 listState = listState,
-                fallback = defaultFling,
+                decay = decay,
                 restOffsetPx = { with(density) { HOME_LOGO_RESERVE.roundToPx() } },
                 nextOffsetPx = { with(density) { HOME_TITLE_LIFT.roundToPx() } },
                 artistPageFollows = { artistPageShown },
