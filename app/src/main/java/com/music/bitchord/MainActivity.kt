@@ -7472,11 +7472,13 @@ private fun rememberHomeFeed(
     LaunchedEffect(homeFresh) {
         if (!homeFresh || CustomizationSettings.pinArtRefreshed) return@LaunchedEffect
         CustomizationSettings.pinArtRefreshed = true
-        (homeState as? UiState.Success)?.data?.let { shelves ->
-            CustomizationSettings.refreshPinArt(shelves.flatMap { it.items })
-        }
+        val feed = (homeState as? UiState.Success)?.data?.flatMap { it.items }.orEmpty()
+        CustomizationSettings.refreshPinArt(feed)
+        // Only for a mix the feed left out: its page draws a different cover
+        // with every request, so the feed's, when it has one, stands.
+        val inFeed = feed.mapNotNullTo(HashSet()) { it.speedDialId }
         val art = HashMap<String, String>()
-        CustomizationSettings.pinnedDynamicMixes().forEach { id ->
+        CustomizationSettings.pinnedDynamicMixes().filterNot { it in inFeed }.forEach { id ->
             val page = if (id.startsWith("VL")) id else "VL$id"
             YtMusicRepository.browseSongs(page).getOrNull()?.header?.thumbnailUrl?.let { art[id] = it }
         }

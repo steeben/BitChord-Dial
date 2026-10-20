@@ -2933,11 +2933,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
         val resolved = browseTypeOf(browseId, type)
         // Opened recently: shown straight from memory, without asking again.
-        // Not a mix YouTube rebuilds, though: it may have new tracks and a new
-        // cover since, so it is always asked for again.
-        if (cachedDetailFresh(browseId) && !CustomizationSettings.isDynamicMix(browseId)) {
+        if (cachedDetailFresh(browseId)) {
             detailPageCache[browseId]?.let { cached ->
-                _detailStack.value += cached
+                // A mix's cover is the one its tile shows, which may have been
+                // refreshed since this page was put by.
+                _detailStack.value += if (thumbnailUrl != null && CustomizationSettings.isDynamicMix(browseId)) {
+                    cached.copy(thumbnailUrl = thumbnailUrl)
+                } else {
+                    cached
+                }
                 return
             }
         }
@@ -3087,9 +3091,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                                 }
                                 // An album always shows its own cover, not the
                                 // cover of whichever track it was opened from.
-                                // So does a mix YouTube rebuilds: the card may
-                                // still carry an earlier rebuild's cover.
-                                if (thumbnailUrl == null || albumFromTrack || CustomizationSettings.isDynamicMix(browseId)) {
+                                if (thumbnailUrl == null || albumFromTrack) {
                                     header.thumbnailUrl?.let { artwork = it }
                                 }
                             }
