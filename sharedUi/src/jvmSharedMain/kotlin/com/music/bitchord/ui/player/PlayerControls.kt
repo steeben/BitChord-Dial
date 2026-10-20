@@ -876,7 +876,9 @@ private fun OutputPartyPill(
     val badge = rememberPartyBadge()
     Pill(glass = LocalPlayerGlass.current) {
         PillSegment(
-            icon = Icons.Rounded.Headphones,
+            // Earbuds, headphones, a speaker or the phone: whatever the sound
+            // is actually leaving by, kept current as the route changes.
+            icon = rememberAudioOutputIcon(),
             iconSize = PILL_HEADPHONES_SIZE,
             contentDescription = stringResource(Res.string.audio_output),
             onClick = onOutput,

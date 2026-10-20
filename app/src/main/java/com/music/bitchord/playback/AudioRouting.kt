@@ -1,5 +1,8 @@
 package com.music.bitchord.playback
 
+import android.annotation.SuppressLint
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothClass
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,6 +58,9 @@ object AudioRouting {
     /** Output kinds worth telling apart on screen, in the order they are listed. */
     enum class Kind { PHONE, WIRED, USB, BLUETOOTH, HDMI, OTHER }
 
+    /** What a Bluetooth output physically is, for its icon — see [formOf]. */
+    enum class Form { EARBUDS, HEADPHONES, SPEAKER, CAR }
+
     data class Device(
         val id: Int,
         /**
@@ -73,6 +79,8 @@ object AudioRouting {
         val kind: Kind,
         /** Where the audio is going right now — see [activeOf]. */
         val isActive: Boolean = false,
+        /** Null for everything that is not Bluetooth. */
+        val form: Form? = null,
     )
 
     private val _selectedId = MutableStateFlow<Int?>(null)
@@ -107,12 +115,14 @@ object AudioRouting {
         return infos
             .mapNotNull { info -> kindOf(info.type)?.let { info to it } }
             .map { (info, kind) ->
+                val name = nameOf(info, kind)
                 Device(
                     id = info.id,
                     type = info.type,
-                    name = nameOf(info, kind),
+                    name = name,
                     kind = kind,
                     isActive = info.id == active?.id,
+                    form = if (kind == Kind.BLUETOOTH) formOf(info, name) else null,
                 )
             }
             // One row per physical device. Several entries under one name is
@@ -200,4 +210,68 @@ object AudioRouting {
         Kind.PHONE, Kind.WIRED -> ""
         else -> info.productName?.toString()?.trim().orEmpty()
     }
+
+    /**
+     * Earbuds, headphones, a speaker or a car, as near as an ordinary app can tell.
+     *
+     * The phone's own Bluetooth settings know for certain because the headset
+     * announces it in its metadata, but reading that needs a privileged
+     * permission. What is left is the device's Bluetooth class, which reliably
+     * separates speakers and cars from things worn on the head but files earbuds
+     * and headphones under the same few classes. So the class decides speaker
+     * and car, and the name decides earbuds; anything worn that the name does
+     * not give away is drawn as headphones.
+     */
+    private fun formOf(info: AudioDeviceInfo, name: String): Form {
+        when (info.type) {
+            AudioDeviceInfo.TYPE_BLE_SPEAKER, AudioDeviceInfo.TYPE_BLE_BROADCAST -> return Form.SPEAKER
+            AudioDeviceInfo.TYPE_HEARING_AID -> return Form.EARBUDS
+        }
+        when (bluetoothClassOf(info)) {
+            BluetoothClass.Device.AUDIO_VIDEO_CAR_AUDIO -> return Form.CAR
+            BluetoothClass.Device.AUDIO_VIDEO_LOUDSPEAKER,
+            BluetoothClass.Device.AUDIO_VIDEO_PORTABLE_AUDIO,
+            BluetoothClass.Device.AUDIO_VIDEO_HIFI_AUDIO,
+            BluetoothClass.Device.AUDIO_VIDEO_SET_TOP_BOX,
+            BluetoothClass.Device.AUDIO_VIDEO_VIDEO_DISPLAY_AND_LOUDSPEAKER,
+            BluetoothClass.Device.AUDIO_VIDEO_VIDEO_MONITOR,
+            -> return Form.SPEAKER
+        }
+        val lower = name.lowercase()
+        return when {
+            HEADPHONE_NAMES.any { it in lower } -> Form.HEADPHONES
+            EARBUD_NAMES.any { it in lower } -> Form.EARBUDS
+            SPEAKER_NAMES.any { it in lower } -> Form.SPEAKER
+            else -> Form.HEADPHONES
+        }
+    }
+
+    /**
+     * The device's Bluetooth class, or null without the permission to read it —
+     * in which case the name is all [formOf] has to go on.
+     */
+    @SuppressLint("MissingPermission")
+    private fun bluetoothClassOf(info: AudioDeviceInfo): Int? {
+        if (android.os.Build.VERSION.SDK_INT < 28) return null
+        val address = info.address?.takeIf { BluetoothAdapter.checkBluetoothAddress(it) } ?: return null
+        return runCatching {
+            @Suppress("DEPRECATION")
+            BluetoothAdapter.getDefaultAdapter()?.getRemoteDevice(address)?.bluetoothClass?.deviceClass
+        }.getOrNull()
+    }
+
+    /** Names that are earbuds; checked after [HEADPHONE_NAMES] so "AirPods Max" stays headphones. */
+    private val EARBUD_NAMES = listOf(
+        "buds", "pods", "earbud", "airdots", "tws", "in-ear", "wf-", "liberty", "powerbeats",
+        "fit pro", "nothing ear", "jabra elite", "earfun free", "soundpeats",
+    )
+
+    /** Headphones whose names would otherwise read as earbuds. */
+    private val HEADPHONE_NAMES = listOf("airpods max", "headphone", "wh-", "elite 45h", "elite 85h")
+
+    /** Speakers named as such, for when the class could not be read. */
+    private val SPEAKER_NAMES = listOf(
+        "speaker", "soundbar", "soundlink", "boom", "sonos", "jbl flip", "jbl charge", "jbl go",
+        "jbl clip", "jbl xtreme", "jbl pulse", "partybox", "soundcore motion", "echo",
+    )
 }

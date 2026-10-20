@@ -1,6 +1,16 @@
 package com.music.bitchord.ui.player
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Bluetooth
+import androidx.compose.material.icons.rounded.DirectionsCar
+import androidx.compose.material.icons.rounded.Earbuds
+import androidx.compose.material.icons.rounded.Headphones
+import androidx.compose.material.icons.rounded.PhoneAndroid
+import androidx.compose.material.icons.rounded.Speaker
+import androidx.compose.material.icons.rounded.Tv
+import androidx.compose.material.icons.rounded.Usb
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.music.bitchord.sharedui.resources.*
 import org.jetbrains.compose.resources.stringResource
 
@@ -46,3 +56,31 @@ internal fun rememberAudioOutputName(accountName: String?): String {
         }
     return outputLabel(active, accountName)
 }
+
+/**
+ * What to draw for an output: the thing itself where the platform could tell
+ * what it is, and how it is connected where it could not.
+ */
+internal fun outputIcon(device: AudioOutputDevice): ImageVector = when (device.form) {
+    AudioOutputForm.EARBUDS -> Icons.Rounded.Earbuds
+    AudioOutputForm.HEADPHONES -> Icons.Rounded.Headphones
+    AudioOutputForm.SPEAKER -> Icons.Rounded.Speaker
+    AudioOutputForm.CAR -> Icons.Rounded.DirectionsCar
+    null -> when (device.kind) {
+        AudioOutputKind.PHONE -> Icons.Rounded.PhoneAndroid
+        AudioOutputKind.WIRED -> Icons.Rounded.Headphones
+        AudioOutputKind.USB -> Icons.Rounded.Usb
+        AudioOutputKind.BLUETOOTH -> Icons.Rounded.Bluetooth
+        AudioOutputKind.HDMI -> Icons.Rounded.Tv
+        AudioOutputKind.OTHER -> Icons.Rounded.Speaker
+    }
+}
+
+/**
+ * The icon for whatever is playing the music, for the output button on the
+ * player. The phone when nothing else is, the same fallback as
+ * [rememberAudioOutputName].
+ */
+@Composable
+internal fun rememberAudioOutputIcon(): ImageVector =
+    rememberAudioOutputs().firstOrNull { it.isActive }?.let(::outputIcon) ?: Icons.Rounded.PhoneAndroid

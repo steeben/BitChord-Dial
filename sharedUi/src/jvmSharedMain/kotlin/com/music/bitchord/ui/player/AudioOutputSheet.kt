@@ -18,16 +18,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.VolumeOff
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
-import androidx.compose.material.icons.rounded.Bluetooth
 import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.CastConnected
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.GraphicEq
-import androidx.compose.material.icons.rounded.Headphones
-import androidx.compose.material.icons.rounded.PhoneAndroid
-import androidx.compose.material.icons.rounded.Speaker
-import androidx.compose.material.icons.rounded.Tv
-import androidx.compose.material.icons.rounded.Usb
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -44,7 +38,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -301,7 +294,7 @@ private fun OutputRow(
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                imageVector = iconFor(device.kind),
+                imageVector = outputIcon(device),
                 contentDescription = null,
                 tint = Color.White.copy(alpha = if (active) 1f else 0.7f),
                 modifier = Modifier.size(21.dp),
@@ -401,15 +394,6 @@ private fun VolumeRow(routeKey: Any) {
             modifier = Modifier.weight(1f),
         )
     }
-}
-
-private fun iconFor(kind: AudioOutputKind): ImageVector = when (kind) {
-    AudioOutputKind.PHONE -> Icons.Rounded.PhoneAndroid
-    AudioOutputKind.WIRED -> Icons.Rounded.Headphones
-    AudioOutputKind.USB -> Icons.Rounded.Usb
-    AudioOutputKind.BLUETOOTH -> Icons.Rounded.Bluetooth
-    AudioOutputKind.HDMI -> Icons.Rounded.Tv
-    AudioOutputKind.OTHER -> Icons.Rounded.Speaker
 }
 
 /** How many times the level is re-read after a route change, and how far apart. */
