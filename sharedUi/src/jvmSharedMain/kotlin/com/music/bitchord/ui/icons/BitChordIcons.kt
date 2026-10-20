@@ -1,6 +1,7 @@
 package com.music.bitchord.ui.icons
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -731,5 +732,34 @@ object BitChordIcons {
                 moveTo(9.5f, 17.5f); lineTo(19.5f, 17.5f)
             }
         }.build()
+    }
+
+    /**
+     * A pair of earbuds, for the player's output button when that is where the
+     * music is going. Drawn from a supplied SVG: the second bud is the first
+     * mirrored and dropped, and the SVG's mask (the shine on each housing and
+     * the curve in each ear tip) is carried as even-odd holes, since an
+     * [ImageVector] has no masks. The 200-unit drawing sits in a 240-unit
+     * viewport so it keeps the same margin as the Material glyphs beside it.
+     */
+    val Earbuds: ImageVector by lazy {
+        val builder = ImageVector.Builder(
+            name = "bc_earbuds",
+            defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 240f, viewportHeight = 240f,
+        ).addGroup(translationX = 20f, translationY = 20f)
+        listOf(
+            // Left: ear tip, housing, stem.
+            "M3 68A26 26 0 1 1 55 68A26 26 0 1 1 3 68ZM15 62.25A14.75 14.75 0 0 1 29.75 77A2.75 2.75 0 0 1 24.25 77A9.25 9.25 0 0 0 15 67.75A2.75 2.75 0 0 1 15 62.25Z",
+            "M27 33A34 34 0 0 1 61 67C61 74 59 81 56 87C85 81 107 52 101 25C95 -2 55 4 27 33ZM70.62 39.66L84.62 29.66A4.5 4.5 0 0 0 79.38 22.34L65.38 32.34A4.5 4.5 0 0 0 70.62 39.66Z",
+            "M55 100Q66 96 76 89L75 135A9.5 9.5 0 0 1 56 135Z",
+            // Right.
+            "M197 116A26 26 0 1 0 145 116A26 26 0 1 0 197 116ZM185 110.25A14.75 14.75 0 0 0 170.25 125A2.75 2.75 0 0 0 175.75 125A9.25 9.25 0 0 1 185 115.75A2.75 2.75 0 0 0 185 110.25Z",
+            "M173 81A34 34 0 0 0 139 115C139 122 141 129 144 135C115 129 93 100 99 73C105 46 145 52 173 81ZM129.38 87.66L115.38 77.66A4.5 4.5 0 0 1 120.62 70.34L134.62 80.34A4.5 4.5 0 0 1 129.38 87.66Z",
+            "M145 148Q134 144 124 137L125 183A9.5 9.5 0 0 0 144 183Z",
+        ).forEach { d ->
+            builder.addPath(pathData = addPathNodes(d), pathFillType = PathFillType.EvenOdd, fill = stroke)
+        }
+        builder.clearGroup().build()
     }
 }
