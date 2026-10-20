@@ -57,7 +57,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -646,6 +648,76 @@ fun speedDialArtRequest(context: PlatformContext, url: String?): ImageRequest =
 
 private const val TILE_FADE_MS = 300
 
+/** How long new art takes to sweep across a tile, top left to bottom right. */
+private const val ART_WIPE_MS = 1400
+
+/** The soft edge of that sweep, as a share of the tile's diagonal. */
+private const val ART_WIPE_FEATHER = 0.25f
+
+/**
+ * A tile's art. When it changes (a pinned mix YouTube has rebuilt), the old
+ * art stays up while the new loads, then the new sweeps in over it on a soft
+ * diagonal edge rather than the tile blanking to grey and popping.
+ */
+@Composable
+private fun SpeedDialArt(url: String?, contentDescription: String?, modifier: Modifier = Modifier) {
+    val context = LocalPlatformContext.current
+    var shownUrl by remember { mutableStateOf(url) }
+    // False from the moment the new art takes the bottom layer until that
+    // layer has drawn it, so the swap underneath never shows a grey frame.
+    var settled by remember { mutableStateOf(true) }
+    Box(modifier) {
+        // Remembered: a request has no equals, so a new one each recomposition
+        // would be a new load each time.
+        val shown = remember(shownUrl, context) { speedDialArtRequest(context, shownUrl) }
+        AsyncImage(
+            model = shown,
+            contentDescription = contentDescription,
+            contentScale = ContentScale.Crop,
+            onSuccess = { settled = true },
+            onError = { settled = true },
+            modifier = Modifier.fillMaxSize(),
+        )
+        if (url != shownUrl || !settled) {
+            val incoming = remember(url, context) { speedDialArtRequest(context, url) }
+            var loaded by remember(url) { mutableStateOf(false) }
+            val wipe = remember(url) { Animatable(0f) }
+            LaunchedEffect(url, loaded) {
+                if (!loaded) return@LaunchedEffect
+                wipe.animateTo(1f, tween(ART_WIPE_MS, easing = FastOutSlowInEasing))
+                settled = false
+                shownUrl = url
+            }
+            AsyncImage(
+                model = incoming,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                onSuccess = { loaded = true },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                    .drawWithContent {
+                        drawContent()
+                        // Shown up to the edge, gone past it: the edge runs
+                        // along the diagonal from before the corner to past
+                        // the far one, so it starts and ends fully off.
+                        val edge = wipe.value * (1f + ART_WIPE_FEATHER) - ART_WIPE_FEATHER
+                        val w = size.width
+                        val h = size.height
+                        drawRect(
+                            brush = Brush.linearGradient(
+                                colors = listOf(Color.Black, Color.Transparent),
+                                start = Offset(w * edge, h * edge),
+                                end = Offset(w * (edge + ART_WIPE_FEATHER), h * (edge + ART_WIPE_FEATHER)),
+                            ),
+                            blendMode = BlendMode.DstIn,
+                        )
+                    },
+            )
+        }
+    }
+}
+
 /** The launch entrance: the gap between one tile starting and the next. */
 private const val INTRO_STEP_MS = 45L
 
@@ -732,16 +804,7 @@ private fun SpeedDialTile(
             )
             .contextClick(onLongPress),
     ) {
-        val context = LocalPlatformContext.current
-        // Remembered: a request has no equals, so a new one each recomposition
-        // would be a new load each time.
-        val request = remember(item.thumbnailUrl, context) { speedDialArtRequest(context, item.thumbnailUrl) }
-        AsyncImage(
-            model = request,
-            contentDescription = item.title,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-        )
+        SpeedDialArt(item.thumbnailUrl, item.title, Modifier.fillMaxSize())
         if (showLabel) {
             Box(
                 Modifier
