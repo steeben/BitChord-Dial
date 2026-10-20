@@ -420,11 +420,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         localUri: String? = null,
     ) {
         reloadLyrics = { loadLyrics(videoId, title, artist, durationMs, album, localUri) }
-        val sources = if (AppSettings.syncedLyrics.value) {
-            AppSettings.lyricsSources.value
-        } else {
-            emptySet()
-        }
+        // Looked up whether or not "Synced lyrics" is on: that setting only
+        // hides the strip on the player, and the lyrics button still opens them.
+        val sources = AppSettings.lyricsSources.value
         // The word-by-word preference is part of the key, so flipping it from
         // the provider drawer looks the playing track up again under the new rule.
         val key = LyricsKey(
