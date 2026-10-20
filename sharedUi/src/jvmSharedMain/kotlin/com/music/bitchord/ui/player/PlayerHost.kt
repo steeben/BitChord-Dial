@@ -203,12 +203,17 @@ interface SystemVolume {
 
 enum class AudioOutputKind { PHONE, WIRED, USB, BLUETOOTH, HDMI, OTHER }
 
+/** What a Bluetooth output physically is, so its icon can say so. */
+enum class AudioOutputForm { EARBUDS, HEADPHONES, SPEAKER, CAR }
+
 data class AudioOutputDevice(
     val id: Int,
     /** Blank for a device with no name of its own; the drawer supplies one. */
     val name: String,
     val kind: AudioOutputKind,
     val isActive: Boolean = false,
+    /** Null where the platform cannot tell, which is everywhere but Bluetooth on Android. */
+    val form: AudioOutputForm? = null,
 )
 
 data class OutputFormatUi(
