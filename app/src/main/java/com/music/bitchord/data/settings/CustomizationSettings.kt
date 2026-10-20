@@ -201,6 +201,46 @@ object CustomizationSettings {
         return pinned
     }
 
+    /** Whether this launch has refreshed the pins' art yet: once per fresh start. */
+    var pinArtRefreshed = false
+
+    /**
+     * Gives pinned tiles the art [items] carry for them now. A pin is saved
+     * with the art it had when it was pinned, but YouTube redraws the cover of
+     * a mix it rebuilds (Discover Mix, Supermix, New Release Mix) with each
+     * rebuild, so the pinned tile would otherwise keep last week's.
+     */
+    fun refreshPinArt(items: List<ShelfItem>) {
+        val art = HashMap<String, String>()
+        items.forEach { item ->
+            val id = item.speedDialId ?: return@forEach
+            item.thumbnailUrl?.let { art.putIfAbsent(id, it) }
+        }
+        refreshPinArt(art)
+    }
+
+    /** [refreshPinArt] from art already keyed by the pin's id. */
+    fun refreshPinArt(art: Map<String, String>) {
+        if (art.isEmpty()) return
+        fun fresh(pins: List<ShelfItem>) = pins.map { pin ->
+            val url = art[pin.speedDialId]
+            if (url == null || url == pin.thumbnailUrl) pin else pin.copy(thumbnailUrl = url)
+        }
+        val speed = fresh(speedDialPins.value)
+        if (speed != speedDialPins.value) setSpeedDialPins(speed)
+        val artists = fresh(artistDialPins.value)
+        if (artists != artistDialPins.value) setArtistDialPins(artists)
+    }
+
+    /**
+     * The pinned mixes YouTube builds for the listener and rebuilds over time,
+     * whose `RDTMAK` ids are the same from one rebuild to the next.
+     */
+    fun pinnedDynamicMixes(): List<String> =
+        speedDialPins.value.mapNotNull { pin -> pin.browseId?.takeIf { pin.videoId == null && isDynamicMix(it) } }
+
+    fun isDynamicMix(browseId: String): Boolean = browseId.removePrefix("VL").startsWith("RDTMAK")
+
     /** Replaces the pins, in the order given. */
     fun setSpeedDialPins(value: List<ShelfItem>) {
         val updated = value.distinctBy { it.speedDialId }.take(SPEED_DIAL_SIZE)

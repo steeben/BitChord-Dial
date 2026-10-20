@@ -466,6 +466,7 @@ class MainActivity : AppCompatActivity() {
         // rotation or a restored activity doesn't play it again.
         if (savedInstanceState == null) {
             SpeedDialIntro.played = false
+            CustomizationSettings.pinArtRefreshed = false
             SpeedDialIntro.canStart = Build.VERSION.SDK_INT < Build.VERSION_CODES.S
         } else {
             SpeedDialIntro.played = true
@@ -7464,6 +7465,25 @@ private fun rememberHomeFeed(
     // A track from the library has started: YouTube's history won't move for
     // it, so the dial is built again here instead.
     val devicePlays by DevicePlays.version.collectAsStateWithLifecycle()
+    // Once per launch, when this launch's feed is in: pinned tiles take the
+    // art the feed has for them now, and a pinned mix the feed doesn't carry
+    // is asked for directly, so a mix YouTube has rebuilt shows its new cover
+    // rather than the one it was pinned with.
+    LaunchedEffect(homeFresh) {
+        if (!homeFresh || CustomizationSettings.pinArtRefreshed) return@LaunchedEffect
+        CustomizationSettings.pinArtRefreshed = true
+        val feed = (homeState as? UiState.Success)?.data?.flatMap { it.items }.orEmpty()
+        CustomizationSettings.refreshPinArt(feed)
+        // Only for a mix the feed left out: its page draws a different cover
+        // with every request, so the feed's, when it has one, stands.
+        val inFeed = feed.mapNotNullTo(HashSet()) { it.speedDialId }
+        val art = HashMap<String, String>()
+        CustomizationSettings.pinnedDynamicMixes().filterNot { it in inFeed }.forEach { id ->
+            val page = if (id.startsWith("VL")) id else "VL$id"
+            YtMusicRepository.browseSongs(page).getOrNull()?.header?.thumbnailUrl?.let { art[id] = it }
+        }
+        CustomizationSettings.refreshPinArt(art)
+    }
     // The feed as Home draws it: the speed dial, then YouTube Music's shelves
     // in the order it gives them.
     val baseHomeState = remember(homeState, speedDialPins, holdSavedDial, lastSpeedDial, hiddenFromDial, devicePlays) {

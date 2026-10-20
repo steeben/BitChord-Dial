@@ -2935,7 +2935,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         // Opened recently: shown straight from memory, without asking again.
         if (cachedDetailFresh(browseId)) {
             detailPageCache[browseId]?.let { cached ->
-                _detailStack.value += cached
+                // A mix's cover is the one its tile shows, which may have been
+                // refreshed since this page was put by.
+                _detailStack.value += if (thumbnailUrl != null && CustomizationSettings.isDynamicMix(browseId)) {
+                    cached.copy(thumbnailUrl = thumbnailUrl)
+                } else {
+                    cached
+                }
                 return
             }
         }
