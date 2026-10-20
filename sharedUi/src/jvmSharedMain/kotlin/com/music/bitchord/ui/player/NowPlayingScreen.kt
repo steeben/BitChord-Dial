@@ -1657,13 +1657,9 @@ fun NowPlayingScreen(
             onOpenOutput = openAudioOutput,
             onListenTogether = onListenTogether,
             onOpenListenTogetherMembers = openListenTogetherMembers,
-            // Only while lyrics are switched on: with them off there is no
-            // provider to choose between.
-            onChooseLyricsProvider = if (syncedLyricsEnabled) {
-                { showLyricsProviders = true }
-            } else {
-                null
-            },
+            // Lyrics load whether or not the strip is shown, so there is
+            // always a provider to choose between.
+            onChooseLyricsProvider = { showLyricsProviders = true },
         )
         // Keep the current output caption visible in every state but the
         // compact controls under the queue and lyrics.
@@ -1957,6 +1953,7 @@ fun NowPlayingScreen(
 
         Box(modifier = modifier.fillMaxSize().then(dockHost)) {
             LandscapePlayerLayout(
+                showHandle = !hideSongStatus,
                 pane = when {
                     lyricsOpen -> PlayerPane.Lyrics
                     queueOpen -> PlayerPane.Queue
@@ -2545,26 +2542,30 @@ fun NowPlayingScreen(
                 // the top of the strip. As lyrics or the queue replace the
                 // album-cover player, it glides into the now-empty strip's
                 // vertical centre alongside the caption's fade.
-                Box(
-                    Modifier
-                        .align(Alignment.TopCenter)
-                        .offset {
-                            IntOffset(
-                                x = 0,
-                                y = lerp(
-                                    6.dp,
-                                    (topStrip - 5.dp).coerceAtLeast(0.dp) / 2,
-                                    p(),
-                                ).roundToPx(),
-                            )
-                        }
-                        .width(38.dp)
-                        .height(5.dp)
-                        .graphicsLayer { alpha = spotifyChromeAlpha * topChromeIn.value }
-                        .shadow(2.dp, RoundedCornerShape(3.dp), clip = false)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(Color.White.copy(alpha = 0.70f)),
-                )
+                // "Hide song status" takes the handle with the caption; the
+                // strip itself stays, so a drag there still closes the player.
+                if (!hideSongStatus) {
+                    Box(
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .offset {
+                                IntOffset(
+                                    x = 0,
+                                    y = lerp(
+                                        6.dp,
+                                        (topStrip - 5.dp).coerceAtLeast(0.dp) / 2,
+                                        p(),
+                                    ).roundToPx(),
+                                )
+                            }
+                            .width(38.dp)
+                            .height(5.dp)
+                            .graphicsLayer { alpha = spotifyChromeAlpha * topChromeIn.value }
+                            .shadow(2.dp, RoundedCornerShape(3.dp), clip = false)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(Color.White.copy(alpha = 0.70f)),
+                    )
+                }
                 // [p] is the shared album-to-panel transition. Keeping this in
                 // composition until its final frame gives the caption a real
                 // fade on both entry and exit, but removes its click target
@@ -3865,8 +3866,8 @@ fun NowPlayingScreen(
             // fading it away behind the queue left this the one place in the
             // player where the current line simply vanished.
             //
-            // Switched off in Settings it goes entirely, rather than sitting
-            // there saying no lyrics were found: none were looked for. It is
+            // Switched off in Settings it goes entirely; the lyrics are still
+            // looked up, and the lyrics button opens them. It is
             // accompanied by a dedicated lyrics button in the bottom row. Its
             // one-line slot remains, invisibly, so opening lyrics cannot grow
             // the half-player merely to make room for the source label.

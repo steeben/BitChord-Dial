@@ -1254,14 +1254,12 @@ private fun BitChordApp(
     // Lyrics follow whatever is playing; duration lands a beat after the track.
     // Keyed on the lyric settings too, so turning a source on or off applies to
     // the track already playing rather than only the next one.
-    val syncedLyricsEnabled by AppSettings.syncedLyrics.collectAsStateWithLifecycle()
     val lyricsSources by AppSettings.lyricsSources.collectAsStateWithLifecycle()
     val preferWordSyncedLyrics by AppSettings.prioritizeSyllableSync.collectAsStateWithLifecycle()
     val ignoreShortLyrics by AppSettings.ignoreShortLyrics.collectAsStateWithLifecycle()
     LaunchedEffect(
         player.song?.videoId,
         player.durationMs,
-        syncedLyricsEnabled,
         lyricsSources,
         preferWordSyncedLyrics,
         ignoreShortLyrics,

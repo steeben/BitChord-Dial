@@ -1142,8 +1142,8 @@ fun SettingsScreen(
                 }
             }
             val syncedLyricsTitle = stringResource(R.string.synced_lyrics)
-            // Same reasoning as Animated cover art above: the lyrics source and
-            // translation rows are only here while this is on.
+            // Only the current-line strip on the player: lyrics still load
+            // and open from the lyrics button with this off.
             row(syncedLyricsTitle, "lyrics", "translation", "lrclib", "musixmatch") {
                 SettingsRow(
                     icon = Icons.AutoMirrored.Rounded.Notes,
@@ -1162,59 +1162,56 @@ fun SettingsScreen(
                     onClick = { AppSettings.setSyncedLyrics(!syncedLyrics) },
                 )
             }
-            // Nothing to choose between while the feature is off, and the
-            // sources are third-party services being reached on the user's
-            // connection — which is the part worth being able to narrow.
-            if (syncedLyrics) {
-                val lyricsBlurTitle = stringResource(R.string.blur_unfocused_lyrics)
-                row(lyricsBlurTitle, "lyrics", "blur") {
-                    SettingsRow(
-                        icon = Icons.Rounded.BlurOn,
-                        title = lyricsBlurTitle,
-                        subtitle = stringResource(R.string.blur_unfocused_lyrics_subtitle),
-                        trailing = {
-                            Switch(
-                                checked = lyricsBlur,
-                                onCheckedChange = AppSettings::setLyricsBlur,
-                                colors = SwitchDefaults.colors(
-                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                    checkedBorderColor = MaterialTheme.colorScheme.primary,
-                                ),
-                            )
-                        },
-                        onClick = { AppSettings.setLyricsBlur(!lyricsBlur) },
-                    )
-                }
-                val lyricsSourcesTitle = stringResource(R.string.lyrics_sources)
-                row(lyricsSourcesTitle, "lyrics", "lrclib", "musixmatch") {
-                    SettingsRow(
-                        icon = Icons.Rounded.Language,
-                        title = lyricsSourcesTitle,
-                        subtitle = lyricsSources
-                            .sortedBy { it.ordinal }
-                            .joinToString(", ") { it.label }
-                            .ifEmpty { stringResource(R.string.no_lyrics_sources_enabled) },
-                        trailing = { Chevron() },
-                        onClick = onLyricsSources,
-                    )
-                }
-                val translationLanguageTitle = stringResource(R.string.translation_language)
-                row(translationLanguageTitle, "lyrics", "translate") {
-                    SettingsRow(
-                        icon = Icons.Rounded.Translate,
-                        title = translationLanguageTitle,
-                        subtitle = if (translationLanguage.isBlank()) {
-                            stringResource(R.string.translation_language_subtitle)
-                        } else {
-                            translationLanguageName(
-                                translationLanguage,
-                                AppCompatDelegate.getApplicationLocales().get(0) ?: Locale.getDefault(),
-                            )
-                        },
-                        trailing = { Chevron() },
-                        onClick = onTranslationLanguage,
-                    )
-                }
+            // Shown whether or not the strip is on: lyrics are still looked
+            // up for the lyrics button, from these same third-party services.
+            val lyricsBlurTitle = stringResource(R.string.blur_unfocused_lyrics)
+            row(lyricsBlurTitle, "lyrics", "blur") {
+                SettingsRow(
+                    icon = Icons.Rounded.BlurOn,
+                    title = lyricsBlurTitle,
+                    subtitle = stringResource(R.string.blur_unfocused_lyrics_subtitle),
+                    trailing = {
+                        Switch(
+                            checked = lyricsBlur,
+                            onCheckedChange = AppSettings::setLyricsBlur,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { AppSettings.setLyricsBlur(!lyricsBlur) },
+                )
+            }
+            val lyricsSourcesTitle = stringResource(R.string.lyrics_sources)
+            row(lyricsSourcesTitle, "lyrics", "lrclib", "musixmatch") {
+                SettingsRow(
+                    icon = Icons.Rounded.Language,
+                    title = lyricsSourcesTitle,
+                    subtitle = lyricsSources
+                        .sortedBy { it.ordinal }
+                        .joinToString(", ") { it.label }
+                        .ifEmpty { stringResource(R.string.no_lyrics_sources_enabled) },
+                    trailing = { Chevron() },
+                    onClick = onLyricsSources,
+                )
+            }
+            val translationLanguageTitle = stringResource(R.string.translation_language)
+            row(translationLanguageTitle, "lyrics", "translate") {
+                SettingsRow(
+                    icon = Icons.Rounded.Translate,
+                    title = translationLanguageTitle,
+                    subtitle = if (translationLanguage.isBlank()) {
+                        stringResource(R.string.translation_language_subtitle)
+                    } else {
+                        translationLanguageName(
+                            translationLanguage,
+                            AppCompatDelegate.getApplicationLocales().get(0) ?: Locale.getDefault(),
+                        )
+                    },
+                    trailing = { Chevron() },
+                    onClick = onTranslationLanguage,
+                )
             }
         }
 
