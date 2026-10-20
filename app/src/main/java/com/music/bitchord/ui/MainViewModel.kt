@@ -2933,7 +2933,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
         val resolved = browseTypeOf(browseId, type)
         // Opened recently: shown straight from memory, without asking again.
-        if (cachedDetailFresh(browseId)) {
+        // Not a mix YouTube rebuilds, though: it may have new tracks and a new
+        // cover since, so it is always asked for again.
+        if (cachedDetailFresh(browseId) && !CustomizationSettings.isDynamicMix(browseId)) {
             detailPageCache[browseId]?.let { cached ->
                 _detailStack.value += cached
                 return
@@ -3069,13 +3071,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                             // so its own menu never has to go and ask. Recorded
                             // even when the listing came back empty.
                             page.owned?.let { setPlaylistOwned(browseId, it) }
-                            // A rebuilt mix's page has its new cover: a pin of
-                            // it takes that too.
-                            if (CustomizationSettings.isDynamicMix(browseId)) {
-                                page.header?.thumbnailUrl?.let {
-                                    CustomizationSettings.refreshPinArt(mapOf(browseId to it))
-                                }
-                            }
                             // Only for the caller that had nothing: a card's own
                             // title is what the user just tapped, and must not
                             // be swapped for the header's wording underneath them.
@@ -3092,7 +3087,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                                 }
                                 // An album always shows its own cover, not the
                                 // cover of whichever track it was opened from.
-                                if (thumbnailUrl == null || albumFromTrack) {
+                                // So does a mix YouTube rebuilds: the card may
+                                // still carry an earlier rebuild's cover.
+                                if (thumbnailUrl == null || albumFromTrack || CustomizationSettings.isDynamicMix(browseId)) {
                                     header.thumbnailUrl?.let { artwork = it }
                                 }
                             }

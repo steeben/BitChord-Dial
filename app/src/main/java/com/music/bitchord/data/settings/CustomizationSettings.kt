@@ -201,6 +201,9 @@ object CustomizationSettings {
         return pinned
     }
 
+    /** Whether this launch has refreshed the pins' art yet: once per fresh start. */
+    var pinArtRefreshed = false
+
     /**
      * Gives pinned tiles the art [items] carry for them now. A pin is saved
      * with the art it had when it was pinned, but YouTube redraws the cover of
