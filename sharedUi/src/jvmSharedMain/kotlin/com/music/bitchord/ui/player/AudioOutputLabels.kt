@@ -3,7 +3,6 @@ package com.music.bitchord.ui.player
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bluetooth
 import androidx.compose.material.icons.rounded.DirectionsCar
-import androidx.compose.material.icons.rounded.Earbuds
 import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.Speaker
@@ -12,6 +11,7 @@ import androidx.compose.material.icons.rounded.Usb
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.music.bitchord.sharedui.resources.*
+import com.music.bitchord.ui.icons.BitChordIcons
 import org.jetbrains.compose.resources.stringResource
 
 /**
@@ -62,7 +62,7 @@ internal fun rememberAudioOutputName(accountName: String?): String {
  * what it is, and how it is connected where it could not.
  */
 internal fun outputIcon(device: AudioOutputDevice): ImageVector = when (device.form) {
-    AudioOutputForm.EARBUDS -> Icons.Rounded.Earbuds
+    AudioOutputForm.EARBUDS -> BitChordIcons.Earbuds
     AudioOutputForm.HEADPHONES -> Icons.Rounded.Headphones
     AudioOutputForm.SPEAKER -> Icons.Rounded.Speaker
     AudioOutputForm.CAR -> Icons.Rounded.DirectionsCar
