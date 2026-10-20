@@ -3069,6 +3069,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                             // so its own menu never has to go and ask. Recorded
                             // even when the listing came back empty.
                             page.owned?.let { setPlaylistOwned(browseId, it) }
+                            // A rebuilt mix's page has its new cover: a pin of
+                            // it takes that too.
+                            if (CustomizationSettings.isDynamicMix(browseId)) {
+                                page.header?.thumbnailUrl?.let {
+                                    CustomizationSettings.refreshPinArt(mapOf(browseId to it))
+                                }
+                            }
                             // Only for the caller that had nothing: a card's own
                             // title is what the user just tapped, and must not
                             // be swapped for the header's wording underneath them.

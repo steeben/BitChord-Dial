@@ -7464,6 +7464,24 @@ private fun rememberHomeFeed(
     // A track from the library has started: YouTube's history won't move for
     // it, so the dial is built again here instead.
     val devicePlays by DevicePlays.version.collectAsStateWithLifecycle()
+    // Pinned tiles take the art the feed has for them now, so a mix YouTube
+    // has rebuilt shows its new cover rather than the one it was pinned with.
+    LaunchedEffect(homeState) {
+        (homeState as? UiState.Success)?.data?.let { shelves ->
+            CustomizationSettings.refreshPinArt(shelves.flatMap { it.items })
+        }
+    }
+    // A pinned mix the feed doesn't carry this time is asked for directly,
+    // once per fresh feed, for its cover as it stands.
+    LaunchedEffect(homeFresh) {
+        if (!homeFresh) return@LaunchedEffect
+        val art = HashMap<String, String>()
+        CustomizationSettings.pinnedDynamicMixes().forEach { id ->
+            val page = if (id.startsWith("VL")) id else "VL$id"
+            YtMusicRepository.browseSongs(page).getOrNull()?.header?.thumbnailUrl?.let { art[id] = it }
+        }
+        CustomizationSettings.refreshPinArt(art)
+    }
     // The feed as Home draws it: the speed dial, then YouTube Music's shelves
     // in the order it gives them.
     val baseHomeState = remember(homeState, speedDialPins, holdSavedDial, lastSpeedDial, hiddenFromDial, devicePlays) {
