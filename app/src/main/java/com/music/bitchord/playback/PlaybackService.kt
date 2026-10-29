@@ -4689,11 +4689,18 @@ class PlaybackService : MediaLibraryService() {
             // fallback rather than the plan: rebuilding the playing player's
             // source costs a decoder, an AudioTrack and a refill, measured at
             // 308ms and 320ms of silence even with every byte already on disk.
-            val outcome = if (canBlendUpgrade(player)) {
-                blendInUpgrade(player, mediaId, now.uri, upgradedItem)
-            } else {
-                UpgradeBlend.CUT
+            var outcome = UpgradeBlend.CUT
+            var attempts = 0
+            while (attempts < UPGRADE_BLEND_ATTEMPTS) {
+                val current = this@PlaybackService.player ?: break
+                if (!canBlendUpgrade(current)) break
+                attempts++
+                outcome = blendInUpgrade(current, mediaId, now.uri, upgradedItem)
+                if (outcome != UpgradeBlend.UNALIGNED) break
             }
+            // Out of attempts at lining it up: the cut, which is a gap but
+            // never a doubled beat.
+            if (outcome == UpgradeBlend.UNALIGNED) outcome = UpgradeBlend.CUT
             if (outcome == UpgradeBlend.GONE) {
                 QualityUpgrade.shelve(mediaId, stream)
                 TrackLog.d("BitChord", "upgrade for $mediaId shelved: the queue moved on while it was blending in")
@@ -4808,6 +4815,9 @@ class PlaybackService : MediaLibraryService() {
 
         /** The queue moved on under the blend. Nothing was touched. */
         GONE,
+
+        /** The stand-by never lined up closely enough to cross over. Nothing was touched. */
+        UNALIGNED,
     }
 
     /**
@@ -4967,19 +4977,21 @@ class PlaybackService : MediaLibraryService() {
             // only when it could not be measured, and said so in the log.
             val measured = measuring.await()
             val offsetMs = measured?.offsetMs ?: 0.0
-            val lock = lockStandby(activePlayer, standbyPlayer, index, offsetMs, stillOurs)
+            val lock = lockStandby(activePlayer, standbyPlayer, spareFilter, index, offsetMs, stillOurs)
                 ?: return UpgradeBlend.GONE
-            // Paused or stalled while lining up: a cut now is either silent or
-            // no worse than it would have been.
-            if (!activePlayer.isPlaying || !standbyPlayer.isPlaying || lock.errorMs.isNaN() ||
-                abs(lock.errorMs) > UPGRADE_BLEND_MAX_LAG_MS
-            ) {
+            // Not lined up closely enough to cross without the overlap being
+            // heard as a doubled beat, or paused or stalled while trying. The
+            // upgrade then waits for a later chance rather than going in badly;
+            // see the caller.
+            if (!activePlayer.isPlaying || !standbyPlayer.isPlaying || !lock.locked) {
                 TrackLog.d(
                     "BitChord",
-                    "upgrade blend: lost the line-up (off by ${lock.errorMs}ms, " +
-                        "playing=${activePlayer.isPlaying}); cutting over instead",
+                    "upgrade blend: could not line up (off by ${"%.1f".format(Locale.ROOT, lock.errorMs)}ms " +
+                        "after ${lock.seeks} seek(s), started ${"%.1f".format(Locale.ROOT, lock.firstErrorMs)}ms, " +
+                        "playing=${activePlayer.isPlaying})",
+                    about = mediaId,
                 )
-                return UpgradeBlend.CUT
+                return UpgradeBlend.UNALIGNED
             }
 
             val fadeStart = SystemClock.elapsedRealtime()
@@ -5006,8 +5018,8 @@ class PlaybackService : MediaLibraryService() {
                 "swap seam: none — blended over ${UPGRADE_BLEND_MS}ms; stand-by ready in ${readyIn}ms, " +
                     "sources ${measured?.let { "%.1fms apart (match %.2f)".format(Locale.ROOT, it.offsetMs, it.confidence) } ?: "not measured"}, " +
                     "locked to ${"%.1f".format(Locale.ROOT, lock.errorMs)}ms " +
-                    "(${if (lock.locked) "held" else "best effort"}, started ${"%.1f".format(Locale.ROOT, lock.firstErrorMs)}ms, " +
-                    "${lock.seeks} seek(s), ${lock.nudges} nudge(s)), " +
+                    "(started ${"%.1f".format(Locale.ROOT, lock.firstErrorMs)}ms, ${lock.seeks} seek(s), " +
+                    "skipped ${"%.1f".format(Locale.ROOT, lock.skippedMs)}ms at the sink), " +
                     "${SystemClock.elapsedRealtime() - startedAt}ms in all",
                 about = mediaId,
             )
@@ -5031,98 +5043,101 @@ class PlaybackService : MediaLibraryService() {
         val firstErrorMs: Double,
         val locked: Boolean,
         val seeks: Int,
-        val nudges: Int,
+        val skippedMs: Double,
     )
 
     /**
      * Main thread. Brings [standbyPlayer] to where [activePlayer] is, plus
-     * [offsetMs] — the difference between the two copies — and holds it there
-     * to within [UPGRADE_LOCK_DEADBAND_MS].
+     * [offsetMs] — the difference between the two copies — to within
+     * [UPGRADE_LOCK_ACCEPT_MS], or says how close it got.
      *
-     * The same lock Automix's beatmatch runs, for the same reasons. A player's
-     * reported position jitters by a few milliseconds and comes off the seek
-     * target rather than real playout for a while after every seek, so a
-     * single reading straight after one is close to meaningless — which is
-     * exactly what the first version of this did, and why it blended two
-     * copies 50ms apart while reporting them level. Readings are taken
-     * [UPGRADE_LOCK_SAMPLES] at a time, well after the player has settled, and
-     * the median used.
+     * Two things the earlier versions of this got wrong, both off field logs:
      *
-     * And errors are closed with a speed pulse rather than another seek. A
-     * seek costs its own resume time, which is the size of the error being
-     * fixed and not the same twice. A pulse of known speed and length moves
-     * the stand-by by exactly the measured error, silently, with nothing
-     * flushed.
+     *  - **When to believe a position.** A player's position comes off its
+     *    AudioTrack's timestamps, and a fresh AudioTrack has none worth the name
+     *    for most of a second — until then the position is a playback-head
+     *    reading less a latency guess, and it was reading 50 to 120ms out. Every
+     *    seek makes a fresh AudioTrack. So the stand-by is seeked once, left
+     *    alone for [UPGRADE_LOCK_STABLE_MS], and only then read, as the median
+     *    of [UPGRADE_LOCK_SAMPLES] readings.
+     *  - **How to correct.** Re-seeking starts that clock over and lands
+     *    somewhere new; speed pulses rebuilt the AudioTrack too, and on a
+     *    96kHz track were heard as a crackle. Neither converged. The stand-by is
+     *    instead seeked a little *behind* where it needs to be, and brought
+     *    forward by dropping exactly the frames it is behind by at its sink —
+     *    see [com.music.bitchord.playback.audio.SinkShift] — which moves the
+     *    audio sample-exactly, keeps the clock true and touches nothing else.
+     *    The drop is heard only once the sink's buffer has played through to
+     *    it, which is what [TransitionFilterProcessor.leadUs] says, so the
+     *    result is read again after that before it is trusted.
      *
      * Null when the queue moved on.
      */
     private suspend fun lockStandby(
         activePlayer: ExoPlayer,
         standbyPlayer: ExoPlayer,
+        standbyFilter: TransitionFilterProcessor,
         index: Int,
         offsetMs: Double,
         stillOurs: () -> Boolean,
     ): StandbyLock? {
-        val base = AppSettings.playbackSpeed.value
         val giveUpAt = SystemClock.elapsedRealtime() + UPGRADE_LOCK_TIMEOUT_MS
         var seeks = 0
-        var nudges = 0
         var first = Double.NaN
-        var error = Double.NaN
-        // What a seek cost last time, which is how far ahead the next one aims.
-        var resumeMs = 0.0
-        suspend fun seekLevel() {
+        var skipped = 0.0
+        suspend fun seekBehind() {
             standbyPlayer.seekTo(
                 index,
-                (activePlayer.currentPosition + offsetMs + resumeMs).roundToLong().coerceAtLeast(0L),
+                (activePlayer.currentPosition + offsetMs - UPGRADE_LOCK_SEEK_BEHIND_MS).roundToLong().coerceAtLeast(0L),
             )
             seeks++
             val readyBy = SystemClock.elapsedRealtime() + UPGRADE_BLEND_SYNC_TIMEOUT_MS
             while (standbyPlayer.playbackState != Player.STATE_READY && SystemClock.elapsedRealtime() < readyBy) {
                 delay(UPGRADE_BLEND_STEP_MS)
             }
+            delay(UPGRADE_LOCK_STABLE_MS)
         }
-        seekLevel()
-        while (true) {
-            delay(UPGRADE_LOCK_SETTLE_MS)
-            if (!stillOurs()) return null
-            if (!activePlayer.isPlaying || !standbyPlayer.isPlaying) {
-                return StandbyLock(Double.NaN, first, false, seeks, nudges)
-            }
+        /** Positive: the stand-by is ahead of where it should be. NaN if either stopped. */
+        suspend fun read(): Double {
             val readings = DoubleArray(UPGRADE_LOCK_SAMPLES)
             for (i in readings.indices) {
-                // Positive: the stand-by is ahead of where it should be.
+                if (!activePlayer.isPlaying || !standbyPlayer.isPlaying) return Double.NaN
                 readings[i] = (standbyPlayer.currentPosition - activePlayer.currentPosition) - offsetMs
                 if (i < readings.lastIndex) delay(UPGRADE_LOCK_SAMPLE_MS)
             }
             readings.sort()
-            error = readings[readings.size / 2]
+            return readings[readings.size / 2]
+        }
+        seekBehind()
+        while (true) {
+            if (!stillOurs()) return null
+            val error = read()
             if (first.isNaN()) first = error
-            if (abs(error) <= UPGRADE_LOCK_DEADBAND_MS) {
-                return StandbyLock(error, first, true, seeks, nudges)
+            if (error.isNaN()) return StandbyLock(error, first, false, seeks, skipped)
+            if (abs(error) <= UPGRADE_LOCK_ACCEPT_MS) {
+                return StandbyLock(error, first, true, seeks, skipped)
             }
             if (SystemClock.elapsedRealtime() >= giveUpAt) {
-                return StandbyLock(error, first, false, seeks, nudges)
+                return StandbyLock(error, first, false, seeks, skipped)
             }
-            if (abs(error) > UPGRADE_LOCK_MAX_NUDGE_ERROR_MS && seeks < UPGRADE_LOCK_MAX_SEEKS) {
-                // Too far to pulse across in good time. Re-seek, aiming ahead by
-                // whatever this seek left it behind by.
-                resumeMs = (resumeMs - error).coerceIn(0.0, UPGRADE_BLEND_MAX_LAG_MS.toDouble())
-                seekLevel()
+            val behind = -error
+            if (behind > 0 && behind <= UPGRADE_LOCK_MAX_SKIP_MS - skipped) {
+                standbyFilter.shift.skipAhead((behind * 1000).roundToLong())
+                skipped += behind
+                // Until the sink has taken the request, and then until its
+                // buffer has played through to the frames it dropped.
+                val takenBy = SystemClock.elapsedRealtime() + UPGRADE_BLEND_SYNC_TIMEOUT_MS
+                while (standbyFilter.shift.isPending && SystemClock.elapsedRealtime() < takenBy) {
+                    delay(UPGRADE_BLEND_STEP_MS)
+                }
+                delay(standbyFilter.leadUs / 1000 + UPGRADE_LOCK_PLAYOUT_MARGIN_MS)
                 continue
             }
-            // Ahead slows down, behind speeds up, for exactly as long as that
-            // difference in speed takes to cover the error.
-            val factor = if (error > 0) 1f - UPGRADE_LOCK_NUDGE else 1f + UPGRADE_LOCK_NUDGE
-            val pulseMs = (abs(error) / (base * UPGRADE_LOCK_NUDGE)).roundToLong()
-                .coerceIn(1L, UPGRADE_LOCK_MAX_PULSE_MS)
-            standbyPlayer.setPlaybackSpeed(base * factor)
-            nudges++
-            try {
-                delay(pulseMs)
-            } finally {
-                standbyPlayer.setPlaybackSpeed(base)
-            }
+            // Ahead, or further behind than a drop should carry: start over
+            // from a fresh seek, if there is budget for one.
+            if (seeks >= UPGRADE_LOCK_MAX_SEEKS) return StandbyLock(error, first, false, seeks, skipped)
+            skipped = 0.0
+            seekBehind()
         }
     }
 
@@ -9200,32 +9215,51 @@ class PlaybackService : MediaLibraryService() {
         /** How far ahead of the listener the two copies are matched against each other. */
         const val UPGRADE_ALIGN_AHEAD_MS = 300L
 
-        /** Longest [lockStandby] spends lining the stand-by up before blending on its best reading. */
-        const val UPGRADE_LOCK_TIMEOUT_MS = 3_000L
+        /**
+         * Longest [lockStandby] spends lining the stand-by up. Generous: the
+         * old copy plays on throughout, and a drop on a float route is only
+         * heard once seconds of buffer have played through to it.
+         */
+        const val UPGRADE_LOCK_TIMEOUT_MS = 12_000L
 
-        /** Close enough that crossing the two over is heard as nothing at all. */
-        const val UPGRADE_LOCK_DEADBAND_MS = 4.0
+        /** Close enough that crossing the two copies over is heard as nothing at all. */
+        const val UPGRADE_LOCK_ACCEPT_MS = 3.0
 
-        /** How long a seek or speed pulse is left to settle before its result is read. */
-        const val UPGRADE_LOCK_SETTLE_MS = 200L
+        /**
+         * How long a freshly seeked stand-by is left alone before its position
+         * is believed: the time a new AudioTrack takes to hand out timestamps
+         * its clock can lock to.
+         */
+        const val UPGRADE_LOCK_STABLE_MS = 1_200L
+
+        /**
+         * How far behind its mark the stand-by is seeked, so that what is left
+         * is always a drop forward rather than a wait: resume times seen so far
+         * run 50 to 120ms, which this has to beat.
+         */
+        const val UPGRADE_LOCK_SEEK_BEHIND_MS = 20L
 
         /** Readings per measurement, of which the median is used. */
-        const val UPGRADE_LOCK_SAMPLES = 5
-        const val UPGRADE_LOCK_SAMPLE_MS = 20L
+        const val UPGRADE_LOCK_SAMPLES = 9
+        const val UPGRADE_LOCK_SAMPLE_MS = 15L
 
-        /** Speed offset for a correcting pulse: 50ms takes a second, silently. */
-        const val UPGRADE_LOCK_NUDGE = 0.05f
-        const val UPGRADE_LOCK_MAX_PULSE_MS = 2_000L
+        /**
+         * Most the stand-by is moved by dropped frames since its last seek.
+         * Below the 200ms past which Media3's sink takes a timestamp jump for a
+         * discontinuity and re-syncs its own clock under ours.
+         */
+        const val UPGRADE_LOCK_MAX_SKIP_MS = 180.0
 
-        /** Past this an error is re-seeked rather than pulsed across. */
-        const val UPGRADE_LOCK_MAX_NUDGE_ERROR_MS = 100.0
+        /** Margin past the sink's reported lead before a drop is taken to have been heard. */
+        const val UPGRADE_LOCK_PLAYOUT_MARGIN_MS = 250L
+
         const val UPGRADE_LOCK_MAX_SEEKS = 3
 
         /** Longest any one start or seek on the stand-by is waited out before the blend gives up. */
         const val UPGRADE_BLEND_SYNC_TIMEOUT_MS = 600L
 
-        /** A lag past this means a seek or stall happened, not a resume time. */
-        const val UPGRADE_BLEND_MAX_LAG_MS = 400L
+        /** Fresh tries at lining the stand-by up before the upgrade falls back to the cut. */
+        const val UPGRADE_BLEND_ATTEMPTS = 2
 
         const val UPGRADE_BLEND_STEP_MS = 10L
         const val UPGRADE_BLEND_FADE_STEP_MS = 8L

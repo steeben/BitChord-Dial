@@ -68,6 +68,13 @@ class TransitionFilterProcessor : BaseAudioProcessor() {
     @Volatile
     var leadUs: Long = 0L
 
+    /**
+     * Frame-exact repositioning of this player's audio — see [SinkShift]. Lives
+     * here because this filter is already the per-player handle both the sink
+     * and the service hold, and it moves between them at every handoff.
+     */
+    val shift = com.music.bitchord.playback.audio.SinkShift()
+
     // ---- Echo out ------------------------------------------------------------
     //
     // A feedback delay after the filters, for Advanced Automix's echo out: the

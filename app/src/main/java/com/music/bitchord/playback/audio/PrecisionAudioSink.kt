@@ -137,6 +137,9 @@ class PrecisionAudioSink(
      */
     private var processedEndUs: Long = C.TIME_UNSET
 
+    /** Frames still to drop for a [SinkShift] request; audio thread only. */
+    private var pendingDropFrames: Long = 0L
+
     override fun configure(audioSinkConfig: AudioSink.AudioSinkConfig) {
         val format = audioSinkConfig.format
         activeFormat = format
@@ -267,6 +270,8 @@ class PrecisionAudioSink(
         presentationTimeUs: Long,
         encodedAccessUnitCount: Int,
     ): Boolean {
+        dropRequestedFrames(inputBuffer)
+        if (!inputBuffer.hasRemaining() && !outputByteBuffer.hasRemaining()) return true
         if (!isPrecisionActive) {
             return delegate.handleBuffer(inputBuffer, presentationTimeUs, encodedAccessUnitCount)
         }
@@ -384,6 +389,36 @@ class PrecisionAudioSink(
         return !inputBuffer.hasRemaining() && !outputByteBuffer.hasRemaining()
     }
 
+    /**
+     * Carries out a [SinkShift] request by discarding whole frames off the
+     * front of [inputBuffer] before anything else sees them. Only between
+     * decoder buffers' worth of output — never with output still pending — so
+     * what is dropped is always the next audio due, and the timestamps the
+     * delegate gets stay continuous with what it was already handed.
+     */
+    private fun dropRequestedFrames(inputBuffer: ByteBuffer) {
+        if (outputByteBuffer.hasRemaining()) return
+        val format = activeFormat ?: return
+        val rate = format.sampleRate.takeIf { it > 0 } ?: return
+        val shift = dspChain.transition.shift
+        val requested = shift.takeRequestUs()
+        if (requested > 0L) pendingDropFrames += requested * rate / 1_000_000L
+        if (pendingDropFrames <= 0L) return
+        // The decoder's output, which is what arrives here in either mode.
+        val encoding = format.pcmEncoding
+        if (!Util.isEncodingLinearPcm(encoding)) {
+            pendingDropFrames = 0L
+            return
+        }
+        val frameBytes = Util.getPcmFrameSize(encoding, format.channelCount)
+        if (frameBytes <= 0) return
+        val frames = minOf(pendingDropFrames, (inputBuffer.remaining() / frameBytes).toLong())
+        if (frames <= 0L) return
+        inputBuffer.position(inputBuffer.position() + (frames * frameBytes).toInt())
+        pendingDropFrames -= frames
+        shift.appliedUs += Util.sampleCountToDurationUs(frames, rate)
+    }
+
     /** [presentationTimeUs] moved on by [frames], or left alone when the rate is unknown. */
     private fun advanceTimestamp(presentationTimeUs: Long, frames: Long): Long {
         if (frames <= 0L || configuredSampleRate <= 0 || presentationTimeUs == C.TIME_UNSET) {
@@ -412,15 +447,21 @@ class PrecisionAudioSink(
      * free.
      */
     override fun getCurrentPositionUs(sourceEnded: Boolean): Long {
-        val position = super.getCurrentPositionUs(sourceEnded)
+        val delegated = super.getCurrentPositionUs(sourceEnded)
+        if (delegated == AudioSink.CURRENT_POSITION_NOT_SET) return delegated
+        // Frames a [SinkShift] dropped were never handed to the delegate, so
+        // its clock runs that far behind the audio; put it back.
+        val position = delegated + dspChain.transition.shift.appliedUs
         val processed = processedEndUs
-        if (position != AudioSink.CURRENT_POSITION_NOT_SET && processed != C.TIME_UNSET) {
+        if (processed != C.TIME_UNSET) {
             dspChain.transition.leadUs = (processed - position).coerceAtLeast(0L)
         }
         return position
     }
 
     override fun flush() {
+        pendingDropFrames = 0L
+        dspChain.transition.shift.clear()
         processedEndUs = C.TIME_UNSET
         dspChain.transition.leadUs = 0L
         streaming = false
@@ -438,6 +479,8 @@ class PrecisionAudioSink(
     }
 
     override fun reset() {
+        pendingDropFrames = 0L
+        dspChain.transition.shift.clear()
         processedEndUs = C.TIME_UNSET
         dspChain.transition.leadUs = 0L
         streaming = false
