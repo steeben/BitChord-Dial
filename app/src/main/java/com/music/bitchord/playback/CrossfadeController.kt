@@ -699,6 +699,16 @@ class CrossfadeController(
         }
     }
 
+    /**
+     * The service moved the session onto the other player outside a transition
+     * of this class's own — a version swap or a blended quality upgrade. The
+     * pause and skip handling has to follow it there, or it is left listening
+     * to a player that has just been stopped.
+     */
+    fun onSessionPlayerChanged() {
+        if (phase == Phase.IDLE) listenTo(active())
+    }
+
     fun release() {
         tickerJob?.cancel()
         tickerJob = null

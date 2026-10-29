@@ -1858,7 +1858,7 @@ class PlaybackService : MediaLibraryService() {
                     }
                 }
             },
-            versionSwapActive = { versionSwapJob?.isActive == true },
+            versionSwapActive = { versionSwapJob?.isActive == true || upgradeBlendActive },
         )
 
     /** Favorite and Shuffle: the only actions shown on the phone notification. */
@@ -2026,6 +2026,11 @@ class PlaybackService : MediaLibraryService() {
         // guarded symmetrically in [createCrossfadeController].
         if (crossfade?.isTransitioning() == true) {
             TrackLog.d("BitChord", "version swap deferred: Automix is mid-transition", about = currentItem.mediaId)
+            return
+        }
+        // Nor while a quality upgrade is blending in across the same pair.
+        if (upgradeBlendActive) {
+            TrackLog.d("BitChord", "version swap deferred: a quality upgrade is blending in", about = currentItem.mediaId)
             return
         }
 
@@ -2372,7 +2377,15 @@ class PlaybackService : MediaLibraryService() {
         }
     }
 
-    private fun adoptPlayerForVersionSwap(outgoing: ExoPlayer, incoming: ExoPlayer) {
+    /**
+     * Moves the session onto [incoming] once a version swap or a blended
+     * quality upgrade has faded across to it. [asNewTrack] is false for the
+     * upgrade: that is the same play of the same song from a better source,
+     * and booking it as a track change would scrobble it twice, write a second
+     * history entry and reset its loudness — the same reasons
+     * [Player.Listener.onMediaItemTransition] skips a cut-in upgrade.
+     */
+    private fun adoptPlayerForVersionSwap(outgoing: ExoPlayer, incoming: ExoPlayer, asNewTrack: Boolean = true) {
         setSessionOwner(outgoing, owns = false)
         setSessionOwner(incoming, owns = true)
 
@@ -2390,14 +2403,16 @@ class PlaybackService : MediaLibraryService() {
         incoming.addAnalyticsListener(formatListener)
 
         mediaSession?.player = newSessionPlayer(incoming, requireNotNull(crossfade))
+        crossfade?.onSessionPlayerChanged()
 
         incoming.volume = 1f
         outgoing.stop()
         outgoing.clearMediaItems()
         outgoing.volume = 1f
 
-        swappingMediaId = null
         refreshCustomLayouts()
+        if (!asNewTrack) return
+        swappingMediaId = null
 
         onTrackBecameCurrent(
             incoming.currentMediaItem,
@@ -4658,30 +4673,59 @@ class PlaybackService : MediaLibraryService() {
             // NerdStats cleanup for why the pre-upgrade claim has to be
             // captured here rather than looked up again on revert.
             val previousFormat = NerdStats.declaredFormat(mediaId)
-            swappingMediaId = mediaId
-            swapCutAt = SystemClock.elapsedRealtime()
             val upgradedMetadata = now.item.mediaMetadata.buildUpon()
                 .setExtras(Bundle(now.item.mediaMetadata.extras ?: Bundle()).apply {
                     putBoolean(EXTRA_QUALITY_UPGRADED, true)
                 })
                 .build()
-            player.replaceMediaItem(
-                player.currentMediaItemIndex,
-                now.item.buildUpon()
-                    .setUri(upgradedUri)
-                    .setMediaMetadata(upgradedMetadata)
-                    .withResolvedStreamType(stream.url)
-                    .build(),
-            )
+            val upgradedItem = now.item.buildUpon()
+                .setUri(upgradedUri)
+                .setMediaMetadata(upgradedMetadata)
+                .withResolvedStreamType(stream.url)
+                .build()
+            // Blended across the stand-by player where it can be, cut in place
+            // where it can't. See [blendInUpgrade] for why the cut is the
+            // fallback rather than the plan: rebuilding the playing player's
+            // source costs a decoder, an AudioTrack and a refill, measured at
+            // 308ms and 320ms of silence even with every byte already on disk.
+            val outcome = if (canBlendUpgrade(player)) {
+                blendInUpgrade(player, mediaId, upgradedItem)
+            } else {
+                UpgradeBlend.CUT
+            }
+            if (outcome == UpgradeBlend.GONE) {
+                QualityUpgrade.shelve(mediaId, stream)
+                TrackLog.d("BitChord", "upgrade for $mediaId shelved: the queue moved on while it was blending in")
+                return@withContext
+            }
+            val swappedAt: Long
+            val upgradedPlayer: ExoPlayer
+            if (outcome == UpgradeBlend.BLENDED) {
+                upgradedPlayer = this@PlaybackService.player ?: return@withContext
+                swappedAt = upgradedPlayer.currentPosition
+            } else {
+                // Read again rather than reusing [now]: a blend that fell
+                // through to here has spent time on the stand-by player, and
+                // the track kept playing through all of it.
+                upgradedPlayer = this@PlaybackService.player ?: return@withContext
+                if (upgradedPlayer.currentMediaItem?.mediaId != mediaId) {
+                    QualityUpgrade.shelve(mediaId, stream)
+                    return@withContext
+                }
+                swappedAt = upgradedPlayer.currentPosition
+                swappingMediaId = mediaId
+                swapCutAt = SystemClock.elapsedRealtime()
+                upgradedPlayer.replaceMediaItem(upgradedPlayer.currentMediaItemIndex, upgradedItem)
+                upgradedPlayer.seekTo(upgradedPlayer.currentMediaItemIndex, swappedAt)
+                upgradedPlayer.prepare()
+            }
             val upgradedSourceName = stream.sourceConfigId?.let { SourceRegistry.config(it)?.displayName }
                 ?: "Upgrade"
             NerdStats.onSourceStream(mediaId, stream.format, upgradedSourceName)
             NerdStats.recordSource(mediaId, upgradedSourceName)
-            player.seekTo(player.currentMediaItemIndex, now.position)
-            player.prepare()
             QualityUpgrade.unshelve(mediaId)
-            TrackLog.d("BitChord", "upgraded to ${stream.format.summary} at ${now.position}ms ($upgradedSourceName)")
-            watchUpgrade(mediaId, now.uri, now.position, now.duration, previousFormat)
+            TrackLog.d("BitChord", "upgraded to ${stream.format.summary} at ${swappedAt}ms ($upgradedSourceName)")
+            watchUpgrade(mediaId, now.uri, swappedAt, now.duration, previousFormat)
             if (QualityUpgrade.continueAfterLossySwap(mediaId)) {
                 // The immediate JioSaavn improvement stays audible while a
                 // slower lossless source is checked against its higher-quality
@@ -4691,7 +4735,7 @@ class PlaybackService : MediaLibraryService() {
                 val firstPass = upgradeJob
                 scope.launch {
                     firstPass?.join()
-                    lookForBetterCopy(player)
+                    lookForBetterCopy(upgradedPlayer)
                 }
             }
             // The opening again, this time sized for Automix rather than for
@@ -4751,6 +4795,260 @@ class PlaybackService : MediaLibraryService() {
             return null
         }
         return SwapPoint(item, uri, player.currentPosition, player.duration)
+    }
+
+    /** How [blendInUpgrade] came out. */
+    private enum class UpgradeBlend {
+        /** The upgrade is playing on what is now the session player, and nothing was cut. */
+        BLENDED,
+
+        /** Nothing was touched; the caller should cut over in place instead. */
+        CUT,
+
+        /** The queue moved on under the blend. Nothing was touched. */
+        GONE,
+    }
+
+    /**
+     * True while [blendInUpgrade] holds the stand-by player. Automix and the
+     * version swap both fade across that same player, so each of them checks
+     * this the way the upgrade checks them — see [createCrossfadeController].
+     */
+    private var upgradeBlendActive = false
+
+    /** Main thread. Whether [blendInUpgrade] has what it needs to run at all. */
+    private fun canBlendUpgrade(activePlayer: ExoPlayer): Boolean {
+        // Paused: a cut is silent anyway, and it leaves nothing running.
+        if (!activePlayer.isPlaying) return false
+        // A party plays one track on every phone and resyncs against the
+        // session player; moving the session mid-song is a change of player
+        // [PartySync] never asked for. The cut there stays as it was.
+        if (ListenTogether.state.value.inParty) return false
+        if (spare == null) return false
+        if (versionSwapJob?.isActive == true) return false
+        return crossfade?.isTransitioning() != true
+    }
+
+    /**
+     * Main thread. Brings an upgraded stream in under the one playing, without
+     * a gap, by the same two-player route a version swap takes.
+     *
+     * Why not in place: `replaceMediaItem` on the playing player throws away
+     * its decoder, its AudioTrack and its buffer before the new source has
+     * produced a sample, and every one of those has to be rebuilt in series
+     * while nothing is sounding. The audition took the network out of that
+     * long ago, and what was left was still measured on a real device at
+     * 308ms and 320ms of silence:
+     *
+     * ```
+     *   swap leg: c2.android.flac.decoder stood up in 21ms, 55ms after the cut
+     *   swap leg: ready 83ms after the cut
+     *   swap seam: 308ms of silence
+     * ```
+     *
+     * — the last 200ms of it being the fresh AudioTrack filling and starting.
+     * None of that is slow; it is just all happening after the music stopped.
+     *
+     * So it happens before. The stand-by player is given the same queue with
+     * the upgraded item in place, prepared off the bytes the audition left on
+     * disk, started silently, and lined up against the session player. Only
+     * then are the two crossed, over [UPGRADE_BLEND_MS], and the session moved
+     * onto the stand-by exactly as a version swap moves it — except that this
+     * is still the same play of the same song, so none of the track-change
+     * bookkeeping runs.
+     *
+     * The crossing is a raised-cosine *equal-gain* curve rather than the
+     * equal-power one Automix and the version swap use. Those blend two
+     * different pieces of audio, where power is what adds; this blends two
+     * copies of the same master, where it is amplitude that adds, and an
+     * equal-power curve would swell by up to 3dB in the middle of what is
+     * meant to be no change at all.
+     *
+     * Lined up as closely as two ExoPlayers allow, which is not sample-exact:
+     * a seek on a running player costs its own resume time, which is measured
+     * once and seeked ahead by. What is left over is logged, and is what
+     * [UPGRADE_BLEND_MS] has to be short enough to hide.
+     */
+    private suspend fun blendInUpgrade(
+        activePlayer: ExoPlayer,
+        mediaId: String,
+        upgradedItem: MediaItem,
+    ): UpgradeBlend {
+        val standbyPlayer = spare ?: return UpgradeBlend.CUT
+        val index = activePlayer.currentMediaItemIndex
+        val startedAt = SystemClock.elapsedRealtime()
+        val stillOurs = {
+            player === activePlayer &&
+                activePlayer.currentMediaItemIndex == index &&
+                activePlayer.currentMediaItem?.mediaId == mediaId
+        }
+        val legs = SwapLegRecorder()
+        var committed = false
+        upgradeBlendActive = true
+        try {
+            standbyPlayer.stop()
+            standbyPlayer.clearMediaItems()
+            standbyPlayer.skipSilenceEnabled = activePlayer.skipSilenceEnabled
+            standbyPlayer.repeatMode = activePlayer.repeatMode
+            standbyPlayer.shuffleModeEnabled = activePlayer.shuffleModeEnabled
+            standbyPlayer.setPlaybackSpeed(AppSettings.playbackSpeed.value)
+            standbyPlayer.volume = 0f
+            val items = (0 until activePlayer.mediaItemCount).map { i ->
+                if (i == index) upgradedItem else activePlayer.getMediaItemAt(i)
+            }
+            standbyPlayer.setMediaItems(items, index, activePlayer.currentPosition)
+            spareLoudness().track(mediaId, nextMediaIdOf(standbyPlayer))
+            // The decoder and AudioTrack this player stands up are the ones the
+            // listener will be hearing, and [formatListener] is still on the
+            // other player while it happens. Recorded here and replayed onto it
+            // once the session moves, or the stats would keep describing Opus.
+            standbyPlayer.addAnalyticsListener(legs)
+            standbyPlayer.playWhenReady = false
+            standbyPlayer.prepare()
+
+            val readyBy = startedAt + UPGRADE_BLEND_READY_TIMEOUT_MS
+            while (standbyPlayer.playbackState != Player.STATE_READY) {
+                if (!stillOurs()) return UpgradeBlend.GONE
+                if (standbyPlayer.playerError != null ||
+                    standbyPlayer.playbackState == Player.STATE_ENDED ||
+                    SystemClock.elapsedRealtime() > readyBy
+                ) {
+                    TrackLog.w(
+                        "BitChord",
+                        "upgrade blend: stand-by never got ready (state=${standbyPlayer.playbackState}, " +
+                            "error=${standbyPlayer.playerError?.errorCodeName}); cutting over instead",
+                    )
+                    return UpgradeBlend.CUT
+                }
+                delay(UPGRADE_BLEND_STEP_MS)
+            }
+            val readyIn = SystemClock.elapsedRealtime() - startedAt
+            if (!activePlayer.isPlaying) return UpgradeBlend.CUT
+
+            // Started before it is lined up, not after: the session player
+            // keeps moving through every step here, and a player only pays its
+            // AudioTrack start once. The seeks that follow land inside what it
+            // has already buffered, so they cost a flush rather than a load.
+            standbyPlayer.play()
+            val runningBy = SystemClock.elapsedRealtime() + UPGRADE_BLEND_SYNC_TIMEOUT_MS
+            while (!standbyPlayer.isPlaying && SystemClock.elapsedRealtime() < runningBy) {
+                delay(UPGRADE_BLEND_STEP_MS)
+            }
+            if (!standbyPlayer.isPlaying) {
+                TrackLog.w("BitChord", "upgrade blend: stand-by would not start; cutting over instead")
+                return UpgradeBlend.CUT
+            }
+            alignStandby(activePlayer, standbyPlayer, index, lead = 0L)
+            // What that seek cost is how far behind it left the stand-by, and
+            // the next seek costs about the same — so the second one aims that
+            // far ahead of the session player and lands level with it.
+            var lag = activePlayer.currentPosition - standbyPlayer.currentPosition
+            val firstLag = lag
+            if (lag in UPGRADE_BLEND_TOLERANCE_MS..UPGRADE_BLEND_MAX_LAG_MS) {
+                alignStandby(activePlayer, standbyPlayer, index, lead = lag)
+                lag = activePlayer.currentPosition - standbyPlayer.currentPosition
+            }
+            if (!stillOurs()) return UpgradeBlend.GONE
+            // Paused, sought or stalled while lining up; any of them makes the
+            // reading meaningless, and a cut now is either silent or no worse
+            // than it would have been.
+            if (!activePlayer.isPlaying || !standbyPlayer.isPlaying || abs(lag) > UPGRADE_BLEND_MAX_LAG_MS) {
+                TrackLog.d(
+                    "BitChord",
+                    "upgrade blend: lost the line-up (lag ${lag}ms, playing=${activePlayer.isPlaying}); " +
+                        "cutting over instead",
+                )
+                return UpgradeBlend.CUT
+            }
+
+            val fadeStart = SystemClock.elapsedRealtime()
+            while (true) {
+                if (!stillOurs()) return UpgradeBlend.GONE
+                if (standbyPlayer.playWhenReady != activePlayer.playWhenReady) {
+                    standbyPlayer.playWhenReady = activePlayer.playWhenReady
+                }
+                val progress = ((SystemClock.elapsedRealtime() - fadeStart).toFloat() / UPGRADE_BLEND_MS)
+                    .coerceIn(0f, 1f)
+                val gain = ((1.0 - cos(PI * progress)) / 2.0).toFloat()
+                standbyPlayer.volume = gain
+                activePlayer.volume = 1f - gain
+                if (progress >= 1f) break
+                delay(UPGRADE_BLEND_FADE_STEP_MS)
+            }
+
+            standbyPlayer.removeAnalyticsListener(legs)
+            adoptPlayerForVersionSwap(outgoing = activePlayer, incoming = standbyPlayer, asNewTrack = false)
+            legs.replayInto(formatListener)
+            committed = true
+            TrackLog.d(
+                "BitChord",
+                "swap seam: none — blended over ${UPGRADE_BLEND_MS}ms; stand-by ready in ${readyIn}ms, " +
+                    "lined up to ${lag}ms (first pass ${firstLag}ms), " +
+                    "${SystemClock.elapsedRealtime() - startedAt}ms in all",
+                about = mediaId,
+            )
+            return UpgradeBlend.BLENDED
+        } finally {
+            upgradeBlendActive = false
+            if (!committed) {
+                standbyPlayer.removeAnalyticsListener(legs)
+                standbyPlayer.stop()
+                standbyPlayer.clearMediaItems()
+                standbyPlayer.volume = 1f
+                activePlayer.volume = 1f
+            }
+        }
+    }
+
+    /** Main thread. Seeks [standbyPlayer] to [lead]ms past the session player and waits for it to resume. */
+    private suspend fun alignStandby(activePlayer: ExoPlayer, standbyPlayer: ExoPlayer, index: Int, lead: Long) {
+        standbyPlayer.seekTo(index, (activePlayer.currentPosition + lead).coerceAtLeast(0L))
+        val readyBy = SystemClock.elapsedRealtime() + UPGRADE_BLEND_SYNC_TIMEOUT_MS
+        while (standbyPlayer.playbackState != Player.STATE_READY && SystemClock.elapsedRealtime() < readyBy) {
+            delay(UPGRADE_BLEND_STEP_MS)
+        }
+        // Long enough for its position to be coming off audio actually
+        // playing out rather than off the seek target it is parked at.
+        delay(UPGRADE_BLEND_SETTLE_MS)
+    }
+
+    /**
+     * Holds the stand-by player's decoder, format and AudioTrack reports while
+     * [formatListener] is still attached to the other player, for replay once
+     * the session has moved. In arrival order, since that is the order the
+     * listener expects them in.
+     */
+    private class SwapLegRecorder : AnalyticsListener {
+        private val events = mutableListOf<(AnalyticsListener) -> Unit>()
+
+        override fun onAudioDecoderInitialized(
+            eventTime: AnalyticsListener.EventTime,
+            decoderName: String,
+            initializedTimestampMs: Long,
+            initializationDurationMs: Long,
+        ) {
+            events += { it.onAudioDecoderInitialized(eventTime, decoderName, initializedTimestampMs, initializationDurationMs) }
+        }
+
+        override fun onAudioInputFormatChanged(
+            eventTime: AnalyticsListener.EventTime,
+            format: Format,
+            decoderReuseEvaluation: DecoderReuseEvaluation?,
+        ) {
+            events += { it.onAudioInputFormatChanged(eventTime, format, decoderReuseEvaluation) }
+        }
+
+        override fun onAudioTrackInitialized(
+            eventTime: AnalyticsListener.EventTime,
+            audioTrackConfig: AudioSink.AudioTrackConfig,
+        ) {
+            events += { it.onAudioTrackInitialized(eventTime, audioTrackConfig) }
+        }
+
+        fun replayInto(target: AnalyticsListener) {
+            events.forEach { it(target) }
+            events.clear()
+        }
     }
 
     /**
@@ -8773,6 +9071,32 @@ class PlaybackService : MediaLibraryService() {
          * be worth the break in the audio it costs.
          */
         const val UPGRADE_MIN_REMAINING_MS = 20_000L
+
+        /**
+         * How long [blendInUpgrade] crosses the two copies of a track over.
+         * Long enough that the volume steps between frames are not heard as
+         * clicks, short enough that what is left of the two players' misalignment
+         * passes as a flicker rather than a doubled note.
+         */
+        const val UPGRADE_BLEND_MS = 160L
+
+        /** Longest [blendInUpgrade] waits for the stand-by to prepare off the audition's bytes. */
+        const val UPGRADE_BLEND_READY_TIMEOUT_MS = 4_000L
+
+        /** Longest any one start or seek on the stand-by is waited out before the blend gives up. */
+        const val UPGRADE_BLEND_SYNC_TIMEOUT_MS = 600L
+
+        /** How long after a seek the stand-by's position is trusted to be off real playout. */
+        const val UPGRADE_BLEND_SETTLE_MS = 60L
+
+        /** A lag below this is reading noise, not worth a second seek. */
+        const val UPGRADE_BLEND_TOLERANCE_MS = 5L
+
+        /** A lag past this means a seek or stall happened, not a resume time. */
+        const val UPGRADE_BLEND_MAX_LAG_MS = 400L
+
+        const val UPGRADE_BLEND_STEP_MS = 10L
+        const val UPGRADE_BLEND_FADE_STEP_MS = 8L
 
         /** Minimum interval between accepted listener-requested quality retries. */
         const val MANUAL_UPGRADE_COOLDOWN_MS = 30_000L
