@@ -313,7 +313,7 @@ internal fun InlineQueue(
             Text(
                 text = stringResource(Res.string.queue),
                 style = MaterialTheme.typography.titleLarge,
-                color = Color.White,
+                color = PlayerInk,
                 modifier = Modifier.weight(1f),
             )
             if (tracks.user.isNotEmpty()) {
@@ -475,7 +475,7 @@ private fun QueueHeading(
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
-            color = Color.White.copy(alpha = 0.75f),
+            color = PlayerInk.copy(alpha = 0.75f),
             modifier = Modifier.weight(1f),
         )
         trailing()
@@ -487,7 +487,7 @@ private fun QueueClearButton(style: TextStyle, locked: Boolean, onClear: () -> U
     Text(
         text = stringResource(Res.string.clear),
         style = style,
-        color = Color.White.copy(alpha = if (locked) 0.25f else 0.75f),
+        color = PlayerInk.copy(alpha = if (locked) 0.25f else 0.75f),
         modifier = Modifier
             .clip(RoundedCornerShape(percent = 50))
             .clickable(enabled = !locked, onClick = onClear)
@@ -506,7 +506,7 @@ private fun AutoplayHeading(hasTracks: Boolean, modifier: Modifier = Modifier) {
         Icon(
             BitChordIcons.Infinity,
             contentDescription = null,
-            tint = Color.White.copy(alpha = 0.75f),
+            tint = PlayerInk.copy(alpha = 0.75f),
             modifier = Modifier.size(18.dp),
         )
         Spacer(Modifier.width(8.dp))
@@ -514,14 +514,14 @@ private fun AutoplayHeading(hasTracks: Boolean, modifier: Modifier = Modifier) {
             Text(
                 text = stringResource(Res.string.autoplay),
                 style = MaterialTheme.typography.titleMedium,
-                color = Color.White,
+                color = PlayerInk,
             )
             Text(
                 text = stringResource(
                     if (hasTracks) Res.string.autoplay_queue_description else Res.string.autoplay_empty_description,
                 ),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.55f),
+                color = PlayerInk.copy(alpha = 0.55f),
             )
         }
     }
@@ -788,7 +788,7 @@ private fun InlineQueueRow(
             Icon(
                 Icons.Rounded.DragHandle,
                 contentDescription = stringResource(Res.string.drag_to_reorder),
-                tint = Color.White.copy(alpha = 0.4f),
+                tint = PlayerInk.copy(alpha = 0.4f),
                 modifier = Modifier
                     .size(20.dp)
                     // The glyph sits well inset in its own box; this pulls it
@@ -823,12 +823,12 @@ private fun InlineQueueRow(
             ExplicitSongTitle(
                 song = song,
                 style = MaterialTheme.typography.titleMedium,
-                color = if (isCurrent) Color.White else Color.White.copy(alpha = 0.92f),
+                color = if (isCurrent) PlayerInk else PlayerInk.copy(alpha = 0.92f),
             )
             Text(
                 text = song.artist,
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.55f),
+                color = PlayerInk.copy(alpha = 0.55f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -837,7 +837,7 @@ private fun InlineQueueRow(
             Icon(
                 Icons.Rounded.GraphicEq,
                 contentDescription = stringResource(Res.string.now_playing),
-                tint = Color.White,
+                tint = PlayerInk,
                 modifier = Modifier.size(18.dp),
             )
             Spacer(Modifier.width(10.dp))
@@ -853,7 +853,7 @@ private fun InlineQueueRow(
                 Icon(
                     Icons.Rounded.Close,
                     contentDescription = stringResource(Res.string.remove_from_queue),
-                    tint = Color.White.copy(alpha = 0.55f),
+                    tint = PlayerInk.copy(alpha = 0.55f),
                     modifier = Modifier.size(18.dp),
                 )
             }

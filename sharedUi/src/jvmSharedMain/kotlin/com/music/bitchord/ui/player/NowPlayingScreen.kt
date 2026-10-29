@@ -830,6 +830,10 @@ fun NowPlayingScreen(
     windowHeight: Dp,
     modifier: Modifier = Modifier,
 ) {
+    // The player's text and glyphs take a faint cast of the accent — see
+    // [ProvidePlayerInk]. The body is left at its old indent to keep this wrap
+    // out of everyone's diffs.
+    ProvidePlayerInk {
     val density = LocalDensity.current
     val haptics = rememberHaptics()
 
@@ -2217,7 +2221,7 @@ fun NowPlayingScreen(
             )
             playerOverlays()
         }
-        return
+        return@ProvidePlayerInk
     }
 
 
@@ -3447,7 +3451,7 @@ fun NowPlayingScreen(
                     Icon(
                         imageVector = if (showNext) Icons.Rounded.FastForward else Icons.Rounded.FastRewind,
                         contentDescription = null,
-                        tint = Color.White,
+                        tint = PlayerInk,
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .offset {
@@ -3576,10 +3580,10 @@ fun NowPlayingScreen(
                                     style = MaterialTheme.typography.titleLarge.copy(
                                         fontSize = 20.sp,
                                     ),
-                                    color = Color.White,
+                                    color = PlayerInk,
                                     enabled = scrolling,
                                     leading = if (song.isExplicit == true) {
-                                        { ExplicitBadge(color = Color.White) }
+                                        { ExplicitBadge(color = PlayerInk) }
                                     } else {
                                         null
                                     },
@@ -3597,7 +3601,7 @@ fun NowPlayingScreen(
                                         fontWeight = FontWeight.W500,
                                         fontSize = 20.sp,
                                     ),
-                                    color = Color.White.copy(alpha = 0.55f),
+                                    color = PlayerInk.copy(alpha = 0.55f),
                                     enabled = scrolling,
                                     // A title that's also scrolling gets to go first —
                                     // starting together reads as clutter, so the artist
@@ -4005,6 +4009,7 @@ fun NowPlayingScreen(
         }
         playerOverlays()
     }
+}
 }
 
 /**

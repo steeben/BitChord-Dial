@@ -4,7 +4,10 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -17,6 +20,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.unit.dp
 import com.music.bitchord.ui.theme.LocalNowPlayingTint
@@ -60,6 +64,43 @@ fun rememberWaveAccents(artworkUrl: String?): WaveAccents {
         dark = animateColorAsState(target.dark, spec, label = "waveDark").value,
     )
 }
+
+/**
+ * The player's white: the colour its text and glyphs are drawn in, leaning very slightly
+ * toward the song's accent so the chrome sits with the backdrop rather than on top of it.
+ * Plain white outside [ProvidePlayerInk], so the player's pieces read the same elsewhere.
+ */
+internal val LocalPlayerInk = compositionLocalOf { Color.White }
+
+/** Shorthand for [LocalPlayerInk] at the call site. */
+internal val PlayerInk: Color
+    @Composable get() = LocalPlayerInk.current
+
+/**
+ * Hands the player's [content] its ink, off the same accent [rememberWaveAccents] follows
+ * (or the theme's own, with nothing playing). Only [PLAYER_INK_TINT] of the way there, so
+ * it reads as white with a cast, not as a colour. A grey accent leaves it plain white.
+ */
+@Composable
+fun ProvidePlayerInk(content: @Composable () -> Unit) {
+    val accent = LocalNowPlayingTint.current ?: MaterialTheme.colorScheme.primary
+    val target = remember(accent) {
+        val base = accent.toHsl()
+        if (base.s < GREY_SATURATION) {
+            Color.White
+        } else {
+            lerp(Color.White, Color.hsl(base.h, base.s.coerceAtLeast(0.6f), 0.6f), PLAYER_INK_TINT)
+        }
+    }
+    val ink by animateColorAsState(
+        target,
+        tween(durationMillis = 900, easing = FastOutSlowInEasing),
+        label = "playerInk",
+    )
+    CompositionLocalProvider(LocalPlayerInk provides ink, content = content)
+}
+
+private const val PLAYER_INK_TINT = 0.12f
 
 /**
  * The waves' clock and swell. [time] runs only while the music does, so a paused bar costs no

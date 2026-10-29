@@ -168,7 +168,7 @@ internal fun PlaybackOriginCaption(
                 blurRadius = 4f,
             ),
         ),
-        color = Color.White,
+        color = PlayerInk,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         textAlign = textAlign,
@@ -242,12 +242,12 @@ internal fun PlayerScrubber(
                 Text(
                     text = formatTime((shown * durationMs).toLong()),
                     style = MaterialTheme.typography.labelMedium,
-                    color = Color.White.copy(alpha = 0.55f),
+                    color = PlayerInk.copy(alpha = 0.55f),
                 )
                 Text(
                     text = "-" + formatTime(durationMs - (shown * durationMs).toLong()),
                     style = MaterialTheme.typography.labelMedium,
-                    color = Color.White.copy(alpha = 0.55f),
+                    color = PlayerInk.copy(alpha = 0.55f),
                 )
             }
             // Pinned to the box's own centre rather than squeezed into the gap
@@ -284,7 +284,7 @@ private fun MixingLabel(pulse: MixPulse, modifier: Modifier = Modifier) {
             fontWeight = FontWeight.SemiBold,
             fontSize = (MaterialTheme.typography.labelMedium.fontSize.value + 1).sp,
         ),
-        color = Color.White.copy(alpha = 0.85f),
+        color = PlayerInk.copy(alpha = 0.85f),
         maxLines = 1,
     )
 }
@@ -368,7 +368,7 @@ internal fun SleeveNerdStats(song: Song, modifier: Modifier = Modifier) {
             Text(
                 text = stats,
                 style = nerdStyle,
-                color = Color.White.copy(alpha = 0.65f),
+                color = PlayerInk.copy(alpha = 0.65f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
@@ -400,7 +400,7 @@ internal fun SleeveNerdStats(song: Song, modifier: Modifier = Modifier) {
                 // Dimmer than the measured line above it: that one describes
                 // the audio, this one describes the app, and the ranking
                 // should show.
-                color = Color.White.copy(alpha = 0.5f),
+                color = PlayerInk.copy(alpha = 0.5f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
@@ -457,7 +457,7 @@ internal fun TransportRow(
             // would shunt everything below it on every load.
             Box(Modifier.size(playTouch), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(
-                    color = Color.White,
+                    color = PlayerInk,
                     strokeWidth = 3.dp,
                     modifier = Modifier.size(if (compact) 30.dp else 38.dp),
                 )
@@ -506,7 +506,7 @@ internal fun VolumeRow(
         Icon(
             Icons.AutoMirrored.Rounded.VolumeDown,
             contentDescription = null,
-            tint = Color.White.copy(alpha = 0.5f),
+            tint = PlayerInk.copy(alpha = 0.5f),
             modifier = Modifier.size(20.dp),
         )
         Spacer(Modifier.width(10.dp))
@@ -522,7 +522,7 @@ internal fun VolumeRow(
         Icon(
             Icons.AutoMirrored.Rounded.VolumeUp,
             contentDescription = null,
-            tint = Color.White.copy(alpha = 0.5f),
+            tint = PlayerInk.copy(alpha = 0.5f),
             modifier = Modifier.size(20.dp),
         )
     }
@@ -709,7 +709,7 @@ internal fun CircleGlyph(
             Icon(
                 imageVector = glyph,
                 contentDescription = contentDescription,
-                tint = Color.White,
+                tint = PlayerInk,
                 modifier = Modifier.size(19.dp),
             )
         }
@@ -755,7 +755,7 @@ private fun TransportGlyph(
         Icon(
             painter = painterResource(icon),
             contentDescription = contentDescription,
-            tint = Color.White.copy(alpha = alpha),
+            tint = PlayerInk.copy(alpha = alpha),
             modifier = Modifier
                 .size(size)
                 .then(if (heightScale != 1f) Modifier.graphicsLayer { scaleY = heightScale } else Modifier),
@@ -954,7 +954,7 @@ private fun PillSegment(
             .semantics { this.contentDescription = contentDescription },
         contentAlignment = Alignment.Center,
     ) {
-        val tint = Color.White.copy(alpha = if (highlighted) 1f else 0.75f)
+        val tint = PlayerInk.copy(alpha = if (highlighted) 1f else 0.75f)
         Crossfade(
             targetState = loading,
             animationSpec = tween(durationMillis = 200),
@@ -963,7 +963,7 @@ private fun PillSegment(
             if (isLoading) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(17.dp),
-                    color = Color.White,
+                    color = PlayerInk,
                     strokeWidth = 2.dp,
                 )
             } else if (icon != null) {
@@ -1066,7 +1066,7 @@ internal fun OutputCaption(
         Text(
             text = if (badge.inParty) jamName else outputName,
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-            color = Color.White.copy(alpha = 0.55f),
+            color = PlayerInk.copy(alpha = 0.55f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
@@ -1179,7 +1179,7 @@ private fun BottomGlyph(
             .semantics { this.contentDescription = contentDescription },
         contentAlignment = Alignment.Center,
     ) {
-        val tint = Color.White.copy(alpha = if (highlighted) 1f else 0.75f)
+        val tint = PlayerInk.copy(alpha = if (highlighted) 1f else 0.75f)
         if (icon != null) {
             Icon(
                 imageVector = icon,
@@ -1644,7 +1644,7 @@ private fun LosslessLabel(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val tint = Color.White.copy(alpha = if (animated) 0.7f else 0.45f)
+        val tint = PlayerInk.copy(alpha = if (animated) 0.7f else 0.45f)
         if (iconPainter != null) {
             Icon(
                 painter = iconPainter,
@@ -1669,7 +1669,7 @@ private fun LosslessLabel(
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontSize = (MaterialTheme.typography.labelMedium.fontSize.value + 1).sp,
                 ),
-                color = Color.White.copy(alpha = 0.45f),
+                color = PlayerInk.copy(alpha = 0.45f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
