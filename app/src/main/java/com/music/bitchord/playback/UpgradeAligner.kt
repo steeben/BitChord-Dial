@@ -105,6 +105,68 @@ object UpgradeAligner {
         Offset(offsetMs = (bestLag + fraction) / WORK_RATE * 1000.0, confidence = best)
     }
 
+    /**
+     * Where [a] sits in [b], to a fraction of a frame: the best L in
+     * -[margin]..[margin] lining a[i] up with b[i + margin + L], with its
+     * normalised correlation. [b] must be [a] plus [margin] frames either side,
+     * both at [rate]. Searched coarsely at [WORK_RATE] first, then refined at
+     * the full rate around the coarse peak. Null below [MIN_CONFIDENCE].
+     */
+    fun locate(a: FloatArray, b: FloatArray, margin: Int, rate: Int): Pair<Double, Double>? {
+        if (a.isEmpty() || b.size < a.size + 2 * margin) return null
+        val step = rate / WORK_RATE
+        val coarseA = downsample(a, rate.toDouble())
+        val coarseB = downsample(b, rate.toDouble())
+        val coarseMargin = (margin / step).toInt()
+        var coarse = 0
+        var best = -2.0
+        for (lag in -coarseMargin..coarseMargin) {
+            val r = normalised(coarseA, coarseB, coarseMargin + lag, coarseA.size)
+            if (r > best) {
+                best = r
+                coarse = lag
+            }
+        }
+        val centre = (coarse * step).toInt()
+        val reach = (2 * step).toInt() + 1
+        var fine = centre
+        var fineBest = -2.0
+        val scores = HashMap<Int, Double>()
+        for (lag in maxOf(-margin, centre - reach)..minOf(margin, centre + reach)) {
+            val r = normalised(a, b, margin + lag, a.size)
+            scores[lag] = r
+            if (r > fineBest) {
+                fineBest = r
+                fine = lag
+            }
+        }
+        if (fineBest < MIN_CONFIDENCE) return null
+        val l = scores[fine - 1]
+        val r = scores[fine + 1]
+        var fraction = 0.0
+        if (l != null && r != null) {
+            val denom = l - 2 * fineBest + r
+            if (denom < 0) fraction = (0.5 * (l - r) / denom).coerceIn(-0.5, 0.5)
+        }
+        return (fine + fraction) to fineBest
+    }
+
+    private fun normalised(a: FloatArray, b: FloatArray, shift: Int, n: Int): Double {
+        var dot = 0.0
+        var ea = 0.0
+        var eb = 0.0
+        val end = minOf(n, b.size - shift)
+        for (i in 0 until end) {
+            val x = a[i]
+            val y = b[i + shift]
+            dot += x * y
+            ea += x * x
+            eb += y * y
+        }
+        val d = sqrt(ea * eb)
+        return if (d < 1e-9) -2.0 else dot / d
+    }
+
     /** Mono at [WORK_RATE], paired with the real start time in seconds. */
     private fun decode(uri: Uri, startSec: Double, endSec: Double): Pair<FloatArray, Double>? {
         val source = AudioCache.headMediaDataSource(uri) ?: return null

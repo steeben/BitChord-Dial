@@ -737,6 +737,9 @@ object QualityUpgrade {
      * swapped in. A failed audition must leave the original search as the last
      * word rather than triggering a second interruption attempt.
      */
+    /** Whether a slower lossless look is waiting on this track's lossy swap — see [continueAfterLossySwap]. */
+    fun hasFollowUp(mediaId: String): Boolean = followUps.containsKey(mediaId)
+
     fun continueAfterLossySwap(mediaId: String): Boolean {
         val next = followUps.remove(mediaId) ?: return false
         pending[mediaId] = next

@@ -137,6 +137,9 @@ class PrecisionAudioSink(
      */
     private var processedEndUs: Long = C.TIME_UNSET
 
+    /** The renderer's offset of the current stream, so block times can be read as song times. */
+    private var outputStreamOffsetUs: Long = 0L
+
     /** Frames still to drop for a [SinkShift] request; audio thread only. */
     private var pendingDropFrames: Long = 0L
 
@@ -346,6 +349,13 @@ class PrecisionAudioSink(
                 }
             }
 
+            // Splicing goes in ahead of the DSP chain, so a spliced-in copy is
+            // equalised, levelled and filtered exactly as the playing one was.
+            val spliceTimeUs = advanceTimestamp(presentationTimeUs, framesEmittedForInput)
+            if (spliceTimeUs != C.TIME_UNSET) {
+                dspChain.transition.splice.onBlock(audioBlock, spliceTimeUs - outputStreamOffsetUs, configuredSampleRate)
+            }
+
             // Process normalized Float32 samples through custom DSP chain
             dspChain.process(audioBlock)
 
@@ -435,7 +445,12 @@ class PrecisionAudioSink(
      * first, is not.
      */
     override fun setOutputStreamOffsetUs(outputStreamOffsetUs: Long) {
-        if (streaming) dspChain.onStreamBoundary()
+        if (streaming) {
+            dspChain.onStreamBoundary()
+            // A splice belongs to the track it was armed on.
+            dspChain.transition.splice.end()
+        }
+        this.outputStreamOffsetUs = outputStreamOffsetUs
         super.setOutputStreamOffsetUs(outputStreamOffsetUs)
     }
 
@@ -460,6 +475,7 @@ class PrecisionAudioSink(
     }
 
     override fun flush() {
+        dspChain.transition.splice.onDiscontinuity()
         pendingDropFrames = 0L
         dspChain.transition.shift.clear()
         processedEndUs = C.TIME_UNSET
@@ -479,6 +495,7 @@ class PrecisionAudioSink(
     }
 
     override fun reset() {
+        dspChain.transition.splice.onDiscontinuity()
         pendingDropFrames = 0L
         dspChain.transition.shift.clear()
         processedEndUs = C.TIME_UNSET

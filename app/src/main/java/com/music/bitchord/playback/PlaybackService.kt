@@ -83,6 +83,8 @@ import com.music.bitchord.playback.cast.CastPlayback
 import com.music.bitchord.playback.cast.CastSink
 import com.music.bitchord.playback.cast.CastStream
 import com.music.bitchord.playback.audio.PrecisionAudioSink
+import com.music.bitchord.playback.audio.SinkSplice
+import com.music.bitchord.playback.audio.SpliceFeed
 import com.music.bitchord.playback.dsd.DsdExtractorsFactory
 import com.music.bitchord.playback.audio.DirectAudioProbe
 import com.music.bitchord.playback.audio.OutputNegotiator
@@ -947,6 +949,7 @@ class PlaybackService : MediaLibraryService() {
         ) {
             val exoPlayer = player ?: return
             if (reason == Player.DISCONTINUITY_REASON_SEEK) {
+                installSplicedUpgrade(exoPlayer, newPosition.positionMs)
                 if (exoPlayer.isPlaying) pushDiscordPresence(exoPlayer)
                 updateLyricSubtitle()
             }
@@ -3364,6 +3367,8 @@ class PlaybackService : MediaLibraryService() {
         alreadyAudible: Boolean = false,
     ) {
         val exoPlayer = player ?: return
+        // A splice belongs to the play it was made in; the sink ends its own.
+        splicedUpgrade = null
         syncBoundedContextCursor(exoPlayer, mediaItem)
         if (boundedContextWindow != null && !ListenTogether.state.value.inParty) {
             saveBoundedContextSnapshot(exoPlayer)
@@ -4250,6 +4255,8 @@ class PlaybackService : MediaLibraryService() {
     private fun lookForBetterCopy(player: ExoPlayer) {
         val item = player.currentMediaItem ?: return
         val mediaId = item.mediaId
+        // Already playing its upgrade, spliced in under the old item.
+        if (splicedUpgrade?.first == mediaId) return
         val uri = item.localConfiguration?.uri
         val alreadyPending = QualityUpgrade.isPending(mediaId)
         val shelved = QualityUpgrade.shelvedFor(mediaId)
@@ -4690,7 +4697,12 @@ class PlaybackService : MediaLibraryService() {
             // source costs a decoder, an AudioTrack and a refill, measured at
             // 308ms and 320ms of silence even with every byte already on disk.
             var outcome = UpgradeBlend.CUT
-            var attempts = 0
+            // Spliced into the one output if it can be, which is the only way
+            // in with no seam at all; blended across two players if not.
+            this@PlaybackService.player?.takeIf { canSpliceUpgrade(it, mediaId) }?.let {
+                outcome = spliceInUpgrade(it, mediaId, upgradedItem, now.duration)
+            }
+            var attempts = if (outcome == UpgradeBlend.CUT) 0 else UPGRADE_BLEND_ATTEMPTS
             while (attempts < UPGRADE_BLEND_ATTEMPTS) {
                 val current = this@PlaybackService.player ?: break
                 if (!canBlendUpgrade(current)) break
@@ -4708,7 +4720,7 @@ class PlaybackService : MediaLibraryService() {
             }
             val swappedAt: Long
             val upgradedPlayer: ExoPlayer
-            if (outcome == UpgradeBlend.BLENDED) {
+            if (outcome == UpgradeBlend.BLENDED || outcome == UpgradeBlend.SPLICED) {
                 upgradedPlayer = this@PlaybackService.player ?: return@withContext
                 swappedAt = upgradedPlayer.currentPosition
             } else {
@@ -4733,7 +4745,11 @@ class PlaybackService : MediaLibraryService() {
             NerdStats.recordSource(mediaId, upgradedSourceName)
             QualityUpgrade.unshelve(mediaId)
             TrackLog.d("BitChord", "upgraded to ${stream.format.summary} at ${swappedAt}ms ($upgradedSourceName)")
-            watchUpgrade(mediaId, now.uri, swappedAt, now.duration, previousFormat)
+            // A splice was measured against the file it plays, and installs
+            // nothing a length check could catch out.
+            if (outcome != UpgradeBlend.SPLICED) {
+                watchUpgrade(mediaId, now.uri, swappedAt, now.duration, previousFormat)
+            }
             if (QualityUpgrade.continueAfterLossySwap(mediaId)) {
                 // The immediate JioSaavn improvement stays audible while a
                 // slower lossless source is checked against its higher-quality
@@ -4787,6 +4803,7 @@ class PlaybackService : MediaLibraryService() {
         // prevent the requested lossless copy from replacing it. Two marked
         // URIs get distinct cache entries through [QualityUpgrade.upgradedUri].
         if (uri.contains("${QualityUpgrade.MARKER}=hifi-")) return null
+        if (splicedUpgrade?.first == mediaId) return null
         // A track the listener is holding on YouTube's own upload is not a
         // candidate for anything, whatever was already in flight for it. The
         // revert can land in the middle of a hunt — that is when the "Upgrading
@@ -4805,6 +4822,187 @@ class PlaybackService : MediaLibraryService() {
         return SwapPoint(item, uri, player.currentPosition, player.duration)
     }
 
+    /**
+     * The upgrade spliced into the playing player's own audio, keyed by track:
+     * the item it would have been swapped to, kept for the moment a real swap
+     * costs nothing — the listener seeking, see [playbackListener]. Null when
+     * nothing is spliced.
+     */
+    private var splicedUpgrade: Pair<String, MediaItem>? = null
+
+    /**
+     * Main thread. A seek on a track playing its upgrade spliced in: the gap a
+     * seek makes anyway is the moment to install the upgraded rendition for
+     * real, so the player reads the new file directly from here on.
+     */
+    private fun installSplicedUpgrade(exoPlayer: ExoPlayer, positionMs: Long) {
+        val (mediaId, item) = splicedUpgrade ?: return
+        if (exoPlayer.currentMediaItem?.mediaId != mediaId) {
+            splicedUpgrade = null
+            return
+        }
+        splicedUpgrade = null
+        activeFilter.splice.end()
+        swappingMediaId = mediaId
+        exoPlayer.replaceMediaItem(exoPlayer.currentMediaItemIndex, item)
+        exoPlayer.seekTo(exoPlayer.currentMediaItemIndex, positionMs)
+        exoPlayer.prepare()
+        TrackLog.d("BitChord", "spliced upgrade installed for real at the seek to ${positionMs}ms", about = mediaId)
+    }
+
+    /** Main thread. Whether [spliceInUpgrade] can run on the playing player at all. */
+    private fun canSpliceUpgrade(activePlayer: ExoPlayer, mediaId: String): Boolean {
+        if (!activePlayer.isPlaying) return false
+        if (ListenTogether.state.value.inParty) return false
+        // The lossy-then-lossless race swaps twice, and its second look keys
+        // off the first swap's marked URI, which a splice never installs.
+        if (QualityUpgrade.hasFollowUp(mediaId)) return false
+        val splice = activeFilter.splice
+        return splice.sampleRate > 0 && splice.channels in 1..2 && splice.state != SinkSplice.ARMED &&
+            splice.state != SinkSplice.ACTIVE
+    }
+
+    /**
+     * Main thread. Splices the upgraded copy into the playing player's own
+     * audio, sample for sample, rather than crossing between two players.
+     *
+     * Every two-player approach before this one failed the same way in the
+     * field: the two players' audio comes out of two AudioTracks, and nothing
+     * Android reports says precisely when either one's sound reaches the
+     * speaker. Lined up by position, they read level and were heard tens of
+     * milliseconds apart — a stutter over a short crossing, an audible doubling
+     * over a long one. So there is only one output here. The upgraded file is
+     * decoded alongside on its own thread ([SpliceFeed]), measured against a
+     * capture of exactly the audio the player is putting out (so whatever
+     * either decoder does with a codec's priming cancels out), and handed to
+     * the player's sink by song time ([SinkSplice]): from the splice on, every
+     * frame of the old copy is replaced by the new copy's frame for the same
+     * moment, after a 20ms crossing.
+     *
+     * The player itself still reads the old file underneath and is not told;
+     * the rendition it would have been swapped to is kept in [splicedUpgrade]
+     * and installed for real the next time the listener seeks, where a gap is
+     * expected anyway. The pipeline stays at the old copy's rate until then,
+     * with the new copy resampled to it.
+     *
+     * [UpgradeBlend.CUT] means nothing was touched and the caller should try
+     * the other ways in.
+     */
+    private suspend fun spliceInUpgrade(
+        activePlayer: ExoPlayer,
+        mediaId: String,
+        upgradedItem: MediaItem,
+        duration: Long,
+    ): UpgradeBlend {
+        val splice = activeFilter.splice
+        val rate = splice.sampleRate
+        val channels = splice.channels
+        val nowUs = splice.processedMediaUs
+        val positionUs = activePlayer.currentPosition * 1000L
+        // The sink's song time has to agree with the player's to within its
+        // buffer; anything else means the offset it reads block times against
+        // is not this track's, and a splice keyed to it would land anywhere.
+        if (nowUs == C.TIME_UNSET || nowUs < positionUs - 1_000_000L || nowUs > positionUs + 10_000_000L ||
+            (duration > 0 && nowUs > duration * 1000L)
+        ) {
+            TrackLog.d("BitChord", "upgrade splice: sink time ${nowUs / 1000}ms does not fit position ${positionUs / 1000}ms")
+            return UpgradeBlend.CUT
+        }
+        val uri = upgradedItem.localConfiguration?.uri ?: return UpgradeBlend.CUT
+        val startedAt = SystemClock.elapsedRealtime()
+        val searchUs = UPGRADE_SPLICE_SEARCH_MS * 1000L
+        val feed = SpliceFeed(
+            openSource = { AudioCache.streamingMediaDataSource(uri) },
+            startUs = (nowUs - 2 * searchUs).coerceAtLeast(0L),
+            rate = rate,
+            channels = channels,
+        )
+        var armed = false
+        try {
+            feed.start()
+            val captureFrames = (rate * UPGRADE_SPLICE_CAPTURE_MS / 1000L).toInt()
+            splice.requestCapture(captureFrames)
+            val stillOurs = {
+                player === activePlayer && activePlayer.currentMediaItem?.mediaId == mediaId
+            }
+            // The capture fills at playback pace; the feed far faster.
+            val giveUpAt = startedAt + UPGRADE_SPLICE_TIMEOUT_MS
+            var own: FloatArray? = null
+            var window: FloatArray? = null
+            var windowStartIndex = 0L
+            val margin = (rate * UPGRADE_SPLICE_SEARCH_MS / 1000L).toInt()
+            while (true) {
+                if (!stillOurs()) return UpgradeBlend.GONE
+                feed.failed?.let {
+                    TrackLog.w("BitChord", "upgrade splice: decoding the new copy failed ($it)")
+                    return UpgradeBlend.CUT
+                }
+                if (SystemClock.elapsedRealtime() > giveUpAt) {
+                    TrackLog.w(
+                        "BitChord",
+                        "upgrade splice: timed out (captured=${splice.captureDone}, decoded=${feed.writtenFrames} frames)",
+                    )
+                    return UpgradeBlend.CUT
+                }
+                val captured = splice.capture()
+                val first = feed.firstFrameUs
+                if (captured != null && first != C.TIME_UNSET) {
+                    windowStartIndex = ((splice.captureStartUs - first) * rate / 1_000_000L) - margin
+                    window = feed.mono(windowStartIndex, captured.size + 2 * margin)
+                    if (window != null) {
+                        own = captured
+                        break
+                    }
+                    if (feed.ended) {
+                        TrackLog.w("BitChord", "upgrade splice: the new copy ended before the capture window")
+                        return UpgradeBlend.CUT
+                    }
+                }
+                delay(UPGRADE_BLEND_STEP_MS * 5)
+            }
+            val ownAudio = own ?: return UpgradeBlend.CUT
+            val feedAudio = window ?: return UpgradeBlend.CUT
+            val captureStartUs = splice.captureStartUs
+            val firstUs = feed.firstFrameUs
+            val located = withContext(Dispatchers.Default) {
+                UpgradeAligner.locate(ownAudio, feedAudio, margin, rate)
+            }
+            if (located == null) {
+                TrackLog.w("BitChord", "upgrade splice: the two copies did not match closely enough to splice")
+                return UpgradeBlend.CUT
+            }
+            val (lagFrames, match) = located
+            // Own frame i (song time captureStart + i/rate) is feed frame
+            // windowStart + margin + lag + i (feed time first + that/rate).
+            val offsetUs = firstUs + (windowStartIndex + margin + lagFrames) * 1_000_000.0 / rate - captureStartUs
+            if (!stillOurs() || !activePlayer.isPlaying) return UpgradeBlend.GONE
+            splice.arm(feed, offsetUs)
+            armed = true
+            val activeBy = SystemClock.elapsedRealtime() + UPGRADE_BLEND_SYNC_TIMEOUT_MS * 3
+            while (splice.state == SinkSplice.ARMED && SystemClock.elapsedRealtime() < activeBy) {
+                delay(UPGRADE_BLEND_STEP_MS)
+            }
+            if (splice.state != SinkSplice.ACTIVE) {
+                TrackLog.w("BitChord", "upgrade splice: armed but never took (state ${splice.state})")
+                splice.end()
+                armed = false
+                return UpgradeBlend.CUT
+            }
+            splicedUpgrade = mediaId to upgradedItem
+            TrackLog.d(
+                "BitChord",
+                "swap seam: none — spliced into the same output at ${splice.splicedAtUs / 1000}ms; " +
+                    "copies ${"%.2f".format(Locale.ROOT, offsetUs / 1000.0)}ms apart (match ${"%.2f".format(Locale.ROOT, match)}), " +
+                    "new copy ${feed.sourceRate}Hz into ${rate}Hz, heard in ~${activeFilter.leadUs / 1000}ms, " +
+                    "${SystemClock.elapsedRealtime() - startedAt}ms to prepare",
+                about = mediaId,
+            )
+            return UpgradeBlend.SPLICED
+        } finally {
+            if (!armed) feed.release()
+        }
+    }
+
     /** How [blendInUpgrade] came out. */
     private enum class UpgradeBlend {
         /** The upgrade is playing on what is now the session player, and nothing was cut. */
@@ -4818,6 +5016,9 @@ class PlaybackService : MediaLibraryService() {
 
         /** The stand-by never lined up closely enough to cross over. Nothing was touched. */
         UNALIGNED,
+
+        /** The upgrade is spliced into the playing player's own audio; see [spliceInUpgrade]. */
+        SPLICED,
     }
 
     /**
@@ -9287,6 +9488,15 @@ class PlaybackService : MediaLibraryService() {
 
         /** Longest any one start or seek on the stand-by is waited out before the blend gives up. */
         const val UPGRADE_BLEND_SYNC_TIMEOUT_MS = 600L
+
+        /** How much of the playing audio [spliceInUpgrade] measures the new copy against. */
+        const val UPGRADE_SPLICE_CAPTURE_MS = 2_000L
+
+        /** How far either way the new copy is searched for it. */
+        const val UPGRADE_SPLICE_SEARCH_MS = 200L
+
+        /** Longest [spliceInUpgrade] waits for its capture and decode before trying the blend. */
+        const val UPGRADE_SPLICE_TIMEOUT_MS = 8_000L
 
         /** Fresh tries at lining the stand-by up before the upgrade falls back to the cut. */
         const val UPGRADE_BLEND_ATTEMPTS = 2

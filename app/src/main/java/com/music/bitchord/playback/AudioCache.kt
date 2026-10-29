@@ -1968,6 +1968,18 @@ object AudioCache {
     }
 
     /**
+     * A reader over [uri] that reads through to the network for whatever the
+     * cache does not hold, writing it in as it goes — the same chain the
+     * player reads through, marked upgrade URIs included. For a decode that
+     * runs alongside playback, such as the quality upgrade's splice feed.
+     * Null before the upstream is set. Callers must [MediaDataSource.close] it.
+     */
+    fun streamingMediaDataSource(uri: Uri): MediaDataSource? {
+        val upstream = upstreamFactory ?: return null
+        return CacheMediaDataSource(cacheFactory(upstream).createDataSource(), uri)
+    }
+
+    /**
      * The same reader over a rendition that is still downloading, for Smart
      * Fade's head-only pass.
      *

@@ -75,6 +75,9 @@ class TransitionFilterProcessor : BaseAudioProcessor() {
      */
     val shift = com.music.bitchord.playback.audio.SinkShift()
 
+    /** Sample-exact splicing of another copy into this player's audio — see [com.music.bitchord.playback.audio.SinkSplice]. */
+    val splice = com.music.bitchord.playback.audio.SinkSplice()
+
     // ---- Echo out ------------------------------------------------------------
     //
     // A feedback delay after the filters, for Advanced Automix's echo out: the
