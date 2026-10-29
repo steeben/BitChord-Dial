@@ -4979,11 +4979,13 @@ class PlaybackService : MediaLibraryService() {
             val offsetMs = measured?.offsetMs ?: 0.0
             val lock = lockStandby(activePlayer, standbyPlayer, spareFilter, index, offsetMs, stillOurs)
                 ?: return UpgradeBlend.GONE
-            // Not lined up closely enough to cross without the overlap being
-            // heard as a doubled beat, or paused or stalled while trying. The
-            // upgrade then waits for a later chance rather than going in badly;
-            // see the caller.
-            if (!activePlayer.isPlaying || !standbyPlayer.isPlaying || !lock.locked) {
+            // Faded across however close the line-up got. Holding out for a
+            // tight lock and cutting when it never came was worse every time:
+            // the readings it waits on swing by tens of milliseconds between
+            // seeks on this hardware, so the lock almost never arrived and the
+            // listener got the full gap of the cut instead. Only a player that
+            // stopped playing while it was being lined up falls back.
+            if (!activePlayer.isPlaying || !standbyPlayer.isPlaying || lock.errorMs.isNaN()) {
                 TrackLog.d(
                     "BitChord",
                     "upgrade blend: could not line up (off by ${"%.1f".format(Locale.ROOT, lock.errorMs)}ms " +
@@ -9244,10 +9246,10 @@ class PlaybackService : MediaLibraryService() {
          * old copy plays on throughout, and a drop on a float route is only
          * heard once seconds of buffer have played through to it.
          */
-        const val UPGRADE_LOCK_TIMEOUT_MS = 15_000L
+        const val UPGRADE_LOCK_TIMEOUT_MS = 6_000L
 
         /** Close enough to cross the two copies over without the overlap being heard as an echo. */
-        const val UPGRADE_LOCK_ACCEPT_MS = 12.0
+        const val UPGRADE_LOCK_ACCEPT_MS = 20.0
 
         /**
          * How long a freshly seeked stand-by is left alone before its position
@@ -9281,7 +9283,7 @@ class PlaybackService : MediaLibraryService() {
         /** Margin past the sink's reported lead before a drop is taken to have been heard. */
         const val UPGRADE_LOCK_PLAYOUT_MARGIN_MS = 250L
 
-        const val UPGRADE_LOCK_MAX_SEEKS = 4
+        const val UPGRADE_LOCK_MAX_SEEKS = 3
 
         /** Longest any one start or seek on the stand-by is waited out before the blend gives up. */
         const val UPGRADE_BLEND_SYNC_TIMEOUT_MS = 600L
