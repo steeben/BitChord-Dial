@@ -45,6 +45,9 @@ object UpgradeAligner {
     /** Below this the two windows were not recognisably the same music. */
     private const val MIN_CONFIDENCE = 0.6
 
+    /** Full-band match a splice needs; a lossy copy against a lossless one rarely tops 0.9 up there. */
+    private const val MIN_SPLICE_CONFIDENCE = 0.5
+
     /**
      * Where [targetUri]'s audio sits against [sourceUri]'s around [atMs] in
      * the source, or null when either copy could not be read there or the two
@@ -112,7 +115,12 @@ object UpgradeAligner {
      * both at [rate]. Searched coarsely at [WORK_RATE] first, then refined at
      * the full rate around the coarse peak. Null below [MIN_CONFIDENCE].
      */
-    fun locate(a: FloatArray, b: FloatArray, margin: Int, rate: Int): Pair<Double, Double>? {
+    /** What [locate] found: [lagFrames] and its [match], and the coarse pass it refined. */
+    class Located(val lagFrames: Double, val match: Double, val coarseLagFrames: Int, val coarseMatch: Double) {
+        val trusted: Boolean get() = match >= MIN_SPLICE_CONFIDENCE
+    }
+
+    fun locate(a: FloatArray, b: FloatArray, margin: Int, rate: Int): Located? {
         if (a.isEmpty() || b.size < a.size + 2 * margin) return null
         val step = rate / WORK_RATE
         val coarseA = downsample(a, rate.toDouble())
@@ -140,7 +148,6 @@ object UpgradeAligner {
                 fine = lag
             }
         }
-        if (fineBest < MIN_CONFIDENCE) return null
         val l = scores[fine - 1]
         val r = scores[fine + 1]
         var fraction = 0.0
@@ -148,7 +155,14 @@ object UpgradeAligner {
             val denom = l - 2 * fineBest + r
             if (denom < 0) fraction = (0.5 * (l - r) / denom).coerceIn(-0.5, 0.5)
         }
-        return (fine + fraction) to fineBest
+        return Located(fine + fraction, fineBest, centre, best)
+    }
+
+    /** The RMS level of [a], for telling silence or garbage from music in a log. */
+    fun rms(a: FloatArray): Double {
+        var sum = 0.0
+        for (v in a) sum += v * v
+        return if (a.isEmpty()) 0.0 else sqrt(sum / a.size)
     }
 
     private fun normalised(a: FloatArray, b: FloatArray, shift: Int, n: Int): Double {

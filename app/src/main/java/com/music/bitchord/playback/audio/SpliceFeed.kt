@@ -57,6 +57,10 @@ class SpliceFeed(
     @Volatile var ended = false
         private set
 
+    /** The decoder's output encoding, for the log. */
+    @Volatile var outputEncoding = 0
+        private set
+
     /** The copy's own rate, for the log. */
     @Volatile var sourceRate = 0
         private set
@@ -139,7 +143,6 @@ class SpliceFeed(
                 failed = "no mime"
                 return
             }
-            format.setInteger(MediaFormat.KEY_PCM_ENCODING, AudioFormat.ENCODING_PCM_FLOAT)
             extractor.seekTo(startUs, MediaExtractor.SEEK_TO_PREVIOUS_SYNC)
             codec = MediaCodec.createDecoderByType(mime)
             codec.configure(format, null, null, 0)
@@ -147,7 +150,12 @@ class SpliceFeed(
 
             var srcRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
             var srcChannels = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
-            var encoding = AudioFormat.ENCODING_PCM_16BIT
+            // Whatever the decoder says it will hand out, read before the
+            // first buffer rather than assumed: a float buffer read as 16-bit
+            // is noise, and noise matches nothing.
+            var encoding = codec.outputFormat.let {
+                if (it.containsKey(MediaFormat.KEY_PCM_ENCODING)) it.getInteger(MediaFormat.KEY_PCM_ENCODING) else AudioFormat.ENCODING_PCM_16BIT
+            }
             var resampler: Resampler? = null
             val info = MediaCodec.BufferInfo()
             var inputDone = false
@@ -173,16 +181,17 @@ class SpliceFeed(
                     val out = codec.outputFormat
                     srcRate = out.getInteger(MediaFormat.KEY_SAMPLE_RATE)
                     srcChannels = out.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
-                    encoding = if (out.containsKey(MediaFormat.KEY_PCM_ENCODING)) {
-                        out.getInteger(MediaFormat.KEY_PCM_ENCODING)
-                    } else {
-                        AudioFormat.ENCODING_PCM_16BIT
-                    }
+                    if (out.containsKey(MediaFormat.KEY_PCM_ENCODING)) encoding = out.getInteger(MediaFormat.KEY_PCM_ENCODING)
                     continue
                 }
                 if (outIndex < 0) continue
                 val eos = info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0
                 val buffer = codec.getOutputBuffer(outIndex)
+                if (encoding != AudioFormat.ENCODING_PCM_16BIT && encoding != AudioFormat.ENCODING_PCM_FLOAT) {
+                    failed = "decoder output encoding $encoding"
+                    break
+                }
+                outputEncoding = encoding
                 if (buffer != null && info.size > 0 && srcChannels > 0 && srcRate > 0) {
                     buffer.position(info.offset)
                     buffer.limit(info.offset + info.size)

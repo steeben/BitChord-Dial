@@ -4930,7 +4930,7 @@ class PlaybackService : MediaLibraryService() {
             var own: FloatArray? = null
             var window: FloatArray? = null
             var windowStartIndex = 0L
-            val margin = (rate * UPGRADE_SPLICE_SEARCH_MS / 1000L).toInt()
+            var margin = (rate * UPGRADE_SPLICE_SEARCH_MS / 1000L).toInt()
             while (true) {
                 if (!stillOurs()) return UpgradeBlend.GONE
                 feed.failed?.let {
@@ -4947,7 +4947,15 @@ class PlaybackService : MediaLibraryService() {
                 val captured = splice.capture()
                 val first = feed.firstFrameUs
                 if (captured != null && first != C.TIME_UNSET) {
-                    windowStartIndex = ((splice.captureStartUs - first) * rate / 1_000_000L) - margin
+                    // Near the top of the song there is less before the
+                    // capture to search through.
+                    val before = (splice.captureStartUs - first) * rate / 1_000_000L
+                    margin = minOf(margin.toLong(), before).toInt()
+                    if (margin < rate / 20) {
+                        TrackLog.w("BitChord", "upgrade splice: too near the top of the song to search for the new copy")
+                        return UpgradeBlend.CUT
+                    }
+                    windowStartIndex = before - margin
                     window = feed.mono(windowStartIndex, captured.size + 2 * margin)
                     if (window != null) {
                         own = captured
@@ -4967,11 +4975,23 @@ class PlaybackService : MediaLibraryService() {
             val located = withContext(Dispatchers.Default) {
                 UpgradeAligner.locate(ownAudio, feedAudio, margin, rate)
             }
-            if (located == null) {
-                TrackLog.w("BitChord", "upgrade splice: the two copies did not match closely enough to splice")
+            if (located == null || !located.trusted) {
+                TrackLog.w(
+                    "BitChord",
+                    "upgrade splice: the two copies did not match closely enough to splice (" +
+                        (located?.let {
+                            "best ${"%.2f".format(Locale.ROOT, it.match)} at ${"%.1f".format(Locale.ROOT, it.lagFrames * 1000.0 / rate)}ms, " +
+                                "coarse ${"%.2f".format(Locale.ROOT, it.coarseMatch)} at ${it.coarseLagFrames * 1000L / rate}ms; "
+                        } ?: "") +
+                        "own rms ${"%.3f".format(Locale.ROOT, UpgradeAligner.rms(ownAudio))}, " +
+                        "new rms ${"%.3f".format(Locale.ROOT, UpgradeAligner.rms(feedAudio))}, " +
+                        "new ${feed.sourceRate}Hz enc ${feed.outputEncoding} into ${rate}Hz/${channels}ch, " +
+                        "capture at ${captureStartUs / 1000}ms, new copy from ${firstUs / 1000}ms)",
+                )
                 return UpgradeBlend.CUT
             }
-            val (lagFrames, match) = located
+            val lagFrames = located.lagFrames
+            val match = located.match
             // Own frame i (song time captureStart + i/rate) is feed frame
             // windowStart + margin + lag + i (feed time first + that/rate).
             val offsetUs = firstUs + (windowStartIndex + margin + lagFrames) * 1_000_000.0 / rate - captureStartUs
@@ -9493,7 +9513,7 @@ class PlaybackService : MediaLibraryService() {
         const val UPGRADE_SPLICE_CAPTURE_MS = 2_000L
 
         /** How far either way the new copy is searched for it. */
-        const val UPGRADE_SPLICE_SEARCH_MS = 200L
+        const val UPGRADE_SPLICE_SEARCH_MS = 1_500L
 
         /** Longest [spliceInUpgrade] waits for its capture and decode before trying the blend. */
         const val UPGRADE_SPLICE_TIMEOUT_MS = 8_000L
