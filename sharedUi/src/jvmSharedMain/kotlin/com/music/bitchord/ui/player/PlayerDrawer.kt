@@ -50,6 +50,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -102,6 +103,9 @@ private const val BACK_SWIPE_TRAVEL = 0.4f
 private val DRAWER_GLASS_TINT = Color(0xFF121212).copy(alpha = 0.6f)
 
 private const val DRAWER_EXIT_MS = 200
+
+/** How far the drawer's glass runs on below its bottom edge, to keep its rim off screen. */
+private val GLASS_OVERHANG = 64.dp
 
 /**
  * The bottom-edge drawer shell every player sheet in this package puts up —
@@ -244,7 +248,7 @@ fun PlayerDrawer(
             enter = slideInVertically(tween(260, easing = FastOutSlowInEasing)) { it },
             exit = slideOutVertically(tween(DRAWER_EXIT_MS, easing = FastOutSlowInEasing)) { it },
         ) {
-        Column(
+        Box(
             modifier = Modifier
                 // Capped so a phone full of rows scrolls inside the drawer
                 // rather than growing one into a full-screen page.
@@ -255,15 +259,39 @@ fun PlayerDrawer(
                 .widthIn(max = DRAWER_MAX_WIDTH)
                 .fillMaxWidth()
                 .onSizeChanged { height = it.height }
-                .offset { IntOffset(0, (offset + backSwipe.value * height * BACK_SWIPE_TRAVEL).roundToInt()) }
+                .offset { IntOffset(0, (offset + backSwipe.value * height * BACK_SWIPE_TRAVEL).roundToInt()) },
+        ) {
+        // The player's liquid glass, as its buttons wear, when the app has it
+        // on — washed darker than theirs, because this is a panel of white
+        // text rather than a glyph on a disc. Drawn behind the rows rather than
+        // on them, and run on past the bottom of the screen, so the glass rim
+        // shows along the top and down the sides but never across the bottom
+        // edge the drawer rests on.
+        if (glass != null && !reduceDynamicBlur) {
+            Box(
+                Modifier
+                    .matchParentSize()
+                    .layout { measurable, constraints ->
+                        val overhang = GLASS_OVERHANG.roundToPx()
+                        val placeable = measurable.measure(
+                            constraints.copy(
+                                minHeight = constraints.minHeight + overhang,
+                                maxHeight = constraints.maxHeight + overhang,
+                            ),
+                        )
+                        layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(0, 0) }
+                    }
+                    .then(glass.surface(Modifier, DRAWER_SHAPE, tint = DRAWER_GLASS_TINT)),
+            )
+        }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
                 .clip(DRAWER_SHAPE)
                 .then(
                     when {
                         reduceDynamicBlur -> Modifier.background(Color(0xFF121212))
-                        // The player's liquid glass, as its buttons wear, when the
-                        // app has it on — washed darker than theirs, because this
-                        // is a panel of white text rather than a glyph on a disc.
-                        glass != null -> glass.surface(Modifier, DRAWER_SHAPE, tint = DRAWER_GLASS_TINT)
+                        glass != null -> Modifier
                         else -> Modifier
                             .optimizedHazeEffect(
                                 state = hazeState,
@@ -316,6 +344,7 @@ fun PlayerDrawer(
                     .padding(start = 4.dp, bottom = titleGap),
             )
             content()
+        }
         }
         }
     }
