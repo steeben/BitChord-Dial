@@ -755,6 +755,18 @@ private fun BitChordApp(
     var showAccountScrobbling by rememberSaveable { mutableStateOf(false) }
     var showSources by rememberSaveable { mutableStateOf(false) }
     var showListenTogether by rememberSaveable { mutableStateOf(false) }
+    // Listen Together opened from the player's own button, not from Settings:
+    // back from it brings the player back up instead of landing on Settings.
+    var listenTogetherFromPlayer by rememberSaveable { mutableStateOf(false) }
+    val closeListenTogether: () -> Unit = {
+        showListenTogether = false
+        if (settingsSubScreen == "listen_together") settingsSubScreen = null
+        if (listenTogetherFromPlayer) {
+            listenTogetherFromPlayer = false
+            showSettings = false
+            showNowPlaying = true
+        }
+    }
     var showEqualizer by rememberSaveable { mutableStateOf(false) }
     var showSpotifyCanvasAuth by remember { mutableStateOf(false) }
 
@@ -1020,12 +1032,14 @@ private fun BitChordApp(
         webSession = null
         showSettings = true
         showListenTogether = true
+        listenTogetherFromPlayer = false
         JamInviteLink.handled()
     }
     LaunchedEffect(signedIn, activeJamInviteCode) {
         if (signedIn && activeJamInviteCode != null) {
             showSettings = true
             showListenTogether = true
+            listenTogetherFromPlayer = false
         }
     }
     val account by viewModel.account.collectAsStateWithLifecycle()
@@ -2887,6 +2901,7 @@ private fun BitChordApp(
                 dismissPlayer()
                 showSettings = true
                 showListenTogether = true
+                listenTogetherFromPlayer = true
             },
             onClearQueue = {
                 // Keep what's playing and context/autoplay; drop user-queued tracks.
@@ -3053,10 +3068,7 @@ private fun BitChordApp(
             showSources = false
             if (settingsSubScreen == "sources") settingsSubScreen = null
         }
-        BackHandler(enabled = showListenTogether) {
-            showListenTogether = false
-            if (settingsSubScreen == "listen_together") settingsSubScreen = null
-        }
+        BackHandler(enabled = showListenTogether, onBack = closeListenTogether)
         BackHandler(enabled = showEqualizer) {
             showEqualizer = false
             if (settingsSubScreen == "equalizer") settingsSubScreen = null
@@ -3704,6 +3716,7 @@ private fun BitChordApp(
                             onListenTogether = {
                                 settingsSubScreen = "listen_together"
                                 showListenTogether = true
+                                listenTogetherFromPlayer = false
                             },
                             onSpotifyCanvasAuth = { showSpotifyCanvasAuth = true },
                             onEditSignatureApi = { editingSignatureApi = true },
@@ -4745,7 +4758,7 @@ private fun BitChordApp(
                         libraryShowAll != null && detail == null -> ({ libraryShowAll = null })
                         showAccountScrobbling -> ({ showAccountScrobbling = false })
                         showSources -> ({ showSources = false })
-                        showListenTogether -> ({ showListenTogether = false })
+                        showListenTogether -> closeListenTogether
                         showEqualizer -> ({ showEqualizer = false })
                         settingsSubScreen != null -> ({ settingsSubScreen = null })
                         showSettings -> ({ showSettings = false })
