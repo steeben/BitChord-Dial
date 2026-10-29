@@ -100,7 +100,7 @@ fun ProvidePlayerInk(content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalPlayerInk provides ink, content = content)
 }
 
-private const val PLAYER_INK_TINT = 0.12f
+private const val PLAYER_INK_TINT = 0.2f
 
 /**
  * The waves' clock and swell. [time] runs only while the music does, so a paused bar costs no
