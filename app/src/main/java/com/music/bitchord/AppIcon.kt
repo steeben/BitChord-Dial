@@ -15,7 +15,8 @@ import android.content.pm.PackageManager
 enum class AppIcon(val alias: String, val iconRes: Int, val labelRes: Int) {
     Default("LauncherDefault", R.mipmap.ic_launcher, R.string.app_icon_default),
     GlassLight("LauncherGlassLight", R.mipmap.ic_launcher_glass_light, R.string.app_icon_glass_light),
-    GlassDark("LauncherGlassDark", R.mipmap.ic_launcher_glass_dark, R.string.app_icon_glass_dark);
+    GlassDark("LauncherGlassDark", R.mipmap.ic_launcher_glass_dark, R.string.app_icon_glass_dark),
+    Dark("LauncherDark", R.mipmap.ic_launcher_dark, R.string.app_icon_dark);
 
     // The aliases are declared against the namespace, not the flavour's
     // applicationId, so the class name is fixed while the package is not.
