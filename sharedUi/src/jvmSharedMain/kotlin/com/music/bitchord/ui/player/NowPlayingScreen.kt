@@ -1124,16 +1124,9 @@ fun NowPlayingScreen(
     // Back out of the queue to the player.
     PlayerBackHandler(enabled = queueOpen) { queueOpen = false }
 
-    // Registered ahead of the pipeline dialog's own handler below: the
-    // pipeline is now only ever opened from the row at the bottom of this
-    // drawer, so it is always the topmost of the two when both are up, and
-    // back has to close it first rather than taking the drawer out from
-    // under it.
-    PlayerBackHandler(enabled = showAudioOutput) { showAudioOutput = false }
-
-    PlayerBackHandler(enabled = showLyricsProviders) { showLyricsProviders = false }
-
-    PlayerBackHandler(enabled = showListenTogetherMembers) { showListenTogetherMembers = false }
+    // The audio output, lyrics provider and Listen Together drawers handle
+    // back themselves, so a predictive swipe can slide them down — see
+    // [PlayerDrawer]'s handlesBack.
 
     PlayerBackHandler(enabled = showAudioPipeline) { showAudioPipeline = false }
 
@@ -1694,6 +1687,9 @@ fun NowPlayingScreen(
                 onDismiss = { showAudioOutput = false },
                 onOpenPipeline = { showAudioPipeline = true },
                 onOpenCast = { showCast = true },
+                // The pipeline and the cast picker are only ever opened from
+                // this drawer, so when either is up it is the one back closes.
+                handlesBack = !showAudioPipeline && !showCast,
             )
         }
         if (showLyricsProviders) {

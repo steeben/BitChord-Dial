@@ -78,6 +78,8 @@ internal fun AudioOutputSheet(
     onOpenPipeline: () -> Unit,
     onOpenCast: () -> Unit,
     modifier: Modifier = Modifier,
+    /** See [PlayerDrawer]'s: false while the pipeline or the cast picker is up over it. */
+    handlesBack: Boolean = true,
 ) {
     val outputs = rememberAudioOutputs()
     val cast by PlayerPlatform.host.castState.collectAsStateWithLifecycle()
@@ -87,6 +89,7 @@ internal fun AudioOutputSheet(
         title = stringResource(Res.string.audio_output),
         onDismiss = onDismiss,
         modifier = modifier,
+        handlesBack = handlesBack,
     ) {
         // Flat, with the playing one marked, rather than folded behind a
         // chevron. There are two outputs on a phone most of the time; one

@@ -118,6 +118,7 @@ internal fun LyricsProviderSheet(
         onDismiss = onDismiss,
         modifier = modifier,
         scrollState = scrollState,
+        handlesBack = true,
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),

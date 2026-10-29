@@ -1,6 +1,8 @@
 package com.music.bitchord.ui.player
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -35,8 +37,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,6 +63,7 @@ import com.music.bitchord.ui.utils.containSheetGestures
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.materials.HazeMaterials
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 internal val DRAWER_SHAPE = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
@@ -88,6 +92,18 @@ internal val SCRIM_COLOR = Color.Black.copy(alpha = 0.5f)
 private const val DISMISS_DRAG_FRACTION = 0.25f
 
 /**
+ * How much of its own height the drawer follows a predictive back swipe down
+ * by, at the swipe's full length. Enough to read as the drawer leaving; the
+ * rest of the way is the exit once the swipe commits.
+ */
+private const val BACK_SWIPE_TRAVEL = 0.4f
+
+/** The wash over the drawer's liquid glass: dark enough for its white rows on any artwork. */
+private val DRAWER_GLASS_TINT = Color(0xFF121212).copy(alpha = 0.6f)
+
+private const val DRAWER_EXIT_MS = 200
+
+/**
  * The bottom-edge drawer shell every player sheet in this package puts up —
  * [AudioOutputSheet] and [ListenTogetherMembersSheet] alike: dark over a
  * scrim, a grab handle, a title, drag down to put it away. Pulled out because
@@ -109,9 +125,43 @@ fun PlayerDrawer(
     titleGap: Dp = 14.dp,
     /** The drawer's own scroll, for content that has to drive it (a drag near its edge). */
     scrollState: ScrollState = rememberScrollState(),
+    /**
+     * Whether back puts the drawer away itself, following a predictive back
+     * swipe down. False where the caller handles back, or while something the
+     * drawer opened is up over it and should take back first.
+     */
+    handlesBack: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val reduceDynamicBlur by PlayerSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
+    val glass = LocalPlayerGlass.current
+    val scope = rememberCoroutineScope()
+    val currentOnDismiss by rememberUpdatedState(onDismiss)
+
+    // Up on the first composition so the drawer travels up from the edge
+    // instead of appearing over the player fully formed, and down again before
+    // [onDismiss] takes it away, so it slides off rather than vanishing.
+    val visibility = remember { MutableTransitionState(false).apply { targetState = true } }
+    val closing = !visibility.targetState
+    val close: () -> Unit = { visibility.targetState = false }
+    LaunchedEffect(visibility.isIdle) {
+        if (visibility.isIdle && !visibility.currentState) currentOnDismiss()
+    }
+
+    // How far through a predictive back swipe the listener is, 0..1. The
+    // drawer sinks with it, and comes back up if the swipe is let go.
+    val backSwipe = remember { Animatable(0f) }
+    PlayerPredictiveBackHandler(
+        enabled = handlesBack && !closing,
+        onProgress = { progress -> scope.launch { backSwipe.snapTo(progress) } },
+        onCancel = { scope.launch { backSwipe.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow)) } },
+        onBack = close,
+    )
+    val scrimFade by animateFloatAsState(
+        targetValue = if (closing) 0f else 1f,
+        animationSpec = tween(DRAWER_EXIT_MS),
+        label = "playerDrawerScrim",
+    )
 
     // How far the drawer has been dragged down, in pixels. Released, it either
     // springs back or goes — see [DISMISS_DRAG_FRACTION].
@@ -124,12 +174,8 @@ fun PlayerDrawer(
     )
     // Fades with the drawer rather than staying at full strength under a sheet
     // halfway off the screen, which is what makes the drag feel connected.
-    val scrimAlpha = if (height > 0) (1f - offset / height).coerceIn(0f, 1f) else 1f
-
-    // Flipped on the first composition so the drawer travels up from the edge
-    // instead of appearing over the player fully formed.
-    var shown by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { shown = true }
+    val backOffset = backSwipe.value * height * BACK_SWIPE_TRAVEL
+    val scrimAlpha = scrimFade * if (height > 0) (1f - (offset + backOffset) / height).coerceIn(0f, 1f) else 1f
 
     // The drawer's rows scroll, and that scroll takes the finger before the
     // drag detector below ever sees it. So a pull down past the top of the
@@ -143,7 +189,7 @@ fun PlayerDrawer(
     // answers to its own drag alone, because a scroll leftover means something
     // else there and must not be read as a pull.
     val dismissOnRelease: () -> Unit = {
-        if (height > 0 && drag > height * DISMISS_DRAG_FRACTION) onDismiss() else drag = 0f
+        if (height > 0 && drag > height * DISMISS_DRAG_FRACTION) close() else drag = 0f
     }
     val drawerScroll = remember {
         object : NestedScrollConnection {
@@ -189,14 +235,14 @@ fun PlayerDrawer(
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() },
-                onClick = onDismiss,
+                onClick = close,
             ),
         contentAlignment = Alignment.BottomCenter,
     ) {
         AnimatedVisibility(
-            visible = shown,
+            visibleState = visibility,
             enter = slideInVertically(tween(260, easing = FastOutSlowInEasing)) { it },
-            exit = slideOutVertically(tween(180)) { it },
+            exit = slideOutVertically(tween(DRAWER_EXIT_MS, easing = FastOutSlowInEasing)) { it },
         ) {
         Column(
             modifier = Modifier
@@ -209,13 +255,16 @@ fun PlayerDrawer(
                 .widthIn(max = DRAWER_MAX_WIDTH)
                 .fillMaxWidth()
                 .onSizeChanged { height = it.height }
-                .offset { IntOffset(0, offset.roundToInt()) }
+                .offset { IntOffset(0, (offset + backSwipe.value * height * BACK_SWIPE_TRAVEL).roundToInt()) }
                 .clip(DRAWER_SHAPE)
                 .then(
-                    if (reduceDynamicBlur) {
-                        Modifier.background(Color(0xFF121212))
-                    } else {
-                        Modifier
+                    when {
+                        reduceDynamicBlur -> Modifier.background(Color(0xFF121212))
+                        // The player's liquid glass, as its buttons wear, when the
+                        // app has it on — washed darker than theirs, because this
+                        // is a panel of white text rather than a glyph on a disc.
+                        glass != null -> glass.surface(Modifier, DRAWER_SHAPE, tint = DRAWER_GLASS_TINT)
+                        else -> Modifier
                             .optimizedHazeEffect(
                                 state = hazeState,
                                 style = HazeMaterials.regular(Color(0xFF141414)),

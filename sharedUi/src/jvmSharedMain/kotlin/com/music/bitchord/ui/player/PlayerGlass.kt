@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 
 /**
  * Liquid glass for the player's own buttons, when the app has it switched on.
@@ -20,9 +21,12 @@ interface PlayerGlass {
     /** Records what is drawn by [modifier]'s node, for [surface] to see through. */
     fun source(modifier: Modifier): Modifier
 
-    /** A glass surface in [shape] on [modifier]. */
+    /**
+     * A glass surface in [shape] on [modifier], washed with [tint] in place of
+     * the theme's own when one is given.
+     */
     @Composable
-    fun surface(modifier: Modifier, shape: CornerBasedShape): Modifier
+    fun surface(modifier: Modifier, shape: CornerBasedShape, tint: Color? = null): Modifier
 }
 
 val LocalPlayerGlass = staticCompositionLocalOf<PlayerGlass?> { null }

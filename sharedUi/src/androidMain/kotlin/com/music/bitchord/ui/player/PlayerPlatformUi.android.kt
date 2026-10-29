@@ -3,6 +3,8 @@ package com.music.bitchord.ui.player
 import android.os.Build
 import android.os.SystemClock
 import android.view.View
+import android.window.BackEvent
+import android.window.OnBackAnimationCallback
 import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
 import androidx.activity.compose.BackHandler
@@ -12,6 +14,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalView
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.platform.LocalContext
@@ -65,6 +68,68 @@ internal actual fun PlayerBackHandler(enabled: Boolean, onBack: () -> Unit) {
             val callback = if (enabled) OverlayBack.register(view, onBack) else null
             onDispose { OverlayBack.unregister(view, callback) }
         }
+    }
+}
+
+/**
+ * [PlayerBackHandler] with the swipe's progress, on Android 14 and up where the
+ * platform reports it: the same overlay-priority callback, as an
+ * [OnBackAnimationCallback]. Below 14 back arrives only once it has happened,
+ * so this is [PlayerBackHandler] itself.
+ */
+@Composable
+internal actual fun PlayerPredictiveBackHandler(
+    enabled: Boolean,
+    onProgress: (Float) -> Unit,
+    onCancel: () -> Unit,
+    onBack: () -> Unit,
+) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        PlayerBackHandler(enabled, onBack)
+        return
+    }
+    val progress = rememberUpdatedState(onProgress)
+    val cancel = rememberUpdatedState(onCancel)
+    val back = rememberUpdatedState(onBack)
+    val view = LocalView.current
+    DisposableEffect(view, enabled) {
+        val callback = if (enabled) {
+            OverlayBackAnimation.register(
+                view,
+                onProgress = { progress.value(it) },
+                onCancel = { cancel.value() },
+                onBack = { back.value() },
+            )
+        } else {
+            null
+        }
+        onDispose { OverlayBackAnimation.unregister(view, callback) }
+    }
+}
+
+/** [OverlayBack], for a callback that hears the swipe as well as its end. */
+@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+private object OverlayBackAnimation {
+    fun register(
+        view: View,
+        onProgress: (Float) -> Unit,
+        onCancel: () -> Unit,
+        onBack: () -> Unit,
+    ): Any? {
+        val dispatcher = view.findOnBackInvokedDispatcher() ?: return null
+        val callback = object : OnBackAnimationCallback {
+            override fun onBackStarted(backEvent: BackEvent) = onProgress(backEvent.progress)
+            override fun onBackProgressed(backEvent: BackEvent) = onProgress(backEvent.progress)
+            override fun onBackCancelled() = onCancel()
+            override fun onBackInvoked() = onBack()
+        }
+        dispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_OVERLAY, callback)
+        return callback
+    }
+
+    fun unregister(view: View, callback: Any?) {
+        if (callback !is OnBackInvokedCallback) return
+        view.findOnBackInvokedDispatcher()?.unregisterOnBackInvokedCallback(callback)
     }
 }
 

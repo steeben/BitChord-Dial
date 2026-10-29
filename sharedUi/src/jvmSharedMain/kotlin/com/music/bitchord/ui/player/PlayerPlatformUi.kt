@@ -26,6 +26,22 @@ internal expect fun appLanguageTag(): String
 internal expect fun PlayerBackHandler(enabled: Boolean, onBack: () -> Unit)
 
 /**
+ * [PlayerBackHandler], with the gesture's progress for a layer that follows it.
+ *
+ * [onProgress] gets 0..1 while a predictive back swipe is held, [onCancel] when
+ * it is let go short, [onBack] when it commits. Where back has no swipe to
+ * follow — the desktop's Escape, a phone below Android 14 — only [onBack] is
+ * ever called. Same priority rules as [PlayerBackHandler].
+ */
+@Composable
+internal expect fun PlayerPredictiveBackHandler(
+    enabled: Boolean,
+    onProgress: (Float) -> Unit,
+    onCancel: () -> Unit,
+    onBack: () -> Unit,
+)
+
+/**
  * Whether a scroll that runs out inside a [PlayerDrawer] should drag the drawer
  * with it.
  *

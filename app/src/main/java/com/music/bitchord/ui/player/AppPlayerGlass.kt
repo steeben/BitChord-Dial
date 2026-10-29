@@ -3,6 +3,7 @@ package com.music.bitchord.ui.player
 import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import com.music.bitchord.ui.components.backdrop.backdrops.LayerBackdrop
 import com.music.bitchord.ui.components.backdrop.backdrops.layerBackdrop
 import com.music.bitchord.ui.components.liquidGlass
@@ -15,6 +16,6 @@ class AppPlayerGlass(private val backdrop: LayerBackdrop) : PlayerGlass {
     override fun source(modifier: Modifier): Modifier = modifier.layerBackdrop(backdrop)
 
     @Composable
-    override fun surface(modifier: Modifier, shape: CornerBasedShape): Modifier =
-        modifier.liquidGlass(shape, backdrop = backdrop, exportedBackdrop = null)
+    override fun surface(modifier: Modifier, shape: CornerBasedShape, tint: Color?): Modifier =
+        modifier.liquidGlass(shape, backdrop = backdrop, exportedBackdrop = null, surfaceTint = tint)
 }

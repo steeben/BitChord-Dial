@@ -63,6 +63,7 @@ internal fun ListenTogetherMembersSheet(
         title = stringResource(Res.string.listen_together),
         onDismiss = onDismiss,
         modifier = modifier,
+        handlesBack = true,
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),

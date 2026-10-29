@@ -43,6 +43,15 @@ internal actual fun PlayerBackHandler(enabled: Boolean, onBack: () -> Unit) {
     }
 }
 
+// Escape is a key, not a swipe: there is no progress to follow.
+@Composable
+internal actual fun PlayerPredictiveBackHandler(
+    enabled: Boolean,
+    onProgress: (Float) -> Unit,
+    onCancel: () -> Unit,
+    onBack: () -> Unit,
+) = PlayerBackHandler(enabled, onBack)
+
 /**
  * The desktop's back stack for the player's layers — the lyrics, the queue, a
  * drawer, a dialog. The window routes Escape here; the newest enabled layer
