@@ -9223,11 +9223,15 @@ class PlaybackService : MediaLibraryService() {
 
         /**
          * How long [blendInUpgrade] crosses the two copies of a track over.
-         * Long enough that the gain change is not a click, short enough that
-         * the few milliseconds [lockStandby] leaves between the copies never
-         * get long enough together to be heard as phasing.
+         *
+         * Two seconds, at the listener's suggestion, after short crossings kept
+         * being heard as a stutter even with the two players reading level: a
+         * player's position is not a precise enough account of when its audio
+         * actually comes out for an 80ms splice to land clean. Spread over two
+         * seconds, whatever offset is left is a gradual handover rather than a
+         * jump at one instant.
          */
-        const val UPGRADE_BLEND_MS = 80L
+        const val UPGRADE_BLEND_MS = 2_000L
 
         /** Longest [blendInUpgrade] waits for the stand-by to prepare off the audition's bytes. */
         const val UPGRADE_BLEND_READY_TIMEOUT_MS = 4_000L
@@ -9242,8 +9246,8 @@ class PlaybackService : MediaLibraryService() {
          */
         const val UPGRADE_LOCK_TIMEOUT_MS = 15_000L
 
-        /** Close enough that crossing the two copies over is heard as nothing at all. */
-        const val UPGRADE_LOCK_ACCEPT_MS = 3.0
+        /** Close enough to cross the two copies over without the overlap being heard as an echo. */
+        const val UPGRADE_LOCK_ACCEPT_MS = 12.0
 
         /**
          * How long a freshly seeked stand-by is left alone before its position
