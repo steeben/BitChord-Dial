@@ -409,7 +409,7 @@ object LocalMediaRepository {
     /** The MediaStore row behind [uri], when there is one this app may read. */
     private fun mediaStoreRow(context: Context, uri: Uri): Song? = runCatching {
         val resolver = context.contentResolver
-        val (target, selection, args): Triple<Uri, String?, Array<String>?> = when {
+        val query: Triple<Uri, String?, Array<String>?> = when {
             uri.scheme == "file" -> {
                 val path = uri.path ?: return@runCatching null
                 Triple(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, "${MediaStore.Audio.Media.DATA} = ?", arrayOf(path))
@@ -421,6 +421,7 @@ object LocalMediaRepository {
                 Triple(MediaStore.getMediaUri(context, uri) ?: return@runCatching null, null, null)
             else -> return@runCatching null
         }
+        val (target, selection, args) = query
         resolver.query(target, AUDIO_PROJECTION, selection, args, null)?.use { cursor ->
             if (!cursor.moveToFirst()) return@use null
             val videoIdByUri = Downloads.saved.value.entries.associate { (id, saved) -> saved to id }
