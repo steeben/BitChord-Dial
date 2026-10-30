@@ -855,6 +855,17 @@
     <string name="liquid_glass_subtitle">नेविगेशन बार पर ग्लास प्रभाव। केवल Android 12+।</string>
 
     <string name="liquid_glass_unavailable">Android 12 या नए की आवश्यकता है</string>
+    <string name="glass_options_subtitle">काँच की पारदर्शिता, रंगत और धुंधलापन बदलें</string>
+    <string name="glass_transparency">पारदर्शिता</string>
+    <string name="glass_blur">धुंधलापन</string>
+    <string name="glass_tint">रंगत</string>
+    <string name="glass_tint_default">डिफ़ॉल्ट</string>
+    <string name="glass_tint_accent">एक्सेंट</string>
+    <string name="glass_tint_blue">नीला</string>
+    <string name="glass_tint_purple">बैंगनी</string>
+    <string name="glass_tint_pink">गुलाबी</string>
+    <string name="glass_tint_orange">नारंगी</string>
+    <string name="glass_tint_green">हरा</string>
 
     <string name="listen_as">इस रूप में सुनें</string>
 

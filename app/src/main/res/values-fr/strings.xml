@@ -856,6 +856,17 @@
     <string name="liquid_glass_subtitle">Effet de verre réfracté sur la barre flottante. Android 12+ uniquement.</string>
 
     <string name="liquid_glass_unavailable">Nécessite Android 12 ou plus récent</string>
+    <string name="glass_options_subtitle">Réglez la transparence, la teinte et le flou du verre</string>
+    <string name="glass_transparency">Transparence</string>
+    <string name="glass_blur">Flou</string>
+    <string name="glass_tint">Teinte</string>
+    <string name="glass_tint_default">Par défaut</string>
+    <string name="glass_tint_accent">Accent</string>
+    <string name="glass_tint_blue">Bleu</string>
+    <string name="glass_tint_purple">Violet</string>
+    <string name="glass_tint_pink">Rose</string>
+    <string name="glass_tint_orange">Orange</string>
+    <string name="glass_tint_green">Vert</string>
 
     <string name="listen_as">Écouter en tant que</string>
 

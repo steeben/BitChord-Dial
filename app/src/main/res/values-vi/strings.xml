@@ -240,6 +240,17 @@
     <string name="liquid_glass">Kính lỏng (Liquid Glass)</string>
     <string name="liquid_glass_subtitle">Hiệu ứng kính khúc xạ trên thanh điều hướng nổi. Chỉ dành cho Android 12+; sử dụng nhiều GPU hơn.</string>
     <string name="liquid_glass_unavailable">Yêu cầu Android 12 trở lên</string>
+    <string name="glass_options_subtitle">Điều chỉnh độ trong suốt, màu phủ và độ mờ của kính</string>
+    <string name="glass_transparency">Độ trong suốt</string>
+    <string name="glass_blur">Độ mờ</string>
+    <string name="glass_tint">Màu phủ</string>
+    <string name="glass_tint_default">Mặc định</string>
+    <string name="glass_tint_accent">Màu nhấn</string>
+    <string name="glass_tint_blue">Xanh dương</string>
+    <string name="glass_tint_purple">Tím</string>
+    <string name="glass_tint_pink">Hồng</string>
+    <string name="glass_tint_orange">Cam</string>
+    <string name="glass_tint_green">Xanh lá</string>
     <string name="full_screen_cover_art">Ảnh bìa toàn màn hình</string>
     <string name="legacy_mesh_gradient">Dải màu lưới kiểu cũ</string>
     <string name="legacy_mesh_gradient_subtitle">Mang lại các đốm màu chuyển động phía sau trình phát từ phiên bản 1.5</string>

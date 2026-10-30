@@ -329,6 +329,17 @@
     <string name="app_icon_dark" translatable="false">Dark</string>
     <string name="liquid_glass_subtitle">Real refracting glass on the floating nav bar. Android 12+ only; uses more GPU.</string>
     <string name="liquid_glass_unavailable">Requires Android 12 or newer</string>
+    <string name="glass_options_subtitle">Adjust how see-through, tinted and blurred the glass is</string>
+    <string name="glass_transparency">Transparency</string>
+    <string name="glass_blur">Blur</string>
+    <string name="glass_tint">Tint</string>
+    <string name="glass_tint_default">Default</string>
+    <string name="glass_tint_accent">Accent</string>
+    <string name="glass_tint_blue">Blue</string>
+    <string name="glass_tint_purple">Purple</string>
+    <string name="glass_tint_pink">Pink</string>
+    <string name="glass_tint_orange">Orange</string>
+    <string name="glass_tint_green">Green</string>
     <string name="full_screen_cover_art">Full-screen cover art</string>
     <string name="legacy_mesh_gradient">Legacy mesh gradient</string>
     <string name="legacy_mesh_gradient_subtitle">Brings back the drifting colour blobs behind the player from v1.5</string>

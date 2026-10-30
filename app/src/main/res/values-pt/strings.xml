@@ -860,6 +860,17 @@
     <string name="liquid_glass_subtitle">Efeito de vidro na barra de navegação. Requer Android 12+.</string>
 
     <string name="liquid_glass_unavailable">Requer Android 12 ou superior</string>
+    <string name="glass_options_subtitle">Ajuste a transparência, a tonalidade e o desfoque do vidro</string>
+    <string name="glass_transparency">Transparência</string>
+    <string name="glass_blur">Desfoque</string>
+    <string name="glass_tint">Tonalidade</string>
+    <string name="glass_tint_default">Padrão</string>
+    <string name="glass_tint_accent">Destaque</string>
+    <string name="glass_tint_blue">Azul</string>
+    <string name="glass_tint_purple">Roxo</string>
+    <string name="glass_tint_pink">Rosa</string>
+    <string name="glass_tint_orange">Laranja</string>
+    <string name="glass_tint_green">Verde</string>
 
     <string name="listen_as">Ouvir como</string>
 

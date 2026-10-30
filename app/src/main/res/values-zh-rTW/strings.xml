@@ -837,6 +837,17 @@
     <string name="liquid_glass_subtitle">浮動導航欄上的折射玻璃效果。僅限 Android 12+；會佔用更多 GPU。</string>
 
     <string name="liquid_glass_unavailable">需要 Android 12 或更高版本</string>
+    <string name="glass_options_subtitle">調整玻璃的透明度、色調和模糊程度</string>
+    <string name="glass_transparency">透明度</string>
+    <string name="glass_blur">模糊</string>
+    <string name="glass_tint">色調</string>
+    <string name="glass_tint_default">預設</string>
+    <string name="glass_tint_accent">強調色</string>
+    <string name="glass_tint_blue">藍色</string>
+    <string name="glass_tint_purple">紫色</string>
+    <string name="glass_tint_pink">粉紅色</string>
+    <string name="glass_tint_orange">橘色</string>
+    <string name="glass_tint_green">綠色</string>
 
     <string name="listen_as">以該身份收聽</string>
 

@@ -224,6 +224,17 @@
     <string name="liquid_glass">Liquid Glass</string>
     <string name="liquid_glass_subtitle">Cristal refractante real en la barra de navegación flotante. Solo Android 12+; usa más GPU.</string>
     <string name="liquid_glass_unavailable">Requiere Android 12 o posterior</string>
+    <string name="glass_options_subtitle">Ajusta la transparencia, el tono y el desenfoque del cristal</string>
+    <string name="glass_transparency">Transparencia</string>
+    <string name="glass_blur">Desenfoque</string>
+    <string name="glass_tint">Tono</string>
+    <string name="glass_tint_default">Predeterminado</string>
+    <string name="glass_tint_accent">Acento</string>
+    <string name="glass_tint_blue">Azul</string>
+    <string name="glass_tint_purple">Morado</string>
+    <string name="glass_tint_pink">Rosa</string>
+    <string name="glass_tint_orange">Naranja</string>
+    <string name="glass_tint_green">Verde</string>
     <string name="full_screen_cover_art">Portada a pantalla completa</string>
     <string name="animated_cover_art">Portada animada</string>
     <string name="synced_lyrics">Letras sincronizadas</string>

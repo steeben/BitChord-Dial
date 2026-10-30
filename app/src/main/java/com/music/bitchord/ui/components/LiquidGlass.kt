@@ -4,7 +4,8 @@
  * upstream attribution. This file is the integration glue, adapted from
  * EchoMusicApp/Echo-Music's GlassEffectConfig/Modifier.liquidGlass
  * (GPL-3.0), cut down from Echo's full per-component/vibrancy-slider config
- * to the single on/off switch BitChord exposes in Settings. It is used by the
+ * to the on/off switch and the transparency, tint and blur options BitChord
+ * exposes in Settings. It is used by the
  * floating nav bar and, while enabled, the app-wide floating top controls.
  */
 package com.music.bitchord.ui.components
@@ -27,7 +28,9 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.graphics.lerp
 import com.music.bitchord.data.settings.AppSettings
+import com.music.bitchord.data.settings.CustomizationSettings
 import com.music.bitchord.ui.components.backdrop.Backdrop
 import com.music.bitchord.ui.components.backdrop.backdrops.LayerBackdrop
 import com.music.bitchord.ui.components.backdrop.drawBackdrop
@@ -67,13 +70,53 @@ internal val LocalGlassExport = compositionLocalOf<LayerBackdrop?> { null }
  */
 fun isGlassSupported(sdkInt: Int = Build.VERSION.SDK_INT): Boolean = sdkInt >= Build.VERSION_CODES.S
 
-/** Apple-matched defaults (Echo's GlassEffectConfig()), fixed rather than user sliders. */
+/**
+ * Apple-matched defaults (Echo's GlassEffectConfig()). The fill's opacity and
+ * the blur radius are the user's, from [CustomizationSettings]; these are what
+ * those options are measured against.
+ */
 private const val VIBRANCY = 1f
-private const val BLUR_RADIUS_DP = 8f
 private const val LENS_HEIGHT = 0.5f
 private const val LENS_AMOUNT = 0.5f
 private const val LENS_MAX_DP = 48f
-private const val SURFACE_OPACITY = 0.4f
+private const val SURFACE_OPACITY = 1f - CustomizationSettings.DEFAULT_GLASS_TRANSPARENCY
+
+/** How far a [GlassTint] pulls the fill's colour away from the theme's. */
+private const val TINT_STRENGTH = 0.55f
+
+/** A colour washed into the glass's fill; [DEFAULT] leaves the theme's own. */
+enum class GlassTint(val argb: Long?) {
+    DEFAULT(null),
+    ACCENT(null),
+    BLUE(0xFF3D7BFF),
+    PURPLE(0xFF9B5CFF),
+    PINK(0xFFFF4F9A),
+    ORANGE(0xFFFF8A3D),
+    GREEN(0xFF34C77B),
+    ;
+
+    /** The colour itself, or null for [DEFAULT]. [ACCENT] is the theme's primary. */
+    @Composable
+    fun color(): Color? = when (this) {
+        DEFAULT -> null
+        ACCENT -> MaterialTheme.colorScheme.primary
+        else -> Color(argb!!)
+    }
+}
+
+/**
+ * The fill a glass surface is washed with: [base] (the theme's tint, or the
+ * caller's own) with the user's tint mixed in and its opacity scaled by their
+ * transparency, so the default setting gives back exactly [base].
+ */
+@Composable
+private fun glassFill(base: Color): Color {
+    val transparency by CustomizationSettings.glassTransparency.collectAsStateWithLifecycle()
+    val tint = CustomizationSettings.glassTint.collectAsStateWithLifecycle().value.color()
+    val alpha = (base.alpha * (1f - transparency) / SURFACE_OPACITY).coerceIn(0f, 1f)
+    val color = if (tint != null) lerp(base.copy(alpha = 1f), tint, TINT_STRENGTH) else base
+    return color.copy(alpha = alpha)
+}
 
 /**
  * Resolution fraction the glass surface records and processes its backdrop at.
@@ -168,7 +211,7 @@ fun Modifier.lightweightLiquidGlass(
 
     return clip(shape)
         .background(
-            color = if (useGlass) glassTint.copy(alpha = SURFACE_OPACITY) else fallbackColor,
+            color = if (useGlass) glassFill(glassTint.copy(alpha = SURFACE_OPACITY)) else fallbackColor,
             shape = shape,
         )
         .then(
@@ -252,7 +295,8 @@ fun Modifier.liquidGlass(
             .border(GLASS_EDGE_WIDTH, GLASS_EDGE_COLOR, shape)
     }
     val density = LocalDensity.current
-    val blurPx = with(density) { BLUR_RADIUS_DP.dp.toPx() } * GLASS_RESOLUTION_SCALE
+    val blurDp by CustomizationSettings.glassBlur.collectAsStateWithLifecycle()
+    val blurPx = with(density) { blurDp.dp.toPx() } * GLASS_RESOLUTION_SCALE
     val lensHeightPx = with(density) { (LENS_HEIGHT * LENS_MAX_DP).dp.toPx() } * GLASS_RESOLUTION_SCALE
     val lensAmountPx = with(density) { (LENS_AMOUNT * LENS_MAX_DP).dp.toPx() } * GLASS_RESOLUTION_SCALE
     val themeTint = if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) {
@@ -260,7 +304,7 @@ fun Modifier.liquidGlass(
     } else {
         Color(0xFF121212)
     }
-    val surfaceTintColor = surfaceTint ?: themeTint.copy(alpha = SURFACE_OPACITY)
+    val surfaceTintColor = glassFill(surfaceTint ?: themeTint.copy(alpha = SURFACE_OPACITY))
 
     return drawBackdrop(
         backdrop = backdrop,

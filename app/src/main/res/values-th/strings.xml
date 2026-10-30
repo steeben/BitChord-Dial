@@ -230,6 +230,17 @@
     <string name="liquid_glass">Liquid Glass</string>
     <string name="liquid_glass_subtitle">กระจกหักเหแสงจริงบนแถบนำทางแบบลอย ใช้ได้เฉพาะ Android 12 ขึ้นไป และใช้ GPU มากขึ้น</string>
     <string name="liquid_glass_unavailable">ต้องใช้ Android 12 ขึ้นไป</string>
+    <string name="glass_options_subtitle">ปรับความโปร่งใส สี และความเบลอของกระจก</string>
+    <string name="glass_transparency">ความโปร่งใส</string>
+    <string name="glass_blur">ความเบลอ</string>
+    <string name="glass_tint">สี</string>
+    <string name="glass_tint_default">ค่าเริ่มต้น</string>
+    <string name="glass_tint_accent">สีเน้น</string>
+    <string name="glass_tint_blue">น้ำเงิน</string>
+    <string name="glass_tint_purple">ม่วง</string>
+    <string name="glass_tint_pink">ชมพู</string>
+    <string name="glass_tint_orange">ส้ม</string>
+    <string name="glass_tint_green">เขียว</string>
     <string name="full_screen_cover_art">ปกอัลบั้มเต็มจอ</string>
     <string name="animated_cover_art">ปกอัลบั้มเคลื่อนไหว</string>
     <string name="synced_lyrics">เนื้อเพลงซิงค์</string>

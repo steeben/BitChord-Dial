@@ -855,6 +855,17 @@
     <string name="liquid_glass_subtitle">Echtes brechendes Glas auf der Navigationsleiste. Nur Android 12+.</string>
 
     <string name="liquid_glass_unavailable">Erfordert Android 12 oder neuer</string>
+    <string name="glass_options_subtitle">Lege fest, wie durchsichtig, getönt und unscharf das Glas ist</string>
+    <string name="glass_transparency">Transparenz</string>
+    <string name="glass_blur">Unschärfe</string>
+    <string name="glass_tint">Tönung</string>
+    <string name="glass_tint_default">Standard</string>
+    <string name="glass_tint_accent">Akzent</string>
+    <string name="glass_tint_blue">Blau</string>
+    <string name="glass_tint_purple">Lila</string>
+    <string name="glass_tint_pink">Rosa</string>
+    <string name="glass_tint_orange">Orange</string>
+    <string name="glass_tint_green">Grün</string>
 
     <string name="listen_as">Hören als</string>
 

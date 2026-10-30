@@ -834,6 +834,17 @@
     <string name="liquid_glass_subtitle">Efek kaca pada bilah navigasi. Khusus Android 12+.</string>
 
     <string name="liquid_glass_unavailable">Memerlukan Android 12 atau yang lebih baru</string>
+    <string name="glass_options_subtitle">Atur seberapa tembus pandang, berwarna, dan buram kacanya</string>
+    <string name="glass_transparency">Transparansi</string>
+    <string name="glass_blur">Buram</string>
+    <string name="glass_tint">Warna</string>
+    <string name="glass_tint_default">Default</string>
+    <string name="glass_tint_accent">Aksen</string>
+    <string name="glass_tint_blue">Biru</string>
+    <string name="glass_tint_purple">Ungu</string>
+    <string name="glass_tint_pink">Merah muda</string>
+    <string name="glass_tint_orange">Oranye</string>
+    <string name="glass_tint_green">Hijau</string>
 
     <string name="listen_as">Dengarkan sebagai</string>
 

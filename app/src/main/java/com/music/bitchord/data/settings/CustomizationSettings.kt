@@ -4,6 +4,7 @@ import android.content.SharedPreferences
 import com.music.bitchord.data.model.HomeShelf
 import com.music.bitchord.data.model.ShelfItem
 import com.music.bitchord.ui.components.DialTileStyle
+import com.music.bitchord.ui.components.GlassTint
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.json.JSONArray
 import org.json.JSONObject
@@ -109,6 +110,15 @@ object CustomizationSettings {
     /** Whether those blobs take the playing song's artwork colour. */
     val ambientFollowsArtwork = MutableStateFlow(false)
 
+    /** How see-through Liquid Glass surfaces are, 0 (opaque fill) to 1 (no fill at all). */
+    val glassTransparency = MutableStateFlow(DEFAULT_GLASS_TRANSPARENCY)
+
+    /** The colour washed into Liquid Glass surfaces; [GlassTint.DEFAULT] keeps the theme's. */
+    val glassTint = MutableStateFlow(GlassTint.DEFAULT)
+
+    /** How far Liquid Glass blurs what is behind it, in dp. */
+    val glassBlur = MutableStateFlow(DEFAULT_GLASS_BLUR)
+
     /** The library last picked from the Library page's logo; remembered across launches. */
     val librarySource = MutableStateFlow(LibrarySource.ALL)
 
@@ -151,6 +161,10 @@ object CustomizationSettings {
             ?: DEFAULT_TAB_VIEWS
         ambientBackground.value = p.getBoolean(KEY_AMBIENT_BACKGROUND, true)
         ambientFollowsArtwork.value = p.getBoolean(KEY_AMBIENT_FOLLOWS_ARTWORK, false)
+        glassTransparency.value = p.getFloat(KEY_GLASS_TRANSPARENCY, DEFAULT_GLASS_TRANSPARENCY).coerceIn(0f, 1f)
+        glassTint.value = GlassTint.entries
+            .firstOrNull { it.name == p.getString(KEY_GLASS_TINT, null) } ?: GlassTint.DEFAULT
+        glassBlur.value = p.getFloat(KEY_GLASS_BLUR, DEFAULT_GLASS_BLUR).coerceIn(0f, MAX_GLASS_BLUR)
         librarySource.value = LibrarySource.entries
             .firstOrNull { it.name == p.getString(KEY_LIBRARY_SOURCE, null) } ?: LibrarySource.ALL
         speedDialPins.value = readPins(p.getString(KEY_SPEED_DIAL_PINS, null))
@@ -442,6 +456,35 @@ object CustomizationSettings {
         prefs?.edit()?.putBoolean(KEY_AMBIENT_FOLLOWS_ARTWORK, value)?.apply()
     }
 
+    fun setGlassTransparency(value: Float) {
+        val clamped = value.coerceIn(0f, 1f)
+        glassTransparency.value = clamped
+        prefs?.edit()?.putFloat(KEY_GLASS_TRANSPARENCY, clamped)?.apply()
+    }
+
+    fun setGlassTint(value: GlassTint) {
+        glassTint.value = value
+        prefs?.edit()?.putString(KEY_GLASS_TINT, value.name)?.apply()
+    }
+
+    fun setGlassBlur(value: Float) {
+        val clamped = value.coerceIn(0f, MAX_GLASS_BLUR)
+        glassBlur.value = clamped
+        prefs?.edit()?.putFloat(KEY_GLASS_BLUR, clamped)?.apply()
+    }
+
+    /** Puts transparency, tint and blur back to how the glass ships. */
+    fun resetGlassOptions() {
+        glassTransparency.value = DEFAULT_GLASS_TRANSPARENCY
+        glassTint.value = GlassTint.DEFAULT
+        glassBlur.value = DEFAULT_GLASS_BLUR
+        prefs?.edit()
+            ?.remove(KEY_GLASS_TRANSPARENCY)
+            ?.remove(KEY_GLASS_TINT)
+            ?.remove(KEY_GLASS_BLUR)
+            ?.apply()
+    }
+
     fun setWavyProgressBar(value: Boolean) {
         wavyProgressBar.value = value
         prefs?.edit()?.putBoolean(KEY_WAVY_PROGRESS_BAR, value)?.apply()
@@ -501,12 +544,20 @@ object CustomizationSettings {
     const val DEFAULT_SPEED_DIAL_ROWS = 4
     const val DEFAULT_HOME_TITLE = "BitChord Dial"
 
+    /** The glass's own look: a 40% fill and an 8dp blur. */
+    const val DEFAULT_GLASS_TRANSPARENCY = 0.6f
+    const val DEFAULT_GLASS_BLUR = 8f
+    const val MAX_GLASS_BLUR = 32f
+
     private const val KEY_NAV_TABS = "custom_nav_tabs"
     private const val KEY_COMPACT_CANVAS_CONTROLS = "custom_compact_canvas_controls"
     private const val KEY_WAVY_PROGRESS_BAR = "custom_wavy_progress_bar"
     private const val KEY_AMBIENT_BACKGROUND = "custom_ambient_background"
     private const val KEY_LIBRARY_TAB_VIEWS = "custom_library_tab_views"
     private const val KEY_AMBIENT_FOLLOWS_ARTWORK = "custom_ambient_follows_artwork"
+    private const val KEY_GLASS_TRANSPARENCY = "custom_glass_transparency"
+    private const val KEY_GLASS_TINT = "custom_glass_tint"
+    private const val KEY_GLASS_BLUR = "custom_glass_blur"
     private const val KEY_LIBRARY_SOURCE = "custom_library_source"
     private const val KEY_SPEED_DIAL_PINS = "custom_speed_dial_pins"
     private const val KEY_LAST_SPEED_DIAL = "custom_last_speed_dial"

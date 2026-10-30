@@ -41,7 +41,9 @@ import androidx.compose.material.icons.rounded.BlurOff
 import androidx.compose.material.icons.rounded.BlurOn
 import androidx.compose.material.icons.rounded.Brightness4
 import androidx.compose.material.icons.rounded.Cached
+import androidx.compose.material.icons.rounded.BlurOn
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Opacity
 import androidx.compose.material.icons.rounded.CropSquare
 import androidx.compose.material.icons.rounded.Crop
 import androidx.compose.material.icons.rounded.SkipNext
@@ -120,6 +122,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -149,6 +154,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import com.music.bitchord.AppIcon
+import com.music.bitchord.ui.components.GlassTint
 import com.music.bitchord.ui.components.isGlassSupported
 import com.music.bitchord.ui.components.languageDisplayNameRes
 import com.music.bitchord.ui.components.MessageState
@@ -331,6 +337,7 @@ fun SettingsScreen(
     var picking by remember { mutableStateOf<QualityTarget?>(null) }
     var pickingDownloadQuality by remember { mutableStateOf(false) }
     var pickingAutomixPerformance by remember { mutableStateOf(false) }
+    var editingGlass by remember { mutableStateOf(false) }
     // What the last export or import did, shown on the row that did it rather
     // than as a toast: a backup is the one action here whose outcome nobody can
     // check by looking at the app afterwards. Held per direction, or an import's
@@ -955,7 +962,8 @@ fun SettingsScreen(
                             ),
                         )
                     },
-                    onClick = { AppSettings.setLiquidGlass(!liquidGlass) },
+                    // The switch turns it on and off; the row opens its options.
+                    onClick = { editingGlass = true },
                 )
             }
             val ambientTitle = stringResource(R.string.ambient_background)
@@ -2007,6 +2015,15 @@ fun SettingsScreen(
         }
     }
 
+    if (editingGlass) {
+        SlideDownBottomSheet(
+            onDismissRequest = { editingGlass = false },
+            containerColor = MaterialTheme.colorScheme.background,
+        ) {
+            LiquidGlassSheet()
+        }
+    }
+
     if (pickingAutomixPerformance) {
         SlideDownBottomSheet(
             onDismissRequest = { pickingAutomixPerformance = false },
@@ -2569,6 +2586,139 @@ private fun AutomixPerformanceSheet(
             }
         }
     }
+}
+
+/** Liquid Glass's look: how see-through it is, the colour in it and how much it blurs. */
+@Composable
+private fun LiquidGlassSheet() {
+    val haptics = LocalHapticFeedback.current
+    val transparency by CustomizationSettings.glassTransparency.collectAsStateWithLifecycle()
+    val tint by CustomizationSettings.glassTint.collectAsStateWithLifecycle()
+    val blur by CustomizationSettings.glassBlur.collectAsStateWithLifecycle()
+    val isDefault = transparency == CustomizationSettings.DEFAULT_GLASS_TRANSPARENCY &&
+        tint == GlassTint.DEFAULT &&
+        blur == CustomizationSettings.DEFAULT_GLASS_BLUR
+    Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+        Row(
+            modifier = Modifier.padding(start = 22.dp, end = 22.dp, bottom = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.AutoAwesome,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.size(22.dp),
+            )
+            Spacer(Modifier.width(14.dp))
+            Column {
+                Text(
+                    text = stringResource(R.string.liquid_glass),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+                Text(
+                    text = stringResource(R.string.glass_options_subtitle),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
+        SliderRow(
+            icon = Icons.Rounded.Opacity,
+            title = stringResource(R.string.glass_transparency),
+            value = "${(transparency * 100).roundToInt()}%",
+            sliderValue = transparency,
+            onSliderValue = { CustomizationSettings.setGlassTransparency((it * 20).roundToInt() / 20f) },
+            valueRange = 0f..1f,
+            steps = 19,
+        )
+        SliderRow(
+            icon = Icons.Rounded.BlurOn,
+            title = stringResource(R.string.glass_blur),
+            value = if (blur == 0f) stringResource(R.string.off) else "${blur.roundToInt()} dp",
+            sliderValue = blur,
+            onSliderValue = { CustomizationSettings.setGlassBlur(it.roundToInt().toFloat()) },
+            valueRange = 0f..CustomizationSettings.MAX_GLASS_BLUR,
+            steps = CustomizationSettings.MAX_GLASS_BLUR.toInt() - 1,
+        )
+        Row(
+            modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, top = 16.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Palette,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.size(ICON_SIZE),
+            )
+            Spacer(Modifier.width(ICON_GAP))
+            Text(
+                text = stringResource(R.string.glass_tint),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(start = ROW_INSET + ICON_SIZE + ICON_GAP, end = ROW_INSET, bottom = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            GlassTint.entries.forEach { option ->
+                val chosen = option == tint
+                val label = stringResource(option.labelRes())
+                val swatch = option.color()
+                    ?: MaterialTheme.colorScheme.surfaceVariant
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(swatch, CircleShape)
+                        .border(
+                            width = if (chosen) 2.dp else 0.5.dp,
+                            color = if (chosen) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.outline,
+                            shape = CircleShape,
+                        )
+                        .clickable(onClickLabel = label) {
+                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            CustomizationSettings.setGlassTint(option)
+                        }
+                        .semantics { contentDescription = label },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (chosen) {
+                        Icon(
+                            Icons.Rounded.Check,
+                            contentDescription = null,
+                            tint = if (swatch.luminance() > 0.5f) Color.Black else Color.White,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+            }
+        }
+        HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
+        DestructiveRow(
+            label = stringResource(R.string.reset_to_default),
+            enabled = !isDefault,
+            onClick = {
+                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                CustomizationSettings.resetGlassOptions()
+            },
+        )
+    }
+}
+
+private fun GlassTint.labelRes(): Int = when (this) {
+    GlassTint.DEFAULT -> R.string.glass_tint_default
+    GlassTint.ACCENT -> R.string.glass_tint_accent
+    GlassTint.BLUE -> R.string.glass_tint_blue
+    GlassTint.PURPLE -> R.string.glass_tint_purple
+    GlassTint.PINK -> R.string.glass_tint_pink
+    GlassTint.ORANGE -> R.string.glass_tint_orange
+    GlassTint.GREEN -> R.string.glass_tint_green
 }
 
 /**

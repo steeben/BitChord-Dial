@@ -236,6 +236,17 @@
     <string name="liquid_glass">Liquid Glass</string>
     <string name="liquid_glass_subtitle">Yüzen gezinme çubuğunda gerçek kırılan cam. Yalnızca Android 12+; daha fazla GPU kullanır.</string>
     <string name="liquid_glass_unavailable">Android 12 veya daha yenisini gerektirir</string>
+    <string name="glass_options_subtitle">Camın saydamlığını, tonunu ve bulanıklığını ayarlayın</string>
+    <string name="glass_transparency">Saydamlık</string>
+    <string name="glass_blur">Bulanıklık</string>
+    <string name="glass_tint">Ton</string>
+    <string name="glass_tint_default">Varsayılan</string>
+    <string name="glass_tint_accent">Vurgu</string>
+    <string name="glass_tint_blue">Mavi</string>
+    <string name="glass_tint_purple">Mor</string>
+    <string name="glass_tint_pink">Pembe</string>
+    <string name="glass_tint_orange">Turuncu</string>
+    <string name="glass_tint_green">Yeşil</string>
     <string name="full_screen_cover_art">Tam ekran kapak resmi</string>
     <string name="animated_cover_art">Hareketli kapak resmi</string>
     <string name="synced_lyrics">Senkronize sözler</string>

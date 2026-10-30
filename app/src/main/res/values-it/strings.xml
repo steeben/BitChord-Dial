@@ -254,6 +254,17 @@
     <string name="liquid_glass">Liquid Glass</string>
     <string name="liquid_glass_subtitle">Vetro rifrangente reale sulla barra di navigazione flottante. Solo Android 12+; usa più GPU.</string>
     <string name="liquid_glass_unavailable">Richiede Android 12 o versioni successive</string>
+    <string name="glass_options_subtitle">Regola trasparenza, tinta e sfocatura del vetro</string>
+    <string name="glass_transparency">Trasparenza</string>
+    <string name="glass_blur">Sfocatura</string>
+    <string name="glass_tint">Tinta</string>
+    <string name="glass_tint_default">Predefinita</string>
+    <string name="glass_tint_accent">Accento</string>
+    <string name="glass_tint_blue">Blu</string>
+    <string name="glass_tint_purple">Viola</string>
+    <string name="glass_tint_pink">Rosa</string>
+    <string name="glass_tint_orange">Arancione</string>
+    <string name="glass_tint_green">Verde</string>
     <string name="full_screen_cover_art">Copertina a tutto schermo</string>
     <string name="animated_cover_art">Copertina animata</string>
     <string name="synced_lyrics">Testi sincronizzati</string>
