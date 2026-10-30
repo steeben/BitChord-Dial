@@ -1815,10 +1815,25 @@ class PlaybackService : MediaLibraryService() {
         val uri = item.localConfiguration?.uri ?: return@withContext null
         val resolver = streamResolver ?: return@withContext null
         val resolved = resolver.resolveDataSpec(DataSpec(uri)).uri
-        if (resolved.scheme != "http" && resolved.scheme != "https") {
-            null
-        } else {
+        if (resolved.scheme == "http" || resolved.scheme == "https") {
             CastStream(resolved.toString(), CastPlayback.mimeTypeOf(resolved))
+        } else {
+            // A downloaded track's URI is a local path the receiver can't
+            // reach, so cast it from its remote stream instead. Only a known
+            // download: an external local file has no stream to fall back on.
+            val fallback = if (uri.scheme == "content" || uri.scheme == "file") {
+                item.mediaId.takeIf { it.isNotBlank() }?.let { vid ->
+                    if (com.music.bitchord.download.Downloads.saved.value.containsKey(vid)) "bitchord://watch?v=$vid" else null
+                }
+            } else null
+            if (fallback != null) {
+                runCatching {
+                    resolver.resolveDataSpec(DataSpec(fallback.toUri())).uri
+                        .takeIf { it.scheme == "http" || it.scheme == "https" }
+                }.getOrNull()?.let { url ->
+                    CastStream(url.toString(), CastPlayback.mimeTypeOf(url))
+                }
+            } else null
         }
     }
 
