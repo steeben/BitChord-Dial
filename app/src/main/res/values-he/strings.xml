@@ -205,6 +205,8 @@
     <string name="equalizer_subtitle">פאנל המערכת של המכשיר שלך</string>
     <string name="show_nerd_stats">הצגת נתונים לחנונים</string>
     <string name="show_nerd_stats_subtitle">קודק, קצב סיביות ותדר דגימה בנגן</string>
+    <string name="hide_user_info">הסתרת פרטי משתמש</string>
+    <string name="hide_user_info_subtitle">מציג ממלאי מקום במקום השם, האימייל ותמונות הפרופיל שלך, לצילומי מסך</string>
     <string name="theme">ערכת נושא</string>
     <string name="reduce_animation">הפחתת אנימציה</string>
     <string name="reduce_animation_subtitle">מקפיא את הגרדיאנט של הנגן הראשי במקום לתת לו לנוע</string>

@@ -230,6 +230,8 @@
     <string name="equalizer_subtitle">Bảng điều khiển hệ thống của thiết bị</string>
     <string name="show_nerd_stats">Thống kê chi tiết</string>
     <string name="show_nerd_stats_subtitle">Codec, tốc độ bit và tần số lấy mẫu trên trình phát</string>
+    <string name="hide_user_info">Ẩn thông tin người dùng</string>
+    <string name="hide_user_info_subtitle">Hiển thị nội dung thay thế cho tên, email và ảnh hồ sơ của bạn, để chụp màn hình</string>
     <string name="theme">Giao diện</string>
     <string name="reduce_animation">Giảm hiệu ứng chuyển động</string>
     <string name="reduce_animation_subtitle">Cố định dải màu của trình phát thay vì chuyển động</string>

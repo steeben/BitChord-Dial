@@ -202,6 +202,8 @@
     <string name="equalizer_subtitle">Panel systemowy Twojego urządzenia</string>
     <string name="show_nerd_stats">Pokaż statystyki dla nerdów</string>
     <string name="show_nerd_stats_subtitle">Kodek, bitrate i sample rate na odtwarzaczu</string>
+    <string name="hide_user_info">Ukryj dane użytkownika</string>
+    <string name="hide_user_info_subtitle">Pokazuje zastępniki zamiast imienia, e-maila i zdjęć profilowych, do zrzutów ekranu</string>
     <string name="theme">Motyw</string>
     <string name="reduce_animation">Zmniejsz animację</string>
     <string name="reduce_animation_subtitle">Zatrzymuje gradient głównego odtwarzacza zamiast dryfowania</string>

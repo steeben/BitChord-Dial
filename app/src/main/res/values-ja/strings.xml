@@ -199,6 +199,8 @@
     <string name="equalizer_subtitle">デバイスのシステムパネル</string>
     <string name="show_nerd_stats">技術情報を表示</string>
     <string name="show_nerd_stats_subtitle">プレイヤーにコーデック、ビットレート、サンプルレートを表示</string>
+    <string name="hide_user_info">ユーザー情報を隠す</string>
+    <string name="hide_user_info_subtitle">スクリーンショット用に、名前・メール・プロフィール写真をプレースホルダーで表示</string>
     <string name="theme">テーマ</string>
     <string name="reduce_animation">アニメーションを減らす</string>
     <string name="reduce_animation_subtitle">メインプレイヤーのグラデーションを動かさず固定します</string>

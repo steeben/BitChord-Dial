@@ -214,6 +214,8 @@
     <string name="equalizer_subtitle">Системная панель вашего устройства</string>
     <string name="show_nerd_stats">Показывать техническую статистику</string>
     <string name="show_nerd_stats_subtitle">Кодек, битрейт и частота дискретизации в плеере</string>
+    <string name="hide_user_info">Скрыть данные пользователя</string>
+    <string name="hide_user_info_subtitle">Показывает заглушки вместо имени, почты и фото профиля — для скриншотов</string>
     <string name="theme">Тема</string>
     <string name="reduce_animation">Уменьшить анимацию</string>
     <string name="reduce_animation_subtitle">Останавливает градиент главного плеера вместо плавного движения</string>

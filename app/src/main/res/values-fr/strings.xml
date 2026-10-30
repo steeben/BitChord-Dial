@@ -205,6 +205,8 @@
     <string name="equalizer_subtitle">Le panneau système de votre appareil</string>
     <string name="show_nerd_stats">Afficher les statistiques techniques</string>
     <string name="show_nerd_stats_subtitle">Codec, débit et fréquence d\'échantillonnage sur le lecteur</string>
+    <string name="hide_user_info">Masquer les infos utilisateur</string>
+    <string name="hide_user_info_subtitle">Affiche des espaces réservés à la place de ton nom, de ton e-mail et de tes photos de profil, pour les captures d\'écran</string>
     <string name="theme">Thème</string>
     <string name="reduce_animation">Réduire les animations</string>
     <string name="reduce_animation_subtitle">Fige le dégradé du lecteur principal au lieu de le faire dériver</string>

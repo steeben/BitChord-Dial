@@ -220,6 +220,8 @@
     <string name="equalizer_subtitle">แผงควบคุมของระบบในอุปกรณ์ของคุณ</string>
     <string name="show_nerd_stats">แสดงสถิติเชิงลึก</string>
     <string name="show_nerd_stats_subtitle">โคเดก อัตราบิต และอัตราสุ่มตัวอย่างบนหน้าเครื่องเล่น</string>
+    <string name="hide_user_info">ซ่อนข้อมูลผู้ใช้</string>
+    <string name="hide_user_info_subtitle">แสดงข้อความแทนชื่อ อีเมล และรูปโปรไฟล์ของคุณ สำหรับการจับภาพหน้าจอ</string>
     <string name="theme">ธีม</string>
     <string name="reduce_animation">ลดแอนิเมชัน</string>
     <string name="reduce_animation_subtitle">หยุดเกรเดียนต์ของเครื่องเล่นหลักแทนการเคลื่อนไหว</string>

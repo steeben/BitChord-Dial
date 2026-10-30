@@ -204,6 +204,8 @@
     <string name="equalizer_subtitle">Das Systempanel deines Geräts</string>
     <string name="show_nerd_stats">Technische Details anzeigen</string>
     <string name="show_nerd_stats_subtitle">Codec, Bitrate und Abtastrate im Player</string>
+    <string name="hide_user_info">Benutzerinfos ausblenden</string>
+    <string name="hide_user_info_subtitle">Zeigt Platzhalter statt deines Namens, deiner E-Mail und deiner Profilbilder, für Screenshots</string>
     <string name="theme">Design</string>
     <string name="reduce_animation">Animationen reduzieren</string>
     <string name="reduce_animation_subtitle">Friert den Farbverlauf des Hauptplayers ein, statt ihn treiben zu lassen</string>

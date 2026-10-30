@@ -199,6 +199,8 @@
     <string name="equalizer_subtitle">Panel sistem perangkat Anda</string>
     <string name="show_nerd_stats">Tampilkan statistik teknis</string>
     <string name="show_nerd_stats_subtitle">Codec, bitrate, dan sample rate pada pemutar</string>
+    <string name="hide_user_info">Sembunyikan info pengguna</string>
+    <string name="hide_user_info_subtitle">Menampilkan placeholder untuk nama, email, dan foto profil kamu, untuk tangkapan layar</string>
     <string name="theme">Tema</string>
     <string name="reduce_animation">Kurangi animasi</string>
     <string name="reduce_animation_subtitle">Membekukan gradien pemutar utama alih-alih bergerak</string>

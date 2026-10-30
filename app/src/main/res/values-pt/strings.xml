@@ -206,6 +206,8 @@
     <string name="equalizer_subtitle">O painel do sistema do seu dispositivo</string>
     <string name="show_nerd_stats">Mostrar estatísticas técnicas</string>
     <string name="show_nerd_stats_subtitle">Codec, taxa de bits e taxa de amostragem no player</string>
+    <string name="hide_user_info">Ocultar dados do usuário</string>
+    <string name="hide_user_info_subtitle">Mostra marcadores no lugar do seu nome, e-mail e fotos de perfil, para capturas de tela</string>
     <string name="theme">Tema</string>
     <string name="reduce_animation">Reduzir animação</string>
     <string name="reduce_animation_subtitle">Congela o gradiente do player principal em vez de mover</string>

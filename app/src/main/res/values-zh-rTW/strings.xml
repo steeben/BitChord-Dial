@@ -201,6 +201,9 @@
     <string name="equalizer_subtitle">裝置的系統面板</string>
     <string name="show_nerd_stats">顯示技術統計資訊</string>
     <string name="show_nerd_stats_subtitle">在播放器上顯示編解碼器、位元率和取樣率</string>
+    <string name="spotify_use_spdc_token">使用 sp_dc 權杖</string>
+    <string name="hide_user_info">隱藏使用者資訊</string>
+    <string name="hide_user_info_subtitle">以預留位置取代你的名稱、電子郵件和頭像，方便截圖</string>
     <string name="theme">主題</string>
     <string name="reduce_animation">減少動畫</string>
     <string name="reduce_animation_subtitle">讓主播放器的漸變保持靜止，而不是流動</string>

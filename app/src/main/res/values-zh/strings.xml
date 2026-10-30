@@ -201,6 +201,8 @@
     <string name="equalizer_subtitle">设备的系统面板</string>
     <string name="show_nerd_stats">显示技术统计信息</string>
     <string name="show_nerd_stats_subtitle">在播放器上显示编解码器、比特率和采样率</string>
+    <string name="hide_user_info">隐藏用户信息</string>
+    <string name="hide_user_info_subtitle">用占位内容替换你的名字、邮箱和头像，方便截图</string>
     <string name="theme">主题</string>
     <string name="reduce_animation">减少动画</string>
     <string name="reduce_animation_subtitle">让主播放器的渐变保持静止，而不是流动</string>

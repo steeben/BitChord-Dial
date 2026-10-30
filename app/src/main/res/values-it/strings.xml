@@ -244,6 +244,8 @@
     <string name="equalizer_subtitle">Il pannello di sistema del tuo dispositivo</string>
     <string name="show_nerd_stats">Mostra statistiche per nerd</string>
     <string name="show_nerd_stats_subtitle">Codec, bitrate e frequenza di campionamento sul player</string>
+    <string name="hide_user_info">Nascondi info utente</string>
+    <string name="hide_user_info_subtitle">Mostra segnaposto al posto di nome, email e foto profilo, per gli screenshot</string>
     <string name="theme">Tema</string>
     <string name="reduce_animation">Riduci animazioni</string>
     <string name="reduce_animation_subtitle">Blocca la sfumatura del player principale invece di farla muovere</string>

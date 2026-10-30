@@ -226,6 +226,8 @@
     <string name="equalizer_subtitle">Cihazınızın sistem paneli</string>
     <string name="show_nerd_stats">Meraklılar için istatistikleri göster</string>
     <string name="show_nerd_stats_subtitle">Oynatıcıda codec, bit hızı ve örnekleme oranı</string>
+    <string name="hide_user_info">Kullanıcı bilgilerini gizle</string>
+    <string name="hide_user_info_subtitle">Ekran görüntüleri için adın, e-postan ve profil fotoğrafların yerine yer tutucular gösterir</string>
     <string name="theme">Tema</string>
     <string name="reduce_animation">Animasyonu azalt</string>
     <string name="reduce_animation_subtitle">Ana oynatıcının gradyanını kaymak yerine dondurur</string>

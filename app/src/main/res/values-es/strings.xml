@@ -214,6 +214,8 @@
     <string name="equalizer_subtitle">El panel de audio del sistema</string>
     <string name="show_nerd_stats">Mostrar datos técnicos</string>
     <string name="show_nerd_stats_subtitle">Códec, tasa de bits y frecuencia de muestreo en el reproductor</string>
+    <string name="hide_user_info">Ocultar datos del usuario</string>
+    <string name="hide_user_info_subtitle">Muestra marcadores en lugar de tu nombre, correo y fotos de perfil, para capturas de pantalla</string>
     <string name="theme">Tema</string>
     <string name="reduce_animation">Reducir animaciones</string>
     <string name="reduce_animation_subtitle">Detiene el degradado del reproductor principal</string>
