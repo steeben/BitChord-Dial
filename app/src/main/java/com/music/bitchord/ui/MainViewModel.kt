@@ -946,6 +946,25 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * Whether the account follows (stars) an artist, for a menu opened off a
      * card: the page's answer if it is open, else the artist page fetched.
      */
+    /**
+     * The star already known for [browseId] — an open page's, or a card menu's
+     * fetched earlier — so a menu can draw it on its first frame.
+     */
+    fun knownArtistSubscription(browseId: String): SubscriptionState? =
+        _detailStack.value.firstOrNull { it.browseId == browseId }?.subscription
+            ?: artistCardPages[browseId]?.subscription
+
+    /**
+     * Fetches the artists' cards ahead of their menus — the artists' dial,
+     * which is held for its menu more than anything — one at a time, so the
+     * star and the shuffle are there the moment a menu opens.
+     */
+    fun prefetchArtistCards(browseIds: List<String>) {
+        viewModelScope.launch {
+            browseIds.filterNot { it in artistCardPages }.forEach { artistCardPage(it) }
+        }
+    }
+
     fun loadArtistSubscription(browseId: String, onResult: (SubscriptionState?) -> Unit) {
         val known = _detailStack.value.firstOrNull { it.browseId == browseId }?.subscription
         if (known != null) {

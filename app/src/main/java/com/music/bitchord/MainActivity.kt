@@ -6085,10 +6085,18 @@ private fun BitChordApp(
             // The artist's star, asked for as the menu opens (signed in only:
             // following is the account's).
             val artistId = target.browseId?.takeIf { target.type == BrowseType.ARTIST && remote }
-            var artistFollow by remember(artistId) { mutableStateOf<SubscriptionState?>(null) }
+            var artistFollow by remember(artistId) {
+                mutableStateOf(artistId?.let(viewModel::knownArtistSubscription))
+            }
+            // Until the answer is in, the row stands in place, untappable, so
+            // the menu doesn't grow a row a second after it opens.
+            var artistFollowAsked by remember(artistId) { mutableStateOf(artistFollow != null) }
             LaunchedEffect(artistId, signedIn) {
                 if (artistId != null && signedIn) {
-                    viewModel.loadArtistSubscription(artistId) { artistFollow = it }
+                    viewModel.loadArtistSubscription(artistId) {
+                        artistFollow = it
+                        artistFollowAsked = true
+                    }
                 }
             }
             val customCover = com.music.bitchord.data.CustomCovers.coverFor(pinnableId, customCovers)
@@ -6284,6 +6292,7 @@ private fun BitChordApp(
                     songs.firstOrNull()?.let(startRadio)
                 }.takeIf { target.fromCard && remote },
                 favorite = artistFollow?.subscribed,
+                favoritePending = artistId != null && signedIn && !artistFollowAsked,
                 onToggleFavorite = artistId?.let { id ->
                     artistFollow?.let { follow ->
                         {
@@ -7576,6 +7585,17 @@ private fun rememberHomeFeed(
                 listOf(base.data.first(), HomeShelf(ARTIST_DIAL_SHELF_TITLE, artists)) + base.data.drop(1),
             )
         }
+    }
+    // The artists' dial's stars, fetched ahead of a hold on one of its tiles,
+    // so the menu opens with "Favorite artist" already in it.
+    val signedIn by viewModel.signedIn.collectAsStateWithLifecycle()
+    LaunchedEffect(arrangedHomeState, signedIn) {
+        if (!signedIn) return@LaunchedEffect
+        val artists = (arrangedHomeState as? UiState.Success)?.data
+            ?.firstOrNull { it.title == ARTIST_DIAL_SHELF_TITLE }?.items
+            ?.mapNotNull { it.browseId }
+            ?: return@LaunchedEffect
+        viewModel.prefetchArtistCards(artists)
     }
     // Saved once the fresh dial is what's showing, for the next launch.
     LaunchedEffect(arrangedHomeState, homeFresh) {

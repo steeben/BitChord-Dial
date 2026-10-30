@@ -214,6 +214,8 @@ fun BrowseActionsSheet(
     /** An artist's star: whether the account follows them, null while unknown or not offered. */
     favorite: Boolean? = null,
     onToggleFavorite: (() -> Unit)? = null,
+    /** The star is still being asked for: its row is shown, unlit and untappable. */
+    favoritePending: Boolean = false,
     /** Opened off a Home dial: takes the tile off it. Null hides the row. */
     onRemoveFromDial: (() -> Unit)? = null,
     /** Opened off a Home dial: shows or hides the tile's title there. Null hides the row. */
@@ -266,6 +268,13 @@ fun BrowseActionsSheet(
                         if (favorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
                         stringResource(if (favorite) R.string.unfavorite_artist else R.string.favorite_artist),
                         onClick = onToggleFavorite,
+                    )
+                } else if (favoritePending) {
+                    ActionRow(
+                        Icons.Rounded.StarBorder,
+                        stringResource(R.string.favorite_artist),
+                        enabled = false,
+                        onClick = {},
                     )
                 }
                 onToggleDialLabel?.let {

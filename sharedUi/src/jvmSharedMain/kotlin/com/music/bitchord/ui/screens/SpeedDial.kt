@@ -92,6 +92,10 @@ import com.music.bitchord.ui.components.PAGE_GUTTER
 import com.music.bitchord.ui.components.SearchPlayingBars
 import com.music.bitchord.ui.components.contextClick
 import com.music.bitchord.ui.components.longPressMenuClickable
+import com.music.bitchord.ui.components.LongPressOrigin
+import com.music.bitchord.ui.components.HeldItem
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.graphics.layer.GraphicsLayer
 import com.music.bitchord.ui.components.dialTileBorder
 import com.music.bitchord.ui.icons.BitChordIcons
 import kotlinx.coroutines.delay
@@ -280,6 +284,11 @@ internal fun SpeedDialShelf(
     val latestReorder by rememberUpdatedState(onReorder)
     val latestMenu by rememberUpdatedState(onItemLongPress)
     val latestItems by rememberUpdatedState(shelf.items)
+    // Where each tile is and what it looks like, by id: a pinned tile's hold
+    // belongs to the drag below, so when it turns out to be a hold for the
+    // menu, the menu is told what was held from here.
+    val tileSpots = remember { HashMap<String, TileSpot>() }
+    val holdScope = rememberCoroutineScope()
 
     var dragId by remember { mutableStateOf<String?>(null) }
     var dragPos by remember { mutableStateOf(Offset.Zero) }
@@ -415,6 +424,7 @@ internal fun SpeedDialShelf(
                                         if (moved) {
                                             latestReorder?.invoke(latestOrder.take(latestPinned))
                                         } else {
+                                            tileSpots[id]?.let { recordHold(it, holdScope) }
                                             latestMenu?.invoke(item)
                                         }
                                         break
@@ -544,6 +554,7 @@ internal fun SpeedDialShelf(
                                 } else {
                                     SpeedDialTile(
                                         item = item,
+                                        spot = tileSpots.getOrPut(id) { TileSpot() },
                                         pinned = pinnedTile && showPinIcon,
                                         showLabel = showLabels != (id in labelOverrides),
                                         current = currentSong != null && item.videoId == currentSong.videoId,
@@ -765,13 +776,15 @@ private fun SpeedDialTile(
     modifier: Modifier = Modifier,
     /** How far it is shaded over, read when drawing: see the dial's jiggle. */
     dim: () -> Float = { 0f },
+    /** Where it is and its picture, for whoever needs them: see [TileSpot]. */
+    spot: TileSpot = remember { TileSpot() },
 ) {
     val shape = RoundedCornerShape(10.dp)
     val press = rememberTilePress()
-    val spot = remember { TileSpot() }
     // Every frame of the tile, kept to hand: a tap that opens a page takes a
     // picture of it from here, for the page to grow out of and land back as.
     val drawn = rememberGraphicsLayer()
+    spot.layer = drawn
     Box(
         modifier = modifier
             .onPlaced { spot.coordinates = it }
@@ -876,9 +889,25 @@ private fun HistoryTile(
     }
 }
 
-/** Where a tile was last laid out, kept off the snapshot: only read when it is tapped. */
+/**
+ * Where a tile was last laid out and the layer it is drawn into, kept off the
+ * snapshot: only read when it is tapped or held.
+ */
 private class TileSpot {
     var coordinates: LayoutCoordinates? = null
+    var layer: GraphicsLayer? = null
+}
+
+/**
+ * Tells [LongPressOrigin] a tile was held, as [longPressMenuClickable] does
+ * for every other item on Home, so its menu lifts the tile out of the dial
+ * instead of sliding a sheet up.
+ */
+private fun recordHold(spot: TileSpot, scope: CoroutineScope) {
+    val coordinates = spot.coordinates?.takeIf { it.isAttached } ?: return
+    val held = HeldItem(coordinates.boundsInWindow())
+    LongPressOrigin.record(held)
+    spot.layer?.let { layer -> scope.launch { held.image = layer.toImageBitmap() } }
 }
 
 /**
