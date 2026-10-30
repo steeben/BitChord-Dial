@@ -3073,16 +3073,28 @@ class PlaybackService : MediaLibraryService() {
             }
         }
 
-    /** Re-arms AutoPlay when an external queue edit exposes an empty tail. */
+    /** AutoPlay tracks ahead of the current one as of the last queue edit. */
+    private var autoplayAheadSeen = 0
+
+    /** Re-arms AutoPlay when an external queue edit empties or shrinks its tail. */
     private fun refreshAutoplayIfQueueEmpty() {
         val exoPlayer = player ?: return
+        val aheadNow = (exoPlayer.currentMediaItemIndex + 1 until exoPlayer.mediaItemCount)
+            .count { exoPlayer.getMediaItemAt(it).fromAutoplay }
+        // Removing some of AutoPlay's tracks leaves a non-empty tail, which the
+        // empty-tail check below misses; a shrunken tail needs topping up too.
+        val tailShrank = aheadNow < autoplayAheadSeen
+        autoplayAheadSeen = aheadNow
         if (!autoplayQueueNeedsRefresh(
                 enabled = autoplayEnabled(ListenTogether.state.value),
                 repeatAll = exoPlayer.repeatMode == Player.REPEAT_MODE_ALL,
                 currentIndex = exoPlayer.currentMediaItemIndex,
                 itemCount = exoPlayer.mediaItemCount,
                 loadInProgress = autoplayLoadJob?.isActive == true,
-            )
+            ) && !(tailShrank && aheadNow < MAX_QUEUED_AUTOPLAY &&
+                autoplayEnabled(ListenTogether.state.value) &&
+                exoPlayer.repeatMode != Player.REPEAT_MODE_ALL &&
+                autoplayLoadJob?.isActive != true)
         ) {
             return
         }
