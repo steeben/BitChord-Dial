@@ -957,6 +957,7 @@
     <string name="glass_tint_darkness">色味の暗さ</string>
     <string name="glass_tint_default">デフォルト</string>
     <string name="glass_tint_accent">アクセント</string>
+    <string name="glass_tint_song">再生中の曲</string>
     <string name="glass_tint_blue">ブルー</string>
     <string name="glass_tint_purple">パープル</string>
     <string name="glass_tint_pink">ピンク</string>

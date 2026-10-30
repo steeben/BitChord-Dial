@@ -862,6 +862,7 @@
     <string name="glass_tint_darkness">रंगत का गहरापन</string>
     <string name="glass_tint_default">डिफ़ॉल्ट</string>
     <string name="glass_tint_accent">एक्सेंट</string>
+    <string name="glass_tint_song">चल रहा गाना</string>
     <string name="glass_tint_blue">नीला</string>
     <string name="glass_tint_purple">बैंगनी</string>
     <string name="glass_tint_pink">गुलाबी</string>

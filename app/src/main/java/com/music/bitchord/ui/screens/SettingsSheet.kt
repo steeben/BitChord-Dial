@@ -73,6 +73,7 @@ import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.LocalOffer
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.MusicOff
 import androidx.compose.material.icons.rounded.MotionPhotosOff
 import androidx.compose.material.icons.rounded.Extension
@@ -2687,9 +2688,11 @@ internal fun LiquidGlassOptions() {
                         .semantics { contentDescription = label },
                     contentAlignment = Alignment.Center,
                 ) {
-                    if (chosen) {
+                    // The playing song's swatch says what it is, since its
+                    // colour changes from one song to the next.
+                    if (chosen || option == GlassTint.SONG) {
                         Icon(
-                            Icons.Rounded.Check,
+                            if (chosen) Icons.Rounded.Check else Icons.Rounded.MusicNote,
                             contentDescription = null,
                             tint = if (swatch.luminance() > 0.5f) Color.Black else Color.White,
                             modifier = Modifier.size(18.dp),
@@ -2722,6 +2725,7 @@ internal fun LiquidGlassOptions() {
 private fun GlassTint.labelRes(): Int = when (this) {
     GlassTint.DEFAULT -> R.string.glass_tint_default
     GlassTint.ACCENT -> R.string.glass_tint_accent
+    GlassTint.SONG -> R.string.glass_tint_song
     GlassTint.BLUE -> R.string.glass_tint_blue
     GlassTint.PURPLE -> R.string.glass_tint_purple
     GlassTint.PINK -> R.string.glass_tint_pink

@@ -867,6 +867,7 @@
     <string name="glass_tint_darkness">כהות הגוון</string>
     <string name="glass_tint_default">ברירת מחדל</string>
     <string name="glass_tint_accent">צבע הדגשה</string>
+    <string name="glass_tint_song">השיר המתנגן</string>
     <string name="glass_tint_blue">כחול</string>
     <string name="glass_tint_purple">סגול</string>
     <string name="glass_tint_pink">ורוד</string>

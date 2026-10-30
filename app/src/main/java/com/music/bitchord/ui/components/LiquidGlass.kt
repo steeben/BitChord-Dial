@@ -28,10 +28,11 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.compositeOver
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.CustomizationSettings
 import com.music.bitchord.ui.components.backdrop.Backdrop
+import com.music.bitchord.ui.theme.LocalNowPlayingTint
 import com.music.bitchord.ui.components.backdrop.backdrops.LayerBackdrop
 import com.music.bitchord.ui.components.backdrop.drawBackdrop
 import com.music.bitchord.ui.components.backdrop.effects.blur
@@ -81,13 +82,28 @@ private const val LENS_AMOUNT = 0.5f
 private const val LENS_MAX_DP = 48f
 private const val SURFACE_OPACITY = 1f - CustomizationSettings.DEFAULT_GLASS_TRANSPARENCY
 
-/** How far a [GlassTint] pulls the fill's colour away from the theme's. */
-private const val TINT_STRENGTH = 0.55f
+/**
+ * How strongly a [GlassTint] is washed over a glass surface at the default
+ * transparency. It is laid over the surface's own fill rather than mixed into
+ * it, so a faint bar and a dense drawer take on the same amount of colour.
+ */
+private const val TINT_WASH = 0.28f
+
+/** How far black the tint darkness slider goes at its top. */
+private const val MAX_SHADE = 0.85f
+
+/**
+ * Whether glass composed under it follows the user's Liquid Glass options.
+ * False on surfaces that take their colours from artwork — the album, playlist
+ * and artist pages and the player — so the stock glass is drawn there instead.
+ */
+val LocalGlassFollowsOptions = staticCompositionLocalOf { true }
 
 /** A colour washed into the glass's fill; [DEFAULT] leaves the theme's own. */
 enum class GlassTint(val argb: Long?) {
     DEFAULT(null),
     ACCENT(null),
+    SONG(null),
     BLUE(0xFF3D7BFF),
     PURPLE(0xFF9B5CFF),
     PINK(0xFFFF4F9A),
@@ -95,29 +111,41 @@ enum class GlassTint(val argb: Long?) {
     GREEN(0xFF34C77B),
     ;
 
-    /** The colour itself, or null for [DEFAULT]. [ACCENT] is the theme's primary. */
+    /**
+     * The colour itself, or null for [DEFAULT]. [ACCENT] is the theme's
+     * primary; [SONG] is the playing song's accent, and none while nothing plays.
+     */
     @Composable
     fun color(): Color? = when (this) {
         DEFAULT -> null
         ACCENT -> MaterialTheme.colorScheme.primary
+        SONG -> LocalNowPlayingTint.current
         else -> Color(argb!!)
     }
 }
 
 /**
  * The fill a glass surface is washed with: [base] (the theme's tint, or the
- * caller's own) with the user's tint mixed in, darkened as far as they asked,
- * and its opacity scaled by their transparency, so the default settings give
- * back exactly [base].
+ * caller's own), then the user's tint and darkness laid over it at fixed
+ * strengths, all scaled by their transparency. The default settings give back
+ * exactly [base].
+ *
+ * The tint and the darkening are layers of their own rather than mixed into
+ * [base], so they come out the same on every surface. Mixed in, they took on
+ * [base]'s opacity: the nav bar's faint fill barely showed a tint the menus'
+ * dense one was flooded with.
  */
 @Composable
 private fun glassFill(base: Color): Color {
+    if (!LocalGlassFollowsOptions.current) return base
     val transparency by CustomizationSettings.glassTransparency.collectAsStateWithLifecycle()
     val tint = CustomizationSettings.glassTint.collectAsStateWithLifecycle().value.color()
     val darkness by CustomizationSettings.glassTintDarkness.collectAsStateWithLifecycle()
-    val alpha = (base.alpha * (1f - transparency) / SURFACE_OPACITY).coerceIn(0f, 1f)
-    val tinted = if (tint != null) lerp(base.copy(alpha = 1f), tint, TINT_STRENGTH) else base.copy(alpha = 1f)
-    return lerp(tinted, Color.Black, darkness).copy(alpha = alpha)
+    val density = ((1f - transparency) / SURFACE_OPACITY).coerceAtLeast(0f)
+    var fill = base.copy(alpha = (base.alpha * density).coerceIn(0f, 1f))
+    if (tint != null) fill = tint.copy(alpha = (TINT_WASH * density).coerceIn(0f, 1f)).compositeOver(fill)
+    if (darkness > 0f) fill = Color.Black.copy(alpha = (darkness * MAX_SHADE * density).coerceIn(0f, 1f)).compositeOver(fill)
+    return fill
 }
 
 /**
@@ -297,7 +325,8 @@ fun Modifier.liquidGlass(
             .border(GLASS_EDGE_WIDTH, GLASS_EDGE_COLOR, shape)
     }
     val density = LocalDensity.current
-    val blurDp by CustomizationSettings.glassBlur.collectAsStateWithLifecycle()
+    val userBlurDp by CustomizationSettings.glassBlur.collectAsStateWithLifecycle()
+    val blurDp = if (LocalGlassFollowsOptions.current) userBlurDp else CustomizationSettings.DEFAULT_GLASS_BLUR
     val blurPx = with(density) { blurDp.dp.toPx() } * GLASS_RESOLUTION_SCALE
     val lensHeightPx = with(density) { (LENS_HEIGHT * LENS_MAX_DP).dp.toPx() } * GLASS_RESOLUTION_SCALE
     val lensAmountPx = with(density) { (LENS_AMOUNT * LENS_MAX_DP).dp.toPx() } * GLASS_RESOLUTION_SCALE

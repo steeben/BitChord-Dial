@@ -862,6 +862,7 @@
     <string name="glass_tint_darkness">Dunkelheit der Tönung</string>
     <string name="glass_tint_default">Standard</string>
     <string name="glass_tint_accent">Akzent</string>
+    <string name="glass_tint_song">Aktueller Song</string>
     <string name="glass_tint_blue">Blau</string>
     <string name="glass_tint_purple">Lila</string>
     <string name="glass_tint_pink">Rosa</string>

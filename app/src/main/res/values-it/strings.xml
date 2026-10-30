@@ -261,6 +261,7 @@
     <string name="glass_tint_darkness">Scurezza della tinta</string>
     <string name="glass_tint_default">Predefinita</string>
     <string name="glass_tint_accent">Accento</string>
+    <string name="glass_tint_song">Brano in riproduzione</string>
     <string name="glass_tint_blue">Blu</string>
     <string name="glass_tint_purple">Viola</string>
     <string name="glass_tint_pink">Rosa</string>

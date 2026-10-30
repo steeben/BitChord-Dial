@@ -900,6 +900,7 @@
     <string name="glass_tint_darkness">Przyciemnienie odcienia</string>
     <string name="glass_tint_default">Domyślny</string>
     <string name="glass_tint_accent">Akcent</string>
+    <string name="glass_tint_song">Odtwarzany utwór</string>
     <string name="glass_tint_blue">Niebieski</string>
     <string name="glass_tint_purple">Fioletowy</string>
     <string name="glass_tint_pink">Różowy</string>

@@ -867,6 +867,7 @@
     <string name="glass_tint_darkness">Escurecimento da tonalidade</string>
     <string name="glass_tint_default">Padrão</string>
     <string name="glass_tint_accent">Destaque</string>
+    <string name="glass_tint_song">Música atual</string>
     <string name="glass_tint_blue">Azul</string>
     <string name="glass_tint_purple">Roxo</string>
     <string name="glass_tint_pink">Rosa</string>

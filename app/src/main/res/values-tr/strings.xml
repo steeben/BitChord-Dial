@@ -243,6 +243,7 @@
     <string name="glass_tint_darkness">Ton koyuluğu</string>
     <string name="glass_tint_default">Varsayılan</string>
     <string name="glass_tint_accent">Vurgu</string>
+    <string name="glass_tint_song">Çalan şarkı</string>
     <string name="glass_tint_blue">Mavi</string>
     <string name="glass_tint_purple">Mor</string>
     <string name="glass_tint_pink">Pembe</string>

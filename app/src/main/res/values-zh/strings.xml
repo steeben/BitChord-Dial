@@ -843,6 +843,7 @@
     <string name="glass_tint_darkness">色调暗度</string>
     <string name="glass_tint_default">默认</string>
     <string name="glass_tint_accent">强调色</string>
+    <string name="glass_tint_song">正在播放的歌曲</string>
     <string name="glass_tint_blue">蓝色</string>
     <string name="glass_tint_purple">紫色</string>
     <string name="glass_tint_pink">粉色</string>

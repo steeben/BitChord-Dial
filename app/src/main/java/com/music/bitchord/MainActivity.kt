@@ -335,6 +335,7 @@ import com.music.bitchord.ui.components.FrostedTopBar
 import com.music.bitchord.ui.components.HomeStickyLogo
 import com.music.bitchord.ui.components.LastfmLoginAlert
 import com.music.bitchord.ui.components.LocalAppBackdrop
+import com.music.bitchord.ui.components.LocalGlassFollowsOptions
 import com.music.bitchord.ui.components.LocalLiquidGlassEnabled
 import com.music.bitchord.ui.components.backdrop.backdrops.LayerBackdrop
 import com.music.bitchord.ui.components.backdrop.backdrops.layerBackdrop
@@ -3918,6 +3919,9 @@ private fun BitChordApp(
                                 continuationToken = latestPage?.continuation ?: page.continuation,
                             )
                         }
+                        // The page wears its artwork's colours, so its glass
+                        // keeps the stock look, not the user's Liquid Glass options.
+                        CompositionLocalProvider(LocalGlassFollowsOptions provides false) {
                         DetailScreen(
                             page = page.withCustomCover(customCovers).withChosenAlbumArt(albumArtChoices, albumSongArt),
                             currentSong = player.song,
@@ -4014,6 +4018,7 @@ private fun BitChordApp(
                             songSort = songSort,
                             contentPadding = listPadding,
                         )
+                        }
                     } else when (key.removePrefix(TAB_KEY).toIntOrNull() ?: selectedTab) {
                         TAB_HOME -> HomeScreen(
                             state = arrangedHomeState.withCustomCovers(customCovers),
@@ -4705,6 +4710,13 @@ private fun BitChordApp(
                     } else {
                         null
                     }
+                // An album, playlist or artist page wears its artwork's
+                // colours, so the bar's glass over it keeps the stock look
+                // rather than the user's Liquid Glass tint and transparency.
+                val onArtworkPage = detail != null && !showStats && !showSettings &&
+                    !showAccountScrobbling && !showSources && !showListenTogether &&
+                    !showEqualizer && !showDiscord && !showHistory && !showReplay
+                CompositionLocalProvider(LocalGlassFollowsOptions provides !onArtworkPage) {
                 FrostedTopBar(
                     title = when {
                         homeRoot -> ""
@@ -4999,6 +5011,7 @@ private fun BitChordApp(
                         }
                     },
                 )
+                }
 
                 // The mark, above the bar and its fade so neither washes it out.
                 androidx.compose.animation.AnimatedVisibility(
@@ -5401,6 +5414,9 @@ private fun BitChordApp(
                     CompositionLocalProvider(
                         LocalPlayerDock provides activeDock,
                         com.music.bitchord.ui.player.LocalPlayerGlass provides playerGlass.takeIf { glassSamplesBackdrop },
+                        // The player is coloured by the artwork, as the album
+                        // and artist pages are, so its glass keeps the stock look.
+                        LocalGlassFollowsOptions provides false,
                     ) {
                         nowPlaying(playerSong)
                     }

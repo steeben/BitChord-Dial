@@ -247,6 +247,7 @@
     <string name="glass_tint_darkness">Độ tối của màu phủ</string>
     <string name="glass_tint_default">Mặc định</string>
     <string name="glass_tint_accent">Màu nhấn</string>
+    <string name="glass_tint_song">Bài đang phát</string>
     <string name="glass_tint_blue">Xanh dương</string>
     <string name="glass_tint_purple">Tím</string>
     <string name="glass_tint_pink">Hồng</string>

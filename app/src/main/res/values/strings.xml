@@ -336,6 +336,7 @@
     <string name="glass_tint_darkness">Tint darkness</string>
     <string name="glass_tint_default">Default</string>
     <string name="glass_tint_accent">Accent</string>
+    <string name="glass_tint_song">Playing song</string>
     <string name="glass_tint_blue">Blue</string>
     <string name="glass_tint_purple">Purple</string>
     <string name="glass_tint_pink">Pink</string>

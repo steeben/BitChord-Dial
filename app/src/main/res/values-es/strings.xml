@@ -231,6 +231,7 @@
     <string name="glass_tint_darkness">Oscuridad del tono</string>
     <string name="glass_tint_default">Predeterminado</string>
     <string name="glass_tint_accent">Acento</string>
+    <string name="glass_tint_song">Canción actual</string>
     <string name="glass_tint_blue">Azul</string>
     <string name="glass_tint_purple">Morado</string>
     <string name="glass_tint_pink">Rosa</string>

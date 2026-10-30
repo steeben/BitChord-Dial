@@ -841,6 +841,7 @@
     <string name="glass_tint_darkness">Kegelapan warna</string>
     <string name="glass_tint_default">Default</string>
     <string name="glass_tint_accent">Aksen</string>
+    <string name="glass_tint_song">Lagu yang diputar</string>
     <string name="glass_tint_blue">Biru</string>
     <string name="glass_tint_purple">Ungu</string>
     <string name="glass_tint_pink">Merah muda</string>

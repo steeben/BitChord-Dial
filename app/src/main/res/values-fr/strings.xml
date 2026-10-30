@@ -863,6 +863,7 @@
     <string name="glass_tint_darkness">Assombrissement de la teinte</string>
     <string name="glass_tint_default">Par défaut</string>
     <string name="glass_tint_accent">Accent</string>
+    <string name="glass_tint_song">Morceau en cours</string>
     <string name="glass_tint_blue">Bleu</string>
     <string name="glass_tint_purple">Violet</string>
     <string name="glass_tint_pink">Rose</string>

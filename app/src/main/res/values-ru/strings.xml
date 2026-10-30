@@ -890,6 +890,7 @@
     <string name="glass_tint_darkness">Затемнение оттенка</string>
     <string name="glass_tint_default">По умолчанию</string>
     <string name="glass_tint_accent">Акцент</string>
+    <string name="glass_tint_song">Текущий трек</string>
     <string name="glass_tint_blue">Синий</string>
     <string name="glass_tint_purple">Фиолетовый</string>
     <string name="glass_tint_pink">Розовый</string>
