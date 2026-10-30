@@ -463,9 +463,9 @@ internal fun LandscapeCredits(
         }
         Spacer(Modifier.width(10.dp))
         // Same gate as the portrait player's: no account to like against for a
-        // guest, and no YouTube identity to rate a local file or a finished
-        // download against either.
-        if (signedIn && song.localUri == null) {
+        // guest — but a local file or a finished download is liked on the
+        // device, which needs none.
+        if (signedIn || song.localUri != null) {
             val liked = likeStatus == LikeStatus.LIKE
             CircleGlyph(
                 icon = if (liked) BitChordIcons.HeartFilled else BitChordIcons.Heart,

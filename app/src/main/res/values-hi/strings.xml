@@ -1386,4 +1386,11 @@
     <string name="bit_perfect_status_inexact">%1$s · सटीक नहीं: यह सोर्स लॉसलेस PCM नहीं है</string>
     <string name="bit_perfect_status_waiting">समर्थित आउटपुट पर लॉसलेस ट्रैक का इंतज़ार है</string>
     <string name="bit_perfect_status_unavailable">इस ट्रैक के लिए उपलब्ध नहीं (%1$s)</string>
+    <string name="opened_file">खोली गई फ़ाइल</string>
+    <string name="folders">फ़ोल्डर</string>
+    <string name="folder">फ़ोल्डर</string>
+    <string name="no_local_folders">संगीत वाला कोई फ़ोल्डर नहीं</string>
+    <string name="offline_playlist_empty">यह प्लेलिस्ट अभी खाली है। गानों के मेनू से उन्हें जोड़ें।</string>
+    <string name="offline_liked_empty">इस डिवाइस पर पसंद किए गए गाने यहाँ दिखेंगे</string>
+    <string name="saved_on_this_device">इस डिवाइस पर सेव किया गया</string>
 </resources>

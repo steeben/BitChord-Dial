@@ -1343,4 +1343,11 @@
     <string name="bit_perfect_status_inexact">%1$s · tam değil: bu kaynak kayıpsız PCM değil</string>
     <string name="bit_perfect_status_waiting">Desteklenen bir çıkışta kayıpsız parça bekleniyor</string>
     <string name="bit_perfect_status_unavailable">Bu parça için kullanılamıyor (%1$s)</string>
+    <string name="opened_file">Açılan dosya</string>
+    <string name="folders">Klasörler</string>
+    <string name="folder">Klasör</string>
+    <string name="no_local_folders">Müzik içeren klasör yok</string>
+    <string name="offline_playlist_empty">Bu çalma listesi henüz boş. Şarkıları menülerinden ekleyin.</string>
+    <string name="offline_liked_empty">Bu cihazda beğendiğin şarkılar burada görünür</string>
+    <string name="saved_on_this_device">Bu cihaza kaydedildi</string>
 </resources>

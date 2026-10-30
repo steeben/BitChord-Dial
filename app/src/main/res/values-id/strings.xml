@@ -1363,4 +1363,11 @@
     <string name="bit_perfect_status_inexact">%1$s · tidak persis: sumber ini bukan PCM lossless</string>
     <string name="bit_perfect_status_waiting">Menunggu trek lossless pada output yang didukung</string>
     <string name="bit_perfect_status_unavailable">Tidak tersedia untuk trek ini (%1$s)</string>
+    <string name="opened_file">File yang dibuka</string>
+    <string name="folders">Folder</string>
+    <string name="folder">Folder</string>
+    <string name="no_local_folders">Tidak ada folder berisi musik</string>
+    <string name="offline_playlist_empty">Playlist ini masih kosong. Tambahkan lagu dari menunya.</string>
+    <string name="offline_liked_empty">Lagu yang kamu sukai di perangkat ini muncul di sini</string>
+    <string name="saved_on_this_device">Disimpan di perangkat ini</string>
 </resources>

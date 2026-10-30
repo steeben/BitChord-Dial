@@ -3038,6 +3038,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
         fun browseTypeOf(browseId: String, fallback: BrowseType = BrowseType.OTHER): BrowseType = when {
             browseId.startsWith(Downloads.PLAYLIST_PREFIX) -> BrowseType.PLAYLIST
+            browseId.startsWith(com.music.bitchord.data.OfflinePlaylists.PREFIX) -> BrowseType.PLAYLIST
             browseId.startsWith("UC") -> BrowseType.ARTIST
             browseId.startsWith("MPREb") || browseId.startsWith("VLOLAK") || browseId.startsWith("OLAK") -> BrowseType.ALBUM
             browseId.startsWith("VL") || browseId.startsWith("PL") -> BrowseType.PLAYLIST
@@ -3194,7 +3195,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     if (it.browseId == browseId && it.songs is UiState.Loading) it.copy(songs = UiState.Success(onDevice)) else it
                 }
             }
+            // Named by the store rather than by whatever opened it, which
+            // may be a "Playing from" label from before a rename.
+            com.music.bitchord.data.OfflinePlaylists.get(browseId)?.let { name = it.title }
+            val offline = offlinePlaylistState(browseId)
             val state = when {
+                offline != null -> offline
                 localPlaylist != null -> {
                     name = localPlaylist.title
                     credit = getApplication<Application>().getString(R.string.local_playlist_subtitle, localPlaylist.songs.size)
@@ -3401,12 +3407,38 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         albumName = album,
     )
 
+    /**
+     * One of the offline player's own playlists, read off the store and
+     * narrowed to the files still on the device — or null for any other page.
+     * A playlist deleted while its page was still reachable, from "Playing
+     * from" say, is an empty page rather than a YouTube lookup.
+     */
+    private suspend fun offlinePlaylistState(browseId: String): UiState<List<Song>>? {
+        if (!com.music.bitchord.data.OfflinePlaylists.isOfflinePlaylist(browseId)) return null
+        val playlist = com.music.bitchord.data.OfflinePlaylists.get(browseId)
+            ?: return UiState.Error(text(R.string.no_tracks_here))
+        val songs = LocalMediaRepository.present(getApplication(), playlist.songs)
+        return if (songs.isEmpty()) {
+            UiState.Error(text(if (playlist.isLiked) R.string.offline_liked_empty else R.string.offline_playlist_empty))
+        } else {
+            UiState.Success(songs)
+        }
+    }
+
+    /** Renames an open page in place — a device playlist, whose title is the store's. */
+    fun retitleDetail(browseId: String, title: String) {
+        if (title.isBlank()) return
+        _detailStack.value = _detailStack.value.map { if (it.browseId == browseId) it.copy(title = title) else it }
+    }
+
     fun reloadLocalDetail(browseId: String) {
         viewModelScope.launch {
             val context = getApplication<Application>()
             val localPlaylist = com.music.bitchord.data.spotify.LocalPlaylistStore.getPlaylist(browseId)
             val remote = remoteLibrary(browseId)
+            val offline = offlinePlaylistState(browseId)
             val state: UiState<List<Song>> = when {
+                offline != null -> offline
                 localPlaylist != null -> {
                     if (localPlaylist.songs.isEmpty()) UiState.Error(text(R.string.spotify_import_empty_playlist))
                     else UiState.Success(localPlaylist.songs)

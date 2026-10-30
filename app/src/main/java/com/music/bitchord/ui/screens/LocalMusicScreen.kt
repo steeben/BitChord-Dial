@@ -48,6 +48,8 @@ import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Album
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -71,6 +73,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Tab
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.TabPosition
+import com.music.bitchord.data.OfflinePlaylist
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
@@ -142,6 +147,9 @@ import java.util.Locale
 private const val LOCAL_TAB_SONGS = 0
 private const val LOCAL_TAB_ARTISTS = 1
 private const val LOCAL_TAB_ALBUMS = 2
+// The offline player's two: only on the whole-device page — see [devicePlaylists].
+private const val LOCAL_TAB_PLAYLISTS = 3
+private const val LOCAL_TAB_FOLDERS = 4
 
 /**
  * Local Music folder view with three tabs: Songs (default), Artists, Albums.
@@ -228,6 +236,15 @@ fun LocalMusicScreen(
      * the same place in the list rather than the top of it.
      */
     scroll: LibraryFolderScroll = remember { LibraryFolderScroll() },
+    /**
+     * The device's own playlists, Liked first — set on the whole-device page,
+     * which is an offline player in its own right and so also gets a Folders
+     * tab. Null keeps the three tabs every other folder has.
+     */
+    devicePlaylists: List<OfflinePlaylist>? = null,
+    onOpenDevicePlaylist: (OfflinePlaylist) -> Unit = {},
+    onDevicePlaylistLongPress: ((OfflinePlaylist) -> Unit)? = null,
+    onCreateDevicePlaylist: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val sortOrder by if (isDownloads) {
@@ -351,19 +368,9 @@ fun LocalMusicScreen(
         // The picked tab wears the playing song's colour, as the Library's
         // own marks and menu do.
         val tabAccent = LocalNowPlayingTint.current ?: MaterialTheme.colorScheme.primary
-        TabRow(
-            selectedTabIndex = selectedTab,
-            // Right under the top bar, which now carries the search field.
-            modifier = if (selectingDownloads) Modifier else Modifier.padding(top = barHeight + 4.dp),
-            containerColor = frostedSurfaceColor(MaterialTheme.colorScheme.background),
-            contentColor = tabAccent,
-            indicator = { tabPositions ->
-                TabRowDefaults.SecondaryIndicator(
-                    modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                    color = tabAccent,
-                )
-            },
-        ) {
+        val deviceTabs = devicePlaylists != null
+        val shownTab = if (deviceTabs) selectedTab.coerceIn(0, LOCAL_TAB_FOLDERS) else selectedTab.coerceIn(0, LOCAL_TAB_ALBUMS)
+        val tabs: @Composable () -> Unit = {
             LocalTab(
                 icon = Icons.Rounded.MusicNote,
                 label = stringResource(R.string.songs),
@@ -391,11 +398,61 @@ fun LocalMusicScreen(
                     leaveDrillDown()
                 },
             )
+            if (deviceTabs) {
+                LocalTab(
+                    icon = Icons.AutoMirrored.Rounded.QueueMusic,
+                    label = stringResource(R.string.playlists),
+                    selected = selectedTab == LOCAL_TAB_PLAYLISTS,
+                    onClick = {
+                        onSelectedTabChange(LOCAL_TAB_PLAYLISTS)
+                        leaveDrillDown()
+                    },
+                )
+                LocalTab(
+                    icon = Icons.Rounded.Folder,
+                    label = stringResource(R.string.folders),
+                    selected = selectedTab == LOCAL_TAB_FOLDERS,
+                    onClick = {
+                        onSelectedTabChange(LOCAL_TAB_FOLDERS)
+                        leaveDrillDown()
+                    },
+                )
+            }
+        }
+        // Right under the top bar, which now carries the search field.
+        val tabRowModifier = if (selectingDownloads) Modifier else Modifier.padding(top = barHeight + 4.dp)
+        val tabIndicator: @Composable (List<TabPosition>) -> Unit = { tabPositions ->
+            TabRowDefaults.SecondaryIndicator(
+                modifier = Modifier.tabIndicatorOffset(tabPositions[shownTab]),
+                color = tabAccent,
+            )
+        }
+        if (deviceTabs) {
+            // Five don't fit a phone's width with their labels whole; they
+            // scroll instead of squeezing.
+            ScrollableTabRow(
+                selectedTabIndex = shownTab,
+                modifier = tabRowModifier,
+                containerColor = frostedSurfaceColor(MaterialTheme.colorScheme.background),
+                contentColor = tabAccent,
+                edgePadding = 0.dp,
+                indicator = tabIndicator,
+                tabs = tabs,
+            )
+        } else {
+            TabRow(
+                selectedTabIndex = shownTab,
+                modifier = tabRowModifier,
+                containerColor = frostedSurfaceColor(MaterialTheme.colorScheme.background),
+                contentColor = tabAccent,
+                indicator = tabIndicator,
+                tabs = tabs,
+            )
         }
 
         // ── Content ──────────────────────────────────────────────────────────
         AnimatedContent(
-            targetState = if (inDrillDown) "drill:$drillDownLabel" else "tab:$selectedTab",
+            targetState = if (inDrillDown) "drill:$drillDownLabel" else "tab:$shownTab",
             transitionSpec = {
                 val fromTab = initialState.removePrefix("tab:").toIntOrNull()
                     .takeIf { initialState.startsWith("tab:") }
@@ -422,6 +479,43 @@ fun LocalMusicScreen(
             modifier = Modifier.fillMaxSize(),
         ) { key ->
             when {
+                // The device's playlists stand apart from the files listed:
+                // Liked is there, and New playlist, with nothing on the device.
+                key == "tab:$LOCAL_TAB_PLAYLISTS" && devicePlaylists != null -> {
+                    val entries = remember(devicePlaylists, searchQuery) {
+                        devicePlaylists
+                            .filter { searchQuery.isBlank() || it.title.contains(searchQuery, ignoreCase = true) }
+                            .map { playlist ->
+                                AlbumEntry(
+                                    title = playlist.title,
+                                    artist = "",
+                                    // Liked keeps the playlist glyph rather than
+                                    // borrowing the sleeve of whatever was liked last.
+                                    thumbnailUrl = playlist.songs.firstNotNullOfOrNull { it.thumbnailUrl }
+                                        .takeUnless { playlist.isLiked },
+                                    playlist = true,
+                                    songs = playlist.songs,
+                                    asked = true,
+                                    key = playlist.browseId,
+                                )
+                            }
+                    }
+                    val byKey = remember(devicePlaylists) { devicePlaylists.associateBy { it.browseId } }
+                    CollectionListTab(
+                        listState = scroll.list(LOCAL_TAB_PLAYLISTS),
+                        icon = Icons.AutoMirrored.Rounded.QueueMusic,
+                        title = stringResource(R.string.playlists),
+                        entries = entries,
+                        emptyMessage = null,
+                        onNew = onCreateDevicePlaylist,
+                        onClick = { entry -> byKey[entry.key]?.let(onOpenDevicePlaylist) },
+                        onLongPress = onDevicePlaylistLongPress?.let { hold ->
+                            { entry -> byKey[entry.key]?.let(hold) }
+                        },
+                        contentPadding = bodyContentPadding,
+                    )
+                }
+
                 // Nothing to tab through. The tab row stays put rather than
                 // being swapped out with the list, so the page still reads as
                 // itself while it says why it's empty.
@@ -529,6 +623,39 @@ fun LocalMusicScreen(
                     )
                 }
 
+                key == "tab:$LOCAL_TAB_FOLDERS" -> {
+                    val folders = remember(sortedSongs, searchQuery) {
+                        folderEntries(sortedSongs).filter {
+                            searchQuery.isBlank() ||
+                                it.title.contains(searchQuery, ignoreCase = true) ||
+                                it.artist.contains(searchQuery, ignoreCase = true)
+                        }
+                    }
+                    CollectionListTab(
+                        listState = scroll.list(LOCAL_TAB_FOLDERS),
+                        icon = Icons.Rounded.Folder,
+                        title = stringResource(R.string.folders),
+                        entries = folders,
+                        emptyMessage = stringResource(R.string.no_local_folders),
+                        onNew = null,
+                        onClick = { entry ->
+                            // A directory is a list somebody put together by
+                            // hand, which is what a playlist is too.
+                            if (onOpenCollection != null) {
+                                onOpenCollection(entry.title, entry.artist, entry.thumbnailUrl, entry.songs, BrowseType.PLAYLIST)
+                            } else {
+                                drillDownLabel = entry.title
+                                drillDownSongs = entry.songs
+                                drillDownArt = null
+                            }
+                        },
+                        onLongPress = onCollectionLongPress?.let { hold ->
+                            { entry -> hold(entry.title, entry.songs) }
+                        },
+                        contentPadding = bodyContentPadding,
+                    )
+                }
+
                 else -> {
                     // LOCAL_TAB_ALBUMS
                     val albumArt by AlbumArtChoices.choices.collectAsStateWithLifecycle()
@@ -583,12 +710,120 @@ fun LocalMusicScreen(
  */
 @Stable
 class LibraryFolderScroll {
-    private val lists = List(3) { LazyListState() }
-    private val grids = List(3) { LazyGridState() }
+    private val lists = List(5) { LazyListState() }
+    private val grids = List(5) { LazyGridState() }
 
     fun list(tab: Int): LazyListState = lists[tab.coerceIn(0, lists.lastIndex)]
 
     fun grid(tab: Int): LazyGridState = grids[tab.coerceIn(0, grids.lastIndex)]
+}
+
+// ── Playlists and Folders tabs ────────────────────────────────────────────────
+
+/**
+ * The Folders tab's rows: every directory holding any of [songs], named the
+ * way a file manager would name it, with where it sits under it. A track with
+ * no path — one off a file server — has no directory to be in, and is the
+ * Songs tab's alone. Two directories of the same name in different places stay
+ * two rows; the subtitle is what tells them apart.
+ */
+private fun folderEntries(songs: List<Song>): List<AlbumEntry> =
+    songs.groupBy { it.directory() }
+        .mapNotNull { (path, group) ->
+            if (path == null) return@mapNotNull null
+            AlbumEntry(
+                title = path.substringAfterLast('/').ifBlank { path },
+                artist = path.substringBeforeLast('/', "").readablePath(),
+                thumbnailUrl = group.firstNotNullOfOrNull { it.thumbnailUrl },
+                playlist = false,
+                songs = group.sortedBy { it.title.lowercase(Locale.ROOT) },
+                asked = false,
+                key = path,
+            )
+        }
+        .sortedWith(compareBy<AlbumEntry> { it.title.lowercase(Locale.ROOT) }.thenBy { it.artist })
+
+/** The directory a device file sits in, or null when its path isn't known. */
+private fun Song.directory(): String? =
+    localPath?.replace('\\', '/')?.substringBeforeLast('/', "")?.takeIf { it.isNotEmpty() }
+
+/**
+ * `/storage/emulated/0/Music/Rock` as `Music/Rock`: the volume is the same for
+ * nearly everything on a phone and reads as noise. A memory card keeps its
+ * name, since that is exactly what tells its folders apart.
+ */
+private fun String.readablePath(): String = when {
+    startsWith("/storage/emulated/0") -> removePrefix("/storage/emulated/0").trimStart('/')
+    startsWith("/storage/") -> removePrefix("/storage/")
+    else -> trimStart('/')
+}
+
+/** A plain list of collections — the device's playlists, or its folders — in the Albums tab's rows. */
+@Composable
+private fun CollectionListTab(
+    icon: ImageVector,
+    title: String,
+    entries: List<AlbumEntry>,
+    emptyMessage: String?,
+    onNew: (() -> Unit)?,
+    onClick: (AlbumEntry) -> Unit,
+    onLongPress: ((AlbumEntry) -> Unit)?,
+    contentPadding: PaddingValues,
+    listState: LazyListState = rememberLazyListState(),
+) {
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = contentPadding,
+    ) {
+        item { SectionHeader(icon = icon, title = title) }
+        if (onNew != null) {
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .longPressMenuClickable(onClick = onNew, onLongClick = null)
+                        .padding(horizontal = PAGE_GUTTER, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.secondaryContainer),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Add,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Text(
+                        text = stringResource(R.string.new_playlist),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                }
+            }
+        }
+        if (entries.isEmpty() && emptyMessage != null) {
+            item { MessageState(message = emptyMessage) }
+        }
+        items(entries, key = { it.key }) { entry ->
+            AlbumRow(
+                entry = entry,
+                onClick = { onClick(entry) },
+                onLongPress = onLongPress?.let { { it(entry) } },
+            )
+            HorizontalDivider(
+                modifier = Modifier.padding(start = ROW_DIVIDER_INSET),
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+            )
+        }
+    }
 }
 
 // ── Songs tab ─────────────────────────────────────────────────────────────────

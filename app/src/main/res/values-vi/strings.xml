@@ -1303,4 +1303,11 @@
     <string name="bit_perfect_status_inexact">%1$s · không chính xác: nguồn này không phải PCM lossless</string>
     <string name="bit_perfect_status_waiting">Đang chờ bản nhạc lossless trên đầu ra được hỗ trợ</string>
     <string name="bit_perfect_status_unavailable">Không khả dụng cho bản nhạc này (%1$s)</string>
+    <string name="opened_file">Tệp đã mở</string>
+    <string name="folders">Thư mục</string>
+    <string name="folder">Thư mục</string>
+    <string name="no_local_folders">Không có thư mục nào chứa nhạc</string>
+    <string name="offline_playlist_empty">Danh sách phát này vẫn trống. Thêm bài hát từ menu của chúng.</string>
+    <string name="offline_liked_empty">Các bài hát bạn thích trên thiết bị này sẽ hiện ở đây</string>
+    <string name="saved_on_this_device">Đã lưu trên thiết bị này</string>
 </resources>

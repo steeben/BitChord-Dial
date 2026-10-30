@@ -176,6 +176,7 @@ import com.music.bitchord.auth.WebSessionMode
 import com.music.bitchord.auth.YtMusicLoginScreen
 import com.music.bitchord.data.AppUpdateChecker
 import com.music.bitchord.data.LocalMediaRepository
+import com.music.bitchord.data.OfflinePlaylists
 import com.music.bitchord.data.listentogether.JamInviteLink
 import com.music.bitchord.data.listentogether.ListenTogether
 import com.music.bitchord.data.listentogether.partyQueueIndexOf
@@ -897,6 +898,10 @@ private fun BitChordApp(
     // The picker opened from the Library tab, where there is no track and
     // creating the playlist is the whole errand.
     var creatingPlaylist by remember { mutableStateOf(false) }
+    // The same two, over the device's own playlists — for a track that is a
+    // file on it, and for "New playlist" on Local Music's Playlists tab.
+    var offlinePlaylistTarget by remember { mutableStateOf<Song?>(null) }
+    var creatingOfflinePlaylist by remember { mutableStateOf(false) }
     var showSpotifyImportDialog by remember { mutableStateOf(false) }
     // Which album or playlist the collection menu is open on, or null when it
     // is shut. One slot for every surface that can open it — the shelves on
@@ -1130,6 +1135,21 @@ private fun BitChordApp(
     var songSortMenuOpen by remember { mutableStateOf(false) }
     var artistMenuOpen by remember { mutableStateOf(false) }
     val likeStatuses by viewModel.likeStatuses.collectAsStateWithLifecycle()
+    // A device file's heart is the device's Liked playlist, not a YouTube
+    // rating: the file has no identity there to rate. One rule for every
+    // surface that draws a heart — the player and the track menu alike.
+    val offlineLiked by OfflinePlaylists.liked.collectAsStateWithLifecycle()
+    val offlinePlaylists by OfflinePlaylists.playlists.collectAsStateWithLifecycle()
+    val likeStatusOf: (Song) -> LikeStatus = { song ->
+        val uri = song.localUri
+        when {
+            uri != null -> if (uri in offlineLiked) LikeStatus.LIKE else LikeStatus.INDIFFERENT
+            else -> likeStatuses[song.videoId] ?: LikeStatus.INDIFFERENT
+        }
+    }
+    val toggleLikeOf: (Song) -> Unit = { song ->
+        if (song.localUri != null) OfflinePlaylists.toggleLike(song) else viewModel.toggleLike(song.videoId)
+    }
     // Which tracks are being held on YouTube's own upload, so the player's menu
     // offers the way back out of a revert rather than the revert again.
     val pinnedToOriginal by OriginalVersion.pinned.collectAsStateWithLifecycle()
@@ -1207,6 +1227,14 @@ private fun BitChordApp(
                 com.music.bitchord.data.spotify.LocalPlaylistStore.getPlaylist(open) != null)
         ) {
             viewModel.reloadLocalDetail(open)
+        }
+    }
+    // An offline playlist's page is the store's, and follows it: a track
+    // removed from its menu, or a like from the player, leaves no stale row.
+    LaunchedEffect(detail?.browseId, offlinePlaylists) {
+        val openPage = detail ?: return@LaunchedEffect
+        if (openPage.songs !is UiState.Loading && OfflinePlaylists.isOfflinePlaylist(openPage.browseId)) {
+            viewModel.reloadLocalDetail(openPage.browseId)
         }
     }
     LaunchedEffect(localMusicFolderUri, filterNonMusicAudio) {
@@ -1469,6 +1497,7 @@ private fun BitChordApp(
     val replayLabel = stringResource(R.string.replay)
     val queueLabel = stringResource(R.string.queue)
     val sharedLinkLabel = stringResource(R.string.shared_link)
+    val openedFileLabel = stringResource(R.string.opened_file)
     val playlistsLabel = stringResource(R.string.playlists)
     val pageTabs = remember(homeLabel, exploreLabel, libraryLabel, searchLabel, playlistsLabel) {
         mapOf(
@@ -2143,6 +2172,24 @@ private fun BitChordApp(
             // bounded queue before the controller connects, so this resumes
             // both a live session and one recovered after process death.
             LinkRequest.Resume -> if (session.mediaItemCount > 0) session.play()
+            // A file from a file manager. The read grant that came with the
+            // intent lasts as long as this task; a persistable one, when the
+            // sender offered it, keeps the track playable after a restart.
+            is LinkRequest.LocalFile -> {
+                runCatching {
+                    context.contentResolver.takePersistableUriPermission(
+                        request.uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                    )
+                }
+                val song = LocalMediaRepository.songFromUri(context, request.uri)
+                playFrom(
+                    listOf(song),
+                    0,
+                    QueueSource(openedFileLabel, PlaybackSourceType.SHARED_LINK, song.localUri),
+                )
+                showNowPlaying = true
+            }
         }
         MusicLink.handled()
     }
@@ -2794,8 +2841,8 @@ private fun BitChordApp(
             shuffleEnabled = shuffleEnabled,
             autoplayEnabled = autoplayEnabled,
             signedIn = signedIn,
-            likeStatus = likeStatuses[song.videoId] ?: LikeStatus.INDIFFERENT,
-            onToggleLike = { viewModel.toggleLike(song.videoId) },
+            likeStatus = likeStatusOf(song),
+            onToggleLike = { toggleLikeOf(song) },
             // The service owns both the queue and the Shuffle state. Keeping
             // the toggle on that side prevents the UI from changing the icon
             // before its asynchronous reorder command has actually landed.
@@ -3832,6 +3879,30 @@ private fun BitChordApp(
                             searchQuery = folderQueries[page.browseId].orEmpty(),
                             collections = downloadCollections,
                             isDownloads = page.browseId == "local:downloads",
+                            // The whole device: the one folder that is an offline
+                            // player in its own right, with playlists of its own
+                            // and the directories the files are kept in.
+                            devicePlaylists = offlinePlaylists.takeIf { page.browseId == "local:all" },
+                            onOpenDevicePlaylist = { playlist ->
+                                viewModel.openDetail(
+                                    browseId = playlist.browseId,
+                                    title = playlist.title,
+                                    type = BrowseType.PLAYLIST,
+                                )
+                            },
+                            onDevicePlaylistLongPress = { playlist ->
+                                openBrowseMenu(
+                                    BrowseTarget(
+                                        browseId = playlist.browseId,
+                                        title = playlist.title,
+                                        subtitle = "",
+                                        thumbnailUrl = playlist.songs.firstNotNullOfOrNull { it.thumbnailUrl },
+                                        type = BrowseType.PLAYLIST,
+                                        songs = playlist.songs,
+                                    ),
+                                )
+                            },
+                            onCreateDevicePlaylist = { creatingOfflinePlaylist = true },
                             currentSong = player.song,
                             isPlaying = player.isPlaying,
                             onDeleteDownloads = { selected ->
@@ -5742,7 +5813,7 @@ private fun BitChordApp(
                 song = song,
                 presentation = presentation,
                 signedIn = signedIn,
-                likeStatus = likeStatuses[song.videoId] ?: LikeStatus.INDIFFERENT,
+                likeStatus = likeStatusOf(song),
                 onPlayNext = { playNext(song); songActions = null },
                 onAddToQueue = { addToQueue(song); songActions = null },
                 onStartRadio = { startRadio(song); songActions = null },
@@ -5833,7 +5904,7 @@ private fun BitChordApp(
                     },
                 // The sheet stays up for a rating: it shows the new state
                 // in place, and people often thumb a song and then queue it.
-                onToggleLike = { viewModel.toggleLike(song.videoId) },
+                onToggleLike = { toggleLikeOf(song) },
                 onToggleDislike = {
                     val previousStatus = viewModel.toggleDislike(song.videoId)
                     if (
@@ -5849,15 +5920,26 @@ private fun BitChordApp(
                 },
                 onAddToPlaylist = {
                     songActions = null
-                    viewModel.loadPlaylists()
-                    playlistTarget = song
+                    if (song.localUri != null) {
+                        offlinePlaylistTarget = song
+                    } else {
+                        viewModel.loadPlaylists()
+                        playlistTarget = song
+                    }
                 },
                 onRemoveFromPlaylist = editable?.let {
                     {
                         songActions = null
                         viewModel.removeFromPlaylist(it.browseId, song)
                     }
-                },
+                } ?: detail?.browseId
+                    ?.takeIf { !fromPlayer && song.localUri != null && OfflinePlaylists.isOfflinePlaylist(it) }
+                    ?.let { id ->
+                        {
+                            songActions = null
+                            OfflinePlaylists.remove(id, song)
+                        }
+                    },
                 onRemoveFromCache = if (inCache) {
                     {
                         songActions = null
@@ -6141,6 +6223,66 @@ private fun BitChordApp(
             }
         }
 
+        // ---- Add to a device playlist / new device playlist ----
+        // The sheet above over the offline player's own playlists, for a track
+        // that is a file on this device. Nothing here waits on a network, so
+        // there is no loading state and the outcome is known on the tap.
+        if (offlinePlaylistTarget != null || creatingOfflinePlaylist) {
+            val target = offlinePlaylistTarget
+            val dismiss = {
+                offlinePlaylistTarget = null
+                creatingOfflinePlaylist = false
+            }
+            val choices = remember(offlinePlaylists) {
+                offlinePlaylists.map { playlist ->
+                    UserPlaylist(
+                        playlistId = playlist.id,
+                        title = playlist.title,
+                        subtitle = context.resources.getQuantityString(
+                            R.plurals.song_count_plural,
+                            playlist.songs.size,
+                            playlist.songs.size,
+                        ),
+                        thumbnailUrl = playlist.songs.firstNotNullOfOrNull { it.thumbnailUrl }
+                            .takeUnless { playlist.isLiked },
+                    )
+                }
+            }
+            SlideDownBottomSheet(
+                onDismissRequest = dismiss,
+                containerColor = MaterialTheme.colorScheme.background,
+            ) {
+                PlaylistPickerSheet(
+                    playlists = choices,
+                    loading = false,
+                    song = target,
+                    startCreating = target == null,
+                    offline = true,
+                    onAdd = { picked ->
+                        target?.let { song ->
+                            val result = OfflinePlaylists.add(picked.mapTo(HashSet()) { it.playlistId }, listOf(song))
+                            showQueueNotice(
+                                when {
+                                    result.added > 1 -> context.resources.getQuantityString(
+                                        R.plurals.added_to_playlists_notice, result.added, result.added,
+                                    )
+                                    result.added == 1 -> context.getString(R.string.song_added_to_playlist)
+                                    result.alreadyThere > 0 -> context.getString(R.string.song_already_in_playlist)
+                                    else -> context.getString(R.string.failed)
+                                },
+                            )
+                        }
+                        dismiss()
+                    },
+                    onCreate = { title, _ ->
+                        OfflinePlaylists.create(title, listOfNotNull(target))
+                        if (target != null) showQueueNotice(context.getString(R.string.song_added_to_playlist))
+                        dismiss()
+                    },
+                )
+            }
+        }
+
         if (showSpotifyImportDialog) {
             BackHandler { showSpotifyImportDialog = false }
             SpotifyImportAlert(
@@ -6215,7 +6357,14 @@ private fun BitChordApp(
             val downloadable = remote ||
                 target.browseId?.startsWith("local:playlist:sp_local_") == true
             val pinnedPlaylists by AppSettings.pinnedPlaylists.collectAsStateWithLifecycle()
-            val pinnableId = target.browseId?.takeIf { target.type == BrowseType.PLAYLIST }
+            // Device playlists have nowhere on the Library page to be pinned
+            // to that would still mean anything off-device.
+            val pinnableId = target.browseId?.takeIf {
+                target.type == BrowseType.PLAYLIST && !it.startsWith(OfflinePlaylists.PREFIX)
+            }
+            // One of the offline player's own playlists, which are the user's
+            // to rename and delete — all but Liked, which is the app's.
+            val offlineEditable = OfflinePlaylists.get(target.browseId)?.takeUnless { it.isLiked }
             // The artist's star, asked for as the menu opens (signed in only:
             // following is the account's).
             val artistId = target.browseId?.takeIf { target.type == BrowseType.ARTIST && remote }
@@ -6247,7 +6396,9 @@ private fun BitChordApp(
             BrowseActionsSheet(
                 // The live answer, not the one the target was built with.
                 target = target.copy(
-                    playlist = playlist,
+                    playlist = playlist ?: offlineEditable?.let {
+                        UserPlaylist(playlistId = it.id, title = it.title, subtitle = "", thumbnailUrl = null)
+                    },
                     thumbnailUrl = customCover ?: chosenAlbumArt ?: target.thumbnailUrl,
                 ),
                 presentation = presentation,
@@ -6368,6 +6519,12 @@ private fun BitChordApp(
                         browseActions = null
                         viewModel.renamePlaylist(p, name)
                     }
+                } ?: offlineEditable?.let { p ->
+                    { name: String ->
+                        browseActions = null
+                        OfflinePlaylists.rename(p.browseId, name)
+                        viewModel.retitleDetail(p.browseId, name.trim())
+                    }
                 },
                 onReorder = playlist?.let { p ->
                     {
@@ -6414,6 +6571,13 @@ private fun BitChordApp(
                     {
                         browseActions = null
                         viewModel.deletePlaylist(p)
+                    }
+                } ?: offlineEditable?.let { p ->
+                    {
+                        browseActions = null
+                        // Its page has nothing left to show; take it away too.
+                        if (detail?.browseId == p.browseId) viewModel.closeDetail()
+                        OfflinePlaylists.delete(p.browseId)
                     }
                 },
                 onDeleteDownload = target.downloadId?.let { id ->
@@ -7492,7 +7656,7 @@ private fun SongSort.localizedLabel(): String = when (this) {
  */
 private fun String?.isDeviceFolder(): Boolean =
     this != null && startsWith("local:") && !startsWith(Downloads.PLAYLIST_PREFIX) &&
-        !startsWith(LIBRARY_GROUP_PREFIX)
+        !startsWith(LIBRARY_GROUP_PREFIX) && !startsWith(OfflinePlaylists.PREFIX)
 
 /**
  * Whether [videoId] is the track playing, and is known to be playing YouTube's

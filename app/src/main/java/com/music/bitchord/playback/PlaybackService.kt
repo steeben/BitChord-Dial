@@ -100,6 +100,7 @@ import com.music.bitchord.playback.audio.bluetooth.BluetoothTelemetry
 import com.music.bitchord.MainActivity
 import com.music.bitchord.data.listentogether.ListenTogether
 import com.music.bitchord.data.listentogether.partyQueueIndexOf
+import com.music.bitchord.data.OfflinePlaylists
 import com.music.bitchord.data.listentogether.partyUpcomingAfter
 import com.music.bitchord.R
 import com.music.bitchord.data.LocalMediaRepository
@@ -1363,6 +1364,16 @@ class PlaybackService : MediaLibraryService() {
                     publishWidgetState()
                 }
         }
+        // A device file's heart, liked from the app, the notification or a widget.
+        scope.launch {
+            OfflinePlaylists.liked
+                .map { liked -> player?.currentMediaItem?.toSong()?.localUri?.let { it in liked } }
+                .distinctUntilChanged()
+                .collectLatest {
+                    refreshCustomLayouts()
+                    publishWidgetState()
+                }
+        }
 
         bluetoothTracker.start()
         scope.launch {
@@ -1925,10 +1936,24 @@ class PlaybackService : MediaLibraryService() {
             nextStreamReady = { item -> !DirectSourceGate.isActive() || DirectSourceGate.isStreamReady(item) },
         )
 
+    /**
+     * Whether [item] is liked, by whichever of the two records owns it: a
+     * local file or a download is liked into the device's own Liked playlist
+     * (see [OfflinePlaylists]), anything else on YouTube.
+     */
+    private fun isLiked(item: MediaItem?): Boolean {
+        val song = item?.toSong() ?: return false
+        return if (song.localUri != null) {
+            OfflinePlaylists.isLiked(song)
+        } else {
+            LikeState.overrides.value[song.videoId] == LikeStatus.LIKE
+        }
+    }
+
     /** Favorite and Shuffle: the only actions shown on the phone notification. */
     private fun notificationButtons(): List<CommandButton> {
         val favorite = CommandButton.Builder(
-            if (LikeState.overrides.value[player?.currentMediaItem?.mediaId] == LikeStatus.LIKE) {
+            if (isLiked(player?.currentMediaItem)) {
                 CommandButton.ICON_HEART_FILLED
             } else {
                 CommandButton.ICON_HEART_UNFILLED
@@ -6776,7 +6801,8 @@ class PlaybackService : MediaLibraryService() {
         // started from the widget or a restart has none until something seeds
         // it. Unknown is not "not liked", so keep what was last published for
         // this same track rather than emptying a heart that was right.
-        val liked = LikeState.overrides.value[song.videoId]?.let { it == LikeStatus.LIKE }
+        val liked = (if (song.localUri != null) OfflinePlaylists.isLiked(song) else null)
+            ?: LikeState.overrides.value[song.videoId]?.let { it == LikeStatus.LIKE }
             ?: MediaWidgetSnapshot.load(this).takeIf { it.mediaId == song.videoId }?.isLiked
             ?: false
         MediaWidgetSnapshot.save(
@@ -8912,8 +8938,15 @@ class PlaybackService : MediaLibraryService() {
                         partySync?.endQueueDrag()
                     }
                 }
-                ACTION_TOGGLE_FAVORITE -> session.player.currentMediaItem?.mediaId?.let {
-                    toggleFavoriteFromNotification(it)
+                ACTION_TOGGLE_FAVORITE -> session.player.currentMediaItem?.let { item ->
+                    val song = item.toSong()
+                    if (song.localUri != null) {
+                        // On the device and nowhere else: nothing to
+                        // reconcile, and the button follows [OfflinePlaylists.liked].
+                        OfflinePlaylists.toggleLike(song)
+                    } else {
+                        toggleFavoriteFromNotification(item.mediaId)
+                    }
                 }
                 else -> return Futures.immediateFuture(
                     SessionResult(SessionError.ERROR_NOT_SUPPORTED),

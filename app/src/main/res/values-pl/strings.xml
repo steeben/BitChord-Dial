@@ -1426,4 +1426,11 @@
     <string name="bit_perfect_status_inexact">%1$s · niedokładne: to źródło nie jest bezstratnym PCM</string>
     <string name="bit_perfect_status_waiting">Oczekiwanie na bezstratny utwór na obsługiwanym wyjściu</string>
     <string name="bit_perfect_status_unavailable">Niedostępne dla tego utworu (%1$s)</string>
+    <string name="opened_file">Otwarty plik</string>
+    <string name="folders">Foldery</string>
+    <string name="folder">Folder</string>
+    <string name="no_local_folders">Brak folderów z muzyką</string>
+    <string name="offline_playlist_empty">Ta playlista jest jeszcze pusta. Dodaj utwory z ich menu.</string>
+    <string name="offline_liked_empty">Utwory polubione na tym urządzeniu pojawią się tutaj</string>
+    <string name="saved_on_this_device">Zapisano na tym urządzeniu</string>
 </resources>

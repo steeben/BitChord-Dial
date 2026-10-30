@@ -1325,4 +1325,11 @@
     <string name="bit_perfect_status_inexact">%1$s · non esatto: questa sorgente non è PCM lossless</string>
     <string name="bit_perfect_status_waiting">In attesa di un brano lossless su un\'uscita supportata</string>
     <string name="bit_perfect_status_unavailable">Non disponibile per questo brano (%1$s)</string>
+    <string name="opened_file">File aperto</string>
+    <string name="folders">Cartelle</string>
+    <string name="folder">Cartella</string>
+    <string name="no_local_folders">Nessuna cartella con musica</string>
+    <string name="offline_playlist_empty">Questa playlist è ancora vuota. Aggiungi brani dal loro menu.</string>
+    <string name="offline_liked_empty">I brani che ti piacciono su questo dispositivo compaiono qui</string>
+    <string name="saved_on_this_device">Salvata su questo dispositivo</string>
 </resources>

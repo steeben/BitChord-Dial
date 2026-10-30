@@ -1363,4 +1363,11 @@
     <string name="bit_perfect_status_inexact">%1$s · 不精确：此音源不是无损 PCM</string>
     <string name="bit_perfect_status_waiting">正在等待受支持输出上的无损曲目</string>
     <string name="bit_perfect_status_unavailable">此曲目不可用（%1$s）</string>
+    <string name="opened_file">已打开的文件</string>
+    <string name="folders">文件夹</string>
+    <string name="folder">文件夹</string>
+    <string name="no_local_folders">没有包含音乐的文件夹</string>
+    <string name="offline_playlist_empty">此歌单还是空的。可从歌曲菜单中添加。</string>
+    <string name="offline_liked_empty">你在此设备上喜欢的歌曲会显示在这里</string>
+    <string name="saved_on_this_device">已保存在此设备上</string>
 </resources>

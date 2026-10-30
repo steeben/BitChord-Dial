@@ -85,6 +85,10 @@ import java.util.Locale
  * Playlists are ticked rather than picked: one track often belongs in more
  * than one list, and a sheet that closed on the first tap meant opening it
  * again for each. [onAdd] gets every ticked playlist at once.
+ *
+ * [offline] is the same sheet over the device's own playlists, for a track
+ * that is a file on it: nothing is saved to the account, so the new-playlist
+ * form says where it goes instead and has no visibility to pick.
  */
 @Composable
 fun PlaylistPickerSheet(
@@ -97,6 +101,7 @@ fun PlaylistPickerSheet(
     startCreating: Boolean = false,
     /** Offered under Create on the new-playlist form: a playlist brought over from Spotify instead. */
     onImportSpotify: (() -> Unit)? = null,
+    offline: Boolean = false,
 ) {
     var creating by remember { mutableStateOf(startCreating) }
     // By id rather than by value: the list is re-fetched under an open sheet,
@@ -110,6 +115,7 @@ fun PlaylistPickerSheet(
             onBack = if (startCreating) null else ({ creating = false }),
             onCreate = onCreate,
             onImportSpotify = onImportSpotify,
+            offline = offline,
             modifier = modifier,
         )
         return
@@ -252,6 +258,7 @@ private fun NewPlaylistForm(
     onBack: (() -> Unit)?,
     onCreate: (String, PlaylistPrivacy) -> Unit,
     onImportSpotify: (() -> Unit)? = null,
+    offline: Boolean,
     modifier: Modifier = Modifier,
 ) {
     var name by remember { mutableStateOf("") }
@@ -299,7 +306,9 @@ private fun NewPlaylistForm(
                     color = MaterialTheme.colorScheme.onBackground,
                 )
                 Text(
-                    text = stringResource(R.string.saved_to_youtube_music_account),
+                    text = stringResource(
+                        if (offline) R.string.saved_on_this_device else R.string.saved_to_youtube_music_account,
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -356,20 +365,23 @@ private fun NewPlaylistForm(
             }
         }
 
-        SheetHeading(stringResource(R.string.who_can_see_it).uppercase(Locale.getDefault()))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 22.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            PlaylistPrivacy.entries.forEach { option ->
-                PrivacyPill(
-                    icon = option.icon,
-                    label = option.label,
-                    selected = option == privacy,
-                    onClick = { privacy = option },
-                )
+        // A playlist on the device is seen by whoever holds the device.
+        if (!offline) {
+            SheetHeading(stringResource(R.string.who_can_see_it).uppercase(Locale.getDefault()))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 22.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                PlaylistPrivacy.entries.forEach { option ->
+                    PrivacyPill(
+                        icon = option.icon,
+                        label = option.label,
+                        selected = option == privacy,
+                        onClick = { privacy = option },
+                    )
+                }
             }
         }
 

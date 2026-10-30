@@ -1387,4 +1387,11 @@
     <string name="bit_perfect_status_inexact">%1$s · inexact : cette source n\'est pas du PCM sans perte</string>
     <string name="bit_perfect_status_waiting">En attente d\'un morceau sans perte sur une sortie compatible</string>
     <string name="bit_perfect_status_unavailable">Indisponible pour ce morceau (%1$s)</string>
+    <string name="opened_file">Fichier ouvert</string>
+    <string name="folders">Dossiers</string>
+    <string name="folder">Dossier</string>
+    <string name="no_local_folders">Aucun dossier contenant de la musique</string>
+    <string name="offline_playlist_empty">Cette playlist est encore vide. Ajoutez-y des titres depuis leur menu.</string>
+    <string name="offline_liked_empty">Les titres que vous aimez sur cet appareil apparaissent ici</string>
+    <string name="saved_on_this_device">Enregistrée sur cet appareil</string>
 </resources>

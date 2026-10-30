@@ -1369,4 +1369,11 @@
     <string name="bit_perfect_status_inexact">%1$s · ไม่ตรงทุกบิต: แหล่งนี้ไม่ใช่ PCM แบบไม่สูญเสียคุณภาพ</string>
     <string name="bit_perfect_status_waiting">กำลังรอแทร็กแบบไม่สูญเสียคุณภาพบนเอาต์พุตที่รองรับ</string>
     <string name="bit_perfect_status_unavailable">ไม่พร้อมใช้งานสำหรับแทร็กนี้ (%1$s)</string>
+    <string name="opened_file">ไฟล์ที่เปิด</string>
+    <string name="folders">โฟลเดอร์</string>
+    <string name="folder">โฟลเดอร์</string>
+    <string name="no_local_folders">ไม่มีโฟลเดอร์ที่มีเพลง</string>
+    <string name="offline_playlist_empty">เพลย์ลิสต์นี้ยังว่างอยู่ เพิ่มเพลงได้จากเมนูของเพลง</string>
+    <string name="offline_liked_empty">เพลงที่คุณถูกใจในอุปกรณ์นี้จะแสดงที่นี่</string>
+    <string name="saved_on_this_device">บันทึกไว้ในอุปกรณ์นี้</string>
 </resources>

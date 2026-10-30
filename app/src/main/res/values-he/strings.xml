@@ -1391,4 +1391,11 @@
     <string name="bit_perfect_status_inexact">%1$s · לא מדויק: המקור הזה אינו PCM ללא אובדן</string>
     <string name="bit_perfect_status_waiting">ממתין לרצועת Lossless ביציאה נתמכת</string>
     <string name="bit_perfect_status_unavailable">לא זמין עבור רצועה זו (%1$s)</string>
+    <string name="opened_file">קובץ שנפתח</string>
+    <string name="folders">תיקיות</string>
+    <string name="folder">תיקייה</string>
+    <string name="no_local_folders">אין תיקיות עם מוזיקה</string>
+    <string name="offline_playlist_empty">הפלייליסט עדיין ריק. אפשר להוסיף שירים מהתפריט שלהם.</string>
+    <string name="offline_liked_empty">שירים שאהבת במכשיר הזה יופיעו כאן</string>
+    <string name="saved_on_this_device">נשמר במכשיר הזה</string>
 </resources>

@@ -117,11 +117,11 @@ import java.util.Locale
  * always the fallback for "I meant to do something with this song".
  *
  * Everything that writes to the account is hidden outright when [signedIn] is
- * false rather than shown and refused. The same goes for a track that is
- * playing from a local file or a finished download (`song.localUri != null`):
- * rating, playlists, downloading it again and sharing all assume a YouTube
- * identity the file doesn't carry, so those rows drop out regardless of
- * [signedIn].
+ * false rather than shown and refused. A track playing from a local file or a
+ * finished download (`song.localUri != null`) carries no YouTube identity to
+ * rate, fetch again or share, so it gets the offline player's rows instead:
+ * Like and Add to playlist against the device's own playlists (see
+ * [com.music.bitchord.data.OfflinePlaylists]), signed in or not.
  *
  * [showSleepTimer] and [onShare] are the player's extras: a sleep timer isn't a
  * property of some row in a list, so it only appears where it means something.
@@ -330,7 +330,35 @@ fun SongActionsSheet(
             GroupSeparator(palette)
         }
 
-        if (signedIn && !isOffline) {
+        if (isOffline) {
+            // The offline player's own pair: a heart that files the track
+            // under this device's Liked playlist, and the device's playlists.
+            // [likeStatus] is that playlist's answer here, not YouTube's, and
+            // neither needs an account. No dislike — there is no
+            // recommendation feed on the device for one to steer.
+            ActionRow(
+                icon = if (liked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                label = if (liked) stringResource(R.string.remove_from_liked) else stringResource(R.string.like),
+                tint = if (liked) palette.accent else null,
+                accent = palette.accent,
+                onClick = onToggleLike,
+            )
+            ActionRow(
+                icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
+                label = stringResource(R.string.add_to_playlist),
+                accent = palette.accent,
+                onClick = onAddToPlaylist,
+            )
+            onRemoveFromPlaylist?.let {
+                ActionRow(
+                    icon = Icons.Rounded.PlaylistRemove,
+                    label = stringResource(R.string.remove_from_playlist),
+                    accent = palette.accent,
+                    onClick = it,
+                )
+            }
+            GroupSeparator(palette)
+        } else if (signedIn) {
             ActionRow(
                 icon = if (liked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                 label = if (liked) stringResource(R.string.remove_from_liked) else stringResource(R.string.like),

@@ -857,6 +857,10 @@ object AppSettings {
         com.music.bitchord.data.CustomCovers.init(context)
         com.music.bitchord.data.AlbumArtChoices.init(context)
         com.music.bitchord.data.LocalLinks.init(context)
+        com.music.bitchord.data.OfflinePlaylists.init(
+            context,
+            likedTitle = context.getString(com.music.bitchord.R.string.auto_liked),
+        )
         LastPlayed.init(context)
         readAll()
         watchConnection(context)
