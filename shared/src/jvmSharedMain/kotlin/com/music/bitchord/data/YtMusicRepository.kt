@@ -576,10 +576,13 @@ object YtMusicRepository {
     /**
      * What YouTube Music would play on after [videoId]. Feeds AutoPlay; the
      * seed track itself comes back first, so callers filter what they have.
+     * [preferVideo] takes each song YouTube pairs with its music video as the
+     * video — a station played on from a video stays videos.
      */
-    suspend fun radio(videoId: String): Result<List<Song>> = call("radio:$videoId") {
-        InnertubeParser.parseWatchQueue(Innertube.next(videoId))
-    }
+    suspend fun radio(videoId: String, preferVideo: Boolean = false): Result<List<Song>> =
+        call("radio:$videoId:$preferVideo") {
+            InnertubeParser.parseWatchQueue(Innertube.next(videoId), preferVideo = preferVideo)
+        }
 
     /**
      * The page of the artist called exactly [name], or null when there is none.

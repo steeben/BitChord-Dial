@@ -786,10 +786,8 @@ class PlaybackService : MediaLibraryService() {
     private var autoplayLoadJob: Job? = null
     /** Rate limit for listener-requested retries; automatic upgrades do not touch it. */
     private val manualUpgradeThrottle = ManualUpgradeThrottle(MANUAL_UPGRADE_COOLDOWN_MS)
-    /** Catalogue lookup that decides which rendition of the next video to warm. */
-    private var preferredPrefetchJob: Job? = null
-    /** Logical queue request, before a video id is replaced by its audio counterpart. */
-    private var preferredPrefetchRequest: Pair<Boolean, List<String>>? = null
+    /** The upcoming ids read-ahead was last asked to warm, so an unchanged queue isn't asked again. */
+    private var preferredPrefetchRequest: List<String>? = null
     private var autoplaySeed: String? = null
 
     /** Index in the live queue represented by entry zero of the persisted window. */
@@ -2523,7 +2521,10 @@ class PlaybackService : MediaLibraryService() {
 
         val position = activePlayer.currentPosition
         val wasPlaying = activePlayer.isPlaying
-        swappingMediaId = song.videoId
+        // The new item has a different id, so the transition callback must be
+        // told to treat it as the same listen, not a new track to record.
+        swappingMediaId = targetVideoId
+        PlaybackTracker.onVersionSwapped(song.videoId, targetVideoId)
 
         // Create the target song with the appropriate flags
         val targetSong = song.copy(
@@ -6844,11 +6845,9 @@ class PlaybackService : MediaLibraryService() {
         // So whatever read-ahead writes for these can be named in the Cached
         // songs folder; its own requests carry nothing but an id.
         AudioCache.noteSongs(upcomingSongs)
-        val preferAudio = AppSettings.preferMusicOnly.value
-        val request = preferAudio to upcomingSongs.map { it.videoId }
+        val request = upcomingSongs.map { it.videoId }
         if (request == preferredPrefetchRequest) return
         preferredPrefetchRequest = request
-        preferredPrefetchJob?.cancel()
 
         fun warm(songs: List<Song>) {
             AudioCache.prefetchQueue(
@@ -6864,31 +6863,7 @@ class PlaybackService : MediaLibraryService() {
             )
         }
 
-        val next = upcomingSongs.firstOrNull()
-        if (!preferAudio || next?.isVideo != true) {
-            preferredPrefetchJob = null
-            warm(upcomingSongs)
-            return
-        }
-
-        // Do not warm the video's bytes while its catalogue lookup is in
-        // flight: if that lookup succeeds, playback will ask for a different
-        // media id and every byte spent on the video would be wasted. An
-        // unchanged result is the fallback and is warmed on the same path.
-        AudioCache.cancel()
-        preferredPrefetchJob = scope.launch {
-            val preferred = runCatching { YtMusicRepository.resolveAudio(next) }
-                .onFailure {
-                    TrackLog.d(
-                        "BitChord",
-                        "music-only queue warm-up fell back to video: ${it.message}",
-                        about = next.videoId,
-                    )
-                }
-                .getOrDefault(next)
-            if (preferredPrefetchRequest != request) return@launch
-            warm(listOf(preferred) + upcomingSongs.drop(1))
-        }
+        warm(upcomingSongs)
     }
 
     /** When the listener last seeked, so [driveDirectWindow] can tell a scrub from playback. */
@@ -6950,8 +6925,6 @@ class PlaybackService : MediaLibraryService() {
     /** Stops both rendition selection and byte read-ahead, and makes resume retry. */
     private fun cancelPrefetch() {
         preferredPrefetchRequest = null
-        preferredPrefetchJob?.cancel()
-        preferredPrefetchJob = null
         AudioCache.cancel()
     }
 
@@ -7524,14 +7497,6 @@ class PlaybackService : MediaLibraryService() {
     private fun observeSettings() {
         scope.launch {
             AppSettings.skipSilence.collect { on -> eachPlayer { it.skipSilenceEnabled = on } }
-        }
-        scope.launch {
-            // Re-evaluate the already queued next track immediately when this
-            // preference changes, instead of waiting for another timeline event.
-            AppSettings.preferMusicOnly.drop(1).collect {
-                cancelPrefetch()
-                player?.takeIf { it.isPlaying }?.let(::prefetchAround)
-            }
         }
         scope.launch {
             AppSettings.preferUsbDac.drop(1).collect { requestOutputReconfiguration() }

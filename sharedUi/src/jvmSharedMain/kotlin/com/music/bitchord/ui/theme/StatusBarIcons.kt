@@ -8,3 +8,11 @@ import androidx.compose.runtime.Composable
  */
 @Composable
 expect fun StatusBarIcons(dark: Boolean)
+
+/**
+ * Takes both system bars off the window while [hidden], for a video playing
+ * full screen; a swipe in from an edge shows them for a moment. Puts them back
+ * when this leaves composition.
+ */
+@Composable
+expect fun HideSystemBars(hidden: Boolean)

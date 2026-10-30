@@ -1320,3 +1320,68 @@ internal fun ShelfCard(
         )
     }
 }
+
+/**
+ * A music video, as the web player lays one out: the thumbnail at its own
+ * 16:9 rather than cropped into a square, the title and credit under it. About
+ * as tall as the square cards, so a video shelf sits in the feed's rhythm.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun VideoShelfCard(
+    item: ShelfItem,
+    onClick: () -> Unit,
+    onLongPress: (() -> Unit)? = null,
+    modifier: Modifier = Modifier.width(VIDEO_CARD_WIDTH),
+    isCurrent: Boolean = false,
+    isPlaying: Boolean = false,
+    titleColor: Color = MaterialTheme.colorScheme.onBackground,
+    subtitleColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    placeholderColor: Color = MaterialTheme.colorScheme.surfaceVariant,
+) {
+    Column(
+        modifier = modifier
+            .longPressMenuClickable(onClick = onClick, onLongClick = onLongPress)
+            .contextClick(onLongPress),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(VIDEO_ASPECT)
+                .clip(RoundedCornerShape(12.dp))
+                .thumbnailBorder(RoundedCornerShape(12.dp))
+                .background(placeholderColor),
+        ) {
+            AsyncImage(
+                // Video stills are not resizable googleusercontent art; the
+                // largest the row listed is already about card size.
+                model = item.thumbnailUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+            if (isCurrent && isPlaying) SearchPlayingBars(Modifier.align(Alignment.Center))
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(
+            text = item.title,
+            style = MaterialTheme.typography.titleMedium,
+            color = titleColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = localizeCardSubtitle(item.subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = subtitleColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/** A music video's frame. */
+const val VIDEO_ASPECT = 16f / 9f
+
+/** Wide enough that a 16:9 card stands about as tall as a square [SHELF_CARD_WIDTH] one. */
+val VIDEO_CARD_WIDTH = 248.dp

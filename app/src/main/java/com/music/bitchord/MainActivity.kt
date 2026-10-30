@@ -371,6 +371,7 @@ import com.music.bitchord.ui.icons.BitChordIcons
 import androidx.media3.common.Player
 import com.music.bitchord.data.YtMusicRepository
 import com.music.bitchord.ui.player.NowPlayingScreen
+import com.music.bitchord.ui.player.MusicVideoEngine
 import com.music.bitchord.ui.player.PlayerSheetMotion
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.drawBehind
@@ -391,6 +392,7 @@ import com.music.bitchord.ui.components.MiniPlayerPull
 import com.music.bitchord.ui.components.HIDDEN_USER_NAME
 import com.music.bitchord.ui.components.masked
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.layout.onSizeChanged
 import com.music.bitchord.ui.player.LocalPlayerDock
 import com.music.bitchord.ui.player.PlayerDock
@@ -1206,6 +1208,11 @@ private fun BitChordApp(
     }
     val controller = rememberMediaController()
     val player = rememberPlayerState(controller)
+    // A music video's picture follows this controller's clock — see [MusicVideoEngine].
+    DisposableEffect(controller) {
+        MusicVideoEngine.attach(controller)
+        onDispose { MusicVideoEngine.attach(null) }
+    }
     // A resume in a party is performed on the instant the server schedules, not
     // when it was pressed, and nothing about the player moves in between — so
     // the transport spends that round trip drawn as though the tap never landed.
@@ -1272,7 +1279,11 @@ private fun BitChordApp(
         }
     }
     val shuffleEnabled by QueueShuffle.enabled.collectAsStateWithLifecycle()
-    val preferMusicOnly by AppSettings.preferMusicOnly.collectAsStateWithLifecycle()
+    // For the version switch's "there is no other version" notice.
+    val versionContext = LocalContext.current
+    // Tracks whose other cut a switch looked for and didn't find: their menu
+    // row reads "not found" from then on instead of offering it again.
+    val missingVersions = remember { mutableStateListOf<String>() }
     // A conversion is deliberately scoped to the current listening session.
     // Keeping the complete original row here lets Revert restore the exact
     // video upload, including its title and playlist identity, rather than
@@ -1289,8 +1300,6 @@ private fun BitChordApp(
     var convertedVideoId by remember { mutableStateOf<String?>(null) }
     // Optimistically updated track for instant UI updates when switching versions
     var optimisticVersionSong by remember { mutableStateOf<Song?>(null) }
-    // Track whether alternate (film/video vs release/audio) version exists for current track
-    var hasAlternateVersion by remember { mutableStateOf(false) }
 
     // Lyrics follow whatever is playing; duration lands a beat after the track.
     // Keyed on the lyric settings too, so turning a source on or off or
@@ -1535,6 +1544,9 @@ private fun BitChordApp(
             // to release the loading state and resume it immediately.
             if (audio == null || audio.videoId == song.videoId) {
                 TrackLog.w("Player", "audio switch found no distinct official song", song.videoId)
+                // The switch is always offered now, so say when there was nothing to switch to.
+                if (song.videoId !in missingVersions) missingVersions += song.videoId
+                if (stillCurrent) showQueueNotice(versionContext.getString(R.string.no_audio_version))
                 if (stillCurrent && resumeAfterResolution) c.play()
                 return
             }
@@ -1601,6 +1613,8 @@ private fun BitChordApp(
 
             if (video == null || video.videoId == song.videoId) {
                 TrackLog.w("Player", "video switch found no distinct video", song.videoId)
+                if (song.videoId !in missingVersions) missingVersions += song.videoId
+                if (stillCurrent) showQueueNotice(versionContext.getString(R.string.no_video_version))
                 if (stillCurrent && resumeAfterResolution) c.play()
                 return
             }
@@ -1733,51 +1747,6 @@ private fun BitChordApp(
             convertedFromAudio = null
             convertedVideoId = null
             switchingAudioVersion = false
-        }
-    }
-
-    // Start with the video MediaItem so the main player is populated at once,
-    // then resolve its catalogue counterpart behind the loading indicators.
-    // A failed/identical match simply resumes this untouched video.
-    LaunchedEffect(player.song?.videoId, preferMusicOnly) {
-        val song = player.song ?: return@LaunchedEffect
-        if (preferMusicOnly && song.isVideo && song.videoId != keepVideoId) {
-            switchToMusicOnly(song, pauseWhileResolving = true)
-        }
-    }
-
-    // Check if alternate (video vs audio) version exists in background.
-    // Skipped entirely in a Listen Together party: the track playing there is
-    // shared by everyone in it, and a per-listener version switch would put
-    // each member on their own cut of what is supposed to be one song — see
-    // [ListenTogether] and the matching guard server-side in
-    // [PlaybackService.smoothSwapCurrentTrackVersion].
-    LaunchedEffect(player.song?.videoId, convertedAudioId, convertedVideoId, partyState.inParty) {
-        val song = player.song
-        if (song == null || partyState.inParty) {
-            hasAlternateVersion = false
-            return@LaunchedEffect
-        }
-        if ((convertedFromVideo != null && convertedAudioId == song.videoId) ||
-            (convertedFromAudio != null && convertedVideoId == song.videoId)) {
-            hasAlternateVersion = true
-            return@LaunchedEffect
-        }
-        hasAlternateVersion = false
-        val exists = withContext(Dispatchers.IO) {
-            if (song.isVideo) {
-                runCatching {
-                    val resolved = YtMusicRepository.resolveAudio(song)
-                    resolved.videoId != song.videoId
-                }.getOrDefault(false)
-            } else {
-                runCatching {
-                    YtMusicRepository.resolveVideo(song) != null
-                }.getOrDefault(false)
-            }
-        }
-        if (player.song?.videoId == song.videoId) {
-            hasAlternateVersion = exists
         }
     }
 
@@ -2201,6 +2170,7 @@ private fun BitChordApp(
                 title = item.title,
                 artist = InnertubeParser.artistFromSubtitle(item.subtitle),
                 thumbnailUrl = item.thumbnailUrl,
+                isVideo = item.isVideo,
             )
         }
     }
@@ -4009,14 +3979,20 @@ private fun BitChordApp(
                                 }
                             },
                             onSectionItemClick = { item ->
-                                item.browseId?.let { id ->
-                                    viewModel.openDetail(
-                                        browseId = id,
-                                        title = item.title,
-                                        subtitle = item.subtitle,
-                                        thumbnailUrl = item.thumbnailUrl,
-                                        type = BrowseType.ALBUM,
-                                    )
+                                val video = shelfSong(item)?.takeIf { item.browseId == null }
+                                if (video != null) {
+                                    // An artist's Videos shelf plays, from the page it is on.
+                                    playRadio(video, QueueSource(page.title, PlaybackSourceType.BROWSE, page.browseId))
+                                } else {
+                                    item.browseId?.let { id ->
+                                        viewModel.openDetail(
+                                            browseId = id,
+                                            title = item.title,
+                                            subtitle = item.subtitle,
+                                            thumbnailUrl = item.thumbnailUrl,
+                                            type = BrowseType.ALBUM,
+                                        )
+                                    }
                                 }
                             },
                             onSectionItemLongPress = onBrowseLongPress,
@@ -4188,6 +4164,7 @@ private fun BitChordApp(
                                                 title = item.title,
                                                 artist = InnertubeParser.artistFromSubtitle(item.subtitle),
                                                 thumbnailUrl = item.thumbnailUrl,
+                                                isVideo = item.isVideo,
                                             ),
                                             QueueSource(
                                                 category.title,
@@ -5640,13 +5617,21 @@ private fun BitChordApp(
             } else {
                 !song.isVideo && convertedVideoId != song.videoId
             }
-            val onToggleVersion: (() -> Unit)? = if (fromPlayer &&
-                hasAlternateVersion &&
-                !switchingAudioVersion &&
+            // Offered for the playing track wherever its menu is opened,
+            // whether or not the other version has been found yet: the
+            // switch looks it up, and says so when there isn't one.
+            val onToggleVersion: (() -> Unit)? = if (
                 controller?.currentMediaItem?.mediaId == song.videoId
             ) {
-                {
+                toggle@{
                     songActions = null
+                    // A party plays one cut for everyone in it — see
+                    // [PlaybackService.smoothSwapCurrentTrackVersion].
+                    if (partyState.inParty) {
+                        showQueueNotice(versionContext.getString(R.string.version_switch_in_party))
+                        return@toggle
+                    }
+                    if (switchingAudioVersion) return@toggle
                     val c = controller
                     val original = convertedFromVideo
                     val originalAudio = convertedFromAudio
@@ -5949,6 +5934,7 @@ private fun BitChordApp(
                 upgradeQualityInProgress = fromPlayer && song.videoId in qualityUpgradesInFlight,
                 onToggleAudioVersion = onToggleVersion,
                 isAudioVersion = menuIsAudioVersion,
+                audioVersionMissing = song.videoId in missingVersions,
                 // Hidden outright when there's no real YouTube id behind
                 // this row to build a link from — SongActionsSheet already
                 // drops it for a local file via `isOffline`, this catches

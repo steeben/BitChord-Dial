@@ -2,9 +2,12 @@ package com.music.bitchord.ui.theme
 
 import android.app.Activity
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 
 /**
  * Draws just the status bar glyphs dark or light, leaving the navigation bar
@@ -23,6 +26,24 @@ actual fun StatusBarIcons(dark: Boolean) {
     val window = findWindow(view) ?: return
     SideEffect {
         WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = dark
+    }
+}
+
+@Composable
+actual fun HideSystemBars(hidden: Boolean) {
+    val view = LocalView.current
+    if (view.isInEditMode) return
+    val window = findWindow(view) ?: return
+    DisposableEffect(window, hidden) {
+        if (!hidden) return@DisposableEffect onDispose {}
+        val controller = WindowCompat.getInsetsController(window, view)
+        val behavior = controller.systemBarsBehavior
+        controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        controller.hide(WindowInsetsCompat.Type.systemBars())
+        onDispose {
+            controller.show(WindowInsetsCompat.Type.systemBars())
+            controller.systemBarsBehavior = behavior
+        }
     }
 }
 

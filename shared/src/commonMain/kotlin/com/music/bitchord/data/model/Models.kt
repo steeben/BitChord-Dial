@@ -405,7 +405,24 @@ data class ShelfItem(
     val thumbnailUrl: String?,
     val videoId: String?,
     val browseId: String?,
+    /**
+     * A music-video upload rather than a catalogue track: widescreen art, and a
+     * picture the player can show. Drawn as a 16:9 card, as the web player does.
+     */
+    val isVideo: Boolean = false,
 )
+
+/** How a shelf's items are laid out — the web player's `ShelfLayout`, by the same rules. */
+enum class ShelfLayout {
+    /** Square cards in one scrolling row. */
+    CARDS,
+
+    /** Track rows, four to a column — Quick picks, Listen again, Recents. */
+    LIST,
+
+    /** Widescreen cards for music videos. */
+    VIDEO,
+}
 
 /** The signed-in Google account, as YouTube Music reports it. */
 data class Account(
@@ -451,7 +468,22 @@ data class HomeShelf(
     val subtitle: String = "",
     val moreBrowseId: String? = null,
     val moreParams: String? = null,
+    val layout: ShelfLayout = ShelfLayout.CARDS,
 )
+
+/**
+ * The layout a shelf of [items] gets, as the web player decides it: rows when
+ * YouTube itself listed tracks as rows (or the shelf is Listen again, which the
+ * web player shows that way), widescreen cards when most of it is videos.
+ */
+fun shelfLayoutFor(title: String, items: List<ShelfItem>, fromList: Boolean): ShelfLayout {
+    if (items.isEmpty()) return ShelfLayout.CARDS
+    val first = items.first()
+    if (fromList && first.videoId != null) return ShelfLayout.LIST
+    if (title.trim().equals("Listen again", ignoreCase = true)) return ShelfLayout.LIST
+    if (items.count { it.isVideo } * 2 > items.size) return ShelfLayout.VIDEO
+    return ShelfLayout.CARDS
+}
 
 /**
  * These shelves minus any that mostly repeat one already on the page, or one earlier in this

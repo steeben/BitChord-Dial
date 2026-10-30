@@ -152,6 +152,14 @@ val NUMBERED_ROW_DIVIDER_INSET = PAGE_GUTTER + TRACK_NUMBER_WIDTH + PAGE_GUTTER
 val FLOATING_BAR_MAX_WIDTH = 440.dp
 
 /**
+ * A track's thumbnail box at [height]: square for a song, 16:9 at the same
+ * height for a music video — its picture's own shape, as YouTube Music lists
+ * one, rather than a still cropped into a square.
+ */
+fun Modifier.trackArtSize(height: Dp, isVideo: Boolean): Modifier =
+    if (isVideo) size(width = height * (16f / 9f), height = height) else size(height)
+
+/**
  * Width of a card in the compact carousels — home shelves, library shelves and
  * the artist page's releases alike.
  *
