@@ -154,6 +154,7 @@ import com.music.bitchord.ui.haptics.Haptic
 import com.music.bitchord.ui.haptics.rememberHaptics
 import com.music.bitchord.ui.icons.BitChordIcons
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.music.bitchord.data.canvas.CanvasArtwork
 import com.music.bitchord.data.canvas.CanvasSource
 import com.music.bitchord.data.lyrics.LyricLine
 import com.music.bitchord.data.lyrics.LyricsSource
@@ -240,6 +241,9 @@ private const val QUEUE_TRAVEL_MS = 420
 
 /** How long a Canvas can drop its picture before the player stops presenting it. */
 private const val CANVAS_DROP_GRACE_MS = 1_200L
+
+/** How long the last track's clip takes to fade out when the song changes. */
+private const val CANVAS_OUTGOING_FADE_MS = 650
 
 /** How much smaller the transport and the action row get under an open queue. */
 private const val COMPACT_TRANSPORT_SHRINK = 0.3f
@@ -947,6 +951,27 @@ fun NowPlayingScreen(
     // frame of the fade, and the still art it governs is an AsyncImage whose
     // request is rebuilt on each pass and so would not be skipped.
     val canvasCover = remember(canvas?.url) { mutableFloatStateOf(0f) }
+    // The last track's clip, held on screen and faded out once the track moves
+    // on, rather than cut the instant its song does: the same dissolve to the
+    // next sleeve that a change of album art gets. Kept on the one player
+    // below, so nothing is remounted to do it, and the next clip mounts in its
+    // place once the fade is through. Its aspect is kept with it, because the
+    // one above is the new song's and starts again from nothing.
+    var outgoingClip by remember { mutableStateOf<CanvasArtwork?>(null) }
+    var outgoingAspect by remember { mutableFloatStateOf(0f) }
+    val outgoingFade = remember { Animatable(0f) }
+    // How much of the new sleeve the outgoing clip still covers, as it reports it.
+    val outgoingCover = remember { mutableFloatStateOf(0f) }
+    // The clip last seen on screen, for the handoff above. Plain fields: it is
+    // read only at the moment a song moves on, never drawn.
+    val lastShownClip = remember { arrayOfNulls<CanvasArtwork>(1) }
+    val lastShownAspect = remember { floatArrayOf(0f) }
+    LaunchedEffect(outgoingClip) {
+        if (outgoingClip == null) return@LaunchedEffect
+        outgoingFade.snapTo(1f)
+        outgoingFade.animateTo(0f, tween(durationMillis = CANVAS_OUTGOING_FADE_MS, easing = FastOutSlowInEasing))
+        outgoingClip = null
+    }
     // v1.5's backdrop, kept behind a switch — see [PlayerSettings.legacyMeshGradient].
     val legacyMesh by PlayerSettings.legacyMeshGradient.collectAsStateWithLifecycle()
     // The backdrop's colours, taken off the artwork's own arrangement rather
@@ -1447,10 +1472,33 @@ fun NowPlayingScreen(
     val heroClipMounted = canvas?.takeIf {
         heroMode && (!(lyricsOpen || queueOpen) || !collapseDone)
     }
+    SideEffect {
+        val shownNow = heroClip?.takeIf { canvasRendered }
+        val last = lastShownClip[0]
+        if (shownNow != null) {
+            lastShownClip[0] = shownNow
+            lastShownAspect[0] = canvasAspect
+        } else if (last != null && last.url != canvas?.url) {
+            // Its song has moved on with the clip still up: let it go slowly.
+            // Not over a panel or mid-collapse, where it was already leaving.
+            if (heroMode && !lyricsOpen && !queueOpen && !collapseStarted && outgoingClip == null) {
+                outgoingAspect = lastShownAspect[0]
+                outgoingCover.floatValue = 1f
+                outgoingClip = last
+            }
+            lastShownClip[0] = null
+        } else if (heroClip == null) {
+            lastShownClip[0] = null
+        }
+    }
+    // What the one player below is showing: the outgoing clip while it fades,
+    // then this track's.
+    val clipOnScreen = outgoingClip ?: heroClipMounted
+    val clipOnScreenAspect = if (outgoingClip != null) outgoingAspect else canvasAspect
     val clipFullscreen = spotifyCanvasOnPhone &&
-        heroClipMounted?.source == CanvasSource.SPOTIFY
+        clipOnScreen?.source == CanvasSource.SPOTIFY
     val clipPortrait = !clipFullscreen &&
-        heroClipMounted != null && canvasAspect > 0f && canvasAspect < 1f
+        clipOnScreen != null && clipOnScreenAspect > 0f && clipOnScreenAspect < 1f
 
     // The setting defaults on, restoring the five-second stand-down, but the
     // listener can keep the deck open indefinitely from Spotify integration.
@@ -1518,16 +1566,16 @@ fun NowPlayingScreen(
     var playerBounds by remember { mutableStateOf(IntSize.Zero) }
     // The bottom of a top-aligned, contained clip in the full-player view.
     // Use measured pixels and the decoded display aspect, never screen constants.
-    fun canvasBottom(portrait: Boolean): Dp =
+    fun canvasBottom(portrait: Boolean, aspect: Float = canvasAspect): Dp =
         if (portrait && playerBounds.width > 0 && playerBounds.height > 0) {
             val viewAspect = playerBounds.width.toFloat() / playerBounds.height
-            val videoHeight = if (canvasAspect >= viewAspect) playerBounds.width / canvasAspect
+            val videoHeight = if (aspect >= viewAspect) playerBounds.width / aspect
                 else playerBounds.height.toFloat()
             with(density) { videoHeight.toDp() }
         } else 0.dp
     val renderedCanvasBottom = canvasBottom(canvasFirstPortrait)
     // The same for the mounted clip — see [heroClipMounted].
-    val clipBottom = canvasBottom(clipPortrait)
+    val clipBottom = canvasBottom(clipPortrait, clipOnScreenAspect)
     // Match the old hero's fade height in physical pixels, not its much larger
     // percentage of a portrait video. The mask ends at the real video bottom.
     val clipFadeFraction = if (clipBottom > 0.dp) {
@@ -2256,7 +2304,21 @@ fun NowPlayingScreen(
         // The tablet has no mirrored main-player treatment to crossfade from.
         // Legacy mesh is the whole backdrop on every page, so the lyrics and
         // queue panels must not crossfade the blurred artwork over it.
-        val legacyMeshBackdrop = !tabletArtworkBackdrop && !spotifyCanvasPresentation &&
+        // A full-screen Canvas covers the backdrop, which is let go of only
+        // once the clip has finished coming in over it — dropped the moment the
+        // clip first showed, its colour left the foot of the player in one frame.
+        val canvasCoversBackdrop by remember(canvasCover) {
+            derivedStateOf { canvasCover.floatValue >= 0.999f }
+        }
+        val backdropCovered = spotifyCanvasPresentation && canvasCoversBackdrop
+        // Faded out under the clip on the same curve as the sleeve above it.
+        val backdropClipAlpha: () -> Float = {
+            if (spotifyCanvasFullscreen) {
+                val cover = canvasCover.floatValue
+                1f - cover * cover * cover * cover
+            } else 1f
+        }
+        val legacyMeshBackdrop = !tabletArtworkBackdrop && !backdropCovered &&
             legacyMesh && !canvasFirstPortrait
         val fullArtworkBackdropAlpha by animateFloatAsState(
             targetValue = if (
@@ -2282,13 +2344,17 @@ fun NowPlayingScreen(
             MeshGradientBackground(
                 palette = rememberArtworkColors(remoteArt, canvasFrame),
                 trackKey = song.videoId,
-                modifier = Modifier.graphicsLayer { alpha = 1f - fullArtworkBackdropAlpha },
+                modifier = Modifier.graphicsLayer {
+                    alpha = (1f - fullArtworkBackdropAlpha) * backdropClipAlpha()
+                },
             )
-        } else if (!tabletArtworkBackdrop && !spotifyCanvasPresentation) {
+        } else if (!tabletArtworkBackdrop && !backdropCovered) {
             ArtworkMeshBackdrop(
                 mesh = artMesh,
                 seam = if (canvasFirstPortrait) renderedCanvasBottom else if (heroMode) heroHeight else 0.dp,
-                modifier = Modifier.graphicsLayer { alpha = 1f - fullArtworkBackdropAlpha },
+                modifier = Modifier.graphicsLayer {
+                    alpha = (1f - fullArtworkBackdropAlpha) * backdropClipAlpha()
+                },
             )
         }
         fullArtworkBlurContent(
@@ -2298,7 +2364,8 @@ fun NowPlayingScreen(
         // Mount once, behind the controls. A known portrait aspect changes the
         // invisible view to full-player bounds before its first frame is shown.
         if (heroMode && heroHeight > 0.dp) {
-            heroClipMounted?.let { clip ->
+            clipOnScreen?.let { clip ->
+                val outgoing = outgoingClip != null
                 CanvasArtworkPlayer(
                     canvas = clip,
                     isPlaying = isPlaying,
@@ -2321,7 +2388,8 @@ fun NowPlayingScreen(
                         CanvasContentMode.FIT_PORTRAIT
                     },
                     alignPortraitTop = clipPortrait,
-                    onAspectRatioChanged = { canvasAspect = it },
+                    // The outgoing clip answers to nothing of the new song's.
+                    onAspectRatioChanged = { if (!outgoing) canvasAspect = it },
                     portraitRevealBounds = playerBounds,
                     // Gone by the half, where [heroClip] lets it go — and the
                     // still sleeve collapsing over it takes exactly the cover
@@ -2330,10 +2398,13 @@ fun NowPlayingScreen(
                     // And with the rest of the player as it docks: a
                     // TextureView doesn't reliably take the fade from a
                     // Compose layer around it.
-                    presentationAlpha = { (1f - 2f * p()).coerceIn(0f, 1f) * dockFade() },
-                    onRenderedChanged = { canvasRendered = it },
+                    presentationAlpha = {
+                        (1f - 2f * p()).coerceIn(0f, 1f) * dockFade() *
+                            (if (outgoingClip != null) outgoingFade.value else 1f)
+                    },
+                    onRenderedChanged = { if (!outgoing) canvasRendered = it },
                     onFrameCaptured = {
-                        if (!clipFullscreen && !tabletArtworkBackdrop &&
+                        if (!outgoing && !clipFullscreen && !tabletArtworkBackdrop &&
                             !lyricsOpen && !queueOpen && !queueDragging
                         ) canvasFrame = it
                     },
@@ -2348,7 +2419,9 @@ fun NowPlayingScreen(
                     } else {
                         meshRefreshMs
                     },
-                    onCoverChanged = { canvasCover.floatValue = it },
+                    onCoverChanged = {
+                        if (outgoing) outgoingCover.floatValue = it else canvasCover.floatValue = it
+                    },
                     bottomFade = when {
                         clipFullscreen -> 0f
                         clipPortrait -> clipFadeFraction
@@ -3135,6 +3208,9 @@ fun NowPlayingScreen(
                             alpha = if (heroClip != null) {
                                 val cover = canvasCover.floatValue
                                 1f - cover * cover * cover * cover
+                            } else if (outgoingClip != null) {
+                                // Coming back in as the last track's clip leaves.
+                                1f - outgoingCover.floatValue
                             } else {
                                 1f
                             }
