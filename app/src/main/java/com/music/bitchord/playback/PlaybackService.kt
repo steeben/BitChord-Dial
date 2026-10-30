@@ -3369,6 +3369,7 @@ class PlaybackService : MediaLibraryService() {
         val exoPlayer = player ?: return
         // A splice belongs to the play it was made in; the sink ends its own.
         splicedUpgrade = null
+        splicedFormat = null
         syncBoundedContextCursor(exoPlayer, mediaItem)
         if (boundedContextWindow != null && !ListenTogether.state.value.inParty) {
             saveBoundedContextSnapshot(exoPlayer)
@@ -4700,7 +4701,7 @@ class PlaybackService : MediaLibraryService() {
             // Spliced into the one output if it can be, which is the only way
             // in with no seam at all; blended across two players if not.
             this@PlaybackService.player?.takeIf { canSpliceUpgrade(it, mediaId) }?.let {
-                outcome = spliceInUpgrade(it, mediaId, upgradedItem, now.duration)
+                outcome = spliceInUpgrade(it, mediaId, upgradedItem, now.duration, stream.format)
             }
             var attempts = if (outcome == UpgradeBlend.CUT) 0 else UPGRADE_BLEND_ATTEMPTS
             while (attempts < UPGRADE_BLEND_ATTEMPTS) {
@@ -4831,6 +4832,14 @@ class PlaybackService : MediaLibraryService() {
     private var splicedUpgrade: Pair<String, MediaItem>? = null
 
     /**
+     * What is really coming out while a splice is running, keyed by track.
+     * The renderer's own format still names the old copy — its decoder is
+     * still decoding it, only for every frame to be replaced at the sink —
+     * so stats for nerds is shown this instead. See [publishNerdStats].
+     */
+    private var splicedFormat: Pair<String, Format>? = null
+
+    /**
      * Main thread. A seek on a track playing its upgrade spliced in: the gap a
      * seek makes anyway is the moment to install the upgraded rendition for
      * real, so the player reads the new file directly from here on.
@@ -4842,12 +4851,35 @@ class PlaybackService : MediaLibraryService() {
             return
         }
         splicedUpgrade = null
+        splicedFormat = null
         activeFilter.splice.end()
         swappingMediaId = mediaId
         exoPlayer.replaceMediaItem(exoPlayer.currentMediaItemIndex, item)
         exoPlayer.seekTo(exoPlayer.currentMediaItemIndex, positionMs)
         exoPlayer.prepare()
         TrackLog.d("BitChord", "spliced upgrade installed for real at the seek to ${positionMs}ms", about = mediaId)
+    }
+
+    /** The spliced-in copy described as the renderer would have, for [splicedFormat]. */
+    private fun splicedFormatOf(source: StreamFormat, rateHz: Int, channels: Int): Format? {
+        val mime = when (source.codec) {
+            "flac" -> MimeTypes.AUDIO_FLAC
+            "alac" -> MimeTypes.AUDIO_ALAC
+            else -> return null
+        }
+        return Format.Builder()
+            .setSampleMimeType(mime)
+            .setSampleRate(rateHz.takeIf { it > 0 } ?: source.sampleRateHz ?: Format.NO_VALUE)
+            .setChannelCount(channels)
+            .setPcmEncoding(
+                when (source.bitDepth) {
+                    16 -> C.ENCODING_PCM_16BIT
+                    24 -> C.ENCODING_PCM_24BIT
+                    32 -> C.ENCODING_PCM_32BIT
+                    else -> Format.NO_VALUE
+                },
+            )
+            .build()
     }
 
     /** Main thread. Whether [spliceInUpgrade] can run on the playing player at all. */
@@ -4893,6 +4925,7 @@ class PlaybackService : MediaLibraryService() {
         mediaId: String,
         upgradedItem: MediaItem,
         duration: Long,
+        sourceFormat: StreamFormat,
     ): UpgradeBlend {
         val splice = activeFilter.splice
         val rate = splice.sampleRate
@@ -5009,6 +5042,10 @@ class PlaybackService : MediaLibraryService() {
                 return UpgradeBlend.CUT
             }
             splicedUpgrade = mediaId to upgradedItem
+            splicedFormatOf(sourceFormat, feed.sourceRate, channels)?.let {
+                splicedFormat = mediaId to it
+                publishNerdStats()
+            }
             TrackLog.d(
                 "BitChord",
                 "swap seam: none — spliced into the same output at ${splice.splicedAtUs / 1000}ms; " +
@@ -6278,8 +6315,8 @@ class PlaybackService : MediaLibraryService() {
 
     private fun publishNerdStats() {
         val player = player ?: return
-        val format = player.audioFormat
         val mediaId = player.currentMediaItem?.mediaId
+        val format = splicedFormat?.takeIf { it.first == mediaId }?.second ?: player.audioFormat
         val measured = format?.measure()
         // DSD reaches the renderer already decimated to PCM (DsdExtractor), so
         // its sample mime is `audio/raw`; the extractor leaves `dsd64` and the
