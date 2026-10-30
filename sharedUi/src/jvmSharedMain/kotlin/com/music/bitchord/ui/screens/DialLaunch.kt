@@ -16,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
@@ -73,7 +74,15 @@ object DialLaunch {
         set(value) {
             current = value
             landed = false
+            launched = false
         }
+
+    /**
+     * Whether the tapped tile's page has come up in its place. The tile hides
+     * only from then: hidden as soon as it was tapped, it was gone for a frame
+     * or two before the page had drawn anything to stand in for it.
+     */
+    internal var launched by mutableStateOf(false)
 
     /**
      * Whether a closing page has all but reached its tile. The tile comes back
@@ -86,7 +95,7 @@ object DialLaunch {
     internal fun pageOf(shelfTitle: String): Int = origin?.takeIf { it.shelfTitle == shelfTitle }?.page ?: 0
 
     /** Whether the tile for [id] is out on its page, so not on the dial. */
-    internal fun isOut(id: String): Boolean = !landed && origin?.key == id
+    internal fun isOut(id: String): Boolean = launched && !landed && origin?.key == id
 
     /** Whether going from page [from] to page [to] opens or closes the launched tile's page from [home]. */
     fun zooms(from: String, to: String, home: String): Boolean {
@@ -152,7 +161,11 @@ fun DialLaunchPage(
     // [zooming] is already false: let go of, the page drew once at full size,
     // right over the tile it had just shrunk into.
     val held = remember { arrayOfNulls<DialOrigin>(1) }
-    if (live != null) held[0] = live
+    if (live != null) {
+        held[0] = live
+        // In the same frame this page first draws over the tile.
+        SideEffect { DialLaunch.launched = true }
+    }
     val origin = live ?: held[0]?.takeIf { closing }
     val progress by visibility.animateFloat(
         transitionSpec = {
