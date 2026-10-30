@@ -952,3 +952,10 @@ fun PillTextField(
         )
     }
 }
+
+/**
+ * The gap a decorative loop leaves after each of its frames before asking for
+ * the next: 25ms lands the next frame on the vsync a thirtieth of a second on,
+ * at 60, 90 and 120Hz alike. Nothing that only decorates needs more than thirty.
+ */
+const val MOTION_FRAME_GAP_MS = 25L

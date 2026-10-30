@@ -41,6 +41,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -70,6 +71,7 @@ import coil3.compose.AsyncImage
 import com.music.bitchord.data.model.CARD_ART_PX
 import com.music.bitchord.data.model.HEADER_ART_PX
 import com.music.bitchord.data.model.HomeShelf
+import com.music.bitchord.data.model.TopPick
 import com.music.bitchord.data.model.ROW_ART_PX
 import com.music.bitchord.data.model.ShelfItem
 import com.music.bitchord.data.model.Song
@@ -187,6 +189,19 @@ fun HomeScreen(
      * from then on.
      */
     onSectionsRevealed: (() -> Unit)? = null,
+    /**
+     * The "Top Picks for You" row under the dials: null while it hasn't been
+     * built yet, empty when there is nothing to pick from. The row is only
+     * drawn by a caller that can act on it, i.e. passes [onTopPickClick].
+     */
+    topPicks: List<TopPick>? = null,
+    topPicksLoading: Boolean = false,
+    /** The signed-in account's name, for the personal station's "Name's Station". */
+    listenerName: String? = null,
+    onTopPickClick: ((TopPick, String) -> Unit)? = null,
+    onTopPickLongPress: ((TopPick) -> Unit)? = null,
+    /** Whether the Top Picks artwork may animate — see [LocalArtworkMotion]. */
+    artworkMotion: Boolean = true,
 ) {
     val recentsViewType by AppUi.host.homeRecentsViewType.collectAsStateWithLifecycle()
 
@@ -233,6 +248,32 @@ fun HomeScreen(
             if (showBanner && onSignIn != null) {
                 item(key = "home-sign-in") {
                     SignInBanner(onSignIn = onSignIn, modifier = Modifier.padding(bottom = 8.dp))
+                }
+            }
+        }
+        // Top Picks sits straight under the dials, before the feed's own rows.
+        // Its loops hold still while Home scrolls, and its pictures wait for
+        // the feed — see LocalArtworkScrolling and LocalArtworkImages.
+        val feedReady = state !is UiState.Loading
+        val topPicksItem: androidx.compose.foundation.lazy.LazyListScope.() -> Unit = {
+            if (onTopPickClick != null) {
+                when {
+                    !topPicks.isNullOrEmpty() -> item(key = "top-picks") {
+                        CompositionLocalProvider(
+                            LocalArtworkMotion provides (artworkMotion && feedReady),
+                            LocalArtworkImages provides feedReady,
+                        ) {
+                            PausedWhileScrolling(listState) {
+                                TopPicksShelf(
+                                    picks = topPicks,
+                                    listenerName = listenerName,
+                                    onClick = onTopPickClick,
+                                    onLongPress = onTopPickLongPress,
+                                )
+                            }
+                        }
+                    }
+                    topPicks == null && topPicksLoading -> topPicksSkeleton()
                 }
             }
         }
@@ -333,7 +374,10 @@ fun HomeScreen(
                         onSpeedDialHistory = onSpeedDialHistory,
                         onArtistDialHistory = onArtistDialHistory,
                         dialHistoryLabel = dialHistoryLabel,
-                        afterLead = if (dialLeads && !holdSpeedDial) bannerItem else null,
+                        afterLead = {
+                            if (dialLeads && !holdSpeedDial) bannerItem()
+                            topPicksItem()
+                        },
                         onSpeedDialReorder = onSpeedDialReorder,
                         recentsViewType = recentsViewType,
                         onRecentsViewTypeToggle = {
