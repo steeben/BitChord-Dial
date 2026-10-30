@@ -175,6 +175,8 @@ fun <T : Any> HeldContextMenu(
 
     val insets = WindowInsets.safeDrawing
     var overlayOffset by remember { mutableStateOf(Offset.Zero) }
+    /** The menu's height while it was last open, for its exit: see the layout. */
+    val openMenuHeight = remember(heldItem) { intArrayOf(0) }
 
     Layout(
         modifier = Modifier
@@ -272,9 +274,19 @@ fun <T : Any> HeldContextMenu(
 
         val menuWidth = (width - margin * 2).coerceAtMost(280.dp.roundToPx()).coerceAtLeast(0)
         val menuMaxHeight = (bottom - top - visualH.roundToInt() - gap).coerceAtLeast(0)
+        // Held at the height it opened at while it closes. The rows can change
+        // under a closing menu (a dial's own rows go as soon as it is let go
+        // of), and a shorter menu could fit on the other side of the item:
+        // it jumped there for the last frames of its exit.
+        val openHeight = openMenuHeight[0]
         val menu = measurables[2].measure(
-            Constraints(minWidth = menuWidth, maxWidth = menuWidth, maxHeight = menuMaxHeight),
+            if (!open && openHeight > 0) {
+                Constraints.fixed(menuWidth, openHeight.coerceAtMost(menuMaxHeight))
+            } else {
+                Constraints(minWidth = menuWidth, maxWidth = menuWidth, maxHeight = menuMaxHeight)
+            },
         )
+        if (open) openMenuHeight[0] = menu.height
 
         // Where the lifted item rests. It stays where it was held whenever the
         // menu fits beside it; the menu goes below by preference and above
