@@ -1728,8 +1728,28 @@ private fun PageBackground(
                     ),
             )
         }
+
+        // The artwork's last rows can still show a bright hairline where the
+        // box ends — the blurred foot's layer and a fractional box height
+        // don't land on the same pixel. The scrim has already reached the
+        // page colour there, so a strip of it straddling the edge hides the
+        // seam without changing anything that's visible around it.
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(HEADER_SEAM_COVER)
+                .offset {
+                    val top = maxOf(listState.headerTop(artHeight.toPx()), floorTop())
+                    val edge = top + artHeight.toPx() - HEADER_SEAM_COVER.toPx() / 2f
+                    IntOffset(0, edge.roundToInt())
+                }
+                .background(palette.wash),
+        )
     }
 }
+
+/** How tall the page-colour strip laid over the artwork's bottom edge is. */
+private val HEADER_SEAM_COVER = 4.dp
 
 /**
  * Where the top of the artwork currently is.
