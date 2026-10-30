@@ -1301,4 +1301,6 @@
     <string name="artist_signatures_unconfigured">Yapılandırılmadı — API URL\'sini ayarlamak için dokunun</string>
     <string name="artist_signatures_test_failed">Bu URL\'de API\'ye ulaşılamadı</string>
     <string name="signed_by">%1$s tarafından imzalandı</string>
+    <string name="remove_from_history">Geçmişten kaldır</string>
+    <string name="remove_from_history_failed">Geçmişten kaldırılamadı</string>
 </resources>

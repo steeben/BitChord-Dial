@@ -1316,4 +1316,6 @@
     <string name="artist_signatures_unconfigured">Sin configurar — toca para establecer la URL de la API</string>
     <string name="artist_signatures_test_failed">No se pudo contactar con la API en esa URL</string>
     <string name="signed_by">Firmado por %1$s</string>
+    <string name="remove_from_history">Quitar del historial</string>
+    <string name="remove_from_history_failed">No se pudo quitar del historial</string>
 </resources>

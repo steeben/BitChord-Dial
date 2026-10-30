@@ -1344,4 +1344,6 @@
     <string name="artist_signatures_unconfigured">Nicht konfiguriert — tippen, um die API-URL festzulegen</string>
     <string name="artist_signatures_test_failed">Die API war unter dieser URL nicht erreichbar</string>
     <string name="signed_by">Signiert von %1$s</string>
+    <string name="remove_from_history">Aus dem Verlauf entfernen</string>
+    <string name="remove_from_history_failed">Konnte nicht aus dem Verlauf entfernt werden</string>
 </resources>

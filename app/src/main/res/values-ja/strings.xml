@@ -1322,4 +1322,6 @@
     <string name="artist_signatures_unconfigured">未設定 — APIのURLを設定するにはタップしてください</string>
     <string name="artist_signatures_test_failed">そのURLでAPIに到達できませんでした</string>
     <string name="signed_by">%1$s のサイン</string>
+    <string name="remove_from_history">履歴から削除</string>
+    <string name="remove_from_history_failed">履歴から削除できませんでした</string>
 </resources>

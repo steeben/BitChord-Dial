@@ -1349,4 +1349,6 @@
     <string name="artist_signatures_unconfigured">Não configurado — toque para definir a URL da API</string>
     <string name="artist_signatures_test_failed">Não foi possível alcançar a API nesse URL</string>
     <string name="signed_by">Assinado por %1$s</string>
+    <string name="remove_from_history">Remover do histórico</string>
+    <string name="remove_from_history_failed">Não foi possível remover do histórico</string>
 </resources>

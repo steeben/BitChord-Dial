@@ -1376,4 +1376,6 @@
     <string name="artist_signatures_unconfigured">Не настроено — нажмите, чтобы задать URL API</string>
     <string name="artist_signatures_test_failed">Не удалось связаться с API по этому URL</string>
     <string name="signed_by">Подпись: %1$s</string>
+    <string name="remove_from_history">Удалить из истории</string>
+    <string name="remove_from_history_failed">Не удалось удалить из истории</string>
 </resources>

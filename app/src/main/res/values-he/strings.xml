@@ -1349,4 +1349,6 @@
     <string name="artist_signatures_unconfigured">לא מוגדר — הקש כדי להגדיר את כתובת ה-API</string>
     <string name="artist_signatures_test_failed">לא ניתן היה להתחבר ל-API בכתובת זו</string>
     <string name="signed_by">נחתם על ידי %1$s</string>
+    <string name="remove_from_history">הסרה מההיסטוריה</string>
+    <string name="remove_from_history_failed">לא ניתן להסיר מההיסטוריה</string>
 </resources>

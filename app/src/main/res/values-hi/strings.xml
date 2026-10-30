@@ -1344,4 +1344,6 @@
     <string name="artist_signatures_unconfigured">कॉन्फ़िगर नहीं है — API URL सेट करने के लिए टैप करें</string>
     <string name="artist_signatures_test_failed">उस URL पर API तक नहीं पहुंचा जा सका</string>
     <string name="signed_by">%1$s द्वारा हस्ताक्षरित</string>
+    <string name="remove_from_history">इतिहास से हटाएँ</string>
+    <string name="remove_from_history_failed">इतिहास से हटाया नहीं जा सका</string>
 </resources>

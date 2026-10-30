@@ -1327,4 +1327,6 @@
     <string name="artist_signatures_unconfigured">ยังไม่ได้กำหนดค่า — แตะเพื่อตั้งค่า URL API</string>
     <string name="artist_signatures_test_failed">ไม่สามารถเข้าถึง API ที่ URL นี้ได้</string>
     <string name="signed_by">ลงนามโดย %1$s</string>
+    <string name="remove_from_history">นำออกจากประวัติ</string>
+    <string name="remove_from_history_failed">นำออกจากประวัติไม่ได้</string>
 </resources>

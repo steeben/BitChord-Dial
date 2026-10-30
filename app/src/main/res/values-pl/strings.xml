@@ -1384,4 +1384,6 @@
     <string name="artist_signatures_unconfigured">Nieskonfigurowano — dotknij, aby ustawić adres URL interfejsu API</string>
     <string name="artist_signatures_test_failed">Nie można połączyć się z API pod tym adresem URL</string>
     <string name="signed_by">Podpisano przez %1$s</string>
+    <string name="remove_from_history">Usuń z historii</string>
+    <string name="remove_from_history_failed">Nie udało się usunąć z historii</string>
 </resources>

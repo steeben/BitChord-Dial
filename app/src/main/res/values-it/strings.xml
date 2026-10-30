@@ -1283,4 +1283,6 @@
     <string name="artist_signatures_unconfigured">Non configurato — tocca per impostare l\'URL dell\'API</string>
     <string name="artist_signatures_test_failed">Impossibile raggiungere l\'API a questo URL</string>
     <string name="signed_by">Firmato da %1$s</string>
+    <string name="remove_from_history">Rimuovi dalla cronologia</string>
+    <string name="remove_from_history_failed">Impossibile rimuovere dalla cronologia</string>
 </resources>

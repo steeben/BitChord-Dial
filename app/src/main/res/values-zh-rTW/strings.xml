@@ -1321,4 +1321,8 @@
     <string name="artist_signatures_unconfigured">尚未設定 — 點選設定 API URL</string>
     <string name="artist_signatures_test_failed">無法連接該 URL 的 API</string>
     <string name="signed_by">由 %1$s 簽名</string>
+    <string name="remove_from_history">從記錄中移除</string>
+    <string name="remove_from_history_failed">無法從記錄中移除</string>
+    <string name="pause_at_zero_volume">音量為零時暫停</string>
+    <string name="pause_at_zero_volume_subtitle">音量調高後繼續播放</string>
 </resources>

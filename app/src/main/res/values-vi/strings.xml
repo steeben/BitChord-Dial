@@ -1261,4 +1261,6 @@
     <string name="artist_signatures_unconfigured">Chưa được định cấu hình — nhấn để đặt URL API</string>
     <string name="artist_signatures_test_failed">Không thể kết nối tới API tại URL này</string>
     <string name="signed_by">Được ký bởi %1$s</string>
+    <string name="remove_from_history">Xóa khỏi lịch sử</string>
+    <string name="remove_from_history_failed">Không thể xóa khỏi lịch sử</string>
 </resources>
