@@ -1387,4 +1387,7 @@
     <string name="remove_from_history">Usuń z historii</string>
     <string name="remove_from_history_failed">Nie udało się usunąć z historii</string>
     <string name="korean">Koreański</string>
+    <string name="direct_source_stream_in_party">Wyłączone podczas imprezy Listen Together</string>
+    <string name="direct_source_stream">Bezpośredni strumień ze źródła</string>
+    <string name="direct_source_stream_subtitle">Odtwarzaj z dodatku od pierwszej nuty, zamiast zaczynać na YouTube i przełączać na wyższą jakość w trakcie utworu</string>
 </resources>

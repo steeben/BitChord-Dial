@@ -1330,4 +1330,7 @@
     <string name="remove_from_history">นำออกจากประวัติ</string>
     <string name="remove_from_history_failed">นำออกจากประวัติไม่ได้</string>
     <string name="korean">เกาหลี</string>
+    <string name="direct_source_stream_in_party">ปิดอยู่ขณะอยู่ในปาร์ตี้ Listen Together</string>
+    <string name="direct_source_stream">สตรีมตรงจากแหล่งที่มา</string>
+    <string name="direct_source_stream_subtitle">เล่นจากส่วนเสริมตั้งแต่โน้ตแรก แทนการเริ่มบน YouTube แล้วเปลี่ยนเป็นคุณภาพสูงขึ้นกลางเพลง</string>
 </resources>

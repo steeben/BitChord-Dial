@@ -1347,4 +1347,7 @@
     <string name="remove_from_history">Aus dem Verlauf entfernen</string>
     <string name="remove_from_history_failed">Konnte nicht aus dem Verlauf entfernt werden</string>
     <string name="korean">Koreanisch</string>
+    <string name="direct_source_stream_in_party">Während einer Listen Together-Party deaktiviert</string>
+    <string name="direct_source_stream">Direkter Quell-Stream</string>
+    <string name="direct_source_stream_subtitle">Ab dem ersten Ton von deinem Add-on abspielen, statt auf YouTube zu starten und mitten im Song auf höhere Qualität zu wechseln</string>
 </resources>

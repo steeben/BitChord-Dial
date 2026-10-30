@@ -1264,4 +1264,7 @@
     <string name="remove_from_history">Xóa khỏi lịch sử</string>
     <string name="remove_from_history_failed">Không thể xóa khỏi lịch sử</string>
     <string name="korean">Tiếng Hàn</string>
+    <string name="direct_source_stream_in_party">Tắt khi bạn đang trong bữa tiệc Listen Together</string>
+    <string name="direct_source_stream">Phát trực tiếp từ nguồn</string>
+    <string name="direct_source_stream_subtitle">Phát từ tiện ích bổ sung ngay từ nốt đầu tiên, thay vì bắt đầu trên YouTube rồi chuyển sang chất lượng cao hơn giữa bài</string>
 </resources>

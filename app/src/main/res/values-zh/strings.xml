@@ -1324,4 +1324,7 @@
     <string name="pause_at_zero_volume">音量为零时暂停</string>
     <string name="pause_at_zero_volume_subtitle">音量调高后继续播放</string>
     <string name="korean">韩语</string>
+    <string name="direct_source_stream_in_party">在 Listen Together 派对中时关闭</string>
+    <string name="direct_source_stream">直接从来源串流</string>
+    <string name="direct_source_stream_subtitle">从第一个音符起就由你的附加组件播放，而不是先从 YouTube 开始，再在歌曲中途切换到更高音质</string>
 </resources>

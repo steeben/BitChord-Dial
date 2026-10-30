@@ -195,6 +195,12 @@ class CrossfadeController(
     private val versionSwapActive: () -> Boolean = { false },
     /** Invoked after [finish] has completed cleanup and returned to IDLE. */
     private val onSettled: () -> Unit = {},
+    /**
+     * Whether the incoming track's audio is ready to blend into, as one more
+     * condition on showing the Automix window on the seek bar. Only marks the
+     * window; arming the transition never waits on it.
+     */
+    private val nextStreamReady: (MediaItem) -> Boolean = { true },
 ) {
 
     private enum class Phase {
@@ -797,7 +803,21 @@ class CrossfadeController(
         if (!holdWanted && phase == Phase.IDLE) releaseHold()
     }
 
+    /**
+     * Where the next transition out of a track starts, in media ms, as the
+     * last idle tick planned it — or null when that track has no crossfade or
+     * Automix transition coming and simply runs to its end.
+     *
+     * Read by [DirectSourceGate]'s window, which opens the next track's
+     * resolve a fixed time before the blend rather than before the file end.
+     */
+    fun plannedTransitionFor(mediaId: String): Long? =
+        plannedTransition?.takeIf { it.first == mediaId }?.second
+
+    private var plannedTransition: Pair<String, Long>? = null
+
     private fun planAutoTransition(player: ExoPlayer) {
+        plannedTransition = null
         // Not while a version swap owns the standby player — see
         // [versionSwapActive]. Nothing to clean up on the way out unlike the
         // party case below: a version swap is a between-tracks affair on the
@@ -874,6 +894,7 @@ class CrossfadeController(
         val fade = fadeFor(duration)
         if (fade <= 0L) return
 
+        player.currentMediaItem?.mediaId?.let { plannedTransition = it to duration - fade }
         val remaining = duration - player.currentPosition
         if (SleepTimer.afterTrack.value) {
             // The sleep timer is due when this track ends. There is no next
@@ -1003,7 +1024,9 @@ class CrossfadeController(
             plan.markerVisible &&
             duration > 0L &&
             analysisState.current == TrackAnalysisState.ANALYSED &&
-            analysisState.next in MEASURED_ENOUGH_TO_ENTER_ON
+            analysisState.next in MEASURED_ENOUGH_TO_ENTER_ON &&
+            // Last, because it is the only one that can read the cache.
+            nextStreamReady(nextItem)
         AppSettings.smartTransitionWindow.value = if (markable) {
             TransitionWindow(
                 start = (plan.transitionStart * 1000.0 / duration).toFloat().coerceIn(0f, 1f),
@@ -1019,6 +1042,7 @@ class CrossfadeController(
         if (fade <= 0L) return
 
         val transitionStartMs = (plan.transitionStart * 1000).roundToLong()
+        plannedTransition = currentItem.mediaId to transitionStartMs
         val remaining = transitionStartMs - player.currentPosition
         if (SleepTimer.afterTrack.value) {
             // Automix would start blending into the next track here; the sleep

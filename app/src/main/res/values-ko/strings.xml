@@ -1115,4 +1115,7 @@
     <string name="unpin_artist_from_speed_dial">스피드 다이얼에서 아티스트 고정 해제</string>
     <string name="pin_artist_radio_to_speed_dial">아티스트 라디오를 스피드 다이얼에 고정</string>
     <string name="unpin_artist_radio_from_speed_dial">스피드 다이얼에서 아티스트 라디오 고정 해제</string>
+    <string name="direct_source_stream">소스에서 직접 스트리밍</string>
+    <string name="direct_source_stream_in_party">Listen Together 파티 중에는 꺼집니다</string>
+    <string name="direct_source_stream_subtitle">YouTube에서 시작해 곡 중간에 고음질로 전환하는 대신, 첫 음부터 애드온으로 재생합니다</string>
 </resources>

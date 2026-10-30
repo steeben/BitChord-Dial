@@ -1319,4 +1319,7 @@
     <string name="remove_from_history">Quitar del historial</string>
     <string name="remove_from_history_failed">No se pudo quitar del historial</string>
     <string name="korean">Coreano</string>
+    <string name="direct_source_stream_in_party">Desactivado mientras estás en una fiesta de Listen Together</string>
+    <string name="direct_source_stream">Transmisión directa desde la fuente</string>
+    <string name="direct_source_stream_subtitle">Reproduce desde tu complemento desde la primera nota, en lugar de empezar en YouTube y pasar a mayor calidad a mitad de la canción</string>
 </resources>

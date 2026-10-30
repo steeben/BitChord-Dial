@@ -111,6 +111,9 @@ object StreamChoice {
      */
     fun isSubstitute(videoId: String): Boolean = chosen[videoId]?.substituted == true
 
+    /** Whether [videoId] has been settled on YouTube's own copy; false when nothing has been chosen. */
+    fun isYouTube(videoId: String): Boolean = chosen[videoId]?.substituted == false
+
     /**
      * Releases [videoId] to be resolved afresh.
      *

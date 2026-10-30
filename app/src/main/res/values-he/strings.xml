@@ -1352,4 +1352,7 @@
     <string name="remove_from_history">הסרה מההיסטוריה</string>
     <string name="remove_from_history_failed">לא ניתן להסיר מההיסטוריה</string>
     <string name="korean">קוריאנית</string>
+    <string name="direct_source_stream_in_party">כבוי בזמן מסיבת Listen Together</string>
+    <string name="direct_source_stream">הזרמה ישירה מהמקור</string>
+    <string name="direct_source_stream_subtitle">ניגון מהתוסף שלך מהצליל הראשון, במקום להתחיל ב-YouTube ולעבור לאיכות גבוהה יותר באמצע השיר</string>
 </resources>

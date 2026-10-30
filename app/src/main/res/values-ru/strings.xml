@@ -1379,4 +1379,7 @@
     <string name="remove_from_history">Удалить из истории</string>
     <string name="remove_from_history_failed">Не удалось удалить из истории</string>
     <string name="korean">Корейский</string>
+    <string name="direct_source_stream_in_party">Отключено во время вечеринки Listen Together</string>
+    <string name="direct_source_stream">Прямой поток из источника</string>
+    <string name="direct_source_stream_subtitle">Воспроизводить из дополнения с первой ноты, а не начинать на YouTube и переключаться на более высокое качество посреди трека</string>
 </resources>

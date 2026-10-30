@@ -1347,4 +1347,7 @@
     <string name="remove_from_history">इतिहास से हटाएँ</string>
     <string name="remove_from_history_failed">इतिहास से हटाया नहीं जा सका</string>
     <string name="korean">कोरियाई</string>
+    <string name="direct_source_stream_in_party">Listen Together पार्टी के दौरान बंद</string>
+    <string name="direct_source_stream">स्रोत से सीधी स्ट्रीम</string>
+    <string name="direct_source_stream_subtitle">YouTube पर शुरू करके गाने के बीच में बेहतर क्वालिटी पर जाने के बजाय, पहले सुर से ही आपके ऐड-ऑन से चलाएँ</string>
 </resources>

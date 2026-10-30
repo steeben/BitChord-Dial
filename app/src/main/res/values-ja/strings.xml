@@ -1325,4 +1325,7 @@
     <string name="remove_from_history">履歴から削除</string>
     <string name="remove_from_history_failed">履歴から削除できませんでした</string>
     <string name="korean">韓国語</string>
+    <string name="direct_source_stream_in_party">Listen Together パーティー中はオフ</string>
+    <string name="direct_source_stream">ソースから直接ストリーミング</string>
+    <string name="direct_source_stream_subtitle">YouTube で再生を始めて曲の途中で高音質に切り替えるのではなく、最初の音からアドオンで再生します</string>
 </resources>

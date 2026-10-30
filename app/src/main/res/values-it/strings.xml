@@ -1286,4 +1286,7 @@
     <string name="remove_from_history">Rimuovi dalla cronologia</string>
     <string name="remove_from_history_failed">Impossibile rimuovere dalla cronologia</string>
     <string name="korean">Coreano</string>
+    <string name="direct_source_stream_in_party">Disattivato durante una festa Listen Together</string>
+    <string name="direct_source_stream">Streaming diretto dalla fonte</string>
+    <string name="direct_source_stream_subtitle">Riproduci dal tuo componente aggiuntivo fin dalla prima nota, invece di partire da YouTube e passare a una qualità superiore a metà brano</string>
 </resources>

@@ -109,6 +109,8 @@
         <item quantity="other">Downloading %1$d songs</item>
     </plurals>
     <string name="source">Sources</string>
+    <string name="direct_source_stream">Direct Source Stream</string>
+    <string name="direct_source_stream_in_party">Off while you\'re in a Listen Together party</string>
     <string name="lossless_audio">Lossless audio</string>
     <string name="prefer_lossless">Prefer lossless</string>
     <string name="lossless_source_subtitle">FLAC and ALAC straight from the source</string>
@@ -1214,4 +1216,5 @@
     <string name="artist_signatures_unconfigured">Not configured — tap to set the API URL</string>
     <string name="artist_signatures_test_failed">Could not reach the API at that URL</string>
     <string name="signed_by">Signed by %1$s</string>
+    <string name="direct_source_stream_subtitle">Play from your addon from the first note, instead of starting on YouTube and switching to higher quality mid-song</string>
 </resources>

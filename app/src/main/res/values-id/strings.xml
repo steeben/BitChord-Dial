@@ -1324,4 +1324,7 @@
     <string name="remove_from_history">Hapus dari riwayat</string>
     <string name="remove_from_history_failed">Tidak dapat menghapus dari riwayat</string>
     <string name="korean">Korea</string>
+    <string name="direct_source_stream_in_party">Nonaktif selama kamu dalam pesta Listen Together</string>
+    <string name="direct_source_stream">Streaming langsung dari sumber</string>
+    <string name="direct_source_stream_subtitle">Putar dari add-on Anda sejak nada pertama, bukan mulai di YouTube lalu beralih ke kualitas lebih tinggi di tengah lagu</string>
 </resources>

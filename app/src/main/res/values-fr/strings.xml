@@ -1348,4 +1348,7 @@
     <string name="remove_from_history">Retirer de l\'historique</string>
     <string name="remove_from_history_failed">Impossible de retirer de l\'historique</string>
     <string name="korean">Coréen</string>
+    <string name="direct_source_stream_in_party">Désactivé pendant une fête Listen Together</string>
+    <string name="direct_source_stream">Flux direct depuis la source</string>
+    <string name="direct_source_stream_subtitle">Lit depuis votre module complémentaire dès la première note, au lieu de démarrer sur YouTube et de passer en meilleure qualité en cours de morceau</string>
 </resources>

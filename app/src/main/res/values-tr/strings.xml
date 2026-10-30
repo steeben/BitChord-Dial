@@ -1304,4 +1304,7 @@
     <string name="remove_from_history">Geçmişten kaldır</string>
     <string name="remove_from_history_failed">Geçmişten kaldırılamadı</string>
     <string name="korean">Korece</string>
+    <string name="direct_source_stream_in_party">Listen Together partisi sırasında kapalı</string>
+    <string name="direct_source_stream">Doğrudan kaynak akışı</string>
+    <string name="direct_source_stream_subtitle">YouTube\'da başlayıp şarkının ortasında daha yüksek kaliteye geçmek yerine, ilk notadan itibaren eklentinizden çal</string>
 </resources>
