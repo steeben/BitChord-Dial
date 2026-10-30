@@ -12,6 +12,7 @@ import android.media.audiofx.AudioEffect
 import android.net.Uri
 import android.widget.Toast
 import android.os.Bundle
+import android.os.Looper
 import android.os.Handler
 import android.os.SystemClock
 import com.music.bitchord.data.TelemetryProvenance
@@ -4860,6 +4861,73 @@ class PlaybackService : MediaLibraryService() {
         TrackLog.d("BitChord", "spliced upgrade installed for real at the seek to ${positionMs}ms", about = mediaId)
     }
 
+    /**
+     * Whether the output the phone is playing to can take [rateHz] as it is:
+     * a USB DAC or other external route that lists that rate (or lists none,
+     * meaning any). The phone's own speaker and headphone paths, and Bluetooth,
+     * run through Android's mixer at its own rate whatever they are handed.
+     */
+    private fun outputCarriesRate(rateHz: Int): Boolean {
+        if (rateHz < HI_RES_INSTALL_MIN_HZ) return false
+        val device = resolveActiveOutputDevice() ?: return false
+        when (resolveActiveRouteKind(device)) {
+            AudioRouting.Kind.PHONE, AudioRouting.Kind.WIRED, AudioRouting.Kind.BLUETOOTH -> return false
+            else -> Unit
+        }
+        val rates = device.sampleRates
+        return rates.isEmpty() || rates.any { it >= rateHz }
+    }
+
+    /** The job waiting for a moment to install a hi-res splice for real. */
+    private var hiResInstallJob: Job? = null
+
+    /**
+     * Main thread. A spliced-in copy at a rate the output can carry natively
+     * is still being converted down to the old copy's rate, which a DAC would
+     * hear; so instead of waiting for a seek, the upgraded file is installed
+     * for real as soon as the cost of doing so — a third of a second of
+     * silence — can be hidden: at the next pause, or inside the first
+     * near-silent stretch the sink sees coming, or, failing either within
+     * [HI_RES_INSTALL_WAIT_MS], straight away.
+     */
+    private fun installHiResSoon(activePlayer: ExoPlayer, mediaId: String, rateHz: Int) {
+        hiResInstallJob?.cancel()
+        val splice = activeFilter.splice
+        splice.findQuietPoint(splice.processedMediaUs)
+        hiResInstallJob = scope.launch(Dispatchers.Main) {
+            val giveUpAt = SystemClock.elapsedRealtime() + HI_RES_INSTALL_WAIT_MS
+            try {
+                while (isActive) {
+                    if (player !== activePlayer || splicedUpgrade?.first != mediaId) return@launch
+                    if (!activePlayer.playWhenReady) {
+                        TrackLog.d("BitChord", "hi-res ${rateHz}Hz upgrade installed while paused", about = mediaId)
+                        installSplicedUpgrade(activePlayer, activePlayer.currentPosition)
+                        return@launch
+                    }
+                    val quietUs = splice.quietPointUs
+                    if (quietUs != C.TIME_UNSET) {
+                        val atMs = quietUs / 1000
+                        TrackLog.d("BitChord", "hi-res ${rateHz}Hz upgrade will install in the quiet at ${atMs}ms", about = mediaId)
+                        activePlayer.createMessage { _, _ -> installSplicedUpgrade(activePlayer, atMs) }
+                            .setLooper(Looper.getMainLooper())
+                            .setPosition(activePlayer.currentMediaItemIndex, atMs)
+                            .setDeleteAfterDelivery(true)
+                            .send()
+                        return@launch
+                    }
+                    if (SystemClock.elapsedRealtime() >= giveUpAt) {
+                        TrackLog.d("BitChord", "hi-res ${rateHz}Hz upgrade installed now; no quiet moment came", about = mediaId)
+                        installSplicedUpgrade(activePlayer, activePlayer.currentPosition)
+                        return@launch
+                    }
+                    delay(HI_RES_INSTALL_POLL_MS)
+                }
+            } finally {
+                splice.stopFindingQuietPoint()
+            }
+        }
+    }
+
     /** The spliced-in copy described as the renderer would have, for [splicedFormat]. */
     private fun splicedFormatOf(source: StreamFormat, rateHz: Int, channels: Int): Format? {
         val mime = when (source.codec) {
@@ -5045,6 +5113,9 @@ class PlaybackService : MediaLibraryService() {
             splicedFormatOf(sourceFormat, feed.sourceRate, channels)?.let {
                 splicedFormat = mediaId to it
                 publishNerdStats()
+            }
+            if (outputCarriesRate(feed.sourceRate) && feed.sourceRate > rate) {
+                installHiResSoon(activePlayer, mediaId, feed.sourceRate)
             }
             TrackLog.d(
                 "BitChord",
@@ -9545,6 +9616,13 @@ class PlaybackService : MediaLibraryService() {
 
         /** Longest any one start or seek on the stand-by is waited out before the blend gives up. */
         const val UPGRADE_BLEND_SYNC_TIMEOUT_MS = 600L
+
+        /** Rates from here up are worth installing for real on an output that carries them. */
+        const val HI_RES_INSTALL_MIN_HZ = 88_200
+
+        /** Longest [installHiResSoon] waits for a pause or a quiet moment. */
+        const val HI_RES_INSTALL_WAIT_MS = 10_000L
+        const val HI_RES_INSTALL_POLL_MS = 100L
 
         /** How much of the playing audio [spliceInUpgrade] measures the new copy against. */
         const val UPGRADE_SPLICE_CAPTURE_MS = 2_000L

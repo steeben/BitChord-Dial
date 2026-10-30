@@ -50,6 +50,51 @@ class SinkSplice {
     /** The captured mono audio, once [captureDone]. */
     fun capture(): FloatArray? = if (captureDone) captureBuffer else null
 
+    // ---- Quiet point --------------------------------------------------------
+
+    @Volatile private var quietAfterUs: Long = Long.MAX_VALUE
+    private var quietRunStartUs: Long = C.TIME_UNSET
+
+    /** Song time of the first near-silent stretch found since [findQuietPoint], or unset. */
+    @Volatile var quietPointUs: Long = C.TIME_UNSET
+        private set
+
+    /**
+     * App thread. Watches the audio as it reaches the sink — well ahead of the
+     * speaker — for a stretch of near silence at or after [afterUs], so a
+     * change that costs a moment of silence can be made inside one.
+     */
+    fun findQuietPoint(afterUs: Long) {
+        quietPointUs = C.TIME_UNSET
+        quietRunStartUs = C.TIME_UNSET
+        quietAfterUs = afterUs
+    }
+
+    fun stopFindingQuietPoint() {
+        quietAfterUs = Long.MAX_VALUE
+    }
+
+    private fun watchForQuiet(block: AudioBlock, mediaUs: Long, rate: Int) {
+        if (mediaUs < quietAfterUs || quietPointUs != C.TIME_UNSET) return
+        val n = block.sampleCount
+        var sum = 0.0
+        for (i in 0 until n) {
+            val v = block.samples[i]
+            sum += v * v
+        }
+        val rms = if (n == 0) 1.0 else kotlin.math.sqrt(sum / n)
+        if (rms < QUIET_RMS) {
+            if (quietRunStartUs == C.TIME_UNSET) quietRunStartUs = mediaUs
+            val endUs = mediaUs + block.frameCount * 1_000_000L / rate
+            if (endUs - quietRunStartUs >= QUIET_MIN_US) {
+                quietPointUs = quietRunStartUs + QUIET_LEAD_IN_US
+                quietAfterUs = Long.MAX_VALUE
+            }
+        } else {
+            quietRunStartUs = C.TIME_UNSET
+        }
+    }
+
     // ---- Splice -----------------------------------------------------------
 
     @Volatile private var feed: SpliceFeed? = null
@@ -90,6 +135,7 @@ class SinkSplice {
     /** Sink. A flush or a reset: anything in flight belongs to the playback just abandoned. */
     internal fun onDiscontinuity() {
         if (!captureDone) captureBuffer = null
+        quietRunStartUs = C.TIME_UNSET
         end()
     }
 
@@ -119,21 +165,31 @@ class SinkSplice {
             }
         }
 
-        val source = feed ?: return
+        val source = feed
+        if (source == null) {
+            watchForQuiet(block, mediaUs, rate)
+            return
+        }
         if (source.channels != ch || source.rate != rate) {
             end()
             return
         }
         if (state == ARMED) {
             val first = source.firstFrameUs
-            if (first == C.TIME_UNSET) return
+            if (first == C.TIME_UNSET) {
+                watchForQuiet(block, mediaUs, rate)
+                return
+            }
             cursor = ((mediaUs + deltaUs - first) * rate / 1_000_000.0).roundToLong()
             fadeFrames = (rate * FADE_SECONDS).toInt().coerceAtLeast(1)
             fadeDone = 0
             splicedAtUs = mediaUs
             state = ACTIVE
         }
-        if (state != ACTIVE) return
+        if (state != ACTIVE) {
+            watchForQuiet(block, mediaUs, rate)
+            return
+        }
         var done = 0
         while (done < frames) {
             val chunk = minOf(frames - done, MAX_BLOCK_FRAMES)
@@ -158,6 +214,7 @@ class SinkSplice {
             done += chunk
         }
         source.releaseUpTo(cursor)
+        watchForQuiet(block, mediaUs, rate)
     }
 
     companion object {
@@ -167,5 +224,12 @@ class SinkSplice {
         const val ENDED = 3
         private const val MAX_BLOCK_FRAMES = 4096
         private const val FADE_SECONDS = 0.02
+
+        /** About -50 dBFS: a break in the music, not a quiet passage of it. */
+        private const val QUIET_RMS = 0.003
+        private const val QUIET_MIN_US = 150_000L
+
+        /** Into the quiet stretch, so the cut lands after the last note has died away. */
+        private const val QUIET_LEAD_IN_US = 30_000L
     }
 }
