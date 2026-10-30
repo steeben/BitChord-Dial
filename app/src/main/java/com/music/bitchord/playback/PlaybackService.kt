@@ -1934,7 +1934,52 @@ class PlaybackService : MediaLibraryService() {
             // a window shown over a track that may still fall back to YouTube
             // promises a blend that could start late or not at all.
             nextStreamReady = { item -> !DirectSourceGate.isActive() || DirectSourceGate.isStreamReady(item) },
+            mixWaveform = { item, durationMs, from, to, bins ->
+                item.localConfiguration?.uri?.let { uri ->
+                    trackAnalyzer.mixWaveform(item.mediaId, uri, durationMs / 1000.0, from, to, bins)
+                }
+            },
+            // Each sink's loop-mix port rides on its transition filter, so the
+            // player and the port trade roles together at every handoff.
+            loopPortOf = { target ->
+                when {
+                    target === player -> activeFilter.loop
+                    target === spare -> spareFilter.loop
+                    else -> null
+                }
+            },
+            loopRegion = { item, durationMs, from, to, rate ->
+                item.localConfiguration?.uri?.let { uri ->
+                    trackAnalyzer.loopRegion(item.mediaId, uri, durationMs / 1000.0, from, to, rate)
+                }
+            },
+            syncedLines = ::loopMixLyrics,
+            loudnessGain = ::loudnessGainFor,
+            onMixPositionJump = { wrapped -> (mediaSession?.player as? SessionPlayer)?.announceMixPosition(wrapped) },
         )
+
+    /**
+     * A track's synced lyrics for the loop mix, which lets a loop be vouched
+     * instrumental by when its lines are sung rather than by the vocal model.
+     * Only with synced lyrics switched on, and never for longer than
+     * [LOOP_MIX_LYRICS_TIMEOUT_MS]: the mask stands in for whatever doesn't come.
+     */
+    private suspend fun loopMixLyrics(item: MediaItem, durationMs: Long): List<LyricLine>? {
+        if (!AppSettings.syncedLyrics.value) return null
+        val song = item.toSong()
+        return kotlinx.coroutines.withTimeoutOrNull(LOOP_MIX_LYRICS_TIMEOUT_MS) {
+            song.localUri?.let { EmbeddedLyrics.forUri(this@PlaybackService, it) }
+                ?: LyricsRepository.lyrics(
+                    videoId = song.videoId,
+                    title = song.title,
+                    artist = song.artist,
+                    durationMs = durationMs,
+                    album = song.albumName,
+                    sources = AppSettings.lyricsSources.value,
+                    order = AppSettings.lyricsSourceOrder.value,
+                )?.lines
+        }
+    }
 
     /**
      * Whether [item] is liked, by whichever of the two records owns it: a
@@ -3010,6 +3055,10 @@ class PlaybackService : MediaLibraryService() {
         autoplayLoadJob = scope.launch {
             var remaining = needed
             var emptyRefreshesRemaining = MAX_AUTOPLAY_EMPTY_REFRESHES
+            // Which song seeds the radio: this one first, then — when its radio
+            // has nothing new left — the songs before it, one further back each
+            // time, as the web player's watchdog does.
+            var seedBack = 0
             while (isActive) {
                 val activePlayer = player ?: return@launch
                 val activeParty = ListenTogether.state.value
@@ -3028,7 +3077,13 @@ class PlaybackService : MediaLibraryService() {
                 } else {
                     queueSongs
                 }
-                val result = loadAutoplayTracks(existing, current, remaining)
+                val seedSong = if (seedBack == 0) {
+                    current
+                } else {
+                    val at = activePlayer.currentMediaItemIndex - seedBack
+                    if (at >= 0) activePlayer.getMediaItemAt(at).toSong() else current
+                }
+                val result = loadAutoplayTracks(existing, seedSong, remaining)
                 val resolved = result.getOrElse {
                     TrackLog.w(
                         "BitChord",
@@ -3088,11 +3143,20 @@ class PlaybackService : MediaLibraryService() {
                 // leaving AutoPlay visibly on with no queue. While the current
                 // item is genuinely the end of the queue, make a delayed fresh
                 // request. Keep it bounded: a radio with no usable unique songs
-                // must not turn into a permanent background polling loop.
+                // must not turn into a permanent background polling loop: it
+                // asks again every [AUTOPLAY_WATCHDOG_MS] only while this song
+                // plays at the end of the queue, and stops with it.
                 val at = latestPlayer.currentMediaItemIndex
                 if (at < 0 || at != latestPlayer.mediaItemCount - 1) return@launch
-                if (emptyRefreshesRemaining-- <= 0) return@launch
-                delay(AUTOPLAY_EMPTY_REFRESH_DELAY_MS)
+                if (emptyRefreshesRemaining-- > 0) {
+                    delay(AUTOPLAY_EMPTY_REFRESH_DELAY_MS)
+                } else {
+                    delay(AUTOPLAY_WATCHDOG_MS)
+                    // Paused: wait for play rather than asking on behalf of nobody.
+                    while (isActive && player?.playWhenReady == false) delay(AUTOPLAY_WATCHDOG_MS)
+                    // This song's radio came back with nothing new: seed from an earlier one.
+                    seedBack = if (at - (seedBack + 1) >= 0) seedBack + 1 else 0
+                }
                 remaining = MAX_QUEUED_AUTOPLAY
             }
         }
@@ -8268,7 +8332,7 @@ class PlaybackService : MediaLibraryService() {
         val exoPlayer = player ?: return
         val currentSong = exoPlayer.currentMediaItem?.toSong() ?: return
         val lines = serviceLyrics
-        val pos = exoPlayer.currentPosition
+        val pos = crossfade?.loopPositionMs() ?: exoPlayer.currentPosition
         val subtitleText = if (lines != null && lines.isNotEmpty() && AppSettings.syncedLyrics.value) {
             val idx = lines.indexOfLast { it.timeMs <= pos }
             val currentLine = lines.getOrNull(idx)
@@ -8438,9 +8502,44 @@ class PlaybackService : MediaLibraryService() {
 
         override fun getPlaybackState() = if (cast.active) cast.playbackState else super.getPlaybackState()
 
-        override fun getCurrentPosition() = if (cast.active) cast.positionMs else super.getCurrentPosition()
+        // During a loop mix the song loops and follows the tempo ramp, so its
+        // playhead is the mix's own, not the player's: the seek bar, the
+        // lyrics and every controller read it here.
+        override fun getCurrentPosition() =
+            if (cast.active) cast.positionMs else crossfade.loopPositionMs() ?: super.getCurrentPosition()
 
-        override fun getContentPosition() = if (cast.active) cast.positionMs else super.getContentPosition()
+        override fun getContentPosition() =
+            if (cast.active) cast.positionMs else crossfade.loopPositionMs() ?: super.getContentPosition()
+
+        private var lastMixPositionMs = C.TIME_UNSET
+
+        /**
+         * Re-anchors every controller on the loop mix's playhead. A wrap is a
+         * deliberate jump back, announced as one (the lyrics follow it); a
+         * re-anchor through the ramp is reported moving forward, so nothing
+         * reads it as a seek.
+         */
+        fun announceMixPosition(wrapped: Boolean) {
+            val now = currentPosition
+            val before = if (wrapped && lastMixPositionMs != C.TIME_UNSET) lastMixPositionMs else (now - 1).coerceAtLeast(0L)
+            lastMixPositionMs = now
+            fun info(position: Long) = Player.PositionInfo(
+                null,
+                currentMediaItemIndex,
+                currentMediaItem,
+                null,
+                currentPeriodIndex,
+                position,
+                position,
+                C.INDEX_UNSET,
+                C.INDEX_UNSET,
+            )
+            val old = info(before)
+            val new = info(now)
+            listeners.forEach { it.onPositionDiscontinuity(old, new, Player.DISCONTINUITY_REASON_INTERNAL) }
+            val events = Player.Events(FlagSet.Builder().add(Player.EVENT_POSITION_DISCONTINUITY).build())
+            listeners.forEach { it.onEvents(this, events) }
+        }
 
         override fun getBufferedPosition() = if (cast.active) cast.positionMs else super.getBufferedPosition()
 
@@ -9798,6 +9897,9 @@ class PlaybackService : MediaLibraryService() {
         /** Shortest gap "skip silence" is allowed to touch. */
         const val MIN_SILENCE_US = 1_000_000L
 
+        /** How long the loop mix waits for a song's synced lyrics before planning on the vocal mask. */
+        const val LOOP_MIX_LYRICS_TIMEOUT_MS = 10_000L
+
         /** Past any song, so the byte ceiling is what stops loading. */
         const val FAR_BUFFER_MS = 15 * 60 * 1000
 
@@ -10110,8 +10212,15 @@ class PlaybackService : MediaLibraryService() {
         /** Avoid hammering the radio endpoint while an empty AutoPlay queue heals. */
         const val AUTOPLAY_EMPTY_REFRESH_DELAY_MS = 2_000L
 
-        /** One fresh request is the fallback; normal track/queue changes re-arm it. */
+        /** One quick fresh request first; then the watchdog below. */
         const val MAX_AUTOPLAY_EMPTY_REFRESHES = 1
+
+        /**
+         * With nothing after the playing song, AutoPlay asks again this often
+         * (seeding from earlier songs once this one's radio is spent), for as
+         * long as the song plays. The web player's watchdog does the same.
+         */
+        const val AUTOPLAY_WATCHDOG_MS = 15_000L
 
         /**
          * How long AutoPlay waits for the party to echo back the tracks it just

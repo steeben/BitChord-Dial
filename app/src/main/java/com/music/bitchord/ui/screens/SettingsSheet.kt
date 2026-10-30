@@ -3329,9 +3329,15 @@ private class SettingsGroupScope(
  * takes itself off the screen when none of them are left. Dividers fall
  * between the rows that survived rather than around the gaps left by the ones
  * that didn't, so a filtered card is indistinguishable from a hand-written one.
+ *
+ * Inline so [content] is not a restartable lambda of its own. It only collects
+ * rows into [SettingsGroupScope.entries], and drawing them happens here: as its
+ * own recompose scope, a setting it reads — Automix hiding the crossfade
+ * slider, say — re-ran it alone, filling a list nothing redrew, and the row
+ * only came or went whenever something else recomposed the screen.
  */
 @Composable
-private fun SearchableSettingsGroup(
+private inline fun SearchableSettingsGroup(
     search: SettingsSearch,
     header: String? = null,
     footer: String? = null,

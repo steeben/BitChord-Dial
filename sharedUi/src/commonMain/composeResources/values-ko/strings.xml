@@ -282,4 +282,8 @@
     <string name="mood_wellbeing_line">명상과 요가를 위한 차분한 음악.</string>
     <string name="mood_work">업무</string>
     <string name="mood_work_line">일에 집중하게 해 줄 차분한 연주곡.</string>
+    <string name="mix_view_bars">%1$d마디</string>
+    <string name="mix_view_one_bar">1마디</string>
+    <string name="mix_view_seconds">%1$d초</string>
+    <string name="mix_view_bpm">%1$d bpm</string>
 </resources>

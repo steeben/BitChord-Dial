@@ -78,6 +78,13 @@ class TransitionFilterProcessor : BaseAudioProcessor() {
     /** Sample-exact splicing of another copy into this player's audio — see [com.music.bitchord.playback.audio.SinkSplice]. */
     val splice = com.music.bitchord.playback.audio.SinkSplice()
 
+    /**
+     * This sink's side of the Automix loop mix. Carried here, on the processor
+     * that already trades roles with its player at every handoff, so the
+     * controller reaches the right sink by the same route as the filters.
+     */
+    val loop = com.music.bitchord.playback.loopmix.LoopMixPort()
+
     // ---- Echo out ------------------------------------------------------------
     //
     // A feedback delay after the filters, for Advanced Automix's echo out: the

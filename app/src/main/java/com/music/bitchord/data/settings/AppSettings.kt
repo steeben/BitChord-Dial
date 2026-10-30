@@ -799,6 +799,12 @@ object AppSettings {
      */
     val smartMixBlend = MutableStateFlow<MixBlend?>(null)
 
+    /** The Automix blend in flight laid out for the mix popup, or null between blends. */
+    val smartMixView = MutableStateFlow<MixTransitionView?>(null)
+
+    /** How far through [smartMixView]'s blend playback is, 0..1. Read it in draw. */
+    val smartMixProgress = MutableStateFlow(0f)
+
     /**
      * True while a version switch is fetching and analysing the other cut
      * before playback actually moves. Drains into the loading bar drawn along
@@ -815,6 +821,14 @@ object AppSettings {
      * that knows which two tracks the next transition is between.
      */
     val smartAnalysis = MutableStateFlow(SmartAnalysis())
+
+    /**
+     * Automix's detailed line for stats for nerds: each song's analysis while
+     * it waits, then the planned mix (a loop mix's loops and tempo ramp, a
+     * blend's length and stretch, or why the pair isn't beatmatched). Published
+     * by the crossfade controller; null while Automix is off.
+     */
+    val automixDetail = MutableStateFlow<String?>(null)
 
     /**
      * Where on the *playing* track the next transition is planned to happen, as
