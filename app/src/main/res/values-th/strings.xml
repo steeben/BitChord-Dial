@@ -1329,4 +1329,5 @@
     <string name="signed_by">ลงนามโดย %1$s</string>
     <string name="remove_from_history">นำออกจากประวัติ</string>
     <string name="remove_from_history_failed">นำออกจากประวัติไม่ได้</string>
+    <string name="korean">เกาหลี</string>
 </resources>

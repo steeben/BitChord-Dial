@@ -1386,4 +1386,5 @@
     <string name="signed_by">Podpisano przez %1$s</string>
     <string name="remove_from_history">Usuń z historii</string>
     <string name="remove_from_history_failed">Nie udało się usunąć z historii</string>
+    <string name="korean">Koreański</string>
 </resources>

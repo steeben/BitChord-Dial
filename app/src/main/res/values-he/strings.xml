@@ -1351,4 +1351,5 @@
     <string name="signed_by">נחתם על ידי %1$s</string>
     <string name="remove_from_history">הסרה מההיסטוריה</string>
     <string name="remove_from_history_failed">לא ניתן להסיר מההיסטוריה</string>
+    <string name="korean">קוריאנית</string>
 </resources>

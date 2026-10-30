@@ -1346,4 +1346,5 @@
     <string name="signed_by">%1$s द्वारा हस्ताक्षरित</string>
     <string name="remove_from_history">इतिहास से हटाएँ</string>
     <string name="remove_from_history_failed">इतिहास से हटाया नहीं जा सका</string>
+    <string name="korean">कोरियाई</string>
 </resources>

@@ -1323,4 +1323,5 @@
     <string name="signed_by">Ditandatangani oleh %1$s</string>
     <string name="remove_from_history">Hapus dari riwayat</string>
     <string name="remove_from_history_failed">Tidak dapat menghapus dari riwayat</string>
+    <string name="korean">Korea</string>
 </resources>

@@ -1263,4 +1263,5 @@
     <string name="signed_by">Được ký bởi %1$s</string>
     <string name="remove_from_history">Xóa khỏi lịch sử</string>
     <string name="remove_from_history_failed">Không thể xóa khỏi lịch sử</string>
+    <string name="korean">Tiếng Hàn</string>
 </resources>

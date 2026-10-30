@@ -1378,4 +1378,5 @@
     <string name="signed_by">Подпись: %1$s</string>
     <string name="remove_from_history">Удалить из истории</string>
     <string name="remove_from_history_failed">Не удалось удалить из истории</string>
+    <string name="korean">Корейский</string>
 </resources>

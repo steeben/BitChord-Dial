@@ -1285,4 +1285,5 @@
     <string name="signed_by">Firmato da %1$s</string>
     <string name="remove_from_history">Rimuovi dalla cronologia</string>
     <string name="remove_from_history_failed">Impossibile rimuovere dalla cronologia</string>
+    <string name="korean">Coreano</string>
 </resources>

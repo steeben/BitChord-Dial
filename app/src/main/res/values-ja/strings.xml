@@ -1324,4 +1324,5 @@
     <string name="signed_by">%1$s のサイン</string>
     <string name="remove_from_history">履歴から削除</string>
     <string name="remove_from_history_failed">履歴から削除できませんでした</string>
+    <string name="korean">韓国語</string>
 </resources>
