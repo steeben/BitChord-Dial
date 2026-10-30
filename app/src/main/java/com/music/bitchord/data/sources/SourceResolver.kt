@@ -12,6 +12,7 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Turns a queued track into an openable stream, using whichever source can
@@ -786,11 +787,17 @@ object SourceResolver {
             }
             .toMutableList()
         var best: Pair<MusicSource, SourceStream>? = null
+        var bestSince = 0L
         try {
             while (running.isNotEmpty()) {
-                val first = select {
-                    running.forEach { candidate -> candidate.onAwait { candidate } }
-                }
+                val waitMs = if (best == null) Long.MAX_VALUE
+                    else UPGRADE_GRACE_MS - (System.currentTimeMillis() - bestSince)
+                if (waitMs <= 0) break
+                val first = withTimeoutOrNull(waitMs) {
+                    select {
+                        running.forEach { candidate -> candidate.onAwait { candidate } }
+                    }
+                } ?: break
                 // Anything that crossed the line while that one was being waited
                 // on is already sitting there. Folding those in costs no time at
                 // all and is what lets rank break a tie between two sources that
@@ -801,7 +808,10 @@ object SourceResolver {
                     val (source, stream) = done.await()
                     if (stream == null) continue
                     if (!accept(source, stream)) continue
-                    if (isBetter(stream.format, best?.second?.format)) best = source to stream
+                    if (isBetter(stream.format, best?.second?.format)) {
+                        if (best == null) bestSince = System.currentTimeMillis()
+                        best = source to stream
+                    }
                 }
                 // Playback needs the first usable answer so sound can start.
                 // An upgrade is different: it runs while audio is already
@@ -809,6 +819,16 @@ object SourceResolver {
                 // patient result. Let every source finish so a fast lower tier
                 // cannot cancel a later, better rendition.
                 if (best != null && !waitForAll) break
+                // ...but not for ever. Once nothing still running could beat
+                // what is in hand, the rest are only holding the swap up: a
+                // lossless answer loses to nothing but an Atmos mix, so it is
+                // taken as soon as Atmos is off the table. Anything else gets
+                // [UPGRADE_GRACE_MS] for a better answer to turn up, which is
+                // the timeout above. Waiting out every source cost 56s on
+                // 'MOBIUS': Qobuz had the FLAC a second in, and the swap sat
+                // behind two 20s timeouts from an addon that never answered.
+                val inHand = best?.second?.format
+                if (inHand != null && running.isNotEmpty() && (inHand.isDolbyAtmos || (inHand.isLossless == true && !atmosWanted()))) break
             }
         } finally {
             running.forEach { it.cancel() }
@@ -1121,6 +1141,14 @@ object SourceResolver {
      * rounding a runtime differently and nothing else.
      */
     private const val UPGRADE_DRIFT_SEC = 2
+
+    /**
+     * How long a [bestAcross] that waits for every source holds a usable
+     * answer open for a better one. Long enough for a slower source with a
+     * lossless copy to beat a fast lossy one; short enough that one dead
+     * addon can't keep the upgrade waiting on its timeouts.
+     */
+    private const val UPGRADE_GRACE_MS = 5_000L
 
     /**
      * How close two runtimes have to be to be the same cut of a song.

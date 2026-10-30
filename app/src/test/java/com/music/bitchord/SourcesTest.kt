@@ -1287,6 +1287,35 @@ class SourcesTest {
      * already been given their full budget, so it must not cancel a slower FLAC
      * merely because JioSaavn's valid 320kbps answer arrived first.
      */
+    /**
+     * Patient, but not held hostage. On 'MOBIUS' Qobuz had the FLAC a second
+     * in and the swap waited 56s more on an addon timing out. A lossless answer
+     * can only lose to Atmos, so with Atmos off the table it is taken at once.
+     */
+    @Test
+    fun `patient upgrade stops waiting once it holds lossless`() = runBlocking {
+        DeviceCodecs.forced = false
+        try {
+            val playing = StreamFormat(codec = "opus", kbps = 141)
+            val quickLossless = FakeSource("Qobuz", answerAfterMs = 5, format = StreamFormat("flac"))
+            val hung = FakeSource("gglos", answerAfterMs = 60_000, format = StreamFormat("flac"))
+            val elapsed = measureTimeMillis {
+                val (source, _) = SourceResolver.bestAcross(
+                    listOf(hung, quickLossless),
+                    raceTarget(),
+                    StreamRequest.Lossless,
+                    waitForAll = true,
+                    strictLength = true,
+                ) { _, candidate -> SourceResolver.worthSwapping(candidate.format, playing) }!!
+                assertEquals("Qobuz", source.displayName)
+            }
+            assertTrue("took ${elapsed}ms, so it waited for the hung source", elapsed < 1_000)
+            assertTrue(hung.cancelled)
+        } finally {
+            DeviceCodecs.forced = null
+        }
+    }
+
     @Test
     fun `patient upgrade chooses the better later answer`() = runBlocking {
         val playing = StreamFormat(codec = "opus", kbps = 141)
