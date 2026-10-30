@@ -813,7 +813,6 @@ private fun InlineQueueRow(
         AsyncImage(
             model = rememberRemoteArtworkUrl(song),
             contentDescription = null,
-            contentScale = ContentScale.Crop,
             modifier = Modifier
                 .trackArtSize(44.dp, song.isVideo)
                 .clip(RoundedCornerShape(6.dp))

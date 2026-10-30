@@ -2345,7 +2345,6 @@ private fun CompactSongRow(
             AsyncImage(
                 model = song.artworkAt(ROW_ART_PX),
                 contentDescription = null,
-                contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .matchParentSize()
                     .clip(RoundedCornerShape(7.dp))
@@ -2406,7 +2405,6 @@ private fun SuggestedSongRow(
             AsyncImage(
                 model = song.artworkAt(ROW_ART_PX),
                 contentDescription = null,
-                contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .matchParentSize()
                     .clip(RoundedCornerShape(8.dp))

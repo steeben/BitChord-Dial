@@ -1198,7 +1198,6 @@ internal fun SheetTrackHeader(
         AsyncImage(
             model = song.artworkAt(ROW_ART_PX),
             contentDescription = null,
-            contentScale = ContentScale.Crop,
             modifier = Modifier
                 .trackArtSize(52.dp, song.isVideo)
                 .clip(RoundedCornerShape(8.dp))
