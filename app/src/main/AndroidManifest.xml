@@ -292,6 +292,305 @@
             </intent-filter>
         </activity-alias>
 
+        <activity-alias
+            android:name=".LauncherBitChord"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_bitchord"
+            android:roundIcon="@mipmap/ic_bitchord"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherBitChordMonochrome"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_monochrome"
+            android:roundIcon="@mipmap/ic_monochrome"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherBitChordGlass"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_liquid_glass"
+            android:roundIcon="@mipmap/ic_liquid_glass"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherBitChordGlassDark"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_liquid_glass_dark"
+            android:roundIcon="@mipmap/ic_liquid_glass_dark"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherBitChordGlassClear"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_liquid_glass_clear"
+            android:roundIcon="@mipmap/ic_liquid_glass_clear"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherBitChordGlassClearDark"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_liquid_glass_clear_dark"
+            android:roundIcon="@mipmap/ic_liquid_glass_clear_dark"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherBitChordSamsungGlass"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_samsung_glass"
+            android:roundIcon="@mipmap/ic_samsung_glass"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherBitChordSamsungGlassDark"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_samsung_glass_dark"
+            android:roundIcon="@mipmap/ic_samsung_glass_dark"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherBitChordSamsungGlassClear"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_samsung_glass_clear"
+            android:roundIcon="@mipmap/ic_samsung_glass_clear"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherBitChordSamsungGlassClearDark"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_samsung_glass_clear_dark"
+            android:roundIcon="@mipmap/ic_samsung_glass_clear_dark"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherBitChordPixelGlass"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_pixel_glass"
+            android:roundIcon="@mipmap/ic_pixel_glass"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherBitChordPixelGlassDark"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_pixel_glass_dark"
+            android:roundIcon="@mipmap/ic_pixel_glass_dark"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherBitChordPixelGlassClear"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_pixel_glass_clear"
+            android:roundIcon="@mipmap/ic_pixel_glass_clear"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherBitChordPixelGlassClearDark"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_pixel_glass_clear_dark"
+            android:roundIcon="@mipmap/ic_pixel_glass_clear_dark"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherBitChordNeonSilver"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_neon_silver"
+            android:roundIcon="@mipmap/ic_neon_silver"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherBitChordNeonCyan"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_neon_cyan"
+            android:roundIcon="@mipmap/ic_neon_cyan"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherBitChordNeonViolet"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_neon_violet"
+            android:roundIcon="@mipmap/ic_neon_violet"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherBitChordSamsungNeonSilver"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_samsung_neon_silver"
+            android:roundIcon="@mipmap/ic_samsung_neon_silver"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherBitChordSamsungNeonCyan"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_samsung_neon_cyan"
+            android:roundIcon="@mipmap/ic_samsung_neon_cyan"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherBitChordSamsungNeonViolet"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_samsung_neon_violet"
+            android:roundIcon="@mipmap/ic_samsung_neon_violet"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherBitChordPixelNeonSilver"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_pixel_neon_silver"
+            android:roundIcon="@mipmap/ic_pixel_neon_silver"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherBitChordPixelNeonCyan"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_pixel_neon_cyan"
+            android:roundIcon="@mipmap/ic_pixel_neon_cyan"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherBitChordPixelNeonViolet"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_pixel_neon_violet"
+            android:roundIcon="@mipmap/ic_pixel_neon_violet"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
         <service
             android:name=".playback.PlaybackService"
             android:exported="true"

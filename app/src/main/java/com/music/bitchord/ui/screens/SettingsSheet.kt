@@ -14,6 +14,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -893,23 +897,39 @@ fun SettingsScreen(
                                 .padding(vertical = 6.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            // An ImageView draws the adaptive icon through the
-                            // device's own mask, the shape the launcher will use.
-                            AndroidView(
-                                factory = { ctx ->
-                                    android.widget.ImageView(ctx).apply { setImageResource(option.iconRes) }
-                                },
-                                modifier = Modifier
-                                    .size(60.dp)
-                                    .then(
-                                        if (selected) {
-                                            Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(18.dp))
-                                        } else {
-                                            Modifier
-                                        },
+                            val tile = Modifier
+                                .size(60.dp)
+                                .then(
+                                    if (selected) {
+                                        Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(18.dp))
+                                    } else {
+                                        Modifier
+                                    },
+                                )
+                                .padding(4.dp)
+                            val preview = option.previewRes
+                            if (preview == null) {
+                                // An ImageView draws the adaptive icon through the
+                                // device's own mask, the shape the launcher will use.
+                                AndroidView(
+                                    factory = { ctx ->
+                                        android.widget.ImageView(ctx).apply { setImageResource(option.iconRes) }
+                                    },
+                                    modifier = tile,
+                                )
+                            } else {
+                                // A shaped icon's foreground holds the finished icon on
+                                // the central 72 of 108 dp: scaled 1.5× it fills the tile
+                                // as designed, rather than through the device's mask.
+                                Box(tile.clipToBounds(), contentAlignment = Alignment.Center) {
+                                    Image(
+                                        painter = painterResource(preview),
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier.fillMaxSize().scale(1.5f),
                                     )
-                                    .padding(4.dp),
-                            )
+                                }
+                            }
                             Text(
                                 text = stringResource(option.labelRes),
                                 textAlign = TextAlign.Center,

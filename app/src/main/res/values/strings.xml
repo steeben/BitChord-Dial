@@ -329,6 +329,29 @@
     <string name="app_icon_glass_light" translatable="false">Glass</string>
     <string name="app_icon_glass_dark" translatable="false">Glass Dark</string>
     <string name="app_icon_dark" translatable="false">Dark</string>
+    <string name="app_icon_bitchord" translatable="false">BitChord</string>
+    <string name="app_icon_monochrome" translatable="false">BitChord Monochrome</string>
+    <string name="app_icon_liquid_glass" translatable="false">Liquid Glass</string>
+    <string name="app_icon_liquid_glass_dark" translatable="false">Liquid Glass Dark</string>
+    <string name="app_icon_liquid_glass_clear" translatable="false">Liquid Glass Clear</string>
+    <string name="app_icon_liquid_glass_clear_dark" translatable="false">Liquid Glass Clear Dark</string>
+    <string name="app_icon_samsung_glass" translatable="false">Samsung Glass</string>
+    <string name="app_icon_samsung_glass_dark" translatable="false">Samsung Glass Dark</string>
+    <string name="app_icon_samsung_glass_clear" translatable="false">Samsung Glass Clear</string>
+    <string name="app_icon_samsung_glass_clear_dark" translatable="false">Samsung Glass Clear Dark</string>
+    <string name="app_icon_pixel_glass" translatable="false">Pixel Glass</string>
+    <string name="app_icon_pixel_glass_dark" translatable="false">Pixel Glass Dark</string>
+    <string name="app_icon_pixel_glass_clear" translatable="false">Pixel Glass Clear</string>
+    <string name="app_icon_pixel_glass_clear_dark" translatable="false">Pixel Glass Clear Dark</string>
+    <string name="app_icon_neon_silver" translatable="false">Neon Silver</string>
+    <string name="app_icon_neon_cyan" translatable="false">Neon Cyan</string>
+    <string name="app_icon_neon_violet" translatable="false">Neon Violet</string>
+    <string name="app_icon_samsung_neon_silver" translatable="false">Samsung Neon Silver</string>
+    <string name="app_icon_samsung_neon_cyan" translatable="false">Samsung Neon Cyan</string>
+    <string name="app_icon_samsung_neon_violet" translatable="false">Samsung Neon Violet</string>
+    <string name="app_icon_pixel_neon_silver" translatable="false">Pixel Neon Silver</string>
+    <string name="app_icon_pixel_neon_cyan" translatable="false">Pixel Neon Cyan</string>
+    <string name="app_icon_pixel_neon_violet" translatable="false">Pixel Neon Violet</string>
     <string name="liquid_glass_subtitle">Real refracting glass on the floating nav bar. Android 12+ only; uses more GPU.</string>
     <string name="liquid_glass_unavailable">Requires Android 12 or newer</string>
     <string name="glass_options_subtitle">Adjust how see-through, tinted and blurred the glass is</string>
