@@ -145,9 +145,11 @@ fun GlassNavBar(
 
     // A factory, not a value — see the note in FloatingTabBar's header. Each of
     // the three surfaces gets its own glass modifier and so its own shape cache.
-    val barTint = glassBarTint()
-    val glassSurface: @Composable () -> Modifier = { Modifier.liquidGlass(shape = pillShape, surfaceTint = barTint) }
-    val accessoryGlass: @Composable () -> Modifier = { Modifier.liquidGlass(shape = accessoryShape, surfaceTint = barTint) }
+    // The bar and the mini player wear the same glass as every other floating
+    // control. They used to be washed a faint white in dark theme, which left
+    // them a bright grey beside the top bar's buttons.
+    val glassSurface: @Composable () -> Modifier = { Modifier.liquidGlass(shape = pillShape) }
+    val accessoryGlass: @Composable () -> Modifier = { Modifier.liquidGlass(shape = accessoryShape) }
 
     FloatingTabBar(
         selectedTabKey = selectedIndex,

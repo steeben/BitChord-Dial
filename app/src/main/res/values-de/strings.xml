@@ -858,6 +858,7 @@
     <string name="glass_options_subtitle">Lege fest, wie durchsichtig, getönt und unscharf das Glas ist</string>
     <string name="glass_transparency">Transparenz</string>
     <string name="glass_blur">Unschärfe</string>
+    <string name="glass_saturation">Sättigung</string>
     <string name="glass_tint">Tönung</string>
     <string name="glass_tint_darkness">Dunkelheit der Tönung</string>
     <string name="glass_tint_default">Standard</string>

@@ -886,6 +886,7 @@
     <string name="glass_options_subtitle">Настройте прозрачность, оттенок и размытие стекла</string>
     <string name="glass_transparency">Прозрачность</string>
     <string name="glass_blur">Размытие</string>
+    <string name="glass_saturation">Насыщенность</string>
     <string name="glass_tint">Оттенок</string>
     <string name="glass_tint_darkness">Затемнение оттенка</string>
     <string name="glass_tint_default">По умолчанию</string>

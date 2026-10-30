@@ -233,6 +233,7 @@
     <string name="glass_options_subtitle">ปรับความโปร่งใส สี และความเบลอของกระจก</string>
     <string name="glass_transparency">ความโปร่งใส</string>
     <string name="glass_blur">ความเบลอ</string>
+    <string name="glass_saturation">ความอิ่มตัวของสี</string>
     <string name="glass_tint">สี</string>
     <string name="glass_tint_darkness">ความเข้มของสี</string>
     <string name="glass_tint_default">ค่าเริ่มต้น</string>

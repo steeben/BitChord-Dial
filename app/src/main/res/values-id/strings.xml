@@ -837,6 +837,7 @@
     <string name="glass_options_subtitle">Atur seberapa tembus pandang, berwarna, dan buram kacanya</string>
     <string name="glass_transparency">Transparansi</string>
     <string name="glass_blur">Buram</string>
+    <string name="glass_saturation">Saturasi</string>
     <string name="glass_tint">Warna</string>
     <string name="glass_tint_darkness">Kegelapan warna</string>
     <string name="glass_tint_default">Default</string>

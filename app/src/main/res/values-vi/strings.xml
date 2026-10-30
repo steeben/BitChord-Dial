@@ -243,6 +243,7 @@
     <string name="glass_options_subtitle">Điều chỉnh độ trong suốt, màu phủ và độ mờ của kính</string>
     <string name="glass_transparency">Độ trong suốt</string>
     <string name="glass_blur">Độ mờ</string>
+    <string name="glass_saturation">Độ bão hòa</string>
     <string name="glass_tint">Màu phủ</string>
     <string name="glass_tint_darkness">Độ tối của màu phủ</string>
     <string name="glass_tint_default">Mặc định</string>

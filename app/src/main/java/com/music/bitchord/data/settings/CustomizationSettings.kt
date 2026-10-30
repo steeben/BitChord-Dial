@@ -119,6 +119,9 @@ object CustomizationSettings {
     /** How far the glass's fill is darkened towards black, 0 (not at all) to 1. */
     val glassTintDarkness = MutableStateFlow(0f)
 
+    /** How much colour Liquid Glass gives what is behind it: 0 grey, 1 as it is, 2 doubled. */
+    val glassSaturation = MutableStateFlow(DEFAULT_GLASS_SATURATION)
+
     /** How far Liquid Glass blurs what is behind it, in dp. */
     val glassBlur = MutableStateFlow(DEFAULT_GLASS_BLUR)
 
@@ -169,6 +172,7 @@ object CustomizationSettings {
             .firstOrNull { it.name == p.getString(KEY_GLASS_TINT, null) } ?: GlassTint.DEFAULT
         glassTintDarkness.value = p.getFloat(KEY_GLASS_TINT_DARKNESS, 0f).coerceIn(0f, 1f)
         glassBlur.value = p.getFloat(KEY_GLASS_BLUR, DEFAULT_GLASS_BLUR).coerceIn(0f, MAX_GLASS_BLUR)
+        glassSaturation.value = p.getFloat(KEY_GLASS_SATURATION, DEFAULT_GLASS_SATURATION).coerceIn(0f, MAX_GLASS_SATURATION)
         librarySource.value = LibrarySource.entries
             .firstOrNull { it.name == p.getString(KEY_LIBRARY_SOURCE, null) } ?: LibrarySource.ALL
         speedDialPins.value = readPins(p.getString(KEY_SPEED_DIAL_PINS, null))
@@ -483,13 +487,21 @@ object CustomizationSettings {
         prefs?.edit()?.putFloat(KEY_GLASS_BLUR, clamped)?.apply()
     }
 
-    /** Puts transparency, tint, its darkness and blur back to how the glass ships. */
+    fun setGlassSaturation(value: Float) {
+        val clamped = value.coerceIn(0f, MAX_GLASS_SATURATION)
+        glassSaturation.value = clamped
+        prefs?.edit()?.putFloat(KEY_GLASS_SATURATION, clamped)?.apply()
+    }
+
+    /** Puts transparency, tint, its darkness, saturation and blur back to how the glass ships. */
     fun resetGlassOptions() {
         glassTransparency.value = DEFAULT_GLASS_TRANSPARENCY
         glassTint.value = GlassTint.DEFAULT
         glassTintDarkness.value = 0f
+        glassSaturation.value = DEFAULT_GLASS_SATURATION
         glassBlur.value = DEFAULT_GLASS_BLUR
         prefs?.edit()
+            ?.remove(KEY_GLASS_SATURATION)
             ?.remove(KEY_GLASS_TRANSPARENCY)
             ?.remove(KEY_GLASS_TINT)
             ?.remove(KEY_GLASS_TINT_DARKNESS)
@@ -561,6 +573,10 @@ object CustomizationSettings {
     const val DEFAULT_GLASS_BLUR = 8f
     const val MAX_GLASS_BLUR = 32f
 
+    /** Glass lifts the colour of what it shows by half again, as Apple's does. */
+    const val DEFAULT_GLASS_SATURATION = 1.5f
+    const val MAX_GLASS_SATURATION = 2f
+
     private const val KEY_NAV_TABS = "custom_nav_tabs"
     private const val KEY_COMPACT_CANVAS_CONTROLS = "custom_compact_canvas_controls"
     private const val KEY_WAVY_PROGRESS_BAR = "custom_wavy_progress_bar"
@@ -571,6 +587,7 @@ object CustomizationSettings {
     private const val KEY_GLASS_TINT = "custom_glass_tint"
     private const val KEY_GLASS_BLUR = "custom_glass_blur"
     private const val KEY_GLASS_TINT_DARKNESS = "custom_glass_tint_darkness"
+    private const val KEY_GLASS_SATURATION = "custom_glass_saturation"
     private const val KEY_LIBRARY_SOURCE = "custom_library_source"
     private const val KEY_SPEED_DIAL_PINS = "custom_speed_dial_pins"
     private const val KEY_LAST_SPEED_DIAL = "custom_last_speed_dial"

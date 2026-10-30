@@ -257,6 +257,7 @@
     <string name="glass_options_subtitle">Regola trasparenza, tinta e sfocatura del vetro</string>
     <string name="glass_transparency">Trasparenza</string>
     <string name="glass_blur">Sfocatura</string>
+    <string name="glass_saturation">Saturazione</string>
     <string name="glass_tint">Tinta</string>
     <string name="glass_tint_darkness">Scurezza della tinta</string>
     <string name="glass_tint_default">Predefinita</string>

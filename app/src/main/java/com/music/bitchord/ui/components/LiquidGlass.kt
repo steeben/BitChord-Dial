@@ -72,11 +72,10 @@ internal val LocalGlassExport = compositionLocalOf<LayerBackdrop?> { null }
 fun isGlassSupported(sdkInt: Int = Build.VERSION.SDK_INT): Boolean = sdkInt >= Build.VERSION_CODES.S
 
 /**
- * Apple-matched defaults (Echo's GlassEffectConfig()). The fill's opacity and
- * the blur radius are the user's, from [CustomizationSettings]; these are what
+ * Apple-matched defaults (Echo's GlassEffectConfig()). The fill's opacity, the
+ * saturation and the blur radius are the user's, from [CustomizationSettings]; these are what
  * those options are measured against.
  */
-private const val VIBRANCY = 1f
 private const val LENS_HEIGHT = 0.5f
 private const val LENS_AMOUNT = 0.5f
 private const val LENS_MAX_DP = 48f
@@ -188,9 +187,9 @@ fun glassContentColor(): Color =
  * Selected-tab indicator colour for a glass surface: white in both themes.
  *
  * In light theme that is the inverse of [glassContentColor], a bright lift
- * behind a dark glyph. In dark theme it is a lighter step of the bar's own
- * white-tinted glass (see [glassBarTint]) rather than a black scrim pressed
- * into it — the selected tab is raised out of the bar, as on iOS, not sunk.
+ * behind a dark glyph. In dark theme it is a faint white lift rather than a
+ * black scrim pressed into the bar's glass — the selected tab is raised out
+ * of the bar, as on iOS, not sunk.
  */
 @Composable
 fun glassIndicatorColor(): Color =
@@ -200,22 +199,7 @@ fun glassIndicatorColor(): Color =
         Color.White.copy(alpha = DARK_INDICATOR_OPACITY)
     }
 
-/**
- * The surface tint the navigation bar's glass is drawn with.
- *
- * In dark theme the default near-black tint makes the bar a darker hole in a
- * dark page, with nothing to say where its edge is. A faint white instead
- * gives it the frosted grey of iOS's bar, which reads as glass over black.
- * Light theme keeps the default.
- */
-@Composable
-fun glassBarTint(): Color? =
-    if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) null else Color.White.copy(alpha = DARK_BAR_OPACITY)
-
-/** How white the nav bar's glass is in dark theme — see [glassBarTint]. */
-private const val DARK_BAR_OPACITY = 0.09f
-
-/** The selected tab's pill in dark theme, a step whiter than the bar. */
+/** The selected tab's pill in dark theme. */
 private const val DARK_INDICATOR_OPACITY = 0.14f
 
 /**
@@ -325,8 +309,11 @@ fun Modifier.liquidGlass(
             .border(GLASS_EDGE_WIDTH, GLASS_EDGE_COLOR, shape)
     }
     val density = LocalDensity.current
+    val followsOptions = LocalGlassFollowsOptions.current
     val userBlurDp by CustomizationSettings.glassBlur.collectAsStateWithLifecycle()
-    val blurDp = if (LocalGlassFollowsOptions.current) userBlurDp else CustomizationSettings.DEFAULT_GLASS_BLUR
+    val blurDp = if (followsOptions) userBlurDp else CustomizationSettings.DEFAULT_GLASS_BLUR
+    val userSaturation by CustomizationSettings.glassSaturation.collectAsStateWithLifecycle()
+    val saturation = if (followsOptions) userSaturation else CustomizationSettings.DEFAULT_GLASS_SATURATION
     val blurPx = with(density) { blurDp.dp.toPx() } * GLASS_RESOLUTION_SCALE
     val lensHeightPx = with(density) { (LENS_HEIGHT * LENS_MAX_DP).dp.toPx() } * GLASS_RESOLUTION_SCALE
     val lensAmountPx = with(density) { (LENS_AMOUNT * LENS_MAX_DP).dp.toPx() } * GLASS_RESOLUTION_SCALE
@@ -341,7 +328,7 @@ fun Modifier.liquidGlass(
         backdrop = backdrop,
         shape = { shape },
         effects = {
-            colorControls(saturation = 1f + 0.5f * VIBRANCY)
+            colorControls(saturation = saturation)
             blur(blurPx)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 lens(

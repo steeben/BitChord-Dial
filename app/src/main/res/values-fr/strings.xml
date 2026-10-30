@@ -859,6 +859,7 @@
     <string name="glass_options_subtitle">Réglez la transparence, la teinte et le flou du verre</string>
     <string name="glass_transparency">Transparence</string>
     <string name="glass_blur">Flou</string>
+    <string name="glass_saturation">Saturation</string>
     <string name="glass_tint">Teinte</string>
     <string name="glass_tint_darkness">Assombrissement de la teinte</string>
     <string name="glass_tint_default">Par défaut</string>

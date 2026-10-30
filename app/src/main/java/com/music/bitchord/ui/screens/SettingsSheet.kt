@@ -66,6 +66,7 @@ import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.Gradient
 import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.InvertColors
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Language
@@ -2594,7 +2595,9 @@ internal fun LiquidGlassOptions() {
     val tint by CustomizationSettings.glassTint.collectAsStateWithLifecycle()
     val darkness by CustomizationSettings.glassTintDarkness.collectAsStateWithLifecycle()
     val blur by CustomizationSettings.glassBlur.collectAsStateWithLifecycle()
+    val saturation by CustomizationSettings.glassSaturation.collectAsStateWithLifecycle()
     val isDefault = transparency == CustomizationSettings.DEFAULT_GLASS_TRANSPARENCY &&
+        saturation == CustomizationSettings.DEFAULT_GLASS_SATURATION &&
         tint == GlassTint.DEFAULT &&
         darkness == 0f &&
         blur == CustomizationSettings.DEFAULT_GLASS_BLUR
@@ -2641,6 +2644,17 @@ internal fun LiquidGlassOptions() {
             onSliderValue = { CustomizationSettings.setGlassBlur(it.roundToInt().toFloat()) },
             valueRange = 0f..CustomizationSettings.MAX_GLASS_BLUR,
             steps = CustomizationSettings.MAX_GLASS_BLUR.toInt() - 1,
+        )
+        // 100% leaves what is behind the glass its own colour; the glass
+        // ships at 150%, lifting it as Apple's does.
+        SliderRow(
+            icon = Icons.Rounded.InvertColors,
+            title = stringResource(R.string.glass_saturation),
+            value = "${(saturation * 100).roundToInt()}%",
+            sliderValue = saturation,
+            onSliderValue = { CustomizationSettings.setGlassSaturation((it * 10).roundToInt() / 10f) },
+            valueRange = 0f..CustomizationSettings.MAX_GLASS_SATURATION,
+            steps = (CustomizationSettings.MAX_GLASS_SATURATION * 10).toInt() - 1,
         )
         Row(
             modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, top = 16.dp, bottom = 8.dp),

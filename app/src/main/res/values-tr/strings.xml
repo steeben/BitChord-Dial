@@ -239,6 +239,7 @@
     <string name="glass_options_subtitle">Camın saydamlığını, tonunu ve bulanıklığını ayarlayın</string>
     <string name="glass_transparency">Saydamlık</string>
     <string name="glass_blur">Bulanıklık</string>
+    <string name="glass_saturation">Doygunluk</string>
     <string name="glass_tint">Ton</string>
     <string name="glass_tint_darkness">Ton koyuluğu</string>
     <string name="glass_tint_default">Varsayılan</string>

@@ -332,6 +332,7 @@
     <string name="glass_options_subtitle">Adjust how see-through, tinted and blurred the glass is</string>
     <string name="glass_transparency">Transparency</string>
     <string name="glass_blur">Blur</string>
+    <string name="glass_saturation">Saturation</string>
     <string name="glass_tint">Tint</string>
     <string name="glass_tint_darkness">Tint darkness</string>
     <string name="glass_tint_default">Default</string>

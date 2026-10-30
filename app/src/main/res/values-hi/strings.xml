@@ -858,6 +858,7 @@
     <string name="glass_options_subtitle">काँच की पारदर्शिता, रंगत और धुंधलापन बदलें</string>
     <string name="glass_transparency">पारदर्शिता</string>
     <string name="glass_blur">धुंधलापन</string>
+    <string name="glass_saturation">संतृप्ति</string>
     <string name="glass_tint">रंगत</string>
     <string name="glass_tint_darkness">रंगत का गहरापन</string>
     <string name="glass_tint_default">डिफ़ॉल्ट</string>
