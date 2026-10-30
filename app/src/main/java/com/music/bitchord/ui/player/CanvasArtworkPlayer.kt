@@ -17,6 +17,8 @@ import android.util.Log
 import android.view.TextureView
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -73,6 +75,17 @@ private const val TAG = "CanvasArtworkPlayer"
  * coming back does not sit there as a hole for the length of a glance.
  */
 private const val REPAINT_TIMEOUT_MS = 700L
+
+/**
+ * A clip's first appearance: held this long after its first frame lands, then
+ * swept in from the top-left corner over [REVEAL_WIPE_MS]. Only the first time
+ * a given clip shows — a clip coming back onto a surface it lost, or standing
+ * in from its remembered frame, crossfades straight back as before.
+ */
+private const val REVEAL_DELAY_MS = 1_000L
+private const val REVEAL_WIPE_MS = 1_600
+/** Width of the wipe's soft edge, as a share of the corner-to-corner diagonal. */
+private const val REVEAL_WIPE_BAND = 0.45f
 
 /**
  * The looping video that plays over a track's cover art, sized to fill and
@@ -171,6 +184,14 @@ internal fun AndroidCanvasArtworkPlayer(
 
     var url by remember(canvas) { mutableStateOf(canvas.url) }
     var rendered by remember(canvas) { mutableStateOf(false) }
+    // [rendered], held back by [REVEAL_DELAY_MS] the first time a clip shows.
+    // Everything the caller sees — the fade, the handoff, the re-tint — runs
+    // off this rather than [rendered], so the still art and its backdrop stay
+    // exactly as they were until the clip actually starts to come in.
+    var revealed by remember(canvas) { mutableStateOf(false) }
+    var revealedOnce by remember(canvas) { mutableStateOf(false) }
+    // How far the first reveal's diagonal sweep has got; 1 is no mask at all.
+    val wipe = remember(canvas) { Animatable(1f) }
     // The clip's opening frame from the last time it played, if it has played
     // this session: shown in its place until the new player has a frame of its
     // own, so coming back to a clip already loaded never flashes the still
@@ -181,6 +202,25 @@ internal fun AndroidCanvasArtworkPlayer(
         // Held through the clip's own fade in over it, then dropped.
         delay(if (rendered) PLACEHOLDER_FADE_MS else PLACEHOLDER_WAIT_MS)
         placeholder = null
+    }
+    LaunchedEffect(rendered) {
+        if (!rendered) {
+            revealed = false
+            return@LaunchedEffect
+        }
+        if (revealedOnce || placeholder != null) {
+            // Back from a lost surface, or over its own remembered frame:
+            // nothing new is arriving, so no ceremony about it.
+            wipe.snapTo(1f)
+            revealedOnce = true
+            revealed = true
+            return@LaunchedEffect
+        }
+        wipe.snapTo(0f)
+        delay(REVEAL_DELAY_MS)
+        revealedOnce = true
+        revealed = true
+        wipe.animateTo(1f, tween(durationMillis = REVEAL_WIPE_MS, easing = LinearEasing))
     }
     // Aspect of the clip itself. Zero until the decoder reports it, which is
     // also the signal that there is nothing sensible to crop to yet.
@@ -303,10 +343,10 @@ internal fun AndroidCanvasArtworkPlayer(
 
     val reportRendered by rememberUpdatedState(onRenderedChanged)
     // To the caller the clip is up while its remembered frame stands in for it.
-    val shown = rendered || placeholder != null
+    val shown = revealed || placeholder != null
     LaunchedEffect(shown) { reportRendered(shown) }
-    LaunchedEffect(rendered) {
-        if (!rendered) return@LaunchedEffect
+    LaunchedEffect(revealed) {
+        if (!revealed) return@LaunchedEffect
         // Let the surface actually paint the frame that just triggered this
         // before reading it back — grabbing it the instant the callback fires
         // can still catch the previous, empty buffer.
@@ -333,10 +373,10 @@ internal fun AndroidCanvasArtworkPlayer(
     // folded into the one above: that one is keyed on [rendered] so it fires
     // again on every fade-in, and this one only needs to start once a fade-in
     // has actually happened and then keep going for as long as it holds.
-    LaunchedEffect(rendered, refreshFrameEveryMs, frameCapturePx, clipAspect, contentMode, alignPortraitTop) {
+    LaunchedEffect(revealed, refreshFrameEveryMs, frameCapturePx, clipAspect, contentMode, alignPortraitTop) {
         val interval = refreshFrameEveryMs ?: return@LaunchedEffect
         Log.d(TAG, "periodic frame refresh started, interval=$interval")
-        if (!rendered) return@LaunchedEffect
+        if (!revealed) return@LaunchedEffect
         while (isActive) {
             delay(interval)
             val view = textureView ?: continue
@@ -350,10 +390,15 @@ internal fun AndroidCanvasArtworkPlayer(
         }
     }
 
+    val sweeping = revealed && wipe.value < 1f
     val alpha by animateFloatAsState(
-        targetValue = if (rendered) 1f else 0f,
-        // Long enough to read as a crossfade from the still artwork.
-        animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing),
+        targetValue = if (revealed) 1f else 0f,
+        // Long enough to read as a crossfade from the still artwork, and the
+        // length of the sweep while there is one, so the two land together.
+        animationSpec = tween(
+            durationMillis = if (sweeping) REVEAL_WIPE_MS else 650,
+            easing = FastOutSlowInEasing,
+        ),
         label = "canvasAlpha",
     )
 
@@ -364,7 +409,9 @@ internal fun AndroidCanvasArtworkPlayer(
     val reportCover by rememberUpdatedState(onCoverChanged)
     LaunchedEffect(Unit) {
         snapshotFlow {
-            maxOf(alpha, if (placeholder != null) 1f else 0f) * currentPresentationAlpha()
+            // Scaled by the sweep too: a still taken out from under a clip
+            // that has only covered a corner of it leaves the rest a hole.
+            maxOf(alpha * wipe.value, if (placeholder != null) 1f else 0f) * currentPresentationAlpha()
         }.collect { reportCover(it) }
     }
     DisposableEffect(Unit) {
@@ -529,6 +576,7 @@ internal fun AndroidCanvasArtworkPlayer(
             if (applied.transformDiffers(clipAspect, contentMode, alignPortraitTop, view.width, view.height)) {
                 view.applyContentTransform(clipAspect, contentMode, alignPortraitTop)
             }
+            frame.wipe = wipe.value
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 if (applied.fadeDiffers(bottomFade, bounds, bottomFadeEndPx)) {
                     view.setBottomFade(bottomFade, bounds, bottomFadeEndPx)
@@ -813,7 +861,24 @@ private class FadingBottomFrame(context: Context) : FrameLayout(context) {
             invalidate()
         }
 
+    /**
+     * How far a first reveal has swept in from the top-left corner: 0 shows
+     * nothing, 1 is no mask. Done here, on every API level, for the same reason
+     * the pre-S bottom fade is — this group's layer is the one place a mask
+     * reaches the video's own frames.
+     */
+    var wipe: Float = 1f
+        set(value) {
+            val clamped = value.coerceIn(0f, 1f)
+            if (clamped == field) return
+            field = clamped
+            invalidate()
+        }
+
     private val maskPaint = Paint().apply {
+        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
+    }
+    private val wipePaint = Paint().apply {
         xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
     }
     private var gradient: LinearGradient? = null
@@ -827,10 +892,43 @@ private class FadingBottomFrame(context: Context) : FrameLayout(context) {
     override fun dispatchDraw(canvas: Canvas) {
         val fade = fadeFraction
         val endY = fadeEndPx?.coerceIn(0f, height.toFloat()) ?: height.toFloat()
-        if (fade <= 0.001f || endY <= 0f) {
+        val fading = fade > 0.001f && endY > 0f
+        val wiping = wipe < 1f
+        if (!fading && !wiping) {
             super.dispatchDraw(canvas)
             return
         }
+        val layer = canvas.saveLayer(0f, 0f, width.toFloat(), height.toFloat(), null)
+        super.dispatchDraw(canvas)
+        if (fading) drawBottomMask(canvas, fade, endY)
+        if (wiping) drawWipeMask(canvas)
+        canvas.restoreToCount(layer)
+    }
+
+    /**
+     * Opaque behind the sweep's front, clear ahead of it, with a soft band
+     * between. The front runs along the top-left to bottom-right diagonal,
+     * starting a band's width before the corner so nothing shows at 0 and
+     * ending past the far corner so nothing is masked at 1.
+     */
+    private fun drawWipeMask(canvas: Canvas) {
+        val w = width.toFloat()
+        val h = height.toFloat()
+        val start = -REVEAL_WIPE_BAND + wipe * (1f + REVEAL_WIPE_BAND)
+        val end = start + REVEAL_WIPE_BAND
+        wipePaint.shader = LinearGradient(
+            w * start,
+            h * start,
+            w * end,
+            h * end,
+            android.graphics.Color.BLACK,
+            android.graphics.Color.TRANSPARENT,
+            Shader.TileMode.CLAMP,
+        )
+        canvas.drawRect(0f, 0f, w, h, wipePaint)
+    }
+
+    private fun drawBottomMask(canvas: Canvas, fade: Float, endY: Float) {
         val shader = gradient?.takeIf { gradientHeight == height } ?: LinearGradient(
             0f,
             endY * (1f - fade),
@@ -844,10 +942,7 @@ private class FadingBottomFrame(context: Context) : FrameLayout(context) {
             gradientHeight = height
         }
         maskPaint.shader = shader
-        val layer = canvas.saveLayer(0f, 0f, width.toFloat(), height.toFloat(), null)
-        super.dispatchDraw(canvas)
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), maskPaint)
-        canvas.restoreToCount(layer)
     }
 }
 
