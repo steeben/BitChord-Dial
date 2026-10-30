@@ -413,6 +413,8 @@
     <string name="signed_in_as">Zalogowano jako %1$s</string>
     <string name="signing_in">Logowanie…</string>
     <string name="sleep_timer">Wyłącznik czasowy</string>
+    <string name="sleep_timer_custom">Własny</string>
+    <string name="start_sleep_timer">Uruchom minutnik</string>
     <string name="sources_no_lossless">Żadne włączone źródło nie może dostarczyć bezstratnego dźwięku. Dodaj moduł niestandardowy, aby odtwarzać dostępne pliki bezstratne bez transkodowania.</string>
     <string name="sources_order_footer">Jeśli źródło nie ma utworu lub jest niedostępne, BitChord próbuje następne. Źródła przed YouTube mogą je zastąpić, gdy znajdą lepszą wersję.</string>
     <string name="sources_order_header">Źródła, sprawdzane w tej kolejności</string>

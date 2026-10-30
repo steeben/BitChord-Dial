@@ -437,6 +437,8 @@
     <string name="signed_in_as">%1$sとしてログイン済み</string>
     <string name="signing_in">ログイン中…</string>
     <string name="sleep_timer">スリープタイマー</string>
+    <string name="sleep_timer_custom">カスタム</string>
+    <string name="start_sleep_timer">タイマーを開始</string>
     <string name="sources_no_lossless">有効なソースの中にロスレスオーディオを提供できるものがありません。トランスコードなしでロスレスファイルを再生するにはカスタムモジュールを追加してください。</string>
     <string name="sources_order_footer">ソースにトラックがない、またはアクセスできない場合、BitChordは次のソースを試します。YouTubeより上のソースは、より良いバージョンが見つかった場合にその録音を置き換えられます。</string>
     <string name="sources_order_header">ソース（この順番で試行）</string>

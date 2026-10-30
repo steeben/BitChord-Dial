@@ -437,6 +437,8 @@
     <string name="signed_in_as">已登录为 %1$s</string>
     <string name="signing_in">正在登录…</string>
     <string name="sleep_timer">睡眠定时器</string>
+    <string name="sleep_timer_custom">自定义</string>
+    <string name="start_sleep_timer">开始计时</string>
     <string name="sources_no_lossless">已启用的来源均无法提供无损音频。添加自定义模块即可播放可用的无损文件，而无需转码。</string>
     <string name="sources_order_footer">如果某个来源没有该曲目或无法访问，BitChord 会尝试下一个来源。排在 YouTube 之前的来源如果返回更好的版本，可以替换其录音。</string>
     <string name="sources_order_header">来源，按此顺序尝试</string>

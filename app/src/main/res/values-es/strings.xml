@@ -478,6 +478,8 @@
     <string name="signed_in_as">Sesión iniciada como %1$s</string>
     <string name="signing_in">Iniciando sesión…</string>
     <string name="sleep_timer">Temporizador</string>
+    <string name="sleep_timer_custom">Personalizado</string>
+    <string name="start_sleep_timer">Iniciar temporizador</string>
     <string name="sources_no_lossless">Ninguna fuente activa ofrece audio sin pérdida. Agrega un módulo personalizado para reproducir archivos sin pérdida disponibles sin transcodificarlos.</string>
     <string name="sources_order_footer">Si una fuente no tiene una canción o no responde, BitChord prueba la siguiente. Las fuentes situadas antes de YouTube pueden reemplazar su grabación si devuelven una versión mejor.</string>
     <string name="sources_order_header">Fuentes, en orden de prioridad</string>

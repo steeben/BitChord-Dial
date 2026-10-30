@@ -495,6 +495,8 @@
     <string name="signed_in_as">Đã đăng nhập dưới tên %1$s</string>
     <string name="signing_in">Đang đăng nhập…</string>
     <string name="sleep_timer">Hẹn giờ tắt</string>
+    <string name="sleep_timer_custom">Tùy chỉnh</string>
+    <string name="start_sleep_timer">Bắt đầu hẹn giờ</string>
     <string name="sources_no_lossless">Không có nguồn nào được bật có thể cung cấp âm thanh Lossless. Hãy thêm tiện ích mở rộng để phát các tệp Lossless mà không cần chuyển mã.</string>
     <string name="sources_order_footer">Nếu một nguồn không có bản nhạc hoặc không thể kết nối, BitChord sẽ thử nguồn tiếp theo. Các nguồn nằm trên YouTube có thể thay thế bản ghi âm của YouTube khi tìm được phiên bản tốt hơn.</string>
     <string name="sources_order_header">Các nguồn nhạc, được thử theo thứ tự này</string>

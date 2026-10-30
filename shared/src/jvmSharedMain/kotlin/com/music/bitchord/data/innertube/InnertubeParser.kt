@@ -704,6 +704,8 @@ object InnertubeParser {
             // art where a catalogue track has square album cover art.
             isVideo = rowType == "video" || thumbnails.isNotSquare(),
             isExplicit = renderer.hasExplicitBadge(),
+            // Extract the "Remove from history" feedback token from the row's menu, if present.
+            feedbackToken = extractFeedbackToken(renderer),
         )
     }
 
@@ -1158,6 +1160,23 @@ object InnertubeParser {
         }
         return out.values.toList()
     }
+
+    /**
+     * The "Remove from history" feedback token on a history row's menu, or
+     * null. The same plain menu items also carry other feedback actions —
+     * "Don't recommend this", for one — so only the item wearing the DELETE
+     * icon is taken; sending a stranger's token would quietly do something
+     * else to the account.
+     */
+    private fun extractFeedbackToken(renderer: JsonObject): String? =
+        renderer.o("menu")
+            ?.o("menuRenderer")
+            ?.a("items")
+            ?.firstNotNullOfOrNull { item ->
+                val service = item.o("menuServiceItemRenderer") ?: return@firstNotNullOfOrNull null
+                if (service.o("icon")?.s("iconType") != "DELETE") return@firstNotNullOfOrNull null
+                service.o("serviceEndpoint")?.o("feedbackEndpoint")?.s("feedbackToken")
+            }
 
     /**
      * The account's own state for one track, read off the watch queue's row

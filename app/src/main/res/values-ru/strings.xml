@@ -470,6 +470,8 @@
     <string name="signed_in_as">Вход выполнен как %1$s</string>
     <string name="signing_in">Выполняется вход…</string>
     <string name="sleep_timer">Таймер сна</string>
+    <string name="sleep_timer_custom">Свой</string>
+    <string name="start_sleep_timer">Запустить таймер</string>
     <string name="sources_no_lossless">Ни один включённый источник не может предоставить аудио без потерь. Добавьте пользовательский модуль, чтобы воспроизводить доступные файлы без потерь без перекодирования.</string>
     <string name="sources_order_footer">Если у источника нет трека или он недоступен, BitChord пробует следующий. Источники выше YouTube могут заменить его запись, если предоставляют более качественную версию.</string>
     <string name="sources_order_header">Источники, пробуются в этом порядке</string>

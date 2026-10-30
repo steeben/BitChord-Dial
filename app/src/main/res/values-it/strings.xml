@@ -512,6 +512,8 @@
     <string name="signed_in_as">Accesso effettuato come %1$s</string>
     <string name="signing_in">Accesso in corso…</string>
     <string name="sleep_timer">Timer di spegnimento</string>
+    <string name="sleep_timer_custom">Personalizzato</string>
+    <string name="start_sleep_timer">Avvia timer</string>
     <string name="sources_no_lossless">Nessuna sorgente attiva può fornire audio lossless. Aggiungi un modulo personalizzato per riprodurre i file lossless disponibili senza transcodifica.</string>
     <string name="sources_order_footer">Se una sorgente non ha un brano o non è raggiungibile, BitChord prova la successiva. Le sorgenti sopra YouTube possono sostituire la sua registrazione quando restituiscono una versione migliore.</string>
     <string name="sources_order_header">Sorgenti, provate in quest\'ordine</string>
