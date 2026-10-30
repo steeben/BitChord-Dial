@@ -794,7 +794,7 @@ object SourceResolver {
                     else UPGRADE_GRACE_MS - (System.currentTimeMillis() - bestSince)
                 if (waitMs <= 0) break
                 val first = withTimeoutOrNull(waitMs) {
-                    select {
+                    select<Deferred<Pair<MusicSource, SourceStream?>>> {
                         running.forEach { candidate -> candidate.onAwait { candidate } }
                     }
                 } ?: break
