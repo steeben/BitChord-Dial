@@ -1035,8 +1035,7 @@ object SourceResolver {
      * addon path sends its `?atmos=` hint on, asked in the one place that
      * chooses between rows.
      */
-    private fun atmosWanted(): Boolean =
-        DeviceCodecs.playsDolbyAtmos && AppSettings.dolbyAtmos.value
+    private fun atmosWanted(): Boolean = DeviceCodecs.atmosWanted
 
     private suspend fun streamBest(
         source: MusicSource,

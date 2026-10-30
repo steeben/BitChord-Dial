@@ -13,6 +13,7 @@ import com.music.bitchord.data.TrackLog
 import com.music.bitchord.data.listentogether.ListenTogether
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.MixBlend
+import com.music.bitchord.playback.audio.bitperfect.BitPerfectOutput
 import com.music.bitchord.data.settings.SmartAnalysis
 import com.music.bitchord.data.settings.TrackAnalysisState
 import com.music.bitchord.data.settings.TransitionWindow
@@ -845,6 +846,12 @@ class CrossfadeController(
             // otherwise sit on screen for as long as the party lasts.
             AppSettings.smartTransitionWindow.value = null
             AppSettings.smartMixInProgress.value = false
+            return
+        }
+        // Bit-perfect output carries one stream to the DAC, unchanged. A blend
+        // needs two, with gain on both, so the queue plays gapless instead.
+        if (BitPerfectOutput.status.value.active) {
+            AppSettings.smartTransitionWindow.value = null
             return
         }
         // Nothing to transition *into*, so any analysis state left over from the

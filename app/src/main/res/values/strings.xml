@@ -1030,6 +1030,34 @@
 
     <string name="prefer_usb_dac">Prefer USB DAC</string>
 
+    <string name="bit_perfect_output">Bit-perfect output</string>
+    <string name="bit_perfect_bypassed_footer">Bit-perfect output is ready, so the faded settings are bypassed and Dolby Atmos versions aren\'t requested. They work again when the DAC is disconnected or the mode is off.</string>
+    <string name="bit_perfect_sheet_warning">Sends the track to the DAC unchanged. The equalizer, loudness normalization, crossfade, Automix, playback speed and BitChord\'s volume are bypassed.</string>
+    <string name="bit_perfect_mode_off_subtitle">Audio goes through Android\'s mixer and BitChord\'s effects.</string>
+    <string name="bit_perfect_mode_usb_android">USB DAC</string>
+    <string name="bit_perfect_mode_usb_android_subtitle">Android 14 opens the DAC at each track\'s own rate and bit depth, without mixing or resampling.</string>
+    <string name="bit_perfect_requires_android_14">Requires Android 14 or later</string>
+    <string name="bit_perfect_mode_dap_exclusive">Built-in DAC (AAudio exclusive)</string>
+    <string name="bit_perfect_mode_dap_exclusive_subtitle">For music players with their own DAC. Opens the headphone or line output exclusively at each track\'s own rate. Not every device grants exclusive mode.</string>
+    <string name="bit_perfect_requires_android_8_1">Requires Android 8.1 or later</string>
+    <string name="bit_perfect_mode_usb_direct">USB DAC (direct driver)</string>
+    <string name="bit_perfect_mode_usb_direct_subtitle">BitChord drives the DAC itself, on any Android version, and sets its volume on the DAC. Asks for USB permission. Can be much louder than normal output.</string>
+    <string name="dac_volume">DAC volume</string>
+    <string name="dac_volume_subtitle">Set on the DAC itself; the music is not scaled</string>
+    <string name="usb_allow_fixed_volume">Allow DACs without volume control</string>
+    <string name="usb_allow_fixed_volume_subtitle">Otherwise such a DAC plays through normal output</string>
+    <string name="usb_allow_fixed_volume_confirm_title">Play at full scale?</string>
+    <string name="usb_allow_fixed_volume_confirm_message">BitChord can\'t set this kind of DAC\'s volume, so it plays at full scale and only the DAC\'s own knob, if it has one, controls loudness. This can be dangerously loud with sensitive headphones.</string>
+    <string name="convert_for_limited_dac">Convert for lower-spec DACs</string>
+    <string name="convert_for_limited_dac_subtitle">Converts tracks above your DAC\'s limit to its highest format. Tracks may take longer to start and won\'t be bit-perfect to the original.</string>
+    <string name="bit_perfect_confirm_title">Turn on bit-perfect output?</string>
+    <string name="bit_perfect_confirm_message">The DAC gets the music at full scale, and the phone\'s volume buttons may stop working. Turn the DAC or amplifier down before you play.</string>
+    <string name="bit_perfect_status_active">%1$s · %2$s kHz · %3$d-bit</string>
+    <string name="bit_perfect_status_dac_limited">%1$s · %2$s kHz · %3$d-bit · DAC max, converted from this track\'s format</string>
+    <string name="bit_perfect_status_inexact">%1$s · not exact: this source isn\'t lossless PCM</string>
+    <string name="bit_perfect_status_waiting">Waiting for a lossless track on a supported output</string>
+    <string name="bit_perfect_status_unavailable">Not available for this track (%1$s)</string>
+
     <string name="loudness_normalization">Loudness normalization</string>
 
     <string name="loudness_normalization_subtitle">Levels every track to the same loudness</string>

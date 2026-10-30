@@ -282,8 +282,16 @@ data class AudioOutputDevice(
 data class OutputFormatUi(
     /** "24-bit PCM · 48 kHz" — whichever parts are known. */
     val summary: String = "",
-    /** Whether the negotiated output could carry more than 16-bit / 48 kHz. */
-    val carriesHiRes: Boolean = false,
+    /**
+     * Whether the music is reaching the DAC bit-perfect right now: on the
+     * exclusive output, with every sample of the track carried exactly.
+     */
+    val bitPerfect: Boolean = false,
+    /**
+     * On the exclusive output, converted to the best format the DAC has because
+     * it can't take the track's own. As good as this DAC gets, but not bit-perfect.
+     */
+    val dacLimited: Boolean = false,
 )
 
 data class PartyUi(
