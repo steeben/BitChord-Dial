@@ -2220,7 +2220,7 @@ fun SettingsScreen(
     }
 
     if (pickingBitPerfect) {
-        ModalBottomSheet(
+        SlideDownBottomSheet(
             onDismissRequest = { pickingBitPerfect = false },
             containerColor = MaterialTheme.colorScheme.background,
         ) {
