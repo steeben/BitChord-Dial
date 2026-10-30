@@ -1327,4 +1327,6 @@
     <string name="direct_source_stream_in_party">Nonaktif selama kamu dalam pesta Listen Together</string>
     <string name="direct_source_stream">Streaming langsung dari sumber</string>
     <string name="direct_source_stream_subtitle">Putar dari add-on Anda sejak nada pertama, bukan mulai di YouTube lalu beralih ke kualitas lebih tinggi di tengah lagu</string>
+    <string name="show_listen_together_button">Tampilkan tombol Dengar bersama</string>
+    <string name="show_listen_together_button_subtitle">Tombol output dan Dengarkan Bersama di bawah kontrol pemutar</string>
 </resources>

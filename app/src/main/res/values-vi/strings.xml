@@ -1267,4 +1267,6 @@
     <string name="direct_source_stream_in_party">Tắt khi bạn đang trong bữa tiệc Listen Together</string>
     <string name="direct_source_stream">Phát trực tiếp từ nguồn</string>
     <string name="direct_source_stream_subtitle">Phát từ tiện ích bổ sung ngay từ nốt đầu tiên, thay vì bắt đầu trên YouTube rồi chuyển sang chất lượng cao hơn giữa bài</string>
+    <string name="show_listen_together_button">Hiện nút Listen together</string>
+    <string name="show_listen_together_button_subtitle">Nút đầu ra và Nghe cùng nhau bên dưới các nút điều khiển trình phát</string>
 </resources>

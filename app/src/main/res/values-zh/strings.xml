@@ -1327,4 +1327,6 @@
     <string name="direct_source_stream_in_party">在 Listen Together 派对中时关闭</string>
     <string name="direct_source_stream">直接从来源串流</string>
     <string name="direct_source_stream_subtitle">从第一个音符起就由你的附加组件播放，而不是先从 YouTube 开始，再在歌曲中途切换到更高音质</string>
+    <string name="show_listen_together_button">显示“一起听”按钮</string>
+    <string name="show_listen_together_button_subtitle">播放器控件下方的输出与 Listen Together 按钮</string>
 </resources>

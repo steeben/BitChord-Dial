@@ -327,6 +327,8 @@
     <string name="reduce_dynamic_blur">Reduce dynamic blur</string>
     <string name="reduce_dynamic_blur_subtitle">Swaps frosted glass for solid fills across the app</string>
     <string name="liquid_glass">Liquid Glass</string>
+    <string name="show_listen_together_button">Show Listen Together button</string>
+    <string name="show_listen_together_button_subtitle">The output and Listen Together pill under the player controls</string>
     <string name="app_icon">App icon</string>
     <string name="app_icon_default">Default</string>
     <string name="app_icon_glass_light" translatable="false">Glass</string>

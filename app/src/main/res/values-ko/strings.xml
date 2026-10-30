@@ -1118,4 +1118,6 @@
     <string name="direct_source_stream">소스에서 직접 스트리밍</string>
     <string name="direct_source_stream_in_party">Listen Together 파티 중에는 꺼집니다</string>
     <string name="direct_source_stream_subtitle">YouTube에서 시작해 곡 중간에 고음질로 전환하는 대신, 첫 음부터 애드온으로 재생합니다</string>
+    <string name="show_listen_together_button">함께 듣기 버튼 표시</string>
+    <string name="show_listen_together_button_subtitle">플레이어 컨트롤 아래의 출력 및 함께 듣기 버튼</string>
 </resources>

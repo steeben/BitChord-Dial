@@ -1382,4 +1382,6 @@
     <string name="direct_source_stream_in_party">Отключено во время вечеринки Listen Together</string>
     <string name="direct_source_stream">Прямой поток из источника</string>
     <string name="direct_source_stream_subtitle">Воспроизводить из дополнения с первой ноты, а не начинать на YouTube и переключаться на более высокое качество посреди трека</string>
+    <string name="show_listen_together_button">Показывать кнопку «Слушать вместе»</string>
+    <string name="show_listen_together_button_subtitle">Кнопка вывода и совместного прослушивания под элементами управления плеером</string>
 </resources>

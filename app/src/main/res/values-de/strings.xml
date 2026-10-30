@@ -1350,4 +1350,6 @@
     <string name="direct_source_stream_in_party">Während einer Listen Together-Party deaktiviert</string>
     <string name="direct_source_stream">Direkter Quell-Stream</string>
     <string name="direct_source_stream_subtitle">Ab dem ersten Ton von deinem Add-on abspielen, statt auf YouTube zu starten und mitten im Song auf höhere Qualität zu wechseln</string>
+    <string name="show_listen_together_button">Schaltfläche „Gemeinsam hören“ anzeigen</string>
+    <string name="show_listen_together_button_subtitle">Die Ausgabe- und Gemeinsam-hören-Schaltfläche unter den Player-Steuerelementen</string>
 </resources>

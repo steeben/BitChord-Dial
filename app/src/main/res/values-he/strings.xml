@@ -1355,4 +1355,6 @@
     <string name="direct_source_stream_in_party">כבוי בזמן מסיבת Listen Together</string>
     <string name="direct_source_stream">הזרמה ישירה מהמקור</string>
     <string name="direct_source_stream_subtitle">ניגון מהתוסף שלך מהצליל הראשון, במקום להתחיל ב-YouTube ולעבור לאיכות גבוהה יותר באמצע השיר</string>
+    <string name="show_listen_together_button">הצגת הכפתור להאזין ביחד</string>
+    <string name="show_listen_together_button_subtitle">כפתור הפלט וההאזנה המשותפת מתחת לפקדי הנגן</string>
 </resources>

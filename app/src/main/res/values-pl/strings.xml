@@ -1390,4 +1390,6 @@
     <string name="direct_source_stream_in_party">Wyłączone podczas imprezy Listen Together</string>
     <string name="direct_source_stream">Bezpośredni strumień ze źródła</string>
     <string name="direct_source_stream_subtitle">Odtwarzaj z dodatku od pierwszej nuty, zamiast zaczynać na YouTube i przełączać na wyższą jakość w trakcie utworu</string>
+    <string name="show_listen_together_button">Pokaż przycisk Słuchajcie razem</string>
+    <string name="show_listen_together_button_subtitle">Przycisk wyjścia i Słuchaj razem pod sterowaniem odtwarzacza</string>
 </resources>

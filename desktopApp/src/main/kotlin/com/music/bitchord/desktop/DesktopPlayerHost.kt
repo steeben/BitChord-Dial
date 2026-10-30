@@ -205,6 +205,7 @@ internal object DesktopPlayerSettings : PlayerSettingsSource {
     override val reduceAnimation = MutableStateFlow(false)
     override val reduceDynamicBlur = MutableStateFlow(false)
     override val showNerdStats = MutableStateFlow(false)
+    override val showListenTogetherButton = MutableStateFlow(true)
     override val smartAnalysis = MutableStateFlow(SmartAnalysis())
     override val smartFadeEnabled = MutableStateFlow(false)
     override val smartMixInProgress = MutableStateFlow(false)

@@ -1355,4 +1355,6 @@
     <string name="direct_source_stream_in_party">Desativado durante uma festa do Listen Together</string>
     <string name="direct_source_stream">Transmissão direta da fonte</string>
     <string name="direct_source_stream_subtitle">Toque a partir do seu complemento desde a primeira nota, em vez de começar no YouTube e mudar para maior qualidade a meio da música</string>
+    <string name="show_listen_together_button">Mostrar botão Ouvir junto</string>
+    <string name="show_listen_together_button_subtitle">O botão de saída e Ouvir juntos sob os controlos do leitor</string>
 </resources>
