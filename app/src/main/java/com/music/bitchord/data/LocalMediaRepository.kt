@@ -335,7 +335,7 @@ object LocalMediaRepository {
         }
     }
 
-    private val ALBUM_ART_URI: Uri = Uri.parse("content://media/external/audio/albumart")
+    private val ALBUM_ART_URI: Uri by lazy { Uri.parse("content://media/external/audio/albumart") }
 
     /**
      * Which of [songs] still have a file behind them, in their order — for an
