@@ -698,6 +698,7 @@ fun RowMoreButton(
         modifier = modifier
             .hangIntoGutter(ROW_MORE_OUTSET)
             .size(36.dp)
+            .menuAnchor()
             .clip(CircleShape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,

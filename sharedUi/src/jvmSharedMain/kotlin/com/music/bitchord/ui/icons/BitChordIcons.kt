@@ -416,6 +416,30 @@ object BitChordIcons {
     }
 
     /** Plain chevron — a disclosure hint, not a directional arrow. */
+    /**
+     * Back, as iOS draws it: a tall chevron rather than an arrow. Mirrored in a
+     * right-to-left layout, where back points the other way.
+     */
+    val ChevronBack: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "bc_chevron_back",
+            defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f,
+            autoMirror = true,
+        ).apply {
+            path(
+                stroke = stroke,
+                strokeLineWidth = 2.6f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round,
+            ) {
+                moveTo(15.2f, 4.2f)
+                lineTo(7.4f, 12f)
+                lineTo(15.2f, 19.8f)
+            }
+        }.build()
+    }
+
     val ChevronRight: ImageVector by lazy {
         ImageVector.Builder(
             name = "bc_chevron_right",

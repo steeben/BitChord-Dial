@@ -320,6 +320,8 @@ import com.music.bitchord.ui.components.ReorderPlaylistSheet
 import com.music.bitchord.ui.components.LongPressOrigin
 import com.music.bitchord.ui.components.SongActionsPresentation
 import com.music.bitchord.ui.components.SongActionsSheet
+import com.music.bitchord.ui.components.IosMenuPopover
+import com.music.bitchord.ui.components.MenuAnchor
 import com.music.bitchord.ui.components.HeldContextMenu
 import com.music.bitchord.ui.components.GlassMenuDrawer
 import com.music.bitchord.ui.components.HeldItem
@@ -455,6 +457,9 @@ private const val LIBRARY_DEAL_WAIT_MS = 15_000L
 
 /** The Settings sub-screen listing the All library's detected duplicates. */
 private const val LIBRARY_DUPLICATES_SCREEN = "library_duplicates"
+
+/** The page key of a Settings category's page, before the category's name. */
+private const val SETTINGS_SECTION_KEY_PREFIX = "settings:"
 
 /** A Library page sliding in or out, side by side with the one it replaces. */
 private const val PAGE_SLIDE_MS = 340
@@ -781,6 +786,15 @@ private fun BitChordApp(
     // SettingsSheet mounted underneath and back navigation restores scroll.
     // null = no sub-screen overlay; non-null = that key is rendered as overlay.
     var settingsSubScreen by rememberSaveable { mutableStateOf<String?>(null) }
+    /** The Settings category open as a page of its own, by name, or null for Settings' main page. */
+    var settingsSectionName by rememberSaveable { mutableStateOf<String?>(null) }
+    val settingsSection = settingsSectionName?.let { name ->
+        com.music.bitchord.ui.screens.SettingsCategory.entries.firstOrNull { it.name == name }
+    }
+    /** The page key Settings is shown under: its main page, or one category's. */
+    val settingsPageKey = settingsSection?.let { SETTINGS_SECTION_KEY_PREFIX + it.name } ?: "settings"
+    // Closing Settings closes whichever category was open in it.
+    LaunchedEffect(showSettings) { if (!showSettings) settingsSectionName = null }
     var showAccountScrobbling by rememberSaveable { mutableStateOf(false) }
     var showSources by rememberSaveable { mutableStateOf(false) }
     var showListenTogether by rememberSaveable { mutableStateOf(false) }
@@ -877,14 +891,17 @@ private fun BitChordApp(
     /**
      * The row or card that was held to open the track menu, or null when it
      * was opened any other way. Non-null lifts that item into
-     * [HeldContextMenu]; null keeps the bottom sheet — which is what the ⋮ on
-     * the very same row still opens.
+     * [HeldContextMenu]; null hangs the menu off [songMenuAnchor] instead —
+     * which is what the ⋮ on the very same row opens.
      */
     var songMenuOrigin by remember { mutableStateOf<HeldItem?>(null) }
+    /** The ⋮ or ⋯ the track menu was opened from, for [IosMenuPopover] to hang off. */
+    var songMenuAnchor by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
     /** Holding a row anywhere but the player — the menu without the player's rows. */
     val openSongMenu: (Song) -> Unit = { song ->
         menuFromPlayer = false
         songMenuOrigin = LongPressOrigin.consume()
+        songMenuAnchor = MenuAnchor.consume()
         songActions = song
     }
     // Whether the player's album/artist lookup (below, for the current track)
@@ -910,6 +927,8 @@ private fun BitChordApp(
     var browseActions by remember { mutableStateOf<BrowseTarget?>(null) }
     /** The card held to open [browseActions] — see [songMenuOrigin]. */
     var browseMenuOrigin by remember { mutableStateOf<HeldItem?>(null) }
+    /** The ⋯ [browseActions] was opened from — see [songMenuAnchor]. */
+    var browseMenuAnchor by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
     /** The album whose cover is being chosen, or null when that sheet is shut. */
     var albumArtPick by remember { mutableStateOf<BrowseTarget?>(null) }
     /** One song whose art is being chosen, with the album it picks from. */
@@ -929,6 +948,7 @@ private fun BitChordApp(
     /** Holding an album or playlist: the popup when it was a hold, else the sheet. */
     val openBrowseMenu: (BrowseTarget) -> Unit = { target ->
         browseMenuOrigin = LongPressOrigin.consume()
+        browseMenuAnchor = MenuAnchor.consume()
         browseRenameInSheet = false
         browseActions = target
     }
@@ -2883,6 +2903,7 @@ private fun BitChordApp(
             onOpenMenu = {
                 menuFromPlayer = true
                 songMenuOrigin = null
+                songMenuAnchor = MenuAnchor.consume()
                 songActions = song
             },
             onOpenAlbum = { id ->
@@ -3196,6 +3217,12 @@ private fun BitChordApp(
         }
         // After Settings' own, so it is asked first: back leaves the page, not Settings.
         BackHandler(enabled = settingsSubScreen == LIBRARY_DUPLICATES_SCREEN) { settingsSubScreen = null }
+        // A category's page steps back to Settings' main page, not out of Settings.
+        BackHandler(
+            enabled = showSettings && settingsSection != null && settingsSubScreen == null &&
+                !showSpotify && !showAccountScrobbling && !showSources && !showListenTogether &&
+                !showEqualizer && !showReplay,
+        ) { settingsSectionName = null }
         BackHandler(
             enabled = detail == null && !showSettings && !showAccountScrobbling && !showSpotify &&
                 !showSources && !showListenTogether && !showEqualizer && !showReplay && selectedMoodGenre == null &&
@@ -3334,7 +3361,7 @@ private fun BitChordApp(
                     // When a sub-screen overlay is active, keep SettingsSheet
                     // mounted so its scroll position survives.  The overlay is
                     // rendered below the AnimatedContent block.
-                    settingsSubScreen != null -> "settings"
+                    settingsSubScreen != null -> settingsPageKey
                     showAccountScrobbling -> "account_scrobbling"
                     showSources -> "sources"
                     showListenTogether -> "listen_together"
@@ -3343,7 +3370,7 @@ private fun BitChordApp(
                     // button sets `showSettings` from every page including
                     // this one, so with Replay winning the tie the button
                     // was live, hit, and changed nothing on screen.
-                    showSettings -> "settings"
+                    showSettings -> settingsPageKey
                     showReplay -> "replay"
                     top != null -> top.browseId
                     else -> "$TAB_KEY$selectedTab"
@@ -3475,6 +3502,11 @@ private fun BitChordApp(
                         val from = libraryDepths[initialState]
                         val to = libraryDepths[targetState]
                         val tabSwap = initialState.startsWith(TAB_KEY) && targetState.startsWith(TAB_KEY)
+                        // Into a Settings category and back out of it: pushed
+                        // sideways, as Library's pages are.
+                        val settingsStep =
+                            (initialState == "settings" && targetState.startsWith(SETTINGS_SECTION_KEY_PREFIX)) ||
+                                (targetState == "settings" && initialState.startsWith(SETTINGS_SECTION_KEY_PREFIX))
                         val dialZoom = !reduceAnimationSetting && DialLaunch.zooms(initialState, targetState, HOME_PAGE_KEY)
                         when {
                             // A dial tile's page opening, as an app does from a
@@ -3493,6 +3525,12 @@ private fun BitChordApp(
                                         scaleIn(tween(DialLaunch.CLOSE_MS, easing = FastOutSlowInEasing), initialScale = DIAL_HOME_SINK)
                                     ) togetherWith ExitTransition.None
                                 ).apply { targetContentZIndex = -1f }
+                            settingsStep && !reduceAnimationSetting -> {
+                                val forward = targetState.startsWith(SETTINGS_SECTION_KEY_PREFIX)
+                                val slide = tween<IntOffset>(PAGE_SLIDE_MS, easing = FastOutSlowInEasing)
+                                slideInHorizontally(slide) { if (forward) it else -it } togetherWith
+                                    slideOutHorizontally(slide) { if (forward) -it else it }
+                            }
                             from != null && to != null && from != to -> {
                                 val forward = to > from
                                 val slide = tween<IntOffset>(PAGE_SLIDE_MS, easing = FastOutSlowInEasing)
@@ -3570,7 +3608,7 @@ private fun BitChordApp(
                     // back swipe draws the page under the top one while the top
                     // one is still there.
                     val live = detailStack.lastOrNull { it.browseId == key }?.takeIf {
-                        key != "settings" && key != "account_scrobbling" &&
+                        key != "settings" && !key.startsWith(SETTINGS_SECTION_KEY_PREFIX) && key != "account_scrobbling" &&
                             key != "discord" && key != "replay" && key != "history" &&
                             key != "library_show_all"
                     }
@@ -3790,9 +3828,13 @@ private fun BitChordApp(
                         )
                     } else if (key == "equalizer") {
                         EqualizerScreen(contentPadding = listPadding)
-                    } else if (key == "settings") {
+                    } else if (key == "settings" || key.startsWith(SETTINGS_SECTION_KEY_PREFIX)) {
+                        // Read off the key, not the state: see `live` above.
+                        val keySection = com.music.bitchord.ui.screens.SettingsCategory.entries.firstOrNull {
+                            key == SETTINGS_SECTION_KEY_PREFIX + it.name
+                        }
                         // A fresh, unfiltered page each time Settings opens.
-                        DisposableEffect(Unit) {
+                        if (keySection == null) DisposableEffect(Unit) {
                             onDispose {
                                 settingsQuery = ""
                                 settingsFieldScrolledOff = false
@@ -3842,7 +3884,9 @@ private fun BitChordApp(
                             searchQuery = settingsQuery,
                             onSearchQueryChange = { settingsQuery = it },
                             searchInBar = settingsSearchInBar,
-                            onSearchScrolledOff = { settingsFieldScrolledOff = it },
+                            onSearchScrolledOff = { if (keySection == null) settingsFieldScrolledOff = it },
+                            section = keySection,
+                            onOpenSection = { settingsSectionName = it.name },
                         )
                     } else if (page != null && page.browseId.isDeviceFolder()) {
                         // Local Music and Downloads — both the tabbed Songs / Artists /
@@ -4094,6 +4138,8 @@ private fun BitChordApp(
                             // arrive stamped with the album they came off, which is what
                             // the download record groups them under.
                             onMore = { songs ->
+                                browseMenuOrigin = null
+                                browseMenuAnchor = MenuAnchor.consume()
                                 browseActions = BrowseTarget(
                                     // A library grouping has no id anything can
                                     // fetch, save or share with; its rows are here.
@@ -4884,7 +4930,7 @@ private fun BitChordApp(
                         showListenTogether -> stringResource(R.string.listen_together)
                         showEqualizer -> stringResource(R.string.equalizer)
                         settingsSubScreen == LIBRARY_DUPLICATES_SCREEN -> stringResource(R.string.library_duplicates)
-                        showSettings -> stringResource(R.string.settings)
+                        showSettings -> stringResource(settingsSection?.title ?: R.string.settings)
                         showReplay -> stringResource(R.string.replay)
                         detail != null && detailActiveShelf != null -> detailActiveShelf?.title.orEmpty()
                         detail != null -> detail.title
@@ -4936,6 +4982,7 @@ private fun BitChordApp(
                         showListenTogether -> closeListenTogether
                         showEqualizer -> ({ showEqualizer = false })
                         settingsSubScreen != null -> ({ settingsSubScreen = null })
+                        showSettings && settingsSection != null -> ({ settingsSectionName = null })
                         showSettings -> ({ showSettings = false })
                         showReplay -> ({ showReplay = false })
                         detailActiveShelf != null -> ({ detailActiveShelf = null })
@@ -5425,201 +5472,6 @@ private fun BitChordApp(
 
         }
 
-        val playerRaised = showNowPlaying && playerSong != null
-
-        // ---- Now Playing ----
-        if (playerRaised) {
-            // What rememberModalBottomSheetState builds, but able to start open,
-            // and with every hide routed through [playerSheetMotion] — a drag
-            // released low, a back press, a tap on the scrim. Refused here and
-            // carried out there, on a curve slow enough to watch the artwork
-            // fly home on, rather than on the sheet's own.
-            val sheetDensity = LocalDensity.current
-            val confirmSheetValue: (SheetValue) -> Boolean = { value ->
-                // Read when asked, not when the sheet was made: the setting
-                // can change while the player is up.
-                if (value == SheetValue.Hidden && !reducePlayerMotion) {
-                    playerSheetMotion.close()
-                    false
-                } else {
-                    true
-                }
-            }
-            val nowPlayingSheetState = rememberSaveable(
-                saver = SheetState.Saver(
-                    skipPartiallyExpanded = true,
-                    confirmValueChange = confirmSheetValue,
-                    density = sheetDensity,
-                    skipHiddenState = false,
-                ),
-            ) {
-                SheetState(
-                    skipPartiallyExpanded = true,
-                    density = sheetDensity,
-                    // Already open when the app is the one raising it: its
-                    // content is held down, and slid up, by the motion.
-                    initialValue = if (playerSheetMotion.holding) SheetValue.Expanded else SheetValue.Hidden,
-                    confirmValueChange = confirmSheetValue,
-                )
-            }
-            DisposableEffect(nowPlayingSheetState) {
-                playerSheetMotion.sheet = nowPlayingSheetState
-                playerDock.sheetOffset = playerSheetMotion::position
-                onDispose {
-                    playerDock.sheetOffset = null
-                    playerSheetMotion.onSheetGone()
-                }
-            }
-            ModalBottomSheet(
-                onDismissRequest = { showNowPlaying = false },
-                sheetState = nowPlayingSheetState,
-                // None of M3's: it follows the sheet's own animation, which is
-                // no longer what moves the player. The player draws its own,
-                // off where the player actually is — see the content below.
-                scrimColor = if (reducePlayerMotion) BottomSheetDefaults.ScrimColor else Color.Transparent,
-                // The player fills the screen and paints its own background to
-                // the very top, so the sheet's default 28.dp top corners would
-                // only cut two notches out of the artwork behind the status bar.
-                // Square, and not clipped along its top — see [PlayerSheetShape].
-                shape = PlayerSheetShape,
-                containerColor = Color.Transparent,
-                dragHandle = null,
-                contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
-                // M3 caps a bottom sheet at [BottomSheetDefaults.SheetMaxWidth]
-                // (640.dp) and centres it once the window is wider than that —
-                // built for a sheet that's meant to look like a sheet next to
-                // visible content either side. This one is the whole player;
-                // capped at 640dp on a tablet it renders as a narrow card with
-                // the page it's supposed to be covering visible down both
-                // sides. Unspecified opts out of the cap entirely, so the
-                // sheet always spans the full window this app draws it for.
-                sheetMaxWidth = Dp.Unspecified,
-                // Back is the app's to carry out, like every other close — see
-                // the handler below. Left to M3, a back press is the one close
-                // that never asks `confirmValueChange`: the sheet hides itself
-                // straight away on its own curve, then the window leaves on its
-                // exit animation with the artwork still drawn in it.
-                properties = ModalBottomSheetProperties(shouldDismissOnBackPress = reducePlayerMotion),
-            ) {
-                // With M3's own back off, the dialog's dispatcher ends here.
-                // Composed ahead of the player, so the player's own handlers —
-                // the lyrics and the queue putting themselves away first — are
-                // newer and are asked before this one.
-                // Predictive: the back swipe pulls the player down the way a
-                // drag does, and letting go finishes the same slide home.
-                PredictiveBackHandler(enabled = !reducePlayerMotion) { events ->
-                    try {
-                        events.collect { event -> playerSheetMotion.backProgress(event.progress) }
-                        playerSheetMotion.close()
-                    } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
-                        playerSheetMotion.backCancelled()
-                        throw cancelled
-                    }
-                }
-                // Keeps a sheet still "settling" after a lyrics or queue
-                // scroll from taking the next touch meant for that list.
-                // See [PlayerSheetMotion.attachWindow].
-                val sheetWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
-                // The player's window holds focus while it is up, so the volume
-                // keys reach it rather than the activity.
-                DacVolumeKeys()
-                DisposableEffect(sheetWindow, reducePlayerMotion) {
-                    if (!reducePlayerMotion) playerSheetMotion.attachWindow(sheetWindow)
-                    onDispose { }
-                }
-                Box(
-                    Modifier
-                        // Where the app is holding the player, if it is — see
-                        // [PlayerSheetMotion.contentOffsetPx]. Placement only.
-                        .offset { IntOffset(0, playerSheetMotion.contentOffsetPx()) }
-                        // The dim behind the player, from the window's top to
-                        // its bottom whatever the player's offset, and as deep
-                        // as the player is open.
-                        .drawBehind {
-                            val open = playerDock.openFraction()
-                            // Not at all under a portrait player that is fully up:
-                            // its own background is opaque, and a full-screen
-                            // blend behind it is paid on every frame the window
-                            // draws for nothing anyone can see.
-                            if (!reducePlayerMotion && open > 0f && !(open >= 1f && playerDock.attached)) {
-                                val top = playerSheetMotion.position().takeUnless { it.isNaN() } ?: 0f
-                                drawRect(
-                                    color = Color.Black.copy(alpha = PLAYER_SCRIM_ALPHA * open),
-                                    topLeft = Offset(0f, -top.toInt().toFloat()),
-                                    size = Size(size.width, size.height),
-                                )
-                            }
-                        }
-                        .guardSheetFromContentTouches(nowPlayingSheetState)
-                        // The sheet fills the window, so its height is the
-                        // whole of its travel: hidden sits that far down.
-                        .onSizeChanged {
-                            playerDock.sheetTravel = it.height.toFloat()
-                            playerSheetMotion.laidOut = true
-                        },
-                ) {
-                    // The player's own backdrop, for its buttons' liquid glass
-                    // (the app's would show the pages behind its window).
-                    val playerBackdrop = rememberLayerBackdrop()
-                    val playerGlass = remember(playerBackdrop) {
-                        com.music.bitchord.ui.player.AppPlayerGlass(playerBackdrop)
-                    }
-                    CompositionLocalProvider(
-                        LocalPlayerDock provides activeDock,
-                        com.music.bitchord.ui.player.LocalPlayerGlass provides playerGlass.takeIf { glassSamplesBackdrop },
-                        // The player is coloured by the artwork, as the album
-                        // and artist pages are, so its glass keeps the stock look.
-                        LocalGlassFollowsOptions provides false,
-                    ) {
-                        nowPlaying(playerSong)
-                    }
-                }
-            }
-        }
-
-        // ---- Replay stories ----
-        // Mounted out here rather than inside the pane above, because a story
-        // covers the window: on a tablet the page is only the left half of the
-        // row, and a story laid out inside it would run alongside the player
-        // instead of over it.
-        replayStory?.let { start ->
-            replay.summary?.takeUnless { it.isEmpty }?.let { summary ->
-                ReplayStories(
-                    summary = summary,
-                    start = start,
-                    onClose = { replayStory = null },
-                    onShare = { card ->
-                        replaySharePage = card
-                        showReplayShare = true
-                    },
-                    paused = showReplayShare,
-                )
-            }
-        }
-
-        // ---- Share the Replay ----
-        if (showReplayShare) {
-            replay.summary?.takeUnless { it.isEmpty }?.let { summary ->
-                SlideDownBottomSheet(
-                    onDismissRequest = { showReplayShare = false },
-                    // Straight to full height. The sheet is a picture and two
-                    // buttons, and half-open it showed the picture with both
-                    // buttons below the fold — a sheet whose only two controls
-                    // need a drag to reach.
-                    sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-                    containerColor = MaterialTheme.colorScheme.background,
-                ) {
-                    ReplayShareSheet(
-                        summary = summary,
-                        holder = account?.name.orEmpty(),
-                        memberSince = replay.memberSince,
-                        page = replaySharePage,
-                        onDismiss = { showReplayShare = false },
-                    )
-                }
-            }
-        }
-
         // ---- Album / playlist detail ----
         // ---- Long-press track actions ----
         // One body for both presentations of the track menu: the sheet the ⋮
@@ -6084,16 +5936,229 @@ private fun BitChordApp(
                 },
             )
         }
-        songActions?.takeIf { songMenuOrigin == null && dialMenuItem == null }?.let { song ->
-            SlideDownBottomSheet(
-                onDismissRequest = { songActions = null },
-                // The sheet paints itself in the track's own colours, corners
-                // and drag handle included — see SongActionsSheet.
+
+        val playerRaised = showNowPlaying && playerSong != null
+
+        // ---- Now Playing ----
+        if (playerRaised) {
+            // What rememberModalBottomSheetState builds, but able to start open,
+            // and with every hide routed through [playerSheetMotion] — a drag
+            // released low, a back press, a tap on the scrim. Refused here and
+            // carried out there, on a curve slow enough to watch the artwork
+            // fly home on, rather than on the sheet's own.
+            val sheetDensity = LocalDensity.current
+            val confirmSheetValue: (SheetValue) -> Boolean = { value ->
+                // Read when asked, not when the sheet was made: the setting
+                // can change while the player is up.
+                if (value == SheetValue.Hidden && !reducePlayerMotion) {
+                    playerSheetMotion.close()
+                    false
+                } else {
+                    true
+                }
+            }
+            val nowPlayingSheetState = rememberSaveable(
+                saver = SheetState.Saver(
+                    skipPartiallyExpanded = true,
+                    confirmValueChange = confirmSheetValue,
+                    density = sheetDensity,
+                    skipHiddenState = false,
+                ),
+            ) {
+                SheetState(
+                    skipPartiallyExpanded = true,
+                    density = sheetDensity,
+                    // Already open when the app is the one raising it: its
+                    // content is held down, and slid up, by the motion.
+                    initialValue = if (playerSheetMotion.holding) SheetValue.Expanded else SheetValue.Hidden,
+                    confirmValueChange = confirmSheetValue,
+                )
+            }
+            DisposableEffect(nowPlayingSheetState) {
+                playerSheetMotion.sheet = nowPlayingSheetState
+                playerDock.sheetOffset = playerSheetMotion::position
+                onDispose {
+                    playerDock.sheetOffset = null
+                    playerSheetMotion.onSheetGone()
+                }
+            }
+            ModalBottomSheet(
+                onDismissRequest = { showNowPlaying = false },
+                sheetState = nowPlayingSheetState,
+                // None of M3's: it follows the sheet's own animation, which is
+                // no longer what moves the player. The player draws its own,
+                // off where the player actually is — see the content below.
+                scrimColor = if (reducePlayerMotion) BottomSheetDefaults.ScrimColor else Color.Transparent,
+                // The player fills the screen and paints its own background to
+                // the very top, so the sheet's default 28.dp top corners would
+                // only cut two notches out of the artwork behind the status bar.
+                // Square, and not clipped along its top — see [PlayerSheetShape].
+                shape = PlayerSheetShape,
                 containerColor = Color.Transparent,
                 dragHandle = null,
+                contentWindowInsets = { WindowInsets(0, 0, 0, 0) },
+                // M3 caps a bottom sheet at [BottomSheetDefaults.SheetMaxWidth]
+                // (640.dp) and centres it once the window is wider than that —
+                // built for a sheet that's meant to look like a sheet next to
+                // visible content either side. This one is the whole player;
+                // capped at 640dp on a tablet it renders as a narrow card with
+                // the page it's supposed to be covering visible down both
+                // sides. Unspecified opts out of the cap entirely, so the
+                // sheet always spans the full window this app draws it for.
+                sheetMaxWidth = Dp.Unspecified,
+                // Back is the app's to carry out, like every other close — see
+                // the handler below. Left to M3, a back press is the one close
+                // that never asks `confirmValueChange`: the sheet hides itself
+                // straight away on its own curve, then the window leaves on its
+                // exit animation with the artwork still drawn in it.
+                properties = ModalBottomSheetProperties(shouldDismissOnBackPress = reducePlayerMotion),
             ) {
-                songMenuBody(song, SongActionsPresentation.Sheet)
+                // With M3's own back off, the dialog's dispatcher ends here.
+                // Composed ahead of the player, so the player's own handlers —
+                // the lyrics and the queue putting themselves away first — are
+                // newer and are asked before this one.
+                // Predictive: the back swipe pulls the player down the way a
+                // drag does, and letting go finishes the same slide home.
+                PredictiveBackHandler(enabled = !reducePlayerMotion) { events ->
+                    try {
+                        events.collect { event -> playerSheetMotion.backProgress(event.progress) }
+                        playerSheetMotion.close()
+                    } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
+                        playerSheetMotion.backCancelled()
+                        throw cancelled
+                    }
+                }
+                // Keeps a sheet still "settling" after a lyrics or queue
+                // scroll from taking the next touch meant for that list.
+                // See [PlayerSheetMotion.attachWindow].
+                val sheetWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
+                // The player's window holds focus while it is up, so the volume
+                // keys reach it rather than the activity.
+                DacVolumeKeys()
+                DisposableEffect(sheetWindow, reducePlayerMotion) {
+                    if (!reducePlayerMotion) playerSheetMotion.attachWindow(sheetWindow)
+                    onDispose { }
+                }
+                Box(
+                    Modifier
+                        // Where the app is holding the player, if it is — see
+                        // [PlayerSheetMotion.contentOffsetPx]. Placement only.
+                        .offset { IntOffset(0, playerSheetMotion.contentOffsetPx()) }
+                        // The dim behind the player, from the window's top to
+                        // its bottom whatever the player's offset, and as deep
+                        // as the player is open.
+                        .drawBehind {
+                            val open = playerDock.openFraction()
+                            // Not at all under a portrait player that is fully up:
+                            // its own background is opaque, and a full-screen
+                            // blend behind it is paid on every frame the window
+                            // draws for nothing anyone can see.
+                            if (!reducePlayerMotion && open > 0f && !(open >= 1f && playerDock.attached)) {
+                                val top = playerSheetMotion.position().takeUnless { it.isNaN() } ?: 0f
+                                drawRect(
+                                    color = Color.Black.copy(alpha = PLAYER_SCRIM_ALPHA * open),
+                                    topLeft = Offset(0f, -top.toInt().toFloat()),
+                                    size = Size(size.width, size.height),
+                                )
+                            }
+                        }
+                        .guardSheetFromContentTouches(nowPlayingSheetState)
+                        // The sheet fills the window, so its height is the
+                        // whole of its travel: hidden sits that far down.
+                        .onSizeChanged {
+                            playerDock.sheetTravel = it.height.toFloat()
+                            playerSheetMotion.laidOut = true
+                        },
+                ) {
+                    // The player's own backdrop, for its buttons' liquid glass
+                    // (the app's would show the pages behind its window).
+                    val playerBackdrop = rememberLayerBackdrop()
+                    val playerGlass = remember(playerBackdrop) {
+                        com.music.bitchord.ui.player.AppPlayerGlass(playerBackdrop)
+                    }
+                    CompositionLocalProvider(
+                        LocalPlayerDock provides activeDock,
+                        com.music.bitchord.ui.player.LocalPlayerGlass provides playerGlass.takeIf { glassSamplesBackdrop },
+                        // The player is coloured by the artwork, as the album
+                        // and artist pages are, so its glass keeps the stock look.
+                        LocalGlassFollowsOptions provides false,
+                    ) {
+                        nowPlaying(playerSong)
+                    }
+                    // The player's ⋯ menu, drawn in the player's own window so
+                    // it is over the player, on the player's glass. Outside the
+                    // provider above: the menu follows the Liquid Glass options
+                    // as every other menu does.
+                    IosMenuPopover(
+                        item = songActions?.takeIf {
+                            menuFromPlayer && songMenuOrigin == null && dialMenuItem == null
+                        },
+                        anchor = songMenuAnchor,
+                        onDismiss = { songActions = null },
+                        backdrop = playerBackdrop.takeIf { glassSamplesBackdrop },
+                    ) { song ->
+                        songMenuBody(song, SongActionsPresentation.Menu)
+                    }
+                }
             }
+        }
+
+        // ---- Replay stories ----
+        // Mounted out here rather than inside the pane above, because a story
+        // covers the window: on a tablet the page is only the left half of the
+        // row, and a story laid out inside it would run alongside the player
+        // instead of over it.
+        replayStory?.let { start ->
+            replay.summary?.takeUnless { it.isEmpty }?.let { summary ->
+                ReplayStories(
+                    summary = summary,
+                    start = start,
+                    onClose = { replayStory = null },
+                    onShare = { card ->
+                        replaySharePage = card
+                        showReplayShare = true
+                    },
+                    paused = showReplayShare,
+                )
+            }
+        }
+
+        // ---- Share the Replay ----
+        if (showReplayShare) {
+            replay.summary?.takeUnless { it.isEmpty }?.let { summary ->
+                SlideDownBottomSheet(
+                    onDismissRequest = { showReplayShare = false },
+                    // Straight to full height. The sheet is a picture and two
+                    // buttons, and half-open it showed the picture with both
+                    // buttons below the fold — a sheet whose only two controls
+                    // need a drag to reach.
+                    sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+                    containerColor = MaterialTheme.colorScheme.background,
+                ) {
+                    ReplayShareSheet(
+                        summary = summary,
+                        holder = account?.name.orEmpty(),
+                        memberSince = replay.memberSince,
+                        page = replaySharePage,
+                        onDismiss = { showReplayShare = false },
+                    )
+                }
+            }
+        }
+
+        // A ⋮ tapped on a row: the iOS menu, hung off that button on the
+        // app's liquid glass (or its frost with glass off). The player's own
+        // ⋯ opens the same menu inside the player's window — see the sheet.
+        IosMenuPopover(
+            item = songActions?.takeIf {
+                songMenuOrigin == null && dialMenuItem == null && !(menuFromPlayer && playerRaised)
+            },
+            anchor = songMenuAnchor,
+            onDismiss = { songActions = null },
+            backdrop = appBackdrop.takeIf { glassSamplesBackdrop },
+            hazeState = hazeState,
+        ) { song ->
+            songMenuBody(song, SongActionsPresentation.Menu)
         }
         // Held on a dial tile: the drawer the player's Audio output menu uses,
         // on the same glass, over everything as the popup below is.
@@ -6666,7 +6731,19 @@ private fun BitChordApp(
                 )
             }
         }
-        browseActions?.takeIf { browseMenuOrigin == null && dialMenuItem == null }?.let { target ->
+        // A ⋯ tapped on a release page or a card: the iOS menu, hung off it.
+        IosMenuPopover(
+            item = browseActions?.takeIf { browseMenuOrigin == null && dialMenuItem == null && !browseRenameInSheet },
+            anchor = browseMenuAnchor,
+            onDismiss = { browseActions = null },
+            backdrop = appBackdrop.takeIf { glassSamplesBackdrop },
+            hazeState = hazeState,
+        ) { target ->
+            browseMenuBody(target, SongActionsPresentation.Menu)
+        }
+        // Rename from a menu: a text field and its keyboard have no place on a
+        // panel floating over the page, so it goes on to a sheet holding the form.
+        browseActions?.takeIf { browseMenuOrigin == null && dialMenuItem == null && browseRenameInSheet }?.let { target ->
             SlideDownBottomSheet(
                 onDismissRequest = { browseActions = null },
                 containerColor = MaterialTheme.colorScheme.background,

@@ -1,5 +1,6 @@
 package com.music.bitchord.ui.screens
 
+import com.music.bitchord.ui.components.menuAnchor
 import com.music.bitchord.ui.components.trackArtSize
 import android.os.Build
 import com.music.bitchord.R
@@ -1332,14 +1333,17 @@ private fun ReleaseActions(
             onClick = onSearch,
             size = circleSize,
         )
-        CircleIconButton(
-            icon = Icons.Rounded.MoreHoriz,
-            contentDescription = stringResource(R.string.more),
-            palette = palette,
-            onClick = { onMore?.invoke(songs) },
-            size = circleSize,
-            enabled = onMore != null,
-        )
+        // The page's menu hangs off this button — see [MenuAnchor].
+        Box(Modifier.menuAnchor()) {
+            CircleIconButton(
+                icon = Icons.Rounded.MoreHoriz,
+                contentDescription = stringResource(R.string.more),
+                palette = palette,
+                onClick = { onMore?.invoke(songs) },
+                size = circleSize,
+                enabled = onMore != null,
+            )
+        }
     }
     }
 }

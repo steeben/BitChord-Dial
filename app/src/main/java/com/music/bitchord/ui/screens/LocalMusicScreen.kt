@@ -1,5 +1,6 @@
 package com.music.bitchord.ui.screens
 
+import com.music.bitchord.ui.components.menuAnchor
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -50,7 +51,6 @@ import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Folder
-import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
@@ -1634,7 +1634,7 @@ private fun DrillDownHeader(
                 modifier = Modifier.size(44.dp).clip(CircleShape).clickable(onClick = onBack),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Rounded.ArrowBack, stringResource(R.string.back), tint = MaterialTheme.colorScheme.onBackground)
+                Icon(BitChordIcons.ChevronBack, stringResource(R.string.back), tint = MaterialTheme.colorScheme.onBackground)
             }
             Spacer(Modifier.weight(1f))
             onMore?.let { more ->
@@ -1645,6 +1645,7 @@ private fun DrillDownHeader(
                     modifier = Modifier
                         .hangIntoGutter(PAGE_GUTTER - 6.dp)
                         .size(44.dp)
+                        .menuAnchor()
                         .clip(CircleShape)
                         .clickable(onClick = more),
                     contentAlignment = Alignment.Center,

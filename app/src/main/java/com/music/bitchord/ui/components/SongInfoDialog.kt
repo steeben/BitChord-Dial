@@ -1,5 +1,6 @@
 package com.music.bitchord.ui.components
 
+import com.music.bitchord.ui.icons.BitChordIcons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -25,7 +26,6 @@ import com.music.bitchord.data.compactCount
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.ui.theme.ArtworkPalette
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Refresh
 
 private val INFO_BODY_MAX_HEIGHT = 360.dp
@@ -188,7 +188,7 @@ internal fun SongInfoPage(song: Song, palette: ArtworkPalette, onBack: () -> Uni
         ) {
             IconButton(onClick = onBack) {
                 Icon(
-                    Icons.AutoMirrored.Rounded.ArrowBack,
+                    BitChordIcons.ChevronBack,
                     contentDescription = stringResource(R.string.back),
                     tint = MaterialTheme.colorScheme.onBackground,
                 )

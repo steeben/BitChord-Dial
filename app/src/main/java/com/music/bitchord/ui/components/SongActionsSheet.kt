@@ -23,7 +23,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
@@ -279,6 +278,38 @@ fun SongActionsSheet(
     val isOffline = song.localUri != null
 
     val rows: @Composable ColumnScope.() -> Unit = {
+        // The menu leads with the actions it is opened for most, as tiles in
+        // the iOS way: the rating — kept up after a tap, so the new state
+        // shows in place — and Share. The sheet keeps them as rows below.
+        val canRate = isOffline || signedIn
+        val shareAction = onShare?.takeIf { !isOffline }
+        if (menu && (canRate || shareAction != null)) {
+            IosMenuQuickActions {
+                if (canRate) {
+                    IosMenuQuickAction(
+                        icon = if (liked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                        label = stringResource(if (liked) R.string.remove_from_liked else R.string.like),
+                        tint = if (liked) palette.accent else null,
+                        onClick = onToggleLike,
+                    )
+                }
+                // No dislike for a device file: there is no recommendation
+                // feed on the device for one to steer.
+                if (signedIn && !isOffline) {
+                    IosMenuQuickAction(
+                        icon = if (disliked) Icons.Rounded.ThumbDown else Icons.Rounded.ThumbDownOffAlt,
+                        label = stringResource(if (disliked) R.string.undo_dislike else R.string.dislike),
+                        tint = if (disliked) palette.accent else null,
+                        onClick = onToggleDislike,
+                    )
+                }
+                shareAction?.let {
+                    IosMenuQuickAction(icon = Icons.Rounded.Share, label = stringResource(R.string.share), onClick = it)
+                }
+            }
+            GroupSeparator(palette)
+        }
+
         // Leads the list whenever it's available: which recording is playing
         // is the one question that has to be answered before any of the rows
         // below mean anything — there is no point rating, queueing or
@@ -336,13 +367,15 @@ fun SongActionsSheet(
             // [likeStatus] is that playlist's answer here, not YouTube's, and
             // neither needs an account. No dislike — there is no
             // recommendation feed on the device for one to steer.
-            ActionRow(
-                icon = if (liked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                label = if (liked) stringResource(R.string.remove_from_liked) else stringResource(R.string.like),
-                tint = if (liked) palette.accent else null,
-                accent = palette.accent,
-                onClick = onToggleLike,
-            )
+            if (!menu) {
+                ActionRow(
+                    icon = if (liked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                    label = if (liked) stringResource(R.string.remove_from_liked) else stringResource(R.string.like),
+                    tint = if (liked) palette.accent else null,
+                    accent = palette.accent,
+                    onClick = onToggleLike,
+                )
+            }
             ActionRow(
                 icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
                 label = stringResource(R.string.add_to_playlist),
@@ -359,20 +392,22 @@ fun SongActionsSheet(
             }
             GroupSeparator(palette)
         } else if (signedIn) {
-            ActionRow(
-                icon = if (liked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                label = if (liked) stringResource(R.string.remove_from_liked) else stringResource(R.string.like),
-                tint = if (liked) palette.accent else null,
-                accent = palette.accent,
-                onClick = onToggleLike,
-            )
-            ActionRow(
-                icon = if (disliked) Icons.Rounded.ThumbDown else Icons.Rounded.ThumbDownOffAlt,
-                label = if (disliked) stringResource(R.string.undo_dislike) else stringResource(R.string.dislike),
-                tint = if (disliked) palette.accent else null,
-                accent = palette.accent,
-                onClick = onToggleDislike,
-            )
+            if (!menu) {
+                ActionRow(
+                    icon = if (liked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                    label = if (liked) stringResource(R.string.remove_from_liked) else stringResource(R.string.like),
+                    tint = if (liked) palette.accent else null,
+                    accent = palette.accent,
+                    onClick = onToggleLike,
+                )
+                ActionRow(
+                    icon = if (disliked) Icons.Rounded.ThumbDown else Icons.Rounded.ThumbDownOffAlt,
+                    label = if (disliked) stringResource(R.string.undo_dislike) else stringResource(R.string.dislike),
+                    tint = if (disliked) palette.accent else null,
+                    accent = palette.accent,
+                    onClick = onToggleDislike,
+                )
+            }
             ActionRow(
                 icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
                 label = stringResource(R.string.add_to_playlist),
@@ -452,6 +487,9 @@ fun SongActionsSheet(
                 onClick = it,
             )
         }
+        // Where the track leads, set apart in the menu as a menu's "Go to" is,
+        // with the album and artist named under each row.
+        if (menu) GroupSeparator(palette)
         when (val id = song.albumId) {
             null -> if (resolvingLinks) {
                 LoadingActionRow(Icons.Rounded.Album, stringResource(R.string.open_album), palette)
@@ -460,6 +498,7 @@ fun SongActionsSheet(
                 Icons.Rounded.Album,
                 stringResource(R.string.open_album),
                 accent = palette.accent,
+                description = song.albumName?.takeIf { menu && it.isNotBlank() },
             ) { onOpenAlbum(id) }
         }
         when (val id = song.artistId) {
@@ -470,6 +509,7 @@ fun SongActionsSheet(
                 Icons.Rounded.Person,
                 stringResource(R.string.open_artist),
                 accent = palette.accent,
+                description = song.artist.takeIf { menu && it.isNotBlank() },
             ) { onOpenArtist(id) }
         }
         ActionRow(Icons.Rounded.Info, stringResource(R.string.song_info), accent = palette.accent) {
@@ -508,7 +548,7 @@ fun SongActionsSheet(
         onChangeAlbumArt?.let {
             ActionRow(Icons.Rounded.Image, stringResource(R.string.change_album_art), accent = palette.accent, onClick = it)
         }
-        if (!isOffline) {
+        if (!isOffline && !menu) {
             onShare?.let {
                 ActionRow(Icons.Rounded.Share, stringResource(R.string.share), accent = palette.accent, onClick = it)
             }
@@ -523,7 +563,15 @@ fun SongActionsSheet(
 
     if (menu) {
         CompositionLocalProvider(LocalActionRowStyle provides ActionRowStyle.Menu) {
-            Column(modifier.fillMaxWidth().verticalScroll(rememberScrollState()), content = rows)
+            Column(modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+                // The player's menu has the sleep timer, and swaps its rows
+                // for the picker in place.
+                if (pickingSleepTimer) {
+                    SleepTimerPicker(palette = palette, onBack = { pickingSleepTimer = false })
+                } else {
+                    rows()
+                }
+            }
         }
         return
     }
@@ -562,17 +610,18 @@ internal val LocalActionRowStyle = staticCompositionLocalOf { ActionRowStyle.She
  * takes it exactly as it takes a sleeve's.
  */
 @Composable
-private fun neutralMenuPalette(): ArtworkPalette {
-    val scheme = MaterialTheme.colorScheme
-    return remember(scheme) {
+internal fun neutralMenuPalette(): ArtworkPalette {
+    val accent = MaterialTheme.colorScheme.primary
+    val colors = iosMenuColors()
+    return remember(accent, colors) {
         ArtworkPalette(
-            background = scheme.surfaceContainerHigh,
-            wash = scheme.surfaceContainerHigh,
-            elevated = scheme.surfaceContainerHighest,
-            accent = scheme.primary,
-            onBackground = scheme.onSurface,
-            onBackgroundVariant = scheme.onSurfaceVariant,
-            divider = scheme.onSurface.copy(alpha = 0.08f),
+            background = colors.fill,
+            wash = colors.fill,
+            elevated = colors.fill,
+            accent = accent,
+            onBackground = colors.label,
+            onBackgroundVariant = colors.secondaryLabel,
+            divider = colors.separator,
         )
     }
 }
@@ -605,12 +654,7 @@ private fun drawerPalette(): ArtworkPalette {
 @Composable
 private fun GroupSeparator(palette: ArtworkPalette) {
     if (LocalActionRowStyle.current == ActionRowStyle.Menu) {
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(6.dp)
-                .background(palette.divider),
-        )
+        IosMenuSeparator()
     } else {
         HorizontalDivider(
             modifier = Modifier.padding(vertical = 6.dp),
@@ -911,7 +955,7 @@ private fun SleepTimerHeader(title: String, subtitle: String, onBack: () -> Unit
     ) {
         IconButton(onClick = onBack) {
             Icon(
-                Icons.AutoMirrored.Rounded.ArrowBack,
+                BitChordIcons.ChevronBack,
                 contentDescription = stringResource(R.string.back),
                 tint = MaterialTheme.colorScheme.onBackground,
             )
@@ -1102,9 +1146,26 @@ internal fun ActionRow(
     tint: Color? = null,
     accent: Color = MaterialTheme.colorScheme.primary,
     enabled: Boolean = true,
+    /** A dimmer line under the label — in a menu only, where it names where the row leads. */
+    description: String? = null,
     onClick: () -> Unit,
 ) {
     val menu = LocalActionRowStyle.current == ActionRowStyle.Menu
+    if (menu) {
+        // The iOS panel's own row: glyph leading, a rounded press fill.
+        IosMenuRow(
+            label = label,
+            icon = icon,
+            onClick = onClick,
+            description = description,
+            value = value,
+            iconTint = tint,
+            valueColor = accent.takeIf { tint != null },
+            labelColor = tint?.takeIf { it == MaterialTheme.colorScheme.error },
+            enabled = enabled,
+        )
+        return
+    }
     // The popup sits on a surface rather than the page background, so its
     // text follows the surface's colour — the two differ in light mode.
     val foreground = if (menu) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onBackground
@@ -1169,6 +1230,22 @@ internal fun ActionRow(
 @Composable
 private fun LoadingActionRow(icon: ImageVector, label: String, palette: ArtworkPalette) {
     val menu = LocalActionRowStyle.current == ActionRowStyle.Menu
+    if (menu) {
+        IosMenuRow(
+            label = label,
+            icon = icon,
+            onClick = null,
+            enabled = false,
+            trailing = {
+                CircularProgressIndicator(
+                    color = palette.onBackgroundVariant,
+                    strokeWidth = 2.dp,
+                    modifier = Modifier.size(16.dp),
+                )
+            },
+        )
+        return
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()

@@ -170,7 +170,10 @@ fun <T : Any> HeldContextMenu(
         else -> Color.Black.copy(alpha = 0.10f)
     }
     val cardShape = RoundedCornerShape(20.dp)
-    val menuShape = RoundedCornerShape(16.dp)
+    // The menu is the iOS panel the ⋮ opens too — see [IosMenuPopover].
+    val menuShape = IosMenuShape
+    val menuColors = iosMenuColors()
+    val menuFill = menuColors.fill.copy(alpha = if (reduceDynamicBlur) 1f else 0.82f)
     val platePadding = 8.dp
 
     val insets = WindowInsets.safeDrawing
@@ -244,7 +247,8 @@ fun <T : Any> HeldContextMenu(
                     // Taps between rows land on the menu, not the scrim under it.
                     .pointerInput(Unit) {}
                     .clip(menuShape)
-                    .menuGround(glass, menuShape, plate, hairline),
+                    .menuGround(glass, menuShape, menuFill, menuColors.rim)
+                    .padding(vertical = 8.dp),
             ) {
                 actions(menuItem)
             }
@@ -272,7 +276,7 @@ fun <T : Any> HeldContextMenu(
         val visualW = plateW * liftScale
         val visualH = plateH * liftScale
 
-        val menuWidth = (width - margin * 2).coerceAtMost(280.dp.roundToPx()).coerceAtLeast(0)
+        val menuWidth = (width - margin * 2).coerceAtMost(IosMenuWidth.roundToPx()).coerceAtLeast(0)
         val menuMaxHeight = (bottom - top - visualH.roundToInt() - gap).coerceAtLeast(0)
         // Held at the height it opened at while it closes. The rows can change
         // under a closing menu (a dial's own rows go as soon as it is let go

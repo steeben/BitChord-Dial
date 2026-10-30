@@ -1,5 +1,11 @@
 package com.music.bitchord.ui.screens
 
+import androidx.compose.material.icons.rounded.PlayCircleOutline
+import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.Inventory2
+import androidx.compose.material.icons.rounded.MoreHoriz
+import androidx.compose.material.icons.rounded.Build
+import androidx.annotation.StringRes
 import android.content.Context
 import android.content.Intent
 import android.media.AudioFormat
@@ -254,6 +260,14 @@ fun SettingsScreen(
     searchInBar: Boolean = false,
     /** Told whether this page's own field has scrolled up under the bar. */
     onSearchScrolledOff: (Boolean) -> Unit = {},
+    /**
+     * The category this page is, or null for the main page — which lists the
+     * categories rather than their rows, until something is typed into its
+     * search field.
+     */
+    section: SettingsCategory? = null,
+    /** Opens one category as a page of its own. */
+    onOpenSection: (SettingsCategory) -> Unit = {},
 ) {
     val context = LocalContext.current
 
@@ -452,7 +466,13 @@ fun SettingsScreen(
     // Made fresh on every pass rather than remembered: it tallies the rows
     // that answered to the query, and that tally has to start from zero each
     // time the query changes.
-    val search = SettingsSearch(searchQuery)
+    //
+    // A category page shows all of its rows, so it searches for nothing. The
+    // main page searches every category at once: typed into, it lays out the
+    // rows that answer from all of them, as the single page Settings once was.
+    val search = SettingsSearch(if (section == null) searchQuery else "")
+    val searching = section == null && searchQuery.isNotBlank()
+    fun shows(category: SettingsCategory) = section == category || searching
 
     // What is left after a keystroke is a different list, and the offset the
     // last one was scrolled to means nothing in it.
@@ -490,156 +510,164 @@ fun SettingsScreen(
             .padding(contentPadding),
     ) {
         Text(
-            text = stringResource(R.string.settings),
+            text = stringResource(section?.title ?: R.string.settings),
             style = MaterialTheme.typography.displayLarge,
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 14.dp),
         )
-        SearchField(
-            query = searchQuery,
-            onQueryChange = onSearchQueryChange,
-            onSubmit = {},
-            placeholder = stringResource(R.string.settings_search_hint),
-            containerColor = frostedSurfaceColor(MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier
-                .padding(start = 20.dp, end = 20.dp, bottom = 4.dp)
-                .onGloballyPositioned { coordinates ->
-                    // Measured unclipped, so it still holds once the field is off screen.
-                    val bottom = coordinates.positionInRoot().y + coordinates.size.height
-                    fieldScrolledOffAt = bottom + scrollState.value - barLinePx
-                }
-                // Hidden rather than removed while the bar has it, so the page
-                // below keeps its place.
-                .graphicsLayer { alpha = if (searchInBar) 0f else 1f },
-        )
+        if (section == null) {
+            SearchField(
+                query = searchQuery,
+                onQueryChange = onSearchQueryChange,
+                onSubmit = {},
+                placeholder = stringResource(R.string.settings_search_hint),
+                containerColor = frostedSurfaceColor(MaterialTheme.colorScheme.surfaceVariant),
+                modifier = Modifier
+                    .padding(start = 20.dp, end = 20.dp, bottom = 4.dp)
+                    .onGloballyPositioned { coordinates ->
+                        // Measured unclipped, so it still holds once the field is off screen.
+                        val bottom = coordinates.positionInRoot().y + coordinates.size.height
+                        fieldScrolledOffAt = bottom + scrollState.value - barLinePx
+                    }
+                    // Hidden rather than removed while the bar has it, so the page
+                    // below keeps its place.
+                    .graphicsLayer { alpha = if (searchInBar) 0f else 1f },
+            )
 
-        SearchableSettingsGroup(search) {
-            val accountTitle = stringResource(R.string.account_integrations)
-            // What the row opens is the scrobbling screen, so the services it
-            // signs into are worth typing at this field even though none of
-            // them is named on the row itself.
-            row(accountTitle, "scrobbling", "last.fm", "listenbrainz") {
-                SettingsRow(
-                    icon = Icons.Rounded.Person,
-                    title = accountTitle,
-                    subtitle = account?.email?.takeIf { it.isNotBlank() }
-                        ?: stringResource(if (signedIn) R.string.signed_in else R.string.not_signed_in),
-                    onClick = onAccountScrobbling,
-                )
-            }
-            // Sits with the account rather than with Playback: a party is up to
-            // five signed-in people, and being signed in is the whole of what
-            // the row needs before it will do anything.
-            val listenTogetherTitle = stringResource(R.string.listen_together)
-            row(listenTogetherTitle, "jam", "party", "sync", "friends") {
-                SettingsRow(
-                    icon = Icons.Rounded.Groups,
-                    title = listenTogetherTitle,
-                    subtitle = party.code?.let {
-                        stringResource(R.string.listen_together_in_party, it)
-                    } ?: stringResource(R.string.listen_together_subtitle),
-                    badge = party.members.size.takeIf { party.inParty && it > 1 }?.toString(),
-                    onClick = onListenTogether,
-                )
-            }
-        }
-
-        // The row that used to sit at the top of this group was called
-        // "Lossless / HQ Audio" and toggled `SourceRegistry.setModuleEnabled` —
-        // it switched the *module source* on and off, not lossless. Sources
-        // above lists that as the module's own row now. Lossless itself is no
-        // longer a setting at all — see
-        // [SourceResolver.requestForNow][com.music.bitchord.data.sources.SourceResolver.requestForNow].
-        SearchableSettingsGroup(search, header = stringResource(R.string.audio_quality)) {
-            val sourceTitle = stringResource(R.string.source)
-            val sourceSubtitle = stringResource(R.string.sources_subtitle)
-            row(sourceTitle, sourceSubtitle, "addon", "lossless") {
-                SettingsRow(
-                    icon = Icons.Rounded.Extension,
-                    title = sourceTitle,
-                    subtitle = sourceSubtitle,
-                    onClick = onSources,
-                )
-            }
-            // It qualifies the row above rather than being a setting of its
-            // own, so it reads as part of Sources. Off, a track starts on
-            // whichever copy answers first and upgrades mid-song; on, it waits
-            // for the addon and plays that one copy to the end.
-            val directSourceTitle = stringResource(R.string.direct_source_stream)
-            // Drawn like the animated-cover cellular line: no icon, no divider.
-            row(directSourceTitle, "addon", "direct", "prefetch", "read-ahead", "upgrade", "transition", divided = false) {
-                // Off for the length of a party: holding every fetch until a
-                // track is about to play would leave this phone behind the
-                // others at each sync — see [DirectSourceGate.isActive].
-                SettingsSubRow(
-                    title = directSourceTitle,
-                    checked = directSourceStream && !party.inParty,
-                    onCheckedChange = AppSettings::setDirectSourceStream,
-                    subtitle = stringResource(
-                        if (party.inParty) R.string.direct_source_stream_in_party
-                        else R.string.direct_source_stream_subtitle,
-                    ),
-                    enabled = !party.inParty,
-                )
-            }
-            val onWifiTitle = stringResource(R.string.on_wifi)
-            row(onWifiTitle, "wi-fi", "streaming quality") {
-                SettingsRow(
-                    icon = Icons.Rounded.Wifi,
-                    title = onWifiTitle,
-                    badge = stringResource(R.string.in_use).takeIf { metered == false },
-                    value = wifiQuality.localizedLabel(),
-                    onClick = { picking = QualityTarget.WIFI },
-                )
-            }
-            val onMobileDataTitle = stringResource(R.string.on_mobile_data)
-            row(onMobileDataTitle, "cellular", "streaming quality") {
-                SettingsRow(
-                    icon = Icons.Rounded.SignalCellularAlt,
-                    title = onMobileDataTitle,
-                    badge = stringResource(R.string.in_use).takeIf { metered == true },
-                    value = cellularQuality.localizedLabel(),
-                    onClick = { picking = QualityTarget.CELLULAR },
-                )
-            }
-            // Sits with the quality ceilings rather than with Playback: it
-            // decides which version of a track gets fetched, the same question
-            // the two rows above answer, and not how one is played back.
-            //
-            // Greyed rather than hidden where the device can't decode E-AC-3.
-            // A missing row reads as a feature the app doesn't have; a disabled
-            // one with a reason under it is the difference between "BitChord
-            // has no Atmos" and "this phone has no Dolby decoder", and only the
-            // second is true. The stored preference is left untouched either
-            // way — see [AppSettings.dolbyAtmos].
-            val dolbyAtmosTitle = stringResource(R.string.dolby_atmos)
-            row(dolbyAtmosTitle, "surround", "e-ac-3") {
-                BypassedByBitPerfect(bitPerfectReady) {
+            SearchableSettingsGroup(search) {
+                val accountTitle = stringResource(R.string.account_integrations)
+                // What the row opens is the scrobbling screen, so the services it
+                // signs into are worth typing at this field even though none of
+                // them is named on the row itself.
+                row(accountTitle, "scrobbling", "last.fm", "listenbrainz") {
                     SettingsRow(
-                        iconPainter = painterResource(R.drawable.ic_dolby_atmos),
-                        title = dolbyAtmosTitle,
-                        subtitle = stringResource(
-                            if (dolbyAtmosSupported) {
-                                R.string.dolby_atmos_subtitle
-                            } else {
-                                R.string.dolby_atmos_unavailable
-                            },
-                        ),
-                        enabled = dolbyAtmosSupported,
-                        trailing = {
-                            Switch(
-                                checked = dolbyAtmos && dolbyAtmosSupported,
-                                onCheckedChange = AppSettings::setDolbyAtmos,
-                                enabled = dolbyAtmosSupported,
-                                colors = SwitchDefaults.colors(
-                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                    checkedBorderColor = MaterialTheme.colorScheme.primary,
-                                ),
-                            )
-                        },
-                        onClick = { AppSettings.setDolbyAtmos(!dolbyAtmos) },
+                        icon = Icons.Rounded.Person,
+                        title = accountTitle,
+                        subtitle = account?.email?.takeIf { it.isNotBlank() }
+                            ?: stringResource(if (signedIn) R.string.signed_in else R.string.not_signed_in),
+                        onClick = onAccountScrobbling,
                     )
                 }
+                // Sits with the account rather than with Playback: a party is up to
+                // five signed-in people, and being signed in is the whole of what
+                // the row needs before it will do anything.
+                val listenTogetherTitle = stringResource(R.string.listen_together)
+                row(listenTogetherTitle, "jam", "party", "sync", "friends") {
+                    SettingsRow(
+                        icon = Icons.Rounded.Groups,
+                        title = listenTogetherTitle,
+                        subtitle = party.code?.let {
+                            stringResource(R.string.listen_together_in_party, it)
+                        } ?: stringResource(R.string.listen_together_subtitle),
+                        badge = party.members.size.takeIf { party.inParty && it > 1 }?.toString(),
+                        onClick = onListenTogether,
+                    )
+                }
+            }
+
+            // The row that used to sit at the top of this group was called
+            // "Lossless / HQ Audio" and toggled `SourceRegistry.setModuleEnabled` —
+            // it switched the *module source* on and off, not lossless. Sources
+            // above lists that as the module's own row now. Lossless itself is no
+            // longer a setting at all — see
+            // [SourceResolver.requestForNow][com.music.bitchord.data.sources.SourceResolver.requestForNow].
+            SearchableSettingsGroup(search, header = stringResource(R.string.audio_quality)) {
+                val sourceTitle = stringResource(R.string.source)
+                val sourceSubtitle = stringResource(R.string.sources_subtitle)
+                row(sourceTitle, sourceSubtitle, "addon", "lossless") {
+                    SettingsRow(
+                        icon = Icons.Rounded.Extension,
+                        title = sourceTitle,
+                        subtitle = sourceSubtitle,
+                        onClick = onSources,
+                    )
+                }
+                // It qualifies the row above rather than being a setting of its
+                // own, so it reads as part of Sources. Off, a track starts on
+                // whichever copy answers first and upgrades mid-song; on, it waits
+                // for the addon and plays that one copy to the end.
+                val directSourceTitle = stringResource(R.string.direct_source_stream)
+                // Drawn like the animated-cover cellular line: no icon, no divider.
+                row(directSourceTitle, "addon", "direct", "prefetch", "read-ahead", "upgrade", "transition", divided = false) {
+                    // Off for the length of a party: holding every fetch until a
+                    // track is about to play would leave this phone behind the
+                    // others at each sync — see [DirectSourceGate.isActive].
+                    SettingsSubRow(
+                        title = directSourceTitle,
+                        checked = directSourceStream && !party.inParty,
+                        onCheckedChange = AppSettings::setDirectSourceStream,
+                        subtitle = stringResource(
+                            if (party.inParty) R.string.direct_source_stream_in_party
+                            else R.string.direct_source_stream_subtitle,
+                        ),
+                        enabled = !party.inParty,
+                    )
+                }
+                val onWifiTitle = stringResource(R.string.on_wifi)
+                row(onWifiTitle, "wi-fi", "streaming quality") {
+                    SettingsRow(
+                        icon = Icons.Rounded.Wifi,
+                        title = onWifiTitle,
+                        badge = stringResource(R.string.in_use).takeIf { metered == false },
+                        value = wifiQuality.localizedLabel(),
+                        onClick = { picking = QualityTarget.WIFI },
+                    )
+                }
+                val onMobileDataTitle = stringResource(R.string.on_mobile_data)
+                row(onMobileDataTitle, "cellular", "streaming quality") {
+                    SettingsRow(
+                        icon = Icons.Rounded.SignalCellularAlt,
+                        title = onMobileDataTitle,
+                        badge = stringResource(R.string.in_use).takeIf { metered == true },
+                        value = cellularQuality.localizedLabel(),
+                        onClick = { picking = QualityTarget.CELLULAR },
+                    )
+                }
+                // Sits with the quality ceilings rather than with Playback: it
+                // decides which version of a track gets fetched, the same question
+                // the two rows above answer, and not how one is played back.
+                //
+                // Greyed rather than hidden where the device can't decode E-AC-3.
+                // A missing row reads as a feature the app doesn't have; a disabled
+                // one with a reason under it is the difference between "BitChord
+                // has no Atmos" and "this phone has no Dolby decoder", and only the
+                // second is true. The stored preference is left untouched either
+                // way — see [AppSettings.dolbyAtmos].
+                val dolbyAtmosTitle = stringResource(R.string.dolby_atmos)
+                row(dolbyAtmosTitle, "surround", "e-ac-3") {
+                    BypassedByBitPerfect(bitPerfectReady) {
+                        SettingsRow(
+                            iconPainter = painterResource(R.drawable.ic_dolby_atmos),
+                            title = dolbyAtmosTitle,
+                            subtitle = stringResource(
+                                if (dolbyAtmosSupported) {
+                                    R.string.dolby_atmos_subtitle
+                                } else {
+                                    R.string.dolby_atmos_unavailable
+                                },
+                            ),
+                            enabled = dolbyAtmosSupported,
+                            trailing = {
+                                Switch(
+                                    checked = dolbyAtmos && dolbyAtmosSupported,
+                                    onCheckedChange = AppSettings::setDolbyAtmos,
+                                    enabled = dolbyAtmosSupported,
+                                    colors = SwitchDefaults.colors(
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                        checkedBorderColor = MaterialTheme.colorScheme.primary,
+                                    ),
+                                )
+                            },
+                            onClick = { AppSettings.setDolbyAtmos(!dolbyAtmos) },
+                        )
+                    }
+                }
+            }
+
+            // The rest of Settings, a category to a page: the main page lists
+            // them, until a search lays out what answers from every one of them.
+            if (!searching) {
+                SettingsCategoryList(onOpen = onOpenSection)
             }
         }
 
@@ -648,7 +676,7 @@ fun SettingsScreen(
         // does this minute cost"; these answer "what am I keeping, and when may
         // it be fetched" — and those two questions only make sense read
         // together, which is what puts them side by side here.
-        SearchableSettingsGroup(search, header = stringResource(R.string.downloads)) {
+        if (shows(SettingsCategory.DOWNLOADS)) SearchableSettingsGroup(search, header = stringResource(R.string.downloads)) {
             val downloadQualityTitle = stringResource(R.string.download_quality)
             row(downloadQualityTitle, "offline", "lossless") {
                 SettingsRow(
@@ -691,7 +719,7 @@ fun SettingsScreen(
             }
         }
 
-        SearchableSettingsGroup(
+        if (shows(SettingsCategory.PLAYBACK)) SearchableSettingsGroup(
             search,
             header = stringResource(R.string.playback),
             footer = stringResource(R.string.bit_perfect_bypassed_footer).takeIf { bitPerfectReady },
@@ -984,7 +1012,7 @@ fun SettingsScreen(
             }
         }
 
-        SearchableSettingsGroup(search, header = stringResource(R.string.appearance)) {
+        if (shows(SettingsCategory.APPEARANCE)) SearchableSettingsGroup(search, header = stringResource(R.string.appearance)) {
             val themeTitle = stringResource(R.string.theme)
             row(themeTitle, "dark mode", "light mode") {
                 SettingsRow(icon = Icons.Rounded.Brightness4, title = themeTitle)
@@ -1413,7 +1441,7 @@ fun SettingsScreen(
             }
         }
 
-        SearchableSettingsGroup(search, header = stringResource(R.string.layout_settings)) {
+        if (shows(SettingsCategory.LAYOUT)) SearchableSettingsGroup(search, header = stringResource(R.string.layout_settings)) {
             val miniShapeTitle = stringResource(R.string.mini_player_shape)
             row(miniShapeTitle, "mini player", "rounded", "square", "pill") {
                 SettingsRow(icon = Icons.Rounded.CropSquare, title = miniShapeTitle)
@@ -1608,7 +1636,7 @@ fun SettingsScreen(
             }
         }
 
-        SearchableSettingsGroup(search, header = stringResource(R.string.performance)) {
+        if (shows(SettingsCategory.PERFORMANCE)) SearchableSettingsGroup(search, header = stringResource(R.string.performance)) {
             val highPerformanceModeTitle = stringResource(R.string.high_performance_mode)
             row(highPerformanceModeTitle, "frame rate", "refresh rate", "hz", "battery", "smooth") {
                 SettingsRow(
@@ -1667,7 +1695,7 @@ fun SettingsScreen(
             }
         }
 
-        SearchableSettingsGroup(search, header = stringResource(R.string.local_music)) {
+        if (shows(SettingsCategory.LOCAL_MUSIC)) SearchableSettingsGroup(search, header = stringResource(R.string.local_music)) {
             val localMusicFolderTitle = stringResource(R.string.local_music_folder)
             row(localMusicFolderTitle, "folder", "offline", "files") {
                 SettingsRow(
@@ -1741,7 +1769,7 @@ fun SettingsScreen(
         val cacheLimitMb = if (cacheUnlimited) CACHE_UNLIMITED_STOP_MB else (cacheLimitBytes / (1024 * 1024)).toInt()
         val unlimitedLabel = stringResource(R.string.song_cache_unlimited)
         val cacheLimitLabel = if (cacheUnlimited) unlimitedLabel else formatCacheSize(cacheLimitMb)
-        SearchableSettingsGroup(search, header = stringResource(R.string.storage)) {
+        if (shows(SettingsCategory.STORAGE)) SearchableSettingsGroup(search, header = stringResource(R.string.storage)) {
             val showCacheFolderTitle = stringResource(R.string.show_cache_folder)
             row(showCacheFolderTitle, "cache", "cached songs", "library", "folder") {
                 SettingsRow(
@@ -1819,7 +1847,7 @@ fun SettingsScreen(
             }
         }
 
-        SearchableSettingsGroup(search, header = stringResource(R.string.your_data)) {
+        if (shows(SettingsCategory.YOUR_DATA)) SearchableSettingsGroup(search, header = stringResource(R.string.your_data)) {
             val replayTitle = stringResource(R.string.replay)
             row(replayTitle, "stats", "history", "wrapped") {
                 SettingsRow(
@@ -1874,7 +1902,7 @@ fun SettingsScreen(
 
         // No footer: it only restated the stop-on-close row's own subtitle,
         // which sits four rows above it and says the same thing in fewer words.
-        SearchableSettingsGroup(search, header = stringResource(R.string.miscellaneous)) {
+        if (shows(SettingsCategory.MISCELLANEOUS)) SearchableSettingsGroup(search, header = stringResource(R.string.miscellaneous)) {
             val checkUpdatesTitle = stringResource(R.string.check_for_updates)
             row(checkUpdatesTitle, "update", "version", "release", "upgrade", "new version") {
                 val update by com.music.bitchord.data.AppUpdateChecker.available.collectAsStateWithLifecycle()
@@ -2007,7 +2035,7 @@ fun SettingsScreen(
             }
         }
 
-        SearchableSettingsGroup(search, header = stringResource(R.string.language)) {
+        if (shows(SettingsCategory.LANGUAGE)) SearchableSettingsGroup(search, header = stringResource(R.string.language)) {
             val appLanguageTitle = stringResource(R.string.app_language)
             row(appLanguageTitle, "locale", "translate") {
                 val selectedLanguage = AppCompatDelegate.getApplicationLocales().get(0)?.toLanguageTag()
@@ -2021,7 +2049,7 @@ fun SettingsScreen(
             }
         }
 
-        SearchableSettingsGroup(search, header = stringResource(R.string.advanced_options)) {
+        if (shows(SettingsCategory.ADVANCED)) SearchableSettingsGroup(search, header = stringResource(R.string.advanced_options)) {
             val smartAlignmentTitle = stringResource(R.string.smart_version_alignment)
             row(smartAlignmentTitle, "alignment", "sync", "waveform", "video", "audio", "skit", "intro") {
                 SettingsRow(
@@ -2083,13 +2111,13 @@ fun SettingsScreen(
 
         // Read after every group above has had its turn at the query, which is
         // what makes this an accurate "nothing here" rather than a guess.
-        if (!search.anyMatch) {
+        if (searching && !search.anyMatch) {
             MessageState(stringResource(R.string.settings_search_empty, searchQuery))
         }
 
         // The version line is the page's colophon, not a setting: it belongs to
         // the whole list, so it goes when the list is narrowed to a few rows.
-        if (searchQuery.isBlank()) {
+        if (section == null && searchQuery.isBlank()) {
         Text(
             text = buildAnnotatedString {
                 append("bitchord $version  ")
@@ -3257,6 +3285,58 @@ private fun DownloadQualitySheet(
 }
 
 // ---- Building blocks --------------------------------------------------------
+
+// ---- Pages ------------------------------------------------------------------
+
+/**
+ * The groups of Settings that are pages of their own, in the order the main
+ * page lists them. Account, Listen Together and Audio quality aren't here:
+ * they stay on the main page, where they always were.
+ */
+enum class SettingsCategory(@param:StringRes val title: Int) {
+    DOWNLOADS(R.string.downloads),
+    PLAYBACK(R.string.playback),
+    APPEARANCE(R.string.appearance),
+    LAYOUT(R.string.layout_settings),
+    PERFORMANCE(R.string.performance),
+    LOCAL_MUSIC(R.string.local_music),
+    STORAGE(R.string.storage),
+    YOUR_DATA(R.string.your_data),
+    MISCELLANEOUS(R.string.miscellaneous),
+    LANGUAGE(R.string.language),
+    ADVANCED(R.string.advanced_options),
+    ;
+
+    val icon: ImageVector
+        get() = when (this) {
+            DOWNLOADS -> Icons.Rounded.Download
+            PLAYBACK -> Icons.Rounded.PlayCircleOutline
+            APPEARANCE -> Icons.Rounded.Palette
+            LAYOUT -> Icons.Rounded.Dashboard
+            PERFORMANCE -> Icons.Rounded.Speed
+            LOCAL_MUSIC -> Icons.Rounded.LibraryMusic
+            STORAGE -> Icons.Rounded.Storage
+            YOUR_DATA -> Icons.Rounded.Inventory2
+            MISCELLANEOUS -> Icons.Rounded.MoreHoriz
+            LANGUAGE -> Icons.Rounded.Language
+            ADVANCED -> Icons.Rounded.Build
+        }
+}
+
+/** The main page's list of categories: a glyph and a name each, and a chevron into it. */
+@Composable
+private fun SettingsCategoryList(onOpen: (SettingsCategory) -> Unit) {
+    SettingsGroup {
+        SettingsCategory.entries.forEachIndexed { index, category ->
+            if (index > 0) RowDivider()
+            SettingsRow(
+                icon = category.icon,
+                title = stringResource(category.title),
+                onClick = { onOpen(category) },
+            )
+        }
+    }
+}
 
 internal val GroupShape = RoundedCornerShape(14.dp)
 internal val GROUP_INSET = 16.dp
