@@ -312,6 +312,7 @@ import com.music.bitchord.ui.components.LongPressOrigin
 import com.music.bitchord.ui.components.SongActionsPresentation
 import com.music.bitchord.ui.components.SongActionsSheet
 import com.music.bitchord.ui.components.HeldContextMenu
+import com.music.bitchord.ui.components.GlassMenuDrawer
 import com.music.bitchord.ui.components.HeldItem
 import androidx.media3.session.MediaController
 import com.music.bitchord.playback.QualityUpgrade
@@ -5874,7 +5875,7 @@ private fun BitChordApp(
                 },
             )
         }
-        songActions?.takeIf { songMenuOrigin == null }?.let { song ->
+        songActions?.takeIf { songMenuOrigin == null && dialMenuItem == null }?.let { song ->
             SlideDownBottomSheet(
                 onDismissRequest = { songActions = null },
                 // The sheet paints itself in the track's own colours, corners
@@ -5883,6 +5884,17 @@ private fun BitChordApp(
                 dragHandle = null,
             ) {
                 songMenuBody(song, SongActionsPresentation.Sheet)
+            }
+        }
+        // Held on a dial tile: the drawer the player's Audio output menu uses,
+        // on the same glass, over everything as the popup below is.
+        songActions?.takeIf { songMenuOrigin == null && dialMenuItem != null }?.let { song ->
+            GlassMenuDrawer(
+                backdrop = appBackdrop.takeIf { glassSamplesBackdrop },
+                hazeState = hazeState,
+                onDismiss = { songActions = null },
+            ) {
+                songMenuBody(song, SongActionsPresentation.Drawer)
             }
         }
         // Drawn over everything, tab bar and mini player included, and kept
@@ -6338,12 +6350,21 @@ private fun BitChordApp(
                 )
             }
         }
-        browseActions?.takeIf { browseMenuOrigin == null }?.let { target ->
+        browseActions?.takeIf { browseMenuOrigin == null && dialMenuItem == null }?.let { target ->
             SlideDownBottomSheet(
                 onDismissRequest = { browseActions = null },
                 containerColor = MaterialTheme.colorScheme.background,
             ) {
                 browseMenuBody(target, SongActionsPresentation.Sheet)
+            }
+        }
+        browseActions?.takeIf { browseMenuOrigin == null && dialMenuItem != null }?.let { target ->
+            GlassMenuDrawer(
+                backdrop = appBackdrop.takeIf { glassSamplesBackdrop },
+                hazeState = hazeState,
+                onDismiss = { browseActions = null },
+            ) {
+                browseMenuBody(target, SongActionsPresentation.Drawer)
             }
         }
         HeldContextMenu(

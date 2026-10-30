@@ -1,7 +1,7 @@
 package com.music.bitchord.ui.components
 
 import android.provider.Settings
-import androidx.activity.compose.BackHandler
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -26,6 +26,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -52,6 +53,8 @@ import com.music.bitchord.data.settings.AppSettings
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.materials.HazeMaterials
+import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.roundToInt
 
 /**
@@ -75,6 +78,10 @@ import kotlin.math.roundToInt
  * (or the system's animator scale at zero) turns the lift into a short fade
  * with nothing moving, and "Reduce dynamic blur" swaps the blurred page for a
  * plain dimming scrim, which is also the cost that setting exists to remove.
+ *
+ * With liquid glass on, the plate and the menu are glass, as the app's other
+ * menus are. A predictive back swipe carries the item part of the way back
+ * into its list as the menu shrinks toward it, and lets go if the swipe is.
  */
 @OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
@@ -128,9 +135,26 @@ fun <T : Any> HeldContextMenu(
         }
     }
 
-    BackHandler(enabled = open, onBack = onDismiss)
+    // How far through a predictive back swipe the listener is, 0..1: the lift
+    // runs back toward the list with it — see [BACK_SWIPE_TRAVEL].
+    val backSwipe = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    PredictiveBackHandler(enabled = open) { events ->
+        try {
+            events.collect { event -> backSwipe.snapTo(event.progress) }
+            // The exit carries on from where the swipe left the lift.
+            progress.snapTo(progress.value * (1f - BACK_SWIPE_TRAVEL * backSwipe.value))
+            backSwipe.snapTo(0f)
+            onDismiss()
+        } catch (cancelled: CancellationException) {
+            scope.launch { backSwipe.animateTo(0f, spring()) }
+            throw cancelled
+        }
+    }
+    val lift = { progress.value * (1f - BACK_SWIPE_TRAVEL * backSwipe.value) }
 
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val glass = LocalLiquidGlassEnabled.current && isGlassSupported() && !reduceDynamicBlur
     // Plain white or black at half strength, so the blur shows through as
     // frost rather than the surface greys reading as a flat slab over it. With
     // no blur behind there is nothing for that to frost, so the plate firms up
@@ -162,7 +186,7 @@ fun <T : Any> HeldContextMenu(
         content = {
             // The page, pushed back. One alpha fades the whole of it rather
             // than a blur radius being animated per frame.
-            val backdropAlpha = { progress.value.coerceIn(0f, 1f) }
+            val backdropAlpha = { lift().coerceIn(0f, 1f) }
             Spacer(
                 Modifier
                     .fillMaxSize()
@@ -194,8 +218,7 @@ fun <T : Any> HeldContextMenu(
                     .then(if (reduceMotion) Modifier else Modifier.shadow(20.dp, cardShape, clip = false))
                     .pointerInput(Unit) {}
                     .clip(cardShape)
-                    .background(plate)
-                    .border(0.5.dp, hairline, cardShape)
+                    .menuGround(glass, cardShape, plate, hairline)
                     .then(
                         if (onPreviewClick != null) {
                             Modifier.clickable(enabled = open) { onPreviewClick(menuItem) }
@@ -219,8 +242,7 @@ fun <T : Any> HeldContextMenu(
                     // Taps between rows land on the menu, not the scrim under it.
                     .pointerInput(Unit) {}
                     .clip(menuShape)
-                    .background(plate)
-                    .border(0.5.dp, hairline, menuShape),
+                    .menuGround(glass, menuShape, plate, hairline),
             ) {
                 actions(menuItem)
             }
@@ -298,7 +320,7 @@ fun <T : Any> HeldContextMenu(
         layout(width, height) {
             backdrop.place(0, 0)
             card.placeWithLayer(cardX, cardY) {
-                val p = progress.value
+                val p = lift()
                 if (reduceMotion) {
                     scaleX = liftScale
                     scaleY = liftScale
@@ -315,7 +337,7 @@ fun <T : Any> HeldContextMenu(
                 }
             }
             menu.placeWithLayer(menuX, menuY) {
-                val p = progress.value
+                val p = lift()
                 alpha = ((p - 0.1f) / 0.9f).coerceIn(0f, 1f)
                 if (!reduceMotion) {
                     // Grows out of the corner nearest the item, and travels
@@ -334,6 +356,17 @@ fun <T : Any> HeldContextMenu(
         }
     }
 }
+
+/**
+ * How much of the lift a predictive back swipe undoes at its full length:
+ * enough to read as the item going home, the rest is the exit once it commits.
+ */
+private const val BACK_SWIPE_TRAVEL = 0.35f
+
+/** The plate's and the menu's ground: liquid glass when it is on, frost otherwise. */
+@Composable
+private fun Modifier.menuGround(glass: Boolean, shape: RoundedCornerShape, plate: Color, hairline: Color): Modifier =
+    if (glass) liquidGlass(shape) else background(plate).border(0.5.dp, hairline, shape)
 
 private suspend fun PointerInputScope.swallowAll() {
     awaitPointerEventScope {

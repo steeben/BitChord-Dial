@@ -224,7 +224,9 @@ fun SongActionsSheet(
      * bottom sheet with its own track header; [SongActionsPresentation.Menu]
      * is only the rows, compact and in the theme's own colours, for the
      * popup a held row lifts into — see [HeldContextMenu], which draws the
-     * held row itself above them.
+     * held row itself above them. [SongActionsPresentation.Drawer] is the
+     * sheet's own layout, header included, with no ground of its own and no
+     * scroll: the glass drawer it is drawn in is both.
      */
     presentation: SongActionsPresentation = SongActionsPresentation.Sheet,
 ) {
@@ -241,8 +243,13 @@ fun SongActionsSheet(
     // The popup stays neutral instead: it floats over a blurred page rather
     // than sitting on the sleeve's own ground, and an accent pitched against
     // that tint is not guaranteed to read against the theme's surface.
+    //
+    // The drawer is glass, so its rows stay in the theme's colours for the
+    // same reason: there is no sleeve behind them to pitch an accent against.
     val palette = if (menu) {
         neutralMenuPalette()
+    } else if (presentation == SongActionsPresentation.Drawer) {
+        drawerPalette()
     } else {
         rememberArtworkPalette(song.thumbnailUrl, artPx = ROW_ART_PX)
     }
@@ -460,25 +467,28 @@ fun SongActionsSheet(
         return
     }
 
-    TintedSheet(palette = palette, imageUrl = song.thumbnailUrl, modifier = modifier) {
-        if (pickingSleepTimer) {
-            SleepTimerPicker(palette = palette, onBack = { pickingSleepTimer = false })
-            return@TintedSheet
+    val page: @Composable ColumnScope.() -> Unit = {
+        when {
+            pickingSleepTimer -> SleepTimerPicker(palette = palette, onBack = { pickingSleepTimer = false })
+            showingSongInfo -> SongInfoPage(song = song, palette = palette, onBack = { showingSongInfo = false })
+            else -> {
+                SheetTrackHeader(song, subtitleColor = palette.onBackgroundVariant)
+                HorizontalDivider(thickness = 0.5.dp, color = palette.divider)
+                rows()
+                Spacer(Modifier.height(24.dp))
+            }
         }
-        if (showingSongInfo) {
-            SongInfoPage(song = song, palette = palette, onBack = { showingSongInfo = false })
-            return@TintedSheet
-        }
+    }
 
-        SheetTrackHeader(song, subtitleColor = palette.onBackgroundVariant)
-        HorizontalDivider(thickness = 0.5.dp, color = palette.divider)
-        rows()
-        Spacer(Modifier.height(24.dp))
+    if (presentation == SongActionsPresentation.Drawer) {
+        Column(modifier.fillMaxWidth(), content = page)
+    } else {
+        TintedSheet(palette = palette, imageUrl = song.thumbnailUrl, modifier = modifier, content = page)
     }
 }
 
 /** How [SongActionsSheet] is being presented. */
-enum class SongActionsPresentation { Sheet, Menu }
+enum class SongActionsPresentation { Sheet, Menu, Drawer }
 
 /** Row density and layout, set by whichever surface the rows are drawn on. */
 internal enum class ActionRowStyle { Sheet, Menu }
@@ -502,6 +512,26 @@ private fun neutralMenuPalette(): ArtworkPalette {
             onBackground = scheme.onSurface,
             onBackgroundVariant = scheme.onSurfaceVariant,
             divider = scheme.onSurface.copy(alpha = 0.08f),
+        )
+    }
+}
+
+/**
+ * The drawer's colours: the theme's foregrounds over clear ground, since the
+ * glass under it is washed in the theme's own background.
+ */
+@Composable
+private fun drawerPalette(): ArtworkPalette {
+    val scheme = MaterialTheme.colorScheme
+    return remember(scheme) {
+        ArtworkPalette(
+            background = Color.Transparent,
+            wash = Color.Transparent,
+            elevated = scheme.onBackground.copy(alpha = 0.08f),
+            accent = scheme.primary,
+            onBackground = scheme.onBackground,
+            onBackgroundVariant = scheme.onSurfaceVariant,
+            divider = scheme.onBackground.copy(alpha = 0.12f),
         )
     }
 }

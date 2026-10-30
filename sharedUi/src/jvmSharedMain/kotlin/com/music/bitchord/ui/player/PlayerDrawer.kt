@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -101,6 +102,7 @@ private const val BACK_SWIPE_TRAVEL = 0.4f
 
 /** The wash over the drawer's liquid glass: dark enough for its white rows on any artwork. */
 private val DRAWER_GLASS_TINT = Color(0xFF121212).copy(alpha = 0.6f)
+private val DRAWER_SURFACE = Color(0xFF121212)
 
 private const val DRAWER_EXIT_MS = 200
 
@@ -122,7 +124,8 @@ private val GLASS_OVERHANG = 64.dp
 @Composable
 fun PlayerDrawer(
     hazeState: HazeState,
-    title: String,
+    /** Null for content that heads itself, as a track menu does with the track. */
+    title: String?,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     /** Air between the title and whatever the drawer opens with. */
@@ -135,6 +138,17 @@ fun PlayerDrawer(
      * drawer opened is up over it and should take back first.
      */
     handlesBack: Boolean = false,
+    /**
+     * The drawer's ground: the wash over its glass, and the fill under it
+     * where there is no glass. Dark for the player's white rows by default; a
+     * page's menu drawn in the theme's own colours passes the theme's.
+     */
+    glassTint: Color = DRAWER_GLASS_TINT,
+    surfaceColor: Color = DRAWER_SURFACE,
+    /** The title's and the grab handle's colour, to read against [surfaceColor]. */
+    contentColor: Color = Color.White,
+    /** Side margin for the content: rows that carry their own inset pass none. */
+    horizontalPadding: Dp = 16.dp,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val reduceDynamicBlur by PlayerSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
@@ -281,7 +295,7 @@ fun PlayerDrawer(
                         )
                         layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(0, 0) }
                     }
-                    .then(glass.surface(Modifier, DRAWER_SHAPE, tint = DRAWER_GLASS_TINT)),
+                    .then(glass.surface(Modifier, DRAWER_SHAPE, tint = glassTint)),
             )
         }
         Column(
@@ -290,14 +304,14 @@ fun PlayerDrawer(
                 .clip(DRAWER_SHAPE)
                 .then(
                     when {
-                        reduceDynamicBlur -> Modifier.background(Color(0xFF121212))
+                        reduceDynamicBlur -> Modifier.background(surfaceColor)
                         glass != null -> Modifier
                         else -> Modifier
                             .optimizedHazeEffect(
                                 state = hazeState,
-                                style = HazeMaterials.regular(Color(0xFF141414)),
+                                style = HazeMaterials.regular(surfaceColor),
                             )
-                            .background(Color(0xFF121212).copy(alpha = 0.9f))
+                            .background(surfaceColor.copy(alpha = 0.9f))
                     }
                 )
                 .clickable(
@@ -318,7 +332,9 @@ fun PlayerDrawer(
                     }
                 }
                 .navigationBarsPadding()
-                .padding(horizontal = 16.dp)
+                // A menu's rename field comes up with the keyboard under it.
+                .imePadding()
+                .padding(horizontal = horizontalPadding)
                 .padding(top = 10.dp, bottom = 20.dp)
                 .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -330,19 +346,21 @@ fun PlayerDrawer(
                     .padding(bottom = 12.dp)
                     .size(width = 36.dp, height = 4.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.25f)),
+                    .background(contentColor.copy(alpha = 0.25f)),
             )
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontSize = 19.sp,
-                    fontWeight = FontWeight.Bold,
-                ),
-                color = Color.White,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 4.dp, bottom = titleGap),
-            )
+            if (title != null) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                    color = contentColor,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 4.dp, bottom = titleGap),
+                )
+            }
             content()
         }
         }

@@ -776,15 +776,6 @@ private fun SpeedDialTile(
         modifier = modifier
             .onPlaced { spot.coordinates = it }
             .tilePress(press)
-            // The press's shade, outside the recording: the picture is of the
-            // tile at rest, as it will look when its page closes back into it.
-            .drawWithContent {
-                drawContent()
-                val shade = press.shade
-                if (shade > 0f) {
-                    drawRoundRect(Color.Black.copy(alpha = shade), cornerRadius = CornerRadius(10.dp.toPx()))
-                }
-            }
             .drawWithContent {
                 drawn.record { this@drawWithContent.drawContent() }
                 drawLayer(drawn)
@@ -881,7 +872,7 @@ private fun HistoryTile(
                     .padding(horizontal = 8.dp, vertical = 6.dp),
             )
         }
-        DimOverlay { maxOf(dim(), press.shade) }
+        DimOverlay(dim)
     }
 }
 
@@ -902,9 +893,11 @@ private class TilePress(private val scope: CoroutineScope) {
     /** Between a tap and its action: the press itself is the tap's, not the finger's. */
     var tapping = false
 
-    /** The tile's scale and shade at the current depth, read when drawing. */
+    /**
+     * The tile's scale at the current depth, read when drawing. It only
+     * sinks: a dark film over it as well flashed on every quick tap.
+     */
     val scale: Float get() = 1f - PRESS_SHRINK * depth.value
-    val shade: Float get() = PRESS_SHADE * depth.value
 
     fun tap(action: suspend () -> Unit) {
         tapping = true
@@ -947,9 +940,8 @@ private fun Modifier.tilePress(press: TilePress): Modifier = graphicsLayer {
     scaleY = scale
 }
 
-/** How far a pressed tile sinks and darkens, how quickly, and how much it bounces back out. */
+/** How far a pressed tile sinks, how quickly, and how much it bounces back out. */
 private const val PRESS_SHRINK = 0.08f
-private const val PRESS_SHADE = 0.18f
 private const val PRESS_IN_MS = 110
 private const val PRESS_BOUNCE = 0.45f
 
@@ -1077,7 +1069,7 @@ private fun LuckyDiceTile(
                 )
             }
         }
-        DimOverlay { maxOf(dim(), press.shade) }
+        DimOverlay(dim)
     }
 }
 
