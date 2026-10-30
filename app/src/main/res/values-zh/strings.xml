@@ -840,6 +840,7 @@
     <string name="glass_transparency">透明度</string>
     <string name="glass_blur">模糊</string>
     <string name="glass_tint">色调</string>
+    <string name="glass_tint_darkness">色调暗度</string>
     <string name="glass_tint_default">默认</string>
     <string name="glass_tint_accent">强调色</string>
     <string name="glass_tint_blue">蓝色</string>

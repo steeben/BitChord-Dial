@@ -864,6 +864,7 @@
     <string name="glass_transparency">שקיפות</string>
     <string name="glass_blur">טשטוש</string>
     <string name="glass_tint">גוון</string>
+    <string name="glass_tint_darkness">כהות הגוון</string>
     <string name="glass_tint_default">ברירת מחדל</string>
     <string name="glass_tint_accent">צבע הדגשה</string>
     <string name="glass_tint_blue">כחול</string>

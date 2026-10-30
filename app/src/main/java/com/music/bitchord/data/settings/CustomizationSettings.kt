@@ -116,6 +116,9 @@ object CustomizationSettings {
     /** The colour washed into Liquid Glass surfaces; [GlassTint.DEFAULT] keeps the theme's. */
     val glassTint = MutableStateFlow(GlassTint.DEFAULT)
 
+    /** How far the glass's fill is darkened towards black, 0 (not at all) to 1. */
+    val glassTintDarkness = MutableStateFlow(0f)
+
     /** How far Liquid Glass blurs what is behind it, in dp. */
     val glassBlur = MutableStateFlow(DEFAULT_GLASS_BLUR)
 
@@ -164,6 +167,7 @@ object CustomizationSettings {
         glassTransparency.value = p.getFloat(KEY_GLASS_TRANSPARENCY, DEFAULT_GLASS_TRANSPARENCY).coerceIn(0f, 1f)
         glassTint.value = GlassTint.entries
             .firstOrNull { it.name == p.getString(KEY_GLASS_TINT, null) } ?: GlassTint.DEFAULT
+        glassTintDarkness.value = p.getFloat(KEY_GLASS_TINT_DARKNESS, 0f).coerceIn(0f, 1f)
         glassBlur.value = p.getFloat(KEY_GLASS_BLUR, DEFAULT_GLASS_BLUR).coerceIn(0f, MAX_GLASS_BLUR)
         librarySource.value = LibrarySource.entries
             .firstOrNull { it.name == p.getString(KEY_LIBRARY_SOURCE, null) } ?: LibrarySource.ALL
@@ -467,20 +471,28 @@ object CustomizationSettings {
         prefs?.edit()?.putString(KEY_GLASS_TINT, value.name)?.apply()
     }
 
+    fun setGlassTintDarkness(value: Float) {
+        val clamped = value.coerceIn(0f, 1f)
+        glassTintDarkness.value = clamped
+        prefs?.edit()?.putFloat(KEY_GLASS_TINT_DARKNESS, clamped)?.apply()
+    }
+
     fun setGlassBlur(value: Float) {
         val clamped = value.coerceIn(0f, MAX_GLASS_BLUR)
         glassBlur.value = clamped
         prefs?.edit()?.putFloat(KEY_GLASS_BLUR, clamped)?.apply()
     }
 
-    /** Puts transparency, tint and blur back to how the glass ships. */
+    /** Puts transparency, tint, its darkness and blur back to how the glass ships. */
     fun resetGlassOptions() {
         glassTransparency.value = DEFAULT_GLASS_TRANSPARENCY
         glassTint.value = GlassTint.DEFAULT
+        glassTintDarkness.value = 0f
         glassBlur.value = DEFAULT_GLASS_BLUR
         prefs?.edit()
             ?.remove(KEY_GLASS_TRANSPARENCY)
             ?.remove(KEY_GLASS_TINT)
+            ?.remove(KEY_GLASS_TINT_DARKNESS)
             ?.remove(KEY_GLASS_BLUR)
             ?.apply()
     }
@@ -558,6 +570,7 @@ object CustomizationSettings {
     private const val KEY_GLASS_TRANSPARENCY = "custom_glass_transparency"
     private const val KEY_GLASS_TINT = "custom_glass_tint"
     private const val KEY_GLASS_BLUR = "custom_glass_blur"
+    private const val KEY_GLASS_TINT_DARKNESS = "custom_glass_tint_darkness"
     private const val KEY_LIBRARY_SOURCE = "custom_library_source"
     private const val KEY_SPEED_DIAL_PINS = "custom_speed_dial_pins"
     private const val KEY_LAST_SPEED_DIAL = "custom_last_speed_dial"

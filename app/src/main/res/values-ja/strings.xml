@@ -954,6 +954,7 @@
     <string name="glass_transparency">透明度</string>
     <string name="glass_blur">ぼかし</string>
     <string name="glass_tint">色味</string>
+    <string name="glass_tint_darkness">色味の暗さ</string>
     <string name="glass_tint_default">デフォルト</string>
     <string name="glass_tint_accent">アクセント</string>
     <string name="glass_tint_blue">ブルー</string>

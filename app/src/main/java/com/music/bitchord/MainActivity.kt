@@ -260,6 +260,7 @@ import com.music.bitchord.ui.screens.ListenTogetherScreen
 import com.music.bitchord.ui.screens.PartyServerEditor
 import com.music.bitchord.ui.screens.SignatureApiEditor
 import com.music.bitchord.ui.screens.SettingsScreen
+import com.music.bitchord.ui.screens.LiquidGlassOptions
 import com.music.bitchord.ui.screens.SourceEditorAlert
 import com.music.bitchord.ui.screens.SourcesScreen
 import com.music.bitchord.data.sources.TrackMatcher
@@ -806,6 +807,7 @@ private fun BitChordApp(
     var settingsBarFieldFocused by remember { mutableStateOf(false) }
     var showLyricsSources by remember { mutableStateOf(false) }
     var showAppLanguage by remember { mutableStateOf(false) }
+    var showGlassOptions by remember { mutableStateOf(false) }
     var showTranslationLanguage by remember { mutableStateOf(false) }
     var showAccountSelector by remember { mutableStateOf(false) }
     var showListenBrainzLogin by remember { mutableStateOf(false) }
@@ -3731,6 +3733,7 @@ private fun BitChordApp(
                             onSpotifyCanvasAuth = { showSpotifyCanvasAuth = true },
                             onEditSignatureApi = { editingSignatureApi = true },
                             onAppLanguage = { showAppLanguage = true },
+                            onLiquidGlassOptions = { showGlassOptions = true },
                             contentPadding = listPadding,
                             onShowUpdate = { showUpdateDialog = true },
                             onLibraryDuplicates = { settingsSubScreen = LIBRARY_DUPLICATES_SCREEN },
@@ -5904,6 +5907,17 @@ private fun BitChordApp(
                 onDismiss = { songActions = null },
             ) {
                 songMenuBody(song, SongActionsPresentation.Drawer)
+            }
+        }
+        // Liquid Glass's options, on the glass they set, over the Settings
+        // page, so each change shows on the drawer (and the bar) as it is made.
+        if (showGlassOptions) {
+            GlassMenuDrawer(
+                backdrop = appBackdrop.takeIf { glassSamplesBackdrop },
+                hazeState = hazeState,
+                onDismiss = { showGlassOptions = false },
+            ) {
+                LiquidGlassOptions()
             }
         }
         // Drawn over everything, tab bar and mini player included, and kept

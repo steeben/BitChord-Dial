@@ -333,6 +333,7 @@
     <string name="glass_transparency">Transparency</string>
     <string name="glass_blur">Blur</string>
     <string name="glass_tint">Tint</string>
+    <string name="glass_tint_darkness">Tint darkness</string>
     <string name="glass_tint_default">Default</string>
     <string name="glass_tint_accent">Accent</string>
     <string name="glass_tint_blue">Blue</string>

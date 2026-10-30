@@ -106,16 +106,18 @@ enum class GlassTint(val argb: Long?) {
 
 /**
  * The fill a glass surface is washed with: [base] (the theme's tint, or the
- * caller's own) with the user's tint mixed in and its opacity scaled by their
- * transparency, so the default setting gives back exactly [base].
+ * caller's own) with the user's tint mixed in, darkened as far as they asked,
+ * and its opacity scaled by their transparency, so the default settings give
+ * back exactly [base].
  */
 @Composable
 private fun glassFill(base: Color): Color {
     val transparency by CustomizationSettings.glassTransparency.collectAsStateWithLifecycle()
     val tint = CustomizationSettings.glassTint.collectAsStateWithLifecycle().value.color()
+    val darkness by CustomizationSettings.glassTintDarkness.collectAsStateWithLifecycle()
     val alpha = (base.alpha * (1f - transparency) / SURFACE_OPACITY).coerceIn(0f, 1f)
-    val color = if (tint != null) lerp(base.copy(alpha = 1f), tint, TINT_STRENGTH) else base
-    return color.copy(alpha = alpha)
+    val tinted = if (tint != null) lerp(base.copy(alpha = 1f), tint, TINT_STRENGTH) else base.copy(alpha = 1f)
+    return lerp(tinted, Color.Black, darkness).copy(alpha = alpha)
 }
 
 /**

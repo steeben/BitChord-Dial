@@ -897,6 +897,7 @@
     <string name="glass_transparency">Przezroczystość</string>
     <string name="glass_blur">Rozmycie</string>
     <string name="glass_tint">Odcień</string>
+    <string name="glass_tint_darkness">Przyciemnienie odcienia</string>
     <string name="glass_tint_default">Domyślny</string>
     <string name="glass_tint_accent">Akcent</string>
     <string name="glass_tint_blue">Niebieski</string>

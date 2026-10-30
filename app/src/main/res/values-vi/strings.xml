@@ -244,6 +244,7 @@
     <string name="glass_transparency">Độ trong suốt</string>
     <string name="glass_blur">Độ mờ</string>
     <string name="glass_tint">Màu phủ</string>
+    <string name="glass_tint_darkness">Độ tối của màu phủ</string>
     <string name="glass_tint_default">Mặc định</string>
     <string name="glass_tint_accent">Màu nhấn</string>
     <string name="glass_tint_blue">Xanh dương</string>

@@ -864,6 +864,7 @@
     <string name="glass_transparency">Transparência</string>
     <string name="glass_blur">Desfoque</string>
     <string name="glass_tint">Tonalidade</string>
+    <string name="glass_tint_darkness">Escurecimento da tonalidade</string>
     <string name="glass_tint_default">Padrão</string>
     <string name="glass_tint_accent">Destaque</string>
     <string name="glass_tint_blue">Azul</string>

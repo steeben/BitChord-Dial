@@ -234,6 +234,7 @@
     <string name="glass_transparency">ความโปร่งใส</string>
     <string name="glass_blur">ความเบลอ</string>
     <string name="glass_tint">สี</string>
+    <string name="glass_tint_darkness">ความเข้มของสี</string>
     <string name="glass_tint_default">ค่าเริ่มต้น</string>
     <string name="glass_tint_accent">สีเน้น</string>
     <string name="glass_tint_blue">น้ำเงิน</string>

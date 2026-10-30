@@ -43,6 +43,7 @@ import androidx.compose.material.icons.rounded.Brightness4
 import androidx.compose.material.icons.rounded.Cached
 import androidx.compose.material.icons.rounded.BlurOn
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Contrast
 import androidx.compose.material.icons.rounded.Opacity
 import androidx.compose.material.icons.rounded.CropSquare
 import androidx.compose.material.icons.rounded.Crop
@@ -215,6 +216,8 @@ fun SettingsScreen(
     onEditSignatureApi: () -> Unit,
     onAppLanguage: () -> Unit,
     contentPadding: PaddingValues,
+    /** Opens Liquid Glass's options, in a glass drawer over the page so they show as they change. */
+    onLiquidGlassOptions: () -> Unit = {},
     modifier: Modifier = Modifier,
     /** Opens the update dialog, once a check has found one. */
     onShowUpdate: () -> Unit = {},
@@ -337,7 +340,6 @@ fun SettingsScreen(
     var picking by remember { mutableStateOf<QualityTarget?>(null) }
     var pickingDownloadQuality by remember { mutableStateOf(false) }
     var pickingAutomixPerformance by remember { mutableStateOf(false) }
-    var editingGlass by remember { mutableStateOf(false) }
     // What the last export or import did, shown on the row that did it rather
     // than as a toast: a backup is the one action here whose outcome nobody can
     // check by looking at the app afterwards. Held per direction, or an import's
@@ -963,7 +965,7 @@ fun SettingsScreen(
                         )
                     },
                     // The switch turns it on and off; the row opens its options.
-                    onClick = { editingGlass = true },
+                    onClick = onLiquidGlassOptions,
                 )
             }
             val ambientTitle = stringResource(R.string.ambient_background)
@@ -2015,15 +2017,6 @@ fun SettingsScreen(
         }
     }
 
-    if (editingGlass) {
-        SlideDownBottomSheet(
-            onDismissRequest = { editingGlass = false },
-            containerColor = MaterialTheme.colorScheme.background,
-        ) {
-            LiquidGlassSheet()
-        }
-    }
-
     if (pickingAutomixPerformance) {
         SlideDownBottomSheet(
             onDismissRequest = { pickingAutomixPerformance = false },
@@ -2588,15 +2581,21 @@ private fun AutomixPerformanceSheet(
     }
 }
 
-/** Liquid Glass's look: how see-through it is, the colour in it and how much it blurs. */
+/**
+ * Liquid Glass's look: how see-through it is, the colour in it, how dark that
+ * is and how much it blurs. Shown in a glass drawer of its own, so every change
+ * shows on the drawer as it is made.
+ */
 @Composable
-private fun LiquidGlassSheet() {
+internal fun LiquidGlassOptions() {
     val haptics = LocalHapticFeedback.current
     val transparency by CustomizationSettings.glassTransparency.collectAsStateWithLifecycle()
     val tint by CustomizationSettings.glassTint.collectAsStateWithLifecycle()
+    val darkness by CustomizationSettings.glassTintDarkness.collectAsStateWithLifecycle()
     val blur by CustomizationSettings.glassBlur.collectAsStateWithLifecycle()
     val isDefault = transparency == CustomizationSettings.DEFAULT_GLASS_TRANSPARENCY &&
         tint == GlassTint.DEFAULT &&
+        darkness == 0f &&
         blur == CustomizationSettings.DEFAULT_GLASS_BLUR
     Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
         Row(
@@ -2699,6 +2698,15 @@ private fun LiquidGlassSheet() {
                 }
             }
         }
+        SliderRow(
+            icon = Icons.Rounded.Contrast,
+            title = stringResource(R.string.glass_tint_darkness),
+            value = "${(darkness * 100).roundToInt()}%",
+            sliderValue = darkness,
+            onSliderValue = { CustomizationSettings.setGlassTintDarkness((it * 20).roundToInt() / 20f) },
+            valueRange = 0f..1f,
+            steps = 19,
+        )
         HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
         DestructiveRow(
             label = stringResource(R.string.reset_to_default),
