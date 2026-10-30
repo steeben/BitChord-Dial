@@ -526,6 +526,20 @@ class PlaybackService : MediaLibraryService() {
     }
 
     private val audioManager by lazy { getSystemService(AudioManager::class.java) }
+
+    /**
+     * Volume all the way down pauses, back up resumes — the phone's own player,
+     * that is. A receiver has its own volume, so nothing here touches a cast.
+     */
+    private val zeroVolumePause by lazy {
+        ZeroVolumePause(
+            context = this,
+            enabled = { AppSettings.pauseAtZeroVolume.value },
+            playing = { !castPlayback.active && player?.playWhenReady == true },
+            pause = { player?.pause() },
+            resume = { if (!castPlayback.active) player?.play() },
+        )
+    }
     private val bluetoothTracker by lazy { BluetoothAudioTracker(this) }
     private var currentAudioInputFormat: Format? = null
     private val outputDeviceCallback = object : AudioDeviceCallback() {
@@ -929,6 +943,7 @@ class PlaybackService : MediaLibraryService() {
             // already sends a listener's play to the receiver. The phone goes
             // quiet again and the receiver is asked instead.
             if (playWhenReady) player?.let(castPlayback::onLocalStartedPlaying)
+            zeroVolumePause.onPlayWhenReadyChanged(playWhenReady)
             publishWidgetState(playing = playWhenReady)
             // The only place the *reason* can be read. A party has to tell a
             // pause the listener asked for from one another app imposed, and
@@ -1688,6 +1703,7 @@ class PlaybackService : MediaLibraryService() {
         sparePlayer.audioSessionId = exoPlayer.audioSessionId
         audioManager?.registerAudioDeviceCallback(outputDeviceCallback, null)
         applyOutputRoute()
+        zeroVolumePause.start()
 
         AppSettings.audioSessionId.value = exoPlayer.audioSessionId
         applySettings(exoPlayer)
@@ -7917,6 +7933,7 @@ class PlaybackService : MediaLibraryService() {
         closeAudioEffectSession()
         bluetoothTracker.stop()
         audioManager?.unregisterAudioDeviceCallback(outputDeviceCallback)
+        zeroVolumePause.stop()
         partySync?.stop()
         partySync = null
         player?.let {

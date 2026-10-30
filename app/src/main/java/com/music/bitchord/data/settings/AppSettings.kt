@@ -240,6 +240,9 @@ object AppSettings {
     val automixPerformanceMode = MutableStateFlow(AutomixPerformanceMode.BALANCED)
     val skipSilence = MutableStateFlow(false)
 
+    /** Pause when the media volume reaches zero, and resume when it comes back up. */
+    val pauseAtZeroVolume = MutableStateFlow(true)
+
     /** Requested PCM representation at the Android AudioTrack boundary. */
     val outputPcmMode = MutableStateFlow(OutputPcmMode.PCM_16)
 
@@ -839,6 +842,7 @@ object AppSettings {
             )
         }.getOrDefault(AutomixPerformanceMode.BALANCED)
         skipSilence.value = prefs.getBoolean(KEY_SKIP_SILENCE, false)
+        pauseAtZeroVolume.value = prefs.getBoolean(KEY_PAUSE_AT_ZERO_VOLUME, true)
         outputPcmMode.value = runCatching {
             OutputPcmMode.valueOf(
                 prefs.getString(KEY_OUTPUT_PCM_MODE, OutputPcmMode.PCM_16.name)
@@ -1147,6 +1151,11 @@ object AppSettings {
     fun setSkipSilence(value: Boolean) {
         skipSilence.value = value
         prefs.edit().putBoolean(KEY_SKIP_SILENCE, value).apply()
+    }
+
+    fun setPauseAtZeroVolume(value: Boolean) {
+        pauseAtZeroVolume.value = value
+        prefs.edit().putBoolean(KEY_PAUSE_AT_ZERO_VOLUME, value).apply()
     }
 
     fun setDolbyAtmos(value: Boolean) {
@@ -2045,6 +2054,7 @@ object AppSettings {
     private const val KEY_SMART_FADE = "smart_fade_enabled"
     private const val KEY_AUTOMIX_PERFORMANCE_MODE = "automix_performance_mode"
     private const val KEY_SKIP_SILENCE = "skip_silence"
+    private const val KEY_PAUSE_AT_ZERO_VOLUME = "pause_at_zero_volume"
     private const val KEY_OUTPUT_PCM_MODE = "output_pcm_mode"
     private const val KEY_PREFER_USB_DAC = "prefer_usb_dac"
     private const val KEY_LOUDNESS_NORMALIZATION = "loudness_normalization"

@@ -265,6 +265,8 @@
     <string name="skip_silence">Skip silence</string>
     <string name="skip_silence_subtitle">Trim gaps longer than a second</string>
     <string name="skip_silence_float_subtitle">Unavailable on 32-bit float output</string>
+    <string name="pause_at_zero_volume">Pause at zero volume</string>
+    <string name="pause_at_zero_volume_subtitle">Resume when the volume comes back up</string>
     <string name="prefer_music_only">Prefer music-only version</string>
     <string name="prefer_music_only_subtitle">For music videos, show the video details while finding and loading the catalogue audio version</string>
     <string name="smart_version_alignment">Smart audio alignment</string>

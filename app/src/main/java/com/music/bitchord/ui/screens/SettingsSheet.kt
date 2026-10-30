@@ -246,6 +246,7 @@ fun SettingsScreen(
     val smartFade by AppSettings.smartFadeEnabled.collectAsStateWithLifecycle()
     val automixPerformance by AppSettings.automixPerformanceMode.collectAsStateWithLifecycle()
     val skipSilence by AppSettings.skipSilence.collectAsStateWithLifecycle()
+    val pauseAtZeroVolume by AppSettings.pauseAtZeroVolume.collectAsStateWithLifecycle()
     val dolbyAtmos by AppSettings.dolbyAtmos.collectAsStateWithLifecycle()
     // A property of the hardware, so it is read once rather than remembered
     // against a key that can never change — see [DeviceCodecs.playsDolbyAtmos],
@@ -786,6 +787,25 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { AppSettings.setSkipSilence(!skipSilence) },
+                )
+            }
+            val pauseAtZeroVolumeTitle = stringResource(R.string.pause_at_zero_volume)
+            row(pauseAtZeroVolumeTitle, "volume", "mute") {
+                SettingsRow(
+                    icon = Icons.Rounded.VolumeOff,
+                    title = pauseAtZeroVolumeTitle,
+                    subtitle = stringResource(R.string.pause_at_zero_volume_subtitle),
+                    trailing = {
+                        Switch(
+                            checked = pauseAtZeroVolume,
+                            onCheckedChange = AppSettings::setPauseAtZeroVolume,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { AppSettings.setPauseAtZeroVolume(!pauseAtZeroVolume) },
                 )
             }
             val spatialAudioTitle = stringResource(R.string.spatial_audio)
