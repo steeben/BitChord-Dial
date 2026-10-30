@@ -361,6 +361,28 @@ object BitChordIcons {
         }.build()
     }
 
+    /**
+     * Two beamed notes, filled, sitting level — what the lyrics show through an
+     * instrumental section. Apart from [MusicNote], which stays the artwork
+     * placeholder elsewhere.
+     */
+    val Instrumental: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "bc_instrumental",
+            defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f,
+        ).addPath(
+            pathData = addPathNodes(
+                "M19.952 1.651a.75.75 0 0 1 .298.599V16.303a3 3 0 0 1-2.176 2.884l-1.32.377a2.553 2.553 0 1 1-1.403-4.909" +
+                    "l2.311-.66a1.5 1.5 0 0 0 1.088-1.442V6.994l-9 2.572v9.737a3 3 0 0 1-2.176 2.884l-1.32.377" +
+                    "a2.553 2.553 0 1 1-1.402-4.909l2.31-.66a1.5 1.5 0 0 0 1.088-1.442V5.25a.75.75 0 0 1 .544-.721" +
+                    "l10.5-3a.75.75 0 0 1 .658.122Z",
+            ),
+            pathFillType = PathFillType.EvenOdd,
+            fill = stroke,
+        ).build()
+    }
+
     /** Speech bubble with two lines of words. */
     val Lyrics: ImageVector by lazy {
         ImageVector.Builder(

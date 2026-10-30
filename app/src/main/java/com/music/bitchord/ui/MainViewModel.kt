@@ -395,6 +395,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private data class LyricsKey(
         val videoId: String,
         val sources: Set<LyricsSource>,
+        /** The order picks a different answer from the same providers. */
+        val order: List<LyricsSource>,
         val preferTimed: Boolean,
         val ignoreShort: Boolean,
     )
@@ -428,6 +430,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val key = LyricsKey(
             videoId,
             sources,
+            AppSettings.lyricsSourceOrder.value,
             AppSettings.prioritizeSyllableSync.value,
             AppSettings.ignoreShortLyrics.value,
         )
