@@ -1352,4 +1352,10 @@
     <string name="direct_source_stream_subtitle">YouTube पर शुरू करके गाने के बीच में बेहतर क्वालिटी पर जाने के बजाय, पहले सुर से ही आपके ऐड-ऑन से चलाएँ</string>
     <string name="show_listen_together_button">साथ में सुनें बटन दिखाएँ</string>
     <string name="show_listen_together_button_subtitle">प्लेयर कंट्रोल के नीचे आउटपुट और साथ सुनें बटन</string>
+    <string name="sync_downloaded_playlists">प्लेलिस्ट अपडेट रखें</string>
+    <string name="sync_downloaded_playlists_subtitle">दिन में दो बार जाँचता है और डाउनलोड की गई प्लेलिस्ट में जोड़े गए नए गाने डाउनलोड करता है</string>
+    <string name="playlist_sync_ask_title">%1$s में नए गाने: %2$d</string>
+    <string name="playlist_sync_ask_text">डाउनलोड करने के लिए टैप करें</string>
+    <string name="playlist_sync_done_title">%1$s में जोड़े गए: %2$d</string>
+    <string name="playlist_updates_channel">प्लेलिस्ट अपडेट</string>
 </resources>

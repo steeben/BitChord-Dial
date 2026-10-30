@@ -1120,4 +1120,10 @@
     <string name="direct_source_stream_subtitle">YouTube에서 시작해 곡 중간에 고음질로 전환하는 대신, 첫 음부터 애드온으로 재생합니다</string>
     <string name="show_listen_together_button">함께 듣기 버튼 표시</string>
     <string name="show_listen_together_button_subtitle">플레이어 컨트롤 아래의 출력 및 함께 듣기 버튼</string>
+    <string name="sync_downloaded_playlists">재생목록 최신 상태로 유지</string>
+    <string name="sync_downloaded_playlists_subtitle">하루 두 번 확인하여 다운로드한 재생목록에 새로 추가된 노래를 다운로드합니다</string>
+    <string name="playlist_sync_ask_title">%1$s의 새 노래: %2$d</string>
+    <string name="playlist_sync_ask_text">탭하여 다운로드</string>
+    <string name="playlist_sync_done_title">%1$s에 추가됨: %2$d</string>
+    <string name="playlist_updates_channel">재생목록 업데이트</string>
 </resources>

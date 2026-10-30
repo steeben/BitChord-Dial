@@ -1291,4 +1291,10 @@
     <string name="direct_source_stream_subtitle">Riproduci dal tuo componente aggiuntivo fin dalla prima nota, invece di partire da YouTube e passare a una qualità superiore a metà brano</string>
     <string name="show_listen_together_button">Mostra il pulsante Ascoltare insieme</string>
     <string name="show_listen_together_button_subtitle">Il pulsante di uscita e Ascolta insieme sotto i controlli del lettore</string>
+    <string name="sync_downloaded_playlists">Mantieni aggiornate le playlist</string>
+    <string name="sync_downloaded_playlists_subtitle">Controlla due volte al giorno e scarica i brani aggiunti alle playlist scaricate</string>
+    <string name="playlist_sync_ask_title">Nuovi brani in %1$s: %2$d</string>
+    <string name="playlist_sync_ask_text">Tocca per scaricare</string>
+    <string name="playlist_sync_done_title">Aggiunti a %1$s: %2$d</string>
+    <string name="playlist_updates_channel">Aggiornamenti playlist</string>
 </resources>

@@ -1357,4 +1357,10 @@
     <string name="direct_source_stream_subtitle">ניגון מהתוסף שלך מהצליל הראשון, במקום להתחיל ב-YouTube ולעבור לאיכות גבוהה יותר באמצע השיר</string>
     <string name="show_listen_together_button">הצגת הכפתור להאזין ביחד</string>
     <string name="show_listen_together_button_subtitle">כפתור הפלט וההאזנה המשותפת מתחת לפקדי הנגן</string>
+    <string name="sync_downloaded_playlists">שמירה על רשימות השמעה מעודכנות</string>
+    <string name="sync_downloaded_playlists_subtitle">בדיקה פעמיים ביום והורדה של שירים חדשים ברשימות ההשמעה שהורדת</string>
+    <string name="playlist_sync_ask_title">שירים חדשים ב-%1$s: %2$d</string>
+    <string name="playlist_sync_ask_text">יש להקיש כדי להוריד</string>
+    <string name="playlist_sync_done_title">נוספו אל %1$s: %2$d</string>
+    <string name="playlist_updates_channel">עדכוני רשימות השמעה</string>
 </resources>

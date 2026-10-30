@@ -1329,4 +1329,10 @@
     <string name="direct_source_stream_subtitle">从第一个音符起就由你的附加组件播放，而不是先从 YouTube 开始，再在歌曲中途切换到更高音质</string>
     <string name="show_listen_together_button">显示“一起听”按钮</string>
     <string name="show_listen_together_button_subtitle">播放器控件下方的输出与 Listen Together 按钮</string>
+    <string name="sync_downloaded_playlists">保持播放列表更新</string>
+    <string name="sync_downloaded_playlists_subtitle">每天检查两次，并下载已下载播放列表中新添加的歌曲</string>
+    <string name="playlist_sync_ask_title">%1$s 有新歌曲：%2$d</string>
+    <string name="playlist_sync_ask_text">点按即可下载</string>
+    <string name="playlist_sync_done_title">已添加到 %1$s：%2$d</string>
+    <string name="playlist_updates_channel">播放列表更新</string>
 </resources>

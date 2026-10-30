@@ -1331,4 +1331,10 @@
     <string name="direct_source_stream_subtitle">從第一個音符就由你的附加元件播放，而不是先從 YouTube 開始，再於歌曲中途切換到更高音質</string>
     <string name="show_listen_together_button">顯示「一起聽」按鈕</string>
     <string name="show_listen_together_button_subtitle">播放器控制項下方的輸出與 Listen Together 按鈕</string>
+    <string name="sync_downloaded_playlists">保持播放清單更新</string>
+    <string name="sync_downloaded_playlists_subtitle">每天檢查兩次，並下載已下載播放清單中新加入的歌曲</string>
+    <string name="playlist_sync_ask_title">%1$s 有新歌曲：%2$d</string>
+    <string name="playlist_sync_ask_text">輕觸即可下載</string>
+    <string name="playlist_sync_done_title">已新增至 %1$s：%2$d</string>
+    <string name="playlist_updates_channel">播放清單更新</string>
 </resources>

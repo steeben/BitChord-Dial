@@ -1335,4 +1335,10 @@
     <string name="direct_source_stream_subtitle">เล่นจากส่วนเสริมตั้งแต่โน้ตแรก แทนการเริ่มบน YouTube แล้วเปลี่ยนเป็นคุณภาพสูงขึ้นกลางเพลง</string>
     <string name="show_listen_together_button">แสดงปุ่มฟังด้วยกัน</string>
     <string name="show_listen_together_button_subtitle">ปุ่มเอาต์พุตและฟังด้วยกันใต้ปุ่มควบคุมเพลเยอร์</string>
+    <string name="sync_downloaded_playlists">อัปเดตเพลย์ลิสต์อยู่เสมอ</string>
+    <string name="sync_downloaded_playlists_subtitle">ตรวจสอบวันละสองครั้งและดาวน์โหลดเพลงใหม่ในเพลย์ลิสต์ที่ดาวน์โหลดไว้</string>
+    <string name="playlist_sync_ask_title">เพลงใหม่ใน %1$s: %2$d</string>
+    <string name="playlist_sync_ask_text">แตะเพื่อดาวน์โหลด</string>
+    <string name="playlist_sync_done_title">เพิ่มไปยัง %1$s แล้ว: %2$d</string>
+    <string name="playlist_updates_channel">การอัปเดตเพลย์ลิสต์</string>
 </resources>

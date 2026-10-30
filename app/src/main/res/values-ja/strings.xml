@@ -1330,4 +1330,10 @@
     <string name="direct_source_stream_subtitle">YouTube で再生を始めて曲の途中で高音質に切り替えるのではなく、最初の音からアドオンで再生します</string>
     <string name="show_listen_together_button">「一緒に聴く」ボタンを表示</string>
     <string name="show_listen_together_button_subtitle">プレーヤーの操作ボタンの下にある出力と「一緒に聴く」のボタン</string>
+    <string name="sync_downloaded_playlists">プレイリストを最新に保つ</string>
+    <string name="sync_downloaded_playlists_subtitle">1日2回確認し、ダウンロード済みプレイリストに追加された曲をダウンロードします</string>
+    <string name="playlist_sync_ask_title">%1$s の新しい曲：%2$d</string>
+    <string name="playlist_sync_ask_text">タップしてダウンロード</string>
+    <string name="playlist_sync_done_title">%1$s に追加：%2$d</string>
+    <string name="playlist_updates_channel">プレイリストの更新</string>
 </resources>

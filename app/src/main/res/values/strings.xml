@@ -1219,4 +1219,10 @@
     <string name="artist_signatures_test_failed">Could not reach the API at that URL</string>
     <string name="signed_by">Signed by %1$s</string>
     <string name="direct_source_stream_subtitle">Play from your addon from the first note, instead of starting on YouTube and switching to higher quality mid-song</string>
+    <string name="sync_downloaded_playlists">Keep playlists updated</string>
+    <string name="sync_downloaded_playlists_subtitle">Checks twice a day and downloads songs newly added to your downloaded playlists</string>
+    <string name="playlist_sync_ask_title">New songs in %1$s: %2$d</string>
+    <string name="playlist_sync_ask_text">Tap to download</string>
+    <string name="playlist_sync_done_title">Added to %1$s: %2$d</string>
+    <string name="playlist_updates_channel">Playlist updates</string>
 </resources>

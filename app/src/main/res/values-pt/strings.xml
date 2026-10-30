@@ -1357,4 +1357,10 @@
     <string name="direct_source_stream_subtitle">Toque a partir do seu complemento desde a primeira nota, em vez de começar no YouTube e mudar para maior qualidade a meio da música</string>
     <string name="show_listen_together_button">Mostrar botão Ouvir junto</string>
     <string name="show_listen_together_button_subtitle">O botão de saída e Ouvir juntos sob os controlos do leitor</string>
+    <string name="sync_downloaded_playlists">Manter playlists atualizadas</string>
+    <string name="sync_downloaded_playlists_subtitle">Verifica duas vezes por dia e baixa as músicas novas das suas playlists baixadas</string>
+    <string name="playlist_sync_ask_title">Músicas novas em %1$s: %2$d</string>
+    <string name="playlist_sync_ask_text">Toque para baixar</string>
+    <string name="playlist_sync_done_title">Adicionadas a %1$s: %2$d</string>
+    <string name="playlist_updates_channel">Atualizações de playlists</string>
 </resources>

@@ -1309,4 +1309,10 @@
     <string name="direct_source_stream_subtitle">YouTube\'da başlayıp şarkının ortasında daha yüksek kaliteye geçmek yerine, ilk notadan itibaren eklentinizden çal</string>
     <string name="show_listen_together_button">Birlikte dinle düğmesini göster</string>
     <string name="show_listen_together_button_subtitle">Oynatıcı kontrollerinin altındaki çıkış ve Birlikte Dinle düğmesi</string>
+    <string name="sync_downloaded_playlists">Çalma listelerini güncel tut</string>
+    <string name="sync_downloaded_playlists_subtitle">Günde iki kez kontrol eder ve indirilen çalma listelerine eklenen yeni şarkıları indirir</string>
+    <string name="playlist_sync_ask_title">%1$s içinde yeni şarkılar: %2$d</string>
+    <string name="playlist_sync_ask_text">İndirmek için dokunun</string>
+    <string name="playlist_sync_done_title">%1$s listesine eklendi: %2$d</string>
+    <string name="playlist_updates_channel">Çalma listesi güncellemeleri</string>
 </resources>
