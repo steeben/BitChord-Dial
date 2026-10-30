@@ -9,6 +9,7 @@ import coil3.SingletonImageLoader
 import coil3.disk.DiskCache
 import coil3.disk.directory
 import coil3.memory.MemoryCache
+import coil3.request.allowHardware
 import coil3.request.crossfade
 import coil3.svg.SvgDecoder
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
@@ -243,7 +244,29 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory {
             // Covers arriving with a hard cut read as the list flickering as
             // it scrolls; a short fade reads as them developing.
             .crossfade(200)
+            .allowHardware(!emulatedGpu)
             .build()
+
+    /**
+     * Whether graphics here go through an emulator's GL translator rather than
+     * a real GPU driver — see [newImageLoader].
+     *
+     * On BlueStacks (Android 9) uploading a hardware bitmap aborts the whole
+     * process: the renderer turns a cover into a texture, the translator
+     * answers GL_INVALID_ENUM, and hwui's own error check kills the app —
+     * `glGenTextures error! GL_INVALID_ENUM`, from RenderThread, each time the
+     * app came back to the foreground with a 640px cover to decode. Covers in
+     * ordinary bitmaps never take that path.
+     *
+     * Asked of the driver on disk rather than of build properties, because
+     * emulators spoof those — BlueStacks reports itself as a Qualcomm Galaxy
+     * S22. `libEGL_emulation` is the AOSP emulator's translator, which no
+     * phone ships.
+     */
+    private val emulatedGpu: Boolean by lazy {
+        listOf("/vendor/lib64", "/vendor/lib", "/system/lib64", "/system/lib")
+            .any { java.io.File("$it/egl/libEGL_emulation.so").exists() }
+    }
 
     private fun initLastfm() {
         val sessionKey = AppSettings.lastfmSessionKey.value
