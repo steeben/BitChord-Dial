@@ -927,7 +927,14 @@ fun NowPlayingScreen(
     // A music video plays its own picture where the sleeve is — see
     // [MusicVideoSurface] — and takes the place of any animated cover.
     val videoMode = showsMusicVideo(song)
-    val canvas = rememberCanvasArtwork(song)?.takeUnless { videoMode }
+    val canvas = rememberCanvasArtwork(song)?.takeUnless { videoMode }?.let {
+        // Apple's 3:4 rendition runs under the whole phone screen, the way its
+        // own player shows it; the square one stays the fallback.
+        val tall = it.portraitUrl
+        if (tall != null && playerFillsWindow(windowWidth)) {
+            it.copy(url = tall, fallbackUrl = it.url, portraitUrl = null)
+        } else it
+    }
     // Whether the picture has a frame on screen; the still frame shows until then.
     var videoRendered by remember(song.videoId) { mutableStateOf(false) }
     // The picture's shape, read only at layout (see the sleeve's card rect), so
@@ -2390,7 +2397,7 @@ fun NowPlayingScreen(
         val fullArtworkBackdropAlpha by animateFloatAsState(
             targetValue = if (
                 !legacyMeshBackdrop &&
-                (tabletArtworkBackdrop || lyricsOpen || queueOpen) &&
+                (tabletArtworkBackdrop || lyricsOpen || queueOpen || !heroMode) &&
                 (tabletArtworkBackdrop || fullArtworkBlurImage != null)
             ) 1f else 0f,
             animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
@@ -2535,17 +2542,58 @@ fun NowPlayingScreen(
         }
         // Painted by the handle strip rather than laid out here — see there.
 
+        if (heroMode && !spotifyCanvasPresentation && heroHeight > 0.dp) {
+            // The banner — still cover, square clip or portrait clip — is
+            // blurred progressively from under the credits down, so the
+            // controls sit on the cover's own colours dissolving rather
+            // than on a flat dark gradient.
+            val reduceDynamicBlur by PlayerSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
+            if (!reduceDynamicBlur && renderEffectBlurSupported) {
+                Box(
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.50f)
+                        // Follows the banner in and out, and goes with the
+                        // rest of it as the player collapses or docks.
+                        .graphicsLayer {
+                            alpha = heroT.value * (1f - 2f * p()).coerceIn(0f, 1f) * dockFade()
+                        }
+                        .optimizedHazeEffect(
+                            state = playerHaze,
+                            style = HazeStyle(
+                                backgroundColor = Color.Transparent,
+                                tints = emptyList(),
+                                blurRadius = 32.dp,
+                                noiseFactor = 0f,
+                                fallbackTint = HazeTint(Color.Transparent),
+                            ),
+                        ) {
+                            // At a 32dp radius anything above ~10% of the
+                            // source resolution is detail the blur throws
+                            // away, so this samples a hundredth of the pixels.
+                            inputScale = HazeInputScale.Fixed(0.10f)
+                            canDrawArea = { true }
+                            mask = Brush.verticalGradient(
+                                0.00f to Color.Transparent,
+                                0.50f to Color.Black,
+                                1.00f to Color.Black,
+                            )
+                        },
+                )
+            }
+        }
         if (canvasFirstPortrait && canvasRendered) {
-            // The image remains visible through the controls; a plain scrim
-            // protects text and touch targets without erasing the video.
+            // A light scrim over the blur keeps text and touch targets
+            // readable without erasing the video.
             Box(
                 Modifier.matchParentSize()
                     .graphicsLayer { alpha = canvasCover.floatValue }
                     .background(
                         Brush.verticalGradient(
                             0f to Color.Transparent,
-                            0.40f to Color.Transparent,
-                            1f to Color.Black.copy(alpha = 0.70f),
+                            0.45f to Color.Transparent,
+                            1f to Color.Black.copy(alpha = 0.45f),
                         ),
                     ),
             )
