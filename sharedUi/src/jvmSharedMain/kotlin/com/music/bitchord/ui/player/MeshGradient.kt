@@ -283,6 +283,12 @@ private fun artSwatches(bitmap: ImageBitmap): List<Color> =
         .sortedByDescending { it.population }
         .map { Color(it.rgb) }
 
+/**
+ * The player's four mesh colours for [bitmap], for surfaces that draw from the
+ * artwork somewhere the mesh itself doesn't run, such as the Automix mix view.
+ */
+fun artworkMeshColors(bitmap: ImageBitmap): List<Color> = paletteOf(bitmap)
+
 private fun paletteOf(bitmap: ImageBitmap): List<Color> {
     fun swatchesOf(clearFilters: Boolean): List<Color> =
         paletteSwatches(bitmap, 24, clearFilters)
