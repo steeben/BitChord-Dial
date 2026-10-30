@@ -140,11 +140,22 @@ private fun glassFill(base: Color): Color {
     val transparency by CustomizationSettings.glassTransparency.collectAsStateWithLifecycle()
     val tint = CustomizationSettings.glassTint.collectAsStateWithLifecycle().value.color()
     val darkness by CustomizationSettings.glassTintDarkness.collectAsStateWithLifecycle()
+    val saturation by CustomizationSettings.glassSaturation.collectAsStateWithLifecycle()
     val density = ((1f - transparency) / SURFACE_OPACITY).coerceAtLeast(0f)
     var fill = base.copy(alpha = (base.alpha * density).coerceIn(0f, 1f))
-    if (tint != null) fill = tint.copy(alpha = (TINT_WASH * density).coerceIn(0f, 1f)).compositeOver(fill)
+    // The saturation slider reaches the tint too, measured from where the
+    // glass ships: the tint as picked at the default, grey at 0%.
+    val tinted = tint?.saturated(saturation / CustomizationSettings.DEFAULT_GLASS_SATURATION)
+    if (tinted != null) fill = tinted.copy(alpha = (TINT_WASH * density).coerceIn(0f, 1f)).compositeOver(fill)
     if (darkness > 0f) fill = Color.Black.copy(alpha = (darkness * MAX_SHADE * density).coerceIn(0f, 1f)).compositeOver(fill)
     return fill
+}
+
+/** This colour with its saturation scaled by [amount]: 0 is its grey, 1 is itself. */
+private fun Color.saturated(amount: Float): Color {
+    val grey = 0.2126f * red + 0.7152f * green + 0.0722f * blue
+    fun channel(c: Float) = (grey + (c - grey) * amount).coerceIn(0f, 1f)
+    return Color(channel(red), channel(green), channel(blue), alpha)
 }
 
 /**
