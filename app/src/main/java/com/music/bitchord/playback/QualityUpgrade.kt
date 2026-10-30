@@ -10,6 +10,7 @@ import com.music.bitchord.data.sources.StreamFormat
 import com.music.bitchord.data.sources.StreamRequest
 import com.music.bitchord.data.sources.TrackMatcher
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -56,6 +57,16 @@ object QualityUpgrade {
 
     /** What a revert tags its rendition with — see [Song.toDirectYouTubeMediaItem]. */
     private const val ORIGINAL = "original"
+
+    /** How long [lookAgain] waits on the live path's leftover lookup. */
+    private const val LATE_LOOKUP_MS = 15_000L
+
+    /**
+     * The most [lookAgain]'s fresh search may take before it is read as "no
+     * better copy". Kept past [SourceResolver.UPGRADE_DEADLINE_MS] so that
+     * deadline, which still keeps whatever answer is in hand, normally wins.
+     */
+    private const val LOOK_AGAIN_BACKSTOP_MS = 60_000L
 
     /**
      * A track playing on less than was asked for.
@@ -470,7 +481,7 @@ object QualityUpgrade {
             // difference was a 189-second cut swapped into a 163-second song,
             // which played for five seconds of silence and was then put back.
             waiting.inFlight?.let { lookup ->
-                val late = runCatching { lookup.await() }.getOrNull()
+                val late = withTimeoutOrNull(LATE_LOOKUP_MS) { runCatching { lookup.await() }.getOrNull() }
                 if (late != null &&
                     SourceResolver.worthSwapping(late.format, waiting.playing) &&
                     SourceResolver.sameRecordingAs(late.durationSec, effectiveDurationSec)
@@ -492,11 +503,19 @@ object QualityUpgrade {
             // again from scratch — this time waiting on every module, which is
             // what the live path could not afford to do. The source already
             // serving the track is left out — see [SourceResolver.upgradeFor].
-            SourceResolver.upgradeFor(
-                waiting.target.copy(durationSec = effectiveDurationSec),
-                playing = waiting.playing,
-                servedBy = waiting.servedBy,
-            ).also {
+            // [SourceResolver.upgradeFor] has its own deadline; this is the
+            // backstop that guarantees the badge comes down even if a source
+            // ignores it. Running out counts as an answer: nothing better.
+            withTimeoutOrNull(LOOK_AGAIN_BACKSTOP_MS) {
+                SourceResolver.upgradeFor(
+                    waiting.target.copy(durationSec = effectiveDurationSec),
+                    playing = waiting.playing,
+                    servedBy = waiting.servedBy,
+                ).also { answered = true }
+            }.also {
+                if (!answered) {
+                    TrackLog.w(TAG, "no source answered within ${LOOK_AGAIN_BACKSTOP_MS / 1000}s; keeping current copy", about = mediaId)
+                }
                 found = it
                 if (it != null && needsLosslessFollowUp(it.format)) {
                     followUps[mediaId] = waiting.copy(

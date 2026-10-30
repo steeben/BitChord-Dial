@@ -826,10 +826,16 @@ object SourceResolver {
             .toMutableList()
         var best: Pair<MusicSource, SourceStream>? = null
         var bestSince = 0L
+        // A patient search still has to end. With nothing in hand the wait
+        // used to be unbounded, so an addon that never answered kept the
+        // "Upgrading" badge up for a whole song.
+        val deadline = if (waitForAll) System.currentTimeMillis() + UPGRADE_DEADLINE_MS else Long.MAX_VALUE
         try {
             while (running.isNotEmpty()) {
-                val waitMs = if (best == null) Long.MAX_VALUE
-                    else UPGRADE_GRACE_MS - (System.currentTimeMillis() - bestSince)
+                val now = System.currentTimeMillis()
+                val graceMs = if (best == null) Long.MAX_VALUE
+                    else UPGRADE_GRACE_MS - (now - bestSince)
+                val waitMs = minOf(graceMs, deadline - now)
                 if (waitMs <= 0) break
                 val first = withTimeoutOrNull(waitMs) {
                     select<Deferred<Pair<MusicSource, SourceStream?>>> {
@@ -1186,6 +1192,12 @@ object SourceResolver {
      * addon can't keep the upgrade waiting on its timeouts.
      */
     private const val UPGRADE_GRACE_MS = 5_000L
+
+    /**
+     * The longest a [bestAcross] that waits for every source runs in all.
+     * Whatever is in hand by then is taken, and no answer is a no.
+     */
+    internal const val UPGRADE_DEADLINE_MS = 40_000L
 
     /**
      * How close two runtimes have to be to be the same cut of a song.

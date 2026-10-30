@@ -10,12 +10,18 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
+import java.io.IOException
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resumeWithException
 
 /**
  * One addon server, and every question this app knows how to ask it.
@@ -319,7 +325,7 @@ class AddonClient(rawBaseUrl: String) {
                 .header("User-Agent", USER_AGENT)
                 .build()
 
-            val wait = client.newCall(request).execute().use { response ->
+            val wait = client.newCall(request).awaitResponse().use { response ->
                 when {
                     response.isSuccessful ->
                         return@withContext response.body?.string()?.takeIf { it.isNotBlank() }
@@ -344,6 +350,27 @@ class AddonClient(rawBaseUrl: String) {
         // Unreachable: every path out of the loop returns or throws.
         @Suppress("UNREACHABLE_CODE")
         throw AddonException("unreachable")
+    }
+
+    /**
+     * [Call.execute], but cancellable.
+     *
+     * A blocking `execute()` ignores coroutine cancellation, so a caller that
+     * had given up on an addon (the upgrade search's deadline, the queue moving
+     * on) still sat in `coroutineScope` until [client]'s 45 s ceiling ran out,
+     * once per request. Cancelling the coroutine now cancels the call.
+     */
+    private suspend fun Call.awaitResponse(): Response = suspendCancellableCoroutine { cont ->
+        cont.invokeOnCancellation { cancel() }
+        enqueue(object : Callback {
+            override fun onResponse(call: Call, response: Response) {
+                cont.resume(response) { _, _, _ -> response.close() }
+            }
+
+            override fun onFailure(call: Call, e: IOException) {
+                if (!cont.isCancelled) cont.resumeWithException(e)
+            }
+        })
     }
 
     /** How long to wait after a 429, from the header when it sent one. */
