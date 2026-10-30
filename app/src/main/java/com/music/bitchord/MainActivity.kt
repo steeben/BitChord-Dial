@@ -461,6 +461,27 @@ private const val LIBRARY_DUPLICATES_SCREEN = "library_duplicates"
 /** The page key of a Settings category's page, before the category's name. */
 private const val SETTINGS_SECTION_KEY_PREFIX = "settings:"
 
+/**
+ * Where the iOS menus hang from, and which Settings category is open. Kept
+ * here rather than as locals of [BitChordApp]: its content lambdas already
+ * carry as many captured values as the JVM allows a method, and one more
+ * local read inside them no longer loads.
+ */
+private object MenuNav {
+    /** The ⋮ or ⋯ the track menu was opened from, for [IosMenuPopover] to hang off. */
+    var songMenuAnchor by mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
+
+    /** The ⋯ the album or playlist menu was opened from. */
+    var browseMenuAnchor by mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
+
+    /** The Settings category open as a page of its own, or null for Settings' main page. */
+    var settingsSection by mutableStateOf<com.music.bitchord.ui.screens.SettingsCategory?>(null)
+
+    /** The page key Settings is shown under: its main page, or one category's. */
+    val settingsPageKey: String
+        get() = settingsSection?.let { SETTINGS_SECTION_KEY_PREFIX + it.name } ?: "settings"
+}
+
 /** A Library page sliding in or out, side by side with the one it replaces. */
 private const val PAGE_SLIDE_MS = 340
 
@@ -786,15 +807,8 @@ private fun BitChordApp(
     // SettingsSheet mounted underneath and back navigation restores scroll.
     // null = no sub-screen overlay; non-null = that key is rendered as overlay.
     var settingsSubScreen by rememberSaveable { mutableStateOf<String?>(null) }
-    /** The Settings category open as a page of its own, by name, or null for Settings' main page. */
-    var settingsSectionName by rememberSaveable { mutableStateOf<String?>(null) }
-    val settingsSection = settingsSectionName?.let { name ->
-        com.music.bitchord.ui.screens.SettingsCategory.entries.firstOrNull { it.name == name }
-    }
-    /** The page key Settings is shown under: its main page, or one category's. */
-    val settingsPageKey = settingsSection?.let { SETTINGS_SECTION_KEY_PREFIX + it.name } ?: "settings"
     // Closing Settings closes whichever category was open in it.
-    LaunchedEffect(showSettings) { if (!showSettings) settingsSectionName = null }
+    LaunchedEffect(showSettings) { if (!showSettings) MenuNav.settingsSection = null }
     var showAccountScrobbling by rememberSaveable { mutableStateOf(false) }
     var showSources by rememberSaveable { mutableStateOf(false) }
     var showListenTogether by rememberSaveable { mutableStateOf(false) }
@@ -891,17 +905,15 @@ private fun BitChordApp(
     /**
      * The row or card that was held to open the track menu, or null when it
      * was opened any other way. Non-null lifts that item into
-     * [HeldContextMenu]; null hangs the menu off [songMenuAnchor] instead —
+     * [HeldContextMenu]; null hangs the menu off [MenuNav.songMenuAnchor] instead —
      * which is what the ⋮ on the very same row opens.
      */
     var songMenuOrigin by remember { mutableStateOf<HeldItem?>(null) }
-    /** The ⋮ or ⋯ the track menu was opened from, for [IosMenuPopover] to hang off. */
-    var songMenuAnchor by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
     /** Holding a row anywhere but the player — the menu without the player's rows. */
     val openSongMenu: (Song) -> Unit = { song ->
         menuFromPlayer = false
         songMenuOrigin = LongPressOrigin.consume()
-        songMenuAnchor = MenuAnchor.consume()
+        MenuNav.songMenuAnchor = MenuAnchor.consume()
         songActions = song
     }
     // Whether the player's album/artist lookup (below, for the current track)
@@ -927,8 +939,6 @@ private fun BitChordApp(
     var browseActions by remember { mutableStateOf<BrowseTarget?>(null) }
     /** The card held to open [browseActions] — see [songMenuOrigin]. */
     var browseMenuOrigin by remember { mutableStateOf<HeldItem?>(null) }
-    /** The ⋯ [browseActions] was opened from — see [songMenuAnchor]. */
-    var browseMenuAnchor by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
     /** The album whose cover is being chosen, or null when that sheet is shut. */
     var albumArtPick by remember { mutableStateOf<BrowseTarget?>(null) }
     /** One song whose art is being chosen, with the album it picks from. */
@@ -948,7 +958,7 @@ private fun BitChordApp(
     /** Holding an album or playlist: the popup when it was a hold, else the sheet. */
     val openBrowseMenu: (BrowseTarget) -> Unit = { target ->
         browseMenuOrigin = LongPressOrigin.consume()
-        browseMenuAnchor = MenuAnchor.consume()
+        MenuNav.browseMenuAnchor = MenuAnchor.consume()
         browseRenameInSheet = false
         browseActions = target
     }
@@ -2903,7 +2913,7 @@ private fun BitChordApp(
             onOpenMenu = {
                 menuFromPlayer = true
                 songMenuOrigin = null
-                songMenuAnchor = MenuAnchor.consume()
+                MenuNav.songMenuAnchor = MenuAnchor.consume()
                 songActions = song
             },
             onOpenAlbum = { id ->
@@ -3219,10 +3229,10 @@ private fun BitChordApp(
         BackHandler(enabled = settingsSubScreen == LIBRARY_DUPLICATES_SCREEN) { settingsSubScreen = null }
         // A category's page steps back to Settings' main page, not out of Settings.
         BackHandler(
-            enabled = showSettings && settingsSection != null && settingsSubScreen == null &&
+            enabled = showSettings && MenuNav.settingsSection != null && settingsSubScreen == null &&
                 !showSpotify && !showAccountScrobbling && !showSources && !showListenTogether &&
                 !showEqualizer && !showReplay,
-        ) { settingsSectionName = null }
+        ) { MenuNav.settingsSection = null }
         BackHandler(
             enabled = detail == null && !showSettings && !showAccountScrobbling && !showSpotify &&
                 !showSources && !showListenTogether && !showEqualizer && !showReplay && selectedMoodGenre == null &&
@@ -3361,7 +3371,7 @@ private fun BitChordApp(
                     // When a sub-screen overlay is active, keep SettingsSheet
                     // mounted so its scroll position survives.  The overlay is
                     // rendered below the AnimatedContent block.
-                    settingsSubScreen != null -> settingsPageKey
+                    settingsSubScreen != null -> MenuNav.settingsPageKey
                     showAccountScrobbling -> "account_scrobbling"
                     showSources -> "sources"
                     showListenTogether -> "listen_together"
@@ -3370,7 +3380,7 @@ private fun BitChordApp(
                     // button sets `showSettings` from every page including
                     // this one, so with Replay winning the tie the button
                     // was live, hit, and changed nothing on screen.
-                    showSettings -> settingsPageKey
+                    showSettings -> MenuNav.settingsPageKey
                     showReplay -> "replay"
                     top != null -> top.browseId
                     else -> "$TAB_KEY$selectedTab"
@@ -3886,7 +3896,7 @@ private fun BitChordApp(
                             searchInBar = settingsSearchInBar,
                             onSearchScrolledOff = { if (keySection == null) settingsFieldScrolledOff = it },
                             section = keySection,
-                            onOpenSection = { settingsSectionName = it.name },
+                            onOpenSection = { MenuNav.settingsSection = it },
                         )
                     } else if (page != null && page.browseId.isDeviceFolder()) {
                         // Local Music and Downloads — both the tabbed Songs / Artists /
@@ -4139,7 +4149,7 @@ private fun BitChordApp(
                             // the download record groups them under.
                             onMore = { songs ->
                                 browseMenuOrigin = null
-                                browseMenuAnchor = MenuAnchor.consume()
+                                MenuNav.browseMenuAnchor = MenuAnchor.consume()
                                 browseActions = BrowseTarget(
                                     // A library grouping has no id anything can
                                     // fetch, save or share with; its rows are here.
@@ -4930,7 +4940,7 @@ private fun BitChordApp(
                         showListenTogether -> stringResource(R.string.listen_together)
                         showEqualizer -> stringResource(R.string.equalizer)
                         settingsSubScreen == LIBRARY_DUPLICATES_SCREEN -> stringResource(R.string.library_duplicates)
-                        showSettings -> stringResource(settingsSection?.title ?: R.string.settings)
+                        showSettings -> stringResource(MenuNav.settingsSection?.title ?: R.string.settings)
                         showReplay -> stringResource(R.string.replay)
                         detail != null && detailActiveShelf != null -> detailActiveShelf?.title.orEmpty()
                         detail != null -> detail.title
@@ -4982,7 +4992,7 @@ private fun BitChordApp(
                         showListenTogether -> closeListenTogether
                         showEqualizer -> ({ showEqualizer = false })
                         settingsSubScreen != null -> ({ settingsSubScreen = null })
-                        showSettings && settingsSection != null -> ({ settingsSectionName = null })
+                        showSettings && MenuNav.settingsSection != null -> ({ MenuNav.settingsSection = null })
                         showSettings -> ({ showSettings = false })
                         showReplay -> ({ showReplay = false })
                         detailActiveShelf != null -> ({ detailActiveShelf = null })
@@ -6093,7 +6103,7 @@ private fun BitChordApp(
                         item = songActions?.takeIf {
                             menuFromPlayer && songMenuOrigin == null && dialMenuItem == null
                         },
-                        anchor = songMenuAnchor,
+                        anchor = MenuNav.songMenuAnchor,
                         onDismiss = { songActions = null },
                         backdrop = playerBackdrop.takeIf { glassSamplesBackdrop },
                     ) { song ->
@@ -6153,7 +6163,7 @@ private fun BitChordApp(
             item = songActions?.takeIf {
                 songMenuOrigin == null && dialMenuItem == null && !(menuFromPlayer && playerRaised)
             },
-            anchor = songMenuAnchor,
+            anchor = MenuNav.songMenuAnchor,
             onDismiss = { songActions = null },
             backdrop = appBackdrop.takeIf { glassSamplesBackdrop },
             hazeState = hazeState,
@@ -6734,7 +6744,7 @@ private fun BitChordApp(
         // A ⋯ tapped on a release page or a card: the iOS menu, hung off it.
         IosMenuPopover(
             item = browseActions?.takeIf { browseMenuOrigin == null && dialMenuItem == null && !browseRenameInSheet },
-            anchor = browseMenuAnchor,
+            anchor = MenuNav.browseMenuAnchor,
             onDismiss = { browseActions = null },
             backdrop = appBackdrop.takeIf { glassSamplesBackdrop },
             hazeState = hazeState,
