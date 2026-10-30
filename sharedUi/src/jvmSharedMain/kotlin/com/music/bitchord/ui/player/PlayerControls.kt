@@ -18,6 +18,9 @@ import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -70,6 +73,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -1544,7 +1548,7 @@ private fun LosslessOrStats(
     nerdStats: NerdStats.Snapshot?,
     modifier: Modifier = Modifier,
 ) {
-    when {
+    val badge = when {
         // Still resolving — either the player itself is buffering, or a
         // module is still racing YouTube for this track in the background
         // (see [NerdStats.racingLossless]) even though YouTube already won
@@ -1567,7 +1571,7 @@ private fun LosslessOrStats(
         // only a genuinely unmeasured track — or a real race via
         // [stillRacing] — earns this label.
         (stillRacing && nerdStats?.isLossless != true) ||
-            (isLoading && losslessRequested && nerdStats == null) -> LosslessLabel(
+            (isLoading && losslessRequested && nerdStats == null) ->
             // What is already true, ahead of what is still being looked for.
             // A race running over JioSaavn's 320kbps AAC and one running over
             // YouTube's 160kbps Opus were both drawn as a bare "Upgrading
@@ -1584,53 +1588,113 @@ private fun LosslessOrStats(
             // a JioSaavn AAC qualifies once its container has stated its rate;
             // YouTube's Opus sits under the threshold and keeps the plain
             // label it had.
-            text = if (nerdStats?.isHiQuality == true) {
-                stringResource(Res.string.high_quality_upgrading)
+            if (nerdStats?.isHiQuality == true) QualityBadge.HIGH_UPGRADING else QualityBadge.UPGRADING
+        // Same line Tidal, Qobuz and Apple Music draw it at — see
+        // [NerdStats.Snapshot.isHiRes].
+        nerdStats?.isLossless == true ->
+            if (nerdStats.isHiRes) QualityBadge.HI_RES_LOSSLESS else QualityBadge.LOSSLESS
+        nerdStats?.isDolbyAtmos == true -> QualityBadge.DOLBY_ATMOS
+        // Lossy, but the good end of lossy — a module's 320kbps tier, which
+        // for a great many tracks is the best copy that exists anywhere the
+        // app can reach. See [NerdStats.Snapshot.isHiQuality].
+        nerdStats?.isHiQuality == true -> QualityBadge.HIGH
+        effectiveQuality == AudioQuality.LOW && nerdStats?.isLowQuality == true -> QualityBadge.DATA_SAVER
+        effectiveQuality == AudioQuality.MEDIUM && nerdStats?.isMediumQuality == true -> QualityBadge.MEDIUM
+        else -> null
+    }
+    // A badge is put up at once, but taken down only once it has stayed gone
+    // for a moment. The upgrade's end is two steps — the race is cleared, then
+    // the new copy's stats land — and between them there is a frame or two
+    // with nothing to say. Taking the badge down for that gap is what made
+    // "Upgrading quality" vanish and "High quality" pop in after it, rather
+    // than the one replacing the other.
+    var shown by remember { mutableStateOf(badge) }
+    LaunchedEffect(badge) {
+        if (badge == null) delay(BADGE_GONE_GRACE_MS)
+        shown = badge
+    }
+    val reduceAnimation by PlayerSettings.reduceAnimation.collectAsStateWithLifecycle()
+    AnimatedContent(
+        targetState = shown,
+        modifier = modifier,
+        contentAlignment = Alignment.Center,
+        transitionSpec = {
+            (if (reduceAnimation) {
+                fadeIn(tween(BADGE_SWAP_MS)) togetherWith fadeOut(tween(BADGE_SWAP_MS))
             } else {
-                stringResource(Res.string.upgrading_quality)
-            },
+                // The old label leaves to the left as the new one arrives from
+                // the right, both fading, so a change reads as the next step
+                // rather than a flicker. Half the label's own width, so the
+                // travel stays inside the gap between the timestamps.
+                (slideInHorizontally(tween(BADGE_SWAP_MS)) { it / 2 } + fadeIn(tween(BADGE_SWAP_MS))) togetherWith
+                    (slideOutHorizontally(tween(BADGE_SWAP_MS)) { -it / 2 } + fadeOut(tween(BADGE_SWAP_MS)))
+            }) using SizeTransform(clip = false)
+        },
+        label = "qualityBadge",
+    ) { target ->
+        if (target != null) QualityBadgeLabel(target)
+    }
+}
+
+/**
+ * What the badge under the seek bar can say. Kept as a state of its own, not
+ * a string, so the swap animation can tell one label from the next — and so a
+ * recomposition that lands on the same label doesn't count as a change.
+ */
+private enum class QualityBadge {
+    UPGRADING, HIGH_UPGRADING, HI_RES_LOSSLESS, LOSSLESS, DOLBY_ATMOS, HIGH, DATA_SAVER, MEDIUM,
+}
+
+@Composable
+private fun QualityBadgeLabel(badge: QualityBadge) {
+    when (badge) {
+        QualityBadge.UPGRADING, QualityBadge.HIGH_UPGRADING -> LosslessLabel(
+            text = stringResource(
+                if (badge == QualityBadge.HIGH_UPGRADING) Res.string.high_quality_upgrading else Res.string.upgrading_quality,
+            ),
+            // The lossless wave: what is being looked for, not what is playing.
+            iconPainter = painterResource(Res.drawable.ic_lossless),
             animated = false,
-            modifier = modifier,
+            // Breathes for as long as the search runs: a wait, not a result,
+            // and the one badge state that is still going to change.
+            pulsing = true,
         )
-        nerdStats?.isLossless == true -> LosslessLabel(
-            // Same line Tidal, Qobuz and Apple Music draw it at — see
-            // [NerdStats.Snapshot.isHiRes].
-            text = stringResource(if (nerdStats.isHiRes) Res.string.hi_res_lossless else Res.string.lossless),
+        QualityBadge.HI_RES_LOSSLESS, QualityBadge.LOSSLESS -> LosslessLabel(
+            text = stringResource(
+                if (badge == QualityBadge.HI_RES_LOSSLESS) Res.string.hi_res_lossless else Res.string.lossless,
+            ),
+            iconPainter = painterResource(Res.drawable.ic_lossless),
             // Shimmer is reserved for the thing that was asked for and
             // confirmed. It is what makes the badge read as an achievement
             // rather than a label, which only one of these two is.
             animated = true,
-            modifier = modifier,
         )
-        nerdStats?.isDolbyAtmos == true -> LosslessLabel(
+        QualityBadge.DOLBY_ATMOS -> LosslessLabel(
             text = "Dolby Atmos",
-            animated = true,
             iconPainter = painterResource(Res.drawable.ic_dolby_atmos),
-            modifier = modifier,
+            animated = true,
         )
-        // Lossy, but the good end of lossy — a module's 320kbps tier, which
-        // for a great many tracks is the best copy that exists anywhere the
-        // app can reach. See [NerdStats.Snapshot.isHiQuality].
-        nerdStats?.isHiQuality == true -> LosslessLabel(
-            text = stringResource(Res.string.high_quality),
-            animated = false,
-            modifier = modifier,
-        )
-        effectiveQuality == AudioQuality.LOW && nerdStats?.isLowQuality == true -> LosslessLabel(
-            text = stringResource(Res.string.data_saver),
-            animated = false,
-            modifier = modifier,
-        )
-        effectiveQuality == AudioQuality.MEDIUM && nerdStats?.isMediumQuality == true -> LosslessLabel(
-            text = stringResource(Res.string.medium_quality),
-            animated = false,
-            modifier = modifier,
-        )
-        else -> {}
+        QualityBadge.HIGH -> LosslessLabel(text = stringResource(Res.string.high_quality), animated = false)
+        QualityBadge.DATA_SAVER -> LosslessLabel(text = stringResource(Res.string.data_saver), animated = false)
+        QualityBadge.MEDIUM -> LosslessLabel(text = stringResource(Res.string.medium_quality), animated = false)
     }
 }
 
-/** A quality glyph ahead of the status label. */
+/** How long the badge waits on an empty state before taking itself down. */
+private const val BADGE_GONE_GRACE_MS = 600L
+
+/** One label leaving and the next arriving. */
+private const val BADGE_SWAP_MS = 350
+
+/** How far "Upgrading quality" dips, and how long each half of a breath takes. */
+private const val UPGRADING_PULSE_LOW = 0.4f
+private const val UPGRADING_PULSE_MS = 900
+
+/**
+ * A quality glyph ahead of the status label: the lossless wave for lossless
+ * and the search for it, the Dolby double-D, and headphones for the lossy
+ * tiers — the same glyphs the source badges in search draw.
+ */
 @Composable
 private fun LosslessLabel(
     text: String,
@@ -1638,19 +1702,43 @@ private fun LosslessLabel(
     modifier: Modifier = Modifier,
     icon: ImageVector = Icons.Rounded.Headphones,
     iconPainter: Painter? = null,
+    /** Fades the whole label in and out, for a state that is still in progress. */
+    pulsing: Boolean = false,
 ) {
+    // Only while asked for, and not at all under "Reduce animation": the
+    // label then just holds still, which says "waiting" well enough.
+    val reduceAnimation by PlayerSettings.reduceAnimation.collectAsStateWithLifecycle()
+    val pulse = if (pulsing && !reduceAnimation) {
+        rememberInfiniteTransition(label = "upgradingPulse").animateFloat(
+            initialValue = 1f,
+            targetValue = UPGRADING_PULSE_LOW,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = UPGRADING_PULSE_MS, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "upgradingPulseAlpha",
+        )
+    } else {
+        null
+    }
     Row(
-        modifier = modifier,
+        // Read in the layer, so a frame of the pulse is a redraw of this one
+        // label — no recomposition, no relayout.
+        modifier = modifier.graphicsLayer {
+            alpha = pulse?.value ?: 1f
+            compositingStrategy = CompositingStrategy.ModulateAlpha
+        },
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val tint = PlayerInk.copy(alpha = if (animated) 0.7f else 0.45f)
         if (iconPainter != null) {
+            // At the drawable's own size — the wave is wide, the double-D
+            // nearly square, and one box squashed one of them.
             Icon(
                 painter = iconPainter,
                 contentDescription = null,
                 tint = tint,
-                modifier = Modifier.size(width = 13.dp, height = 10.dp),
             )
         } else {
             Icon(
