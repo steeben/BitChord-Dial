@@ -46,9 +46,12 @@ internal abstract class BackdropEffectScopeImpl : BackdropEffectScope, RuntimeSh
 
     // Vendored change: [contentScale] reports the size the effects actually operate
     // on when the backdrop layer is recorded at a reduced resolution, so shader
-    // geometry (e.g. the lens size uniform) matches the layer's pixel grid.
+    // geometry (e.g. the lens size uniform) matches the layer's pixel grid. The
+    // density is scaled with it, so a shape's dp corners resolve on that same
+    // grid: left at full density, a 28dp corner came out three times too round
+    // for the lens, which drew a second, rounder outline inside the glass's own.
     fun update(scope: DrawScope, contentScale: Float = 1f): Boolean {
-        val newDensity = scope.density
+        val newDensity = scope.density * contentScale
         val newFontScale = scope.fontScale
         val newSize = if (contentScale != 1f) scope.size * contentScale else scope.size
         val newLayoutDirection = scope.layoutDirection
