@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.music.bitchord.ui.graphics.ColorUtils
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
@@ -141,19 +142,48 @@ fun FullArtworkBlurBackdrop(
     image: ImageBitmap?,
     modifier: Modifier = Modifier,
 ) {
-    val imageAlpha by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (image != null) 1f else 0f,
-        animationSpec = tween(320, easing = FastOutSlowInEasing),
-        label = "preparedBackdropImage",
-    )
+    val reduceAnimation by PlayerSettings.reduceAnimation.collectAsStateWithLifecycle()
+    // The cover on screen, and the previous one fading out over it. A new
+    // track's blur is prepared a beat after the skip; until it is, the last
+    // one stays rather than dropping to the flat fallback and back.
+    var shown by remember { mutableStateOf(image) }
+    var leaving by remember { mutableStateOf<ImageBitmap?>(null) }
+    val firstIn = remember { Animatable(if (image != null) 1f else 0f) }
+    val leaveFade = remember { Animatable(0f) }
+    LaunchedEffect(image) {
+        val next = image ?: return@LaunchedEffect
+        // Mid-fade, fade from whichever of the two is more on screen.
+        val from = leaving?.takeIf { leaveFade.value > 0.5f } ?: shown
+        leaving = null
+        shown = next
+        when {
+            from == null -> firstIn.animateTo(1f, tween(320, easing = FastOutSlowInEasing))
+            from === next || reduceAnimation -> Unit
+            else -> {
+                leaving = from
+                leaveFade.snapTo(1f)
+                leaveFade.animateTo(0f, tween(MESH_FADE_MS, easing = FastOutSlowInEasing))
+                leaving = null
+            }
+        }
+    }
     Box(modifier = modifier.fillMaxSize().background(FallbackBackdrop)) {
-        image?.let { bitmap ->
+        shown?.let { bitmap ->
             val painter = remember(bitmap) { BitmapPainter(bitmap) }
             Image(
                 painter = painter,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize().graphicsLayer { alpha = imageAlpha },
+                modifier = Modifier.fillMaxSize().graphicsLayer { alpha = firstIn.value },
+            )
+        }
+        leaving?.let { bitmap ->
+            val painter = remember(bitmap) { BitmapPainter(bitmap) }
+            Image(
+                painter = painter,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().graphicsLayer { alpha = leaveFade.value },
             )
         }
 
@@ -218,11 +248,6 @@ fun rememberArtworkMesh(
 
     LaunchedEffect(imageUrl, artPx) {
         if (imageUrl == null || meshUrl == imageUrl) return@LaunchedEffect
-        val request = ImageRequest.Builder(context)
-            .data(imageUrl.artworkAt(artPx))
-            .size(MESH_PX)
-            .forPixelAccess() // the sleeve has to be read back pixel by pixel
-            .build()
         // Tried more than once, because this effect is keyed on the artwork and
         // nothing else: a read that fails is not retried by Coil and cannot be
         // re-triggered from here, so one dropped connection used to leave the
@@ -231,19 +256,12 @@ fun rememberArtworkMesh(
         // reason; see [NowPlayingScreen]'s artAttempt.
         repeat(MESH_ATTEMPTS) { attempt ->
             if (attempt > 0) delay(MESH_RETRY_DELAY_MS)
-            val result = SingletonImageLoader.get(context).execute(request)
-            val bitmap = (result as? SuccessResult)?.image?.toImageBitmap()
-            if (bitmap != null) {
-                val found = withContext(Dispatchers.Default) { meshOf(bitmap, imageUrl.hashCode()) }
-                if (found != null) {
-                    meshCache[imageUrl] = found
-                    mesh = found
-                }
-                // A cover that decoded but had no mesh in it — see [meshOf] —
-                // is an answer, not a failure. Asking again gets the same one.
-                meshUrl = imageUrl
-                return@LaunchedEffect
-            }
+            val read = readArtworkMesh(context, imageUrl, artPx) ?: return@repeat
+            read.mesh?.let { mesh = it }
+            // A cover that decoded but had no mesh in it — see [meshOf] —
+            // is an answer, not a failure. Asking again gets the same one.
+            meshUrl = imageUrl
+            return@LaunchedEffect
         }
     }
 
@@ -258,6 +276,32 @@ fun rememberArtworkMesh(
         meshUrl = imageUrl
     }
     return mesh
+}
+
+/** One go at the mesh for [imageUrl]: null if the cover didn't decode. */
+private class MeshRead(val mesh: ArtworkMesh?)
+
+private suspend fun readArtworkMesh(context: PlatformContext, imageUrl: String, artPx: Int): MeshRead? {
+    meshCache[imageUrl]?.let { return MeshRead(it) }
+    val request = ImageRequest.Builder(context)
+        .data(imageUrl.artworkAt(artPx))
+        .size(MESH_PX)
+        .forPixelAccess() // the sleeve has to be read back pixel by pixel
+        .build()
+    val result = SingletonImageLoader.get(context).execute(request)
+    val bitmap = (result as? SuccessResult)?.image?.toImageBitmap() ?: return null
+    val found = withContext(Dispatchers.Default) { meshOf(bitmap, imageUrl.hashCode()) }
+    if (found != null) meshCache[imageUrl] = found
+    return MeshRead(found)
+}
+
+/**
+ * Reads the mesh for a cover that is about to be played — the tracks either
+ * side of the current one — so a skip finds it in the cache and the backdrop
+ * starts crossfading in the same frame as the sleeve, instead of a decode later.
+ */
+suspend fun prewarmArtworkMesh(context: PlatformContext, imageUrl: String, artPx: Int = CARD_ART_PX) {
+    readArtworkMesh(context, imageUrl, artPx)
 }
 
 /**

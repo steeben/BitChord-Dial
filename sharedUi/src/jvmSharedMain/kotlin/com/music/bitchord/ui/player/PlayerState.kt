@@ -23,6 +23,7 @@ import coil3.PlatformContext
 import coil3.compose.LocalPlatformContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImagePainter
+import androidx.compose.ui.graphics.painter.Painter
 import coil3.request.ImageRequest
 import com.music.bitchord.data.model.CARD_ART_PX
 import com.music.bitchord.data.canvas.CanvasArtwork
@@ -163,13 +164,26 @@ internal class PlayerArtwork(val url: String?, private val context: PlatformCont
     var previewLoaded by mutableStateOf(false)
         private set
 
+    /**
+     * The last picture each request drew, kept so the cover can stay on screen
+     * fading out over the next track's — see [OutgoingArtwork]. Holding the
+     * painter rather than asking Coil again means there is no load, not even a
+     * memory-cache one, between the old cover and its fade.
+     */
+    var painter by mutableStateOf<Painter?>(null)
+        private set
+    var previewPainter by mutableStateOf<Painter?>(null)
+        private set
+
     fun onPreviewState(state: AsyncImagePainter.State) {
         previewLoaded = state is AsyncImagePainter.State.Success
+        if (state is AsyncImagePainter.State.Success) previewPainter = state.painter
     }
 
     /** Fed from each painter drawing [request]. */
     fun onState(state: AsyncImagePainter.State) {
         loaded = state is AsyncImagePainter.State.Success
+        if (state is AsyncImagePainter.State.Success) painter = state.painter
         // Only the failure is latched, and only upwards: the retry that clears
         // it is [failed]'s own effect, and clearing it from a Loading state here
         // would cancel that effect's wait every time the painter passed back

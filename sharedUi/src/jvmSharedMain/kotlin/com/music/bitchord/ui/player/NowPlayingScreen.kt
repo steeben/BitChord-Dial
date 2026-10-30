@@ -846,7 +846,8 @@ fun NowPlayingScreen(
     // the full-size cover is what made the player sit on a grey tile.
     val artContext = LocalPlatformContext.current
     LaunchedEffect(queueIndex, queue.size) {
-        for (offset in 1..2) {
+        // The track before as well, so skipping back crossfades as cleanly.
+        for (offset in listOf(1, 2, -1)) {
             val url = queue.getOrNull(queueIndex + offset)?.thumbnailUrl ?: continue
             if (!url.startsWith("http")) continue
             val loader = SingletonImageLoader.get(artContext)
@@ -856,6 +857,15 @@ fun NowPlayingScreen(
             loader.enqueue(
                 ImageRequest.Builder(artContext).data(url.artworkAt(ART_PX)).size(ART_PX).build(),
             )
+        }
+        // And their backdrop meshes, so the blur under the sleeve fades with
+        // it on a skip rather than a decode behind it. Left until the track
+        // hand-off has settled, like the player's other prewarming.
+        delay(NEIGHBOUR_MESH_DELAY_MS)
+        for (offset in listOf(1, -1)) {
+            val url = queue.getOrNull(queueIndex + offset)?.thumbnailUrl ?: continue
+            if (!url.startsWith("http")) continue
+            prewarmArtworkMesh(artContext, url)
         }
     }
     // This is produced by the palette's existing 128 px decode and cache. It
@@ -1969,6 +1979,7 @@ fun NowPlayingScreen(
                         artRequest = art.request,
                         artLoaded = art.loaded,
                         onArtState = art::onState,
+                        outgoingArt = { OutgoingArtwork(art, Modifier.fillMaxSize()) },
                         canvas = canvas,
                         canvasRendered = canvasRendered,
                         isPlaying = isPlaying,
@@ -3295,6 +3306,8 @@ fun NowPlayingScreen(
                             .fillMaxSize()
                             .drawWithContent { if (art.loaded || !canvasRendered) drawContent() },
                     )
+                    // The last track's cover, fading out over this one.
+                    OutgoingArtwork(art, Modifier.fillMaxSize())
 
                     // Where the clip plays when it can't have the banner:
                     // inside the same clip as the still art, taking the
@@ -4143,3 +4156,5 @@ private suspend fun AwaitPointerEventScope.followQueueDrag(
     onHold(false)
     onSettle(open)
 }
+
+private const val NEIGHBOUR_MESH_DELAY_MS = 1500L

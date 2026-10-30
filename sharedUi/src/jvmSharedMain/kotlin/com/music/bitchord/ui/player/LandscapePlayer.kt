@@ -291,6 +291,8 @@ internal fun LandscapeArtwork(
     sleeveShape: () -> Shape = { LandscapeArtShape },
     /** How much of the sleeve's shadow is cast, 1 at rest. */
     shadowFraction: () -> Float = { 1f },
+    /** The last track's cover fading out over this one — see [OutgoingArtwork]. */
+    outgoingArt: @Composable BoxScope.() -> Unit = {},
     overlay: @Composable BoxScope.() -> Unit = {},
 ) {
     val casts = artLoaded || canvasRendered
@@ -336,6 +338,7 @@ internal fun LandscapeArtwork(
                     .fillMaxSize()
                     .drawWithContent { if (artLoaded || !canvasRendered) drawContent() },
             )
+            outgoingArt()
             canvas?.let { clip ->
                 CanvasArtworkPlayer(
                     canvas = clip,
