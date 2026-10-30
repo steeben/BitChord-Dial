@@ -201,6 +201,8 @@
     <string name="skip_silence">Ignorer les silences</string>
     <string name="skip_silence_subtitle">Coupe les silences de plus d\'une seconde</string>
     <string name="skip_silence_float_subtitle">Indisponible avec la sortie flottante 32 bits</string>
+    <string name="pause_at_zero_volume">Pause à volume nul</string>
+    <string name="pause_at_zero_volume_subtitle">Reprend quand le volume remonte</string>
     <string name="equalizer">Égaliseur</string>
     <string name="equalizer_subtitle">Le panneau système de votre appareil</string>
     <string name="show_nerd_stats">Afficher les statistiques techniques</string>

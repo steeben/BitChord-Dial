@@ -201,6 +201,8 @@
     <string name="skip_silence">דילוג על שקט</string>
     <string name="skip_silence_subtitle">קיצוץ הפסקות ארוכות משנייה</string>
     <string name="skip_silence_float_subtitle">לא זמין בפלט float של 32 סיביות</string>
+    <string name="pause_at_zero_volume">השהיה בעוצמת קול אפס</string>
+    <string name="pause_at_zero_volume_subtitle">המשך כשעוצמת הקול עולה שוב</string>
     <string name="equalizer">אקולייזר</string>
     <string name="equalizer_subtitle">פאנל המערכת של המכשיר שלך</string>
     <string name="show_nerd_stats">הצגת נתונים לחנונים</string>

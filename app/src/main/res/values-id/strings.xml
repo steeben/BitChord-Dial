@@ -195,6 +195,8 @@
     <string name="skip_silence">Lewati keheningan</string>
     <string name="skip_silence_subtitle">Memotong jeda lebih dari satu detik</string>
     <string name="skip_silence_float_subtitle">Tidak tersedia pada output float 32-bit</string>
+    <string name="pause_at_zero_volume">Jeda saat volume nol</string>
+    <string name="pause_at_zero_volume_subtitle">Lanjutkan saat volume naik lagi</string>
     <string name="equalizer">Equalizer</string>
     <string name="equalizer_subtitle">Panel sistem perangkat Anda</string>
     <string name="show_nerd_stats">Tampilkan statistik teknis</string>

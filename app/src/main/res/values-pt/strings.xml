@@ -202,6 +202,8 @@
     <string name="skip_silence">Pular silêncio</string>
     <string name="skip_silence_subtitle">Corta pausas maiores que um segundo</string>
     <string name="skip_silence_float_subtitle">Indisponível com saída float de 32 bits</string>
+    <string name="pause_at_zero_volume">Pausar com volume zero</string>
+    <string name="pause_at_zero_volume_subtitle">Retomar quando o volume voltar a subir</string>
     <string name="equalizer">Equalizador</string>
     <string name="equalizer_subtitle">O painel do sistema do seu dispositivo</string>
     <string name="show_nerd_stats">Mostrar estatísticas técnicas</string>

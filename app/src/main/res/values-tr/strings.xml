@@ -222,6 +222,8 @@
     <string name="skip_silence">Sessizliği atla</string>
     <string name="skip_silence_subtitle">Bir saniyeden uzun boşlukları kırp</string>
     <string name="skip_silence_float_subtitle">32 bit float çıkışta kullanılamaz</string>
+    <string name="pause_at_zero_volume">Ses sıfırken duraklat</string>
+    <string name="pause_at_zero_volume_subtitle">Ses tekrar açıldığında devam et</string>
     <string name="equalizer">Ekolayzır</string>
     <string name="equalizer_subtitle">Cihazınızın sistem paneli</string>
     <string name="show_nerd_stats">Meraklılar için istatistikleri göster</string>

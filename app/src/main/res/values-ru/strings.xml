@@ -210,6 +210,8 @@
     <string name="skip_silence">Пропускать тишину</string>
     <string name="skip_silence_subtitle">Обрезает паузы длиннее секунды</string>
     <string name="skip_silence_float_subtitle">Недоступно при 32-битном выводе с плавающей точкой</string>
+    <string name="pause_at_zero_volume">Пауза при нулевой громкости</string>
+    <string name="pause_at_zero_volume_subtitle">Продолжать, когда громкость снова растёт</string>
     <string name="equalizer">Эквалайзер</string>
     <string name="equalizer_subtitle">Системная панель вашего устройства</string>
     <string name="show_nerd_stats">Показывать техническую статистику</string>

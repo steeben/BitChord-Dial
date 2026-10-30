@@ -240,6 +240,8 @@
     <string name="skip_silence">Salta i silenzi</string>
     <string name="skip_silence_subtitle">Taglia le pause più lunghe di un secondo</string>
     <string name="skip_silence_float_subtitle">Non disponibile con uscita float a 32 bit</string>
+    <string name="pause_at_zero_volume">Pausa a volume zero</string>
+    <string name="pause_at_zero_volume_subtitle">Riprende quando il volume risale</string>
     <string name="equalizer">Equalizzatore</string>
     <string name="equalizer_subtitle">Il pannello di sistema del tuo dispositivo</string>
     <string name="show_nerd_stats">Mostra statistiche per nerd</string>

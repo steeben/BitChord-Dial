@@ -226,6 +226,8 @@
     <string name="skip_silence">Bỏ qua đoạn im lặng</string>
     <string name="skip_silence_subtitle">Cắt bớt các khoảng lặng dài hơn 1 giây</string>
     <string name="skip_silence_float_subtitle">Không khả dụng với đầu ra float 32-bit</string>
+    <string name="pause_at_zero_volume">Tạm dừng khi âm lượng bằng 0</string>
+    <string name="pause_at_zero_volume_subtitle">Tiếp tục khi tăng âm lượng</string>
     <string name="equalizer">Bộ chỉnh âm</string>
     <string name="equalizer_subtitle">Bảng điều khiển hệ thống của thiết bị</string>
     <string name="show_nerd_stats">Thống kê chi tiết</string>
