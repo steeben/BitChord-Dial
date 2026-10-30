@@ -1673,7 +1673,11 @@ private fun PageBackground(
                 .offset {
                     val top = maxOf(listState.headerTop(artHeight.toPx()), floorTop())
                     IntOffset(0, top.roundToInt())
-                },
+                }
+                // The blurred foot is an offscreen layer, and while the page is
+                // scaled open its bounds round outward: a row of it past the
+                // scrim showed as a thin bright line along the artwork's edge.
+                .clipToBounds(),
         ) {
             HeaderArt(
                 art = baseArt,
