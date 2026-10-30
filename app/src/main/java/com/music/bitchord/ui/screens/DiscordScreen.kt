@@ -67,6 +67,7 @@ import com.music.bitchord.ui.components.ChoiceAlert
 import com.music.bitchord.ui.components.DiscordTokenAlert
 import com.music.bitchord.ui.components.TextValueAlert
 import com.music.bitchord.ui.components.thumbnailBorder
+import com.music.bitchord.ui.components.maskedUsername
 import com.my.kizzy.rpc.KizzyRPC
 import dev.chrisbanes.haze.HazeState
 import kotlinx.coroutines.Dispatchers
@@ -168,6 +169,7 @@ fun DiscordScreen(
     val username by AppSettings.discordUsername.collectAsStateWithLifecycle()
     val name by AppSettings.discordName.collectAsStateWithLifecycle()
     val avatar by AppSettings.discordAvatar.collectAsStateWithLifecycle()
+    val hideUserInfo by AppSettings.hideUserInfo.collectAsStateWithLifecycle()
     val rpcEnabled by AppSettings.discordRpcEnabled.collectAsStateWithLifecycle()
     val useDetails by AppSettings.discordUseDetails.collectAsStateWithLifecycle()
     val showAudioQuality by AppSettings.discordShowAudioQuality.collectAsStateWithLifecycle()
@@ -220,9 +222,9 @@ fun DiscordScreen(
 
         DiscordAccountCard(
             connected = connected,
-            name = name,
-            username = username,
-            avatar = avatar,
+            name = name.maskedUsername(hideUserInfo),
+            username = username.maskedUsername(hideUserInfo),
+            avatar = if (hideUserInfo) "" else avatar,
             status = statusOf(status),
             icon = discordIcon,
             onConnect = onOpenLogin,

@@ -33,6 +33,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.music.bitchord.data.settings.AppSettings
+import com.music.bitchord.ui.components.HIDDEN_USER_NAME
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.BlurredEdgeTreatment
@@ -554,12 +557,17 @@ internal fun JoinConfirmSheet(
     onJoin: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val hideUserInfo by AppSettings.hideUserInfo.collectAsStateWithLifecycle()
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         MemberAvatarStack(
-            members = preview.members.map { it.displayName to it.avatarUrl },
+            members = if (hideUserInfo) {
+                preview.members.map { HIDDEN_USER_NAME to null }
+            } else {
+                preview.members.map { it.displayName to it.avatarUrl }
+            },
             total = preview.memberCount,
         )
         Spacer(Modifier.height(18.dp))
@@ -730,6 +738,9 @@ internal fun InviteSheet(
     }
 }
 
-/** @see ListenTogether.myAvatarUrl */
+/** @see ListenTogether.myAvatarUrl — null while Hide user info is on. */
 @Composable
-internal fun rememberMyAvatar(): String? = ListenTogether.myAvatarUrl()
+internal fun rememberMyAvatar(): String? {
+    val hideUserInfo by AppSettings.hideUserInfo.collectAsStateWithLifecycle()
+    return if (hideUserInfo) null else ListenTogether.myAvatarUrl()
+}

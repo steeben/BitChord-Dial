@@ -35,6 +35,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.R
 import com.music.bitchord.data.model.Account
 import com.music.bitchord.data.settings.AppSettings
+import com.music.bitchord.ui.components.maskedUsername
 import kotlin.math.roundToInt
 
 @Composable
@@ -68,6 +69,7 @@ fun AccountAndScrobblingScreen(
     val discordUsername by AppSettings.discordUsername.collectAsStateWithLifecycle()
     val discordRpcEnabled by AppSettings.discordRpcEnabled.collectAsStateWithLifecycle()
     val spotifyConnected by AppSettings.spotifySpdcToken.collectAsStateWithLifecycle()
+    val hideUserInfo by AppSettings.hideUserInfo.collectAsStateWithLifecycle()
 
     Column(
         modifier = modifier
@@ -142,7 +144,7 @@ fun AccountAndScrobblingScreen(
                 subtitle = when {
                     discordToken.isEmpty() -> stringResource(R.string.tap_to_connect)
                     !discordRpcEnabled -> stringResource(R.string.connected_presence_off)
-                    discordUsername.isNotEmpty() -> stringResource(R.string.sharing_as, discordUsername)
+                    discordUsername.isNotEmpty() -> stringResource(R.string.sharing_as, discordUsername.maskedUsername(hideUserInfo))
                     else -> stringResource(R.string.sharing_listens)
                 },
                 onClick = onOpenDiscord,
@@ -204,7 +206,7 @@ fun AccountAndScrobblingScreen(
                     icon = Icons.Rounded.History,
                     title = "Last.fm",
                     subtitle = if (lastfmSessionKey.isNotBlank()) {
-                        stringResource(R.string.signed_in_as, lastfmUsername)
+                        stringResource(R.string.signed_in_as, lastfmUsername.maskedUsername(hideUserInfo))
                     } else {
                         stringResource(R.string.tap_to_sign_in)
                     },

@@ -384,6 +384,8 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.foundation.layout.offset
 import com.music.bitchord.ui.components.MiniPlayerPull
+import com.music.bitchord.ui.components.HIDDEN_USER_NAME
+import com.music.bitchord.ui.components.masked
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.layout.onSizeChanged
 import com.music.bitchord.ui.player.LocalPlayerDock
@@ -1043,9 +1045,16 @@ private fun BitChordApp(
             listenTogetherFromPlayer = false
         }
     }
-    val account by viewModel.account.collectAsStateWithLifecycle()
-    val selectedChannelName by viewModel.selectedChannelName.collectAsStateWithLifecycle()
-    val googleAccounts by viewModel.googleAccounts.collectAsStateWithLifecycle()
+    // Hide user info swaps in placeholders here, where the UI reads them, so
+    // every screen below draws the masked identity and the view model keeps
+    // the real one.
+    val hideUserInfo by AppSettings.hideUserInfo.collectAsStateWithLifecycle()
+    val realAccount by viewModel.account.collectAsStateWithLifecycle()
+    val account = if (hideUserInfo) realAccount?.masked() else realAccount
+    val realChannelName by viewModel.selectedChannelName.collectAsStateWithLifecycle()
+    val selectedChannelName = if (hideUserInfo) realChannelName?.let { HIDDEN_USER_NAME } else realChannelName
+    val realGoogleAccounts by viewModel.googleAccounts.collectAsStateWithLifecycle()
+    val googleAccounts = if (hideUserInfo) realGoogleAccounts.masked() else realGoogleAccounts
     val activeAccountId by viewModel.activeAccountId.collectAsStateWithLifecycle()
     val activeProfileId by viewModel.activeProfileId.collectAsStateWithLifecycle()
     val historyState by viewModel.history.collectAsStateWithLifecycle()
@@ -6505,7 +6514,7 @@ private fun BitChordApp(
                     YtMusicLoginScreen(
                         mode = mode,
                         initialCookie = if (mode == WebSessionMode.SWITCH_CHANNEL) {
-                            googleAccounts.firstOrNull { it.accountId == activeAccountId }?.cookie
+                            realGoogleAccounts.firstOrNull { it.accountId == activeAccountId }?.cookie
                         } else null,
                         captureRequest = captureRequest,
                         onPageReady = { pageReady = it },

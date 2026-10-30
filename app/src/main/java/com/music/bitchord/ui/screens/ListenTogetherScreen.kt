@@ -87,6 +87,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.music.bitchord.data.settings.AppSettings
+import com.music.bitchord.ui.components.HIDDEN_USER_NAME
 import coil3.compose.AsyncImage
 import com.music.bitchord.R
 import com.music.bitchord.data.listentogether.JamInviteLink
@@ -357,7 +359,7 @@ fun ListenTogetherScreen(
         ) {
             when (open) {
                 PartySheet.Create -> CreatePartySheet(
-                    avatarUrl = ListenTogether.myAvatarUrl(),
+                    avatarUrl = rememberMyAvatar(),
                     nickname = nickname,
                     onNicknameChange = {
                         nickname = it.take(80)
@@ -399,7 +401,7 @@ fun ListenTogetherScreen(
 
                 is PartySheet.Confirm -> JoinConfirmSheet(
                     preview = open.preview,
-                    avatarUrl = ListenTogether.myAvatarUrl(),
+                    avatarUrl = rememberMyAvatar(),
                     nickname = nickname,
                     onNicknameChange = {
                         nickname = it.take(80)
@@ -497,7 +499,7 @@ fun ListenTogetherScreen(
 
         if (!state.inParty) {
             PartyLanding(
-                avatarUrl = ListenTogether.myAvatarUrl(),
+                avatarUrl = rememberMyAvatar(),
                 enabled = signedIn && ListenTogether.hasServer && !busy,
                 // The last attempt's message does not belong on the next one.
                 onCreate = {
@@ -1029,6 +1031,11 @@ private fun PartyAvatar(url: String?, size: Dp = ICON_SIZE) {
 
 @Composable
 private fun MemberRow(member: PartyMember, isYou: Boolean, canKick: Boolean = false, onKick: () -> Unit = {}) {
+    // Hide user info covers the whole party, not just this device's row: the
+    // others are people too, and a screenshot is just as likely to show them.
+    val hideUserInfo by AppSettings.hideUserInfo.collectAsStateWithLifecycle()
+    @Suppress("NAME_SHADOWING")
+    val member = if (hideUserInfo) member.copy(displayName = HIDDEN_USER_NAME, avatarUrl = null) else member
     Row(
         modifier = Modifier
             .fillMaxWidth()

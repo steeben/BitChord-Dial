@@ -242,6 +242,7 @@ fun SettingsScreen(
     val dolbyAtmosSupported = DeviceCodecs.playsDolbyAtmos
     val spatialAudio by AppSettings.spatialAudio.collectAsStateWithLifecycle()
     val nerdStats by AppSettings.showNerdStats.collectAsStateWithLifecycle()
+    val hideUserInfo by AppSettings.hideUserInfo.collectAsStateWithLifecycle()
     val reduceAnimation by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     val liquidGlass by AppSettings.liquidGlass.collectAsStateWithLifecycle()
@@ -1860,6 +1861,25 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { AppSettings.setShowNerdStats(!nerdStats) },
+                )
+            }
+            val hideUserInfoTitle = stringResource(R.string.hide_user_info)
+            row(hideUserInfoTitle, "screenshot", "privacy", "profile", "name", "email", "avatar", "photo") {
+                SettingsRow(
+                    icon = Icons.Rounded.VisibilityOff,
+                    title = hideUserInfoTitle,
+                    subtitle = stringResource(R.string.hide_user_info_subtitle),
+                    trailing = {
+                        Switch(
+                            checked = hideUserInfo,
+                            onCheckedChange = AppSettings::setHideUserInfo,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { AppSettings.setHideUserInfo(!hideUserInfo) },
                 )
             }
         }
