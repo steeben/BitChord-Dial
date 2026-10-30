@@ -1399,6 +1399,32 @@ class SourcesTest {
     }
 
     @Test
+    fun `drops a Portuguese guest credit from the query`() {
+        assertEquals(
+            listOf("o mundo é mal froid", "o mundo é mal"),
+            TrackMatcher.queries(TrackMatcher.Target("O Mundo É Mal (part. Clara Lima)", "Froid")),
+        )
+        // A numbered part is the title, not a guest credit.
+        assertEquals(
+            "song part",
+            TrackMatcher.queries(TrackMatcher.Target("Song (Part 1)", "")).single(),
+        )
+        // Neither is an English title that merely starts with the word.
+        assertEquals(
+            listOf("part of me"),
+            TrackMatcher.queries(TrackMatcher.Target("Part of Me", "")),
+        )
+    }
+
+    @Test
+    fun `ignores a YouTube type label in the artist slot`() {
+        assertEquals(
+            "lud session 2",
+            TrackMatcher.queries(TrackMatcher.Target("Lud Session 2", "Música")).single(),
+        )
+    }
+
+    @Test
     fun `has nothing to ask for without a title`() {
         assertTrue(TrackMatcher.queries(TrackMatcher.Target("", "Atif Aslam")).isEmpty())
     }
@@ -1449,6 +1475,45 @@ class SourcesTest {
                 title = "残響散歌",
                 artist = "Aimer",
                 durationSec = 288,
+            ),
+        )
+    }
+
+    /** A CJK head with its Latin filing in brackets is the same title, not packaging. */
+    @Test
+    fun `matches a bracketed CJK translation against its Latin filing`() {
+        assertTrue(
+            matches(
+                song("Love", "Singer", "2:53"),
+                title = "愛(Love)",
+                artist = "Singer",
+                durationSec = 174,
+            ),
+        )
+        assertTrue(
+            matches(
+                song("Love (愛)", "Singer", "2:53"),
+                title = "愛",
+                artist = "Singer",
+                durationSec = 174,
+            ),
+        )
+        // Same-script packaging must not rescue a different title.
+        assertFalse(
+            matches(
+                song("Film Name", "Some Artist", "4:07"),
+                title = "Song Name (From \"Film Name\")",
+                artist = "Singer",
+                durationSec = 247,
+            ),
+        )
+        // One word of a longer aside is not the whole title.
+        assertFalse(
+            matches(
+                song("Night", "Singer", "4:20"),
+                title = "夜に駆ける (Racing Into The Night)",
+                artist = "Singer",
+                durationSec = 260,
             ),
         )
     }
