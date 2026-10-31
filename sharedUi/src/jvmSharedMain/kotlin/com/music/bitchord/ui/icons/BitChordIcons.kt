@@ -617,6 +617,61 @@ object BitChordIcons {
         }.build()
     }
 
+    /**
+     * AI Mix: a record wearing headphones, the DJ-set mark. The record is a
+     * solid disc with its label punched out, the headband a stroke like the
+     * rest of the set, the ear cups solid either side of it.
+     */
+    val AiMix: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "bc_ai_mix",
+            defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f,
+        ).apply {
+            // Headband, arching over the record.
+            path(stroke = stroke, strokeLineWidth = 2f, strokeLineCap = StrokeCap.Round) {
+                moveTo(4.6f, 14.2f)
+                lineTo(4.6f, 12.4f)
+                arcToRelative(7.4f, 7.4f, 0f, isMoreThanHalf = false, isPositiveArc = true, 14.8f, 0f)
+                lineTo(19.4f, 14.2f)
+            }
+            // Ear cups.
+            path(fill = stroke) {
+                moveTo(3f, 13.4f)
+                quadTo(3f, 12.6f, 3.8f, 12.6f)
+                lineTo(5.6f, 12.6f)
+                lineTo(5.6f, 18.6f)
+                lineTo(3.8f, 18.6f)
+                quadTo(3f, 18.6f, 3f, 17.8f)
+                close()
+                moveTo(21f, 13.4f)
+                quadTo(21f, 12.6f, 20.2f, 12.6f)
+                lineTo(18.4f, 12.6f)
+                lineTo(18.4f, 18.6f)
+                lineTo(20.2f, 18.6f)
+                quadTo(21f, 18.6f, 21f, 17.8f)
+                close()
+            }
+            // The record, label punched out, spindle hole left solid.
+            path(fill = stroke, pathFillType = PathFillType.EvenOdd) {
+                moveTo(12f, 9.6f)
+                arcToRelative(6f, 6f, 0f, isMoreThanHalf = true, isPositiveArc = true, 0f, 12f)
+                arcToRelative(6f, 6f, 0f, isMoreThanHalf = true, isPositiveArc = true, 0f, -12f)
+                close()
+                moveTo(12f, 13.5f)
+                arcToRelative(2.1f, 2.1f, 0f, isMoreThanHalf = true, isPositiveArc = true, 0f, 4.2f)
+                arcToRelative(2.1f, 2.1f, 0f, isMoreThanHalf = true, isPositiveArc = true, 0f, -4.2f)
+                close()
+            }
+            path(fill = stroke) {
+                moveTo(12f, 14.85f)
+                arcToRelative(0.75f, 0.75f, 0f, isMoreThanHalf = true, isPositiveArc = true, 0f, 1.5f)
+                arcToRelative(0.75f, 0.75f, 0f, isMoreThanHalf = true, isPositiveArc = true, 0f, -1.5f)
+                close()
+            }
+        }.build()
+    }
+
     /** Speed gauge used by high-performance display settings. */
     val Performance: ImageVector by lazy {
         ImageVector.Builder(

@@ -211,6 +211,8 @@ fun BrowseActionsSheet(
     startRenaming: Boolean = false,
     /** Starts a radio off the target (an artist's top song). Null hides the row. */
     onStartRadio: (() -> Unit)? = null,
+    /** Plays these tracks as an AI Mix — see [com.music.bitchord.playback.AiMix]. Null hides the row. */
+    onAiMix: (() -> Unit)? = null,
     /** An artist's star: whether the account follows them, null while unknown or not offered. */
     favorite: Boolean? = null,
     onToggleFavorite: (() -> Unit)? = null,
@@ -263,6 +265,8 @@ fun BrowseActionsSheet(
                 }
                 onShuffle?.let { ActionRow(BitChordIcons.Shuffle, stringResource(R.string.shuffle), onClick = it) }
                 onStartRadio?.let { ActionRow(Icons.Rounded.Radio, stringResource(R.string.start_radio), onClick = it) }
+            onAiMix?.let { ActionRow(BitChordIcons.AiMix, stringResource(R.string.ai_mix), onClick = it) }
+                onAiMix?.let { ActionRow(BitChordIcons.AiMix, stringResource(R.string.ai_mix), onClick = it) }
                 if (favorite != null && onToggleFavorite != null) {
                     ActionRow(
                         if (favorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,

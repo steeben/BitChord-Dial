@@ -120,6 +120,7 @@ suspend fun MediaController.playBoundedContext(
     continuationToken: String?,
     shuffle: Boolean = QueueShuffle.enabled.value,
 ) {
+    AiMix.onNewQueue()
     val token = BoundedContextRequests.put(
         BoundedContextRequests.Request(
             songs = songs,
@@ -144,6 +145,7 @@ suspend fun MediaController.playBoundedContext(
 
 /** Clears the previous queue's service and restart state before starting radio. */
 suspend fun MediaController.beginRadioQueue() {
+    AiMix.onNewQueue()
     sendCustomCommand(
         SessionCommand(ACTION_BEGIN_RADIO_QUEUE, Bundle.EMPTY),
         Bundle.EMPTY,
@@ -854,6 +856,7 @@ fun mediaIdIn(uri: Uri): String? = if (uri.authority == "source") {
  */
 suspend fun MediaController.playSongs(songs: List<Song>, startIndex: Int) {
     if (songs.isEmpty()) return
+    AiMix.onNewQueue()
     sendCustomCommand(
         SessionCommand(ACTION_CLEAR_BOUNDED_CONTEXT, Bundle.EMPTY),
         Bundle.EMPTY,

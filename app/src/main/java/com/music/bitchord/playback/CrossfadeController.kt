@@ -985,6 +985,10 @@ class CrossfadeController(
             AppSettings.smartTransitionWindow.value = null
             return
         }
+        if (AiMix.active.value) {
+            planAiMix(player)
+            return
+        }
         // Nothing to transition *into*, so any analysis state left over from the
         // previous pair is stale — the last track of a queue should not still be
         // claiming both songs are measured.
@@ -1050,6 +1054,151 @@ class CrossfadeController(
         if (remaining > fade + ARM_LEAD_MS) return
 
         begin(fade, endMs = duration, smart = false)
+    }
+
+    /** The track [planAiMix] last moved onto its sample, so it is moved there once. */
+    private var aiMixSeated: String? = null
+
+    /** True while [planAiMix] is fading the mix's last sample out. */
+    private var aiMixFadingOut = false
+
+    /**
+     * AI Mix: the playing track is its [AiMix.SAMPLE_MS] window, and the
+     * next one comes in on its own window over an [AiMix.BLEND_MS] filter
+     * blend — a DJ set of hooks rather than a playlist of songs.
+     *
+     * Rides the same arm-and-blend machinery as Automix, ending the outgoing
+     * track at its window's end rather than its outro and cueing the incoming
+     * one at its window's start rather than its intro. Automix has to stay on
+     * for it, since that is what a blend checks to keep running: switching it
+     * off ends the mix.
+     */
+    private fun planAiMix(player: ExoPlayer) {
+        if (!AppSettings.smartFadeEnabled.value) {
+            AiMix.stop()
+            AppSettings.smartTransitionWindow.value = null
+            return
+        }
+        val item = player.currentMediaItem ?: return
+        val duration = player.duration.takeIf { it != C.TIME_UNSET && it > 0L } ?: return
+        val start = AiMix.windowStart(item.mediaId, duration) { sampleStartMs(item, duration) }
+
+        // A track reached any way but a blend — the first of the mix, a skip,
+        // a tap in the queue — starts at its sample, not at its intro.
+        if (aiMixSeated != item.mediaId) {
+            aiMixSeated = item.mediaId
+            if (player.currentPosition < start - AI_MIX_SEAT_SLACK_MS) {
+                player.seekTo(start)
+                return
+            }
+        }
+
+        val end = minOf(start + AiMix.SAMPLE_MS, duration - AI_MIX_END_GUARD_MS)
+        val fade = minOf(AiMix.BLEND_MS, (end - start) / 3).coerceAtLeast(1_000L)
+        if (end - fade <= 0L) return
+        val position = player.currentPosition
+        AppSettings.smartTransitionWindow.value = TransitionWindow(
+            start = ((end - fade).toFloat() / duration).coerceIn(0f, 1f),
+            end = (end.toFloat() / duration).coerceIn(0f, 1f),
+        )
+        plannedTransition = item.mediaId to (end - fade)
+
+        if (!player.hasNextMediaItem() || player.repeatMode == Player.REPEAT_MODE_ONE) {
+            // The set's last sample: faded out over the blend it would have
+            // spent on a next track, then the set is over.
+            if (player.repeatMode == Player.REPEAT_MODE_ONE) return
+            if (position < end - fade) {
+                if (aiMixFadingOut) {
+                    aiMixFadingOut = false
+                    player.volume = 1f
+                }
+                return
+            }
+            aiMixFadingOut = true
+            player.volume = fallGain(((position - (end - fade)).toFloat() / fade).coerceIn(0f, 1f))
+            if (position >= end) {
+                player.pause()
+                player.volume = 1f
+                aiMixFadingOut = false
+                AiMix.stop()
+                AppSettings.smartTransitionWindow.value = null
+            }
+            return
+        }
+
+        val nextIndex = player.nextMediaItemIndex
+        val nextItem = player.getMediaItemAt(nextIndex)
+        val nextDuration = nextItemDurationMs(nextIndex, nextItem)
+        // Measured where it can be, so the next window can be picked on the
+        // music rather than on a guess.
+        requestAnalysisAround(player, duration)
+
+        holdAhead(player, duration)
+        // Earlier than Automix arms: the incoming track opens mid-song, often
+        // on a stream nothing has fetched yet.
+        if (end - fade - position > AI_MIX_ARM_LEAD_MS) return
+        val cue = AiMix.windowStart(nextItem.mediaId, nextDuration) { sampleStartMs(nextItem, nextDuration) }
+        TrackLog.d(
+            TAG,
+            "AI Mix ${item.mediaId} [${start}..${end}ms] -> ${nextItem.mediaId} @${cue}ms over ${fade}ms",
+            about = null,
+        )
+        begin(
+            fade,
+            endMs = end,
+            smart = true,
+            cueTimeMs = cue,
+            renderStyle = Render(
+                style = TransitionStyle.DJ_FILTER,
+                bassSwap = true,
+                filterSweep = com.music.bitchord.playback.smart.FILTER_SWEEP,
+                filterVariant = FilterTransitionVariant.SWEEP,
+            ),
+        )
+    }
+
+    /**
+     * Where a track's 30-second sample starts: its loudest stretch when
+     * analysis has measured one — the chorus or the drop, nearly always —
+     * pulled back onto the phrase or bar it begins on, and otherwise a third
+     * of the way in, about where a store's preview of the song would start.
+     */
+    private fun sampleStartMs(item: MediaItem, durationMs: Long): Long {
+        val latest = durationMs - AiMix.SAMPLE_MS - AI_MIX_END_GUARD_MS
+        if (latest <= 0L) return 0L
+        val analysis = analysisFor(item)
+        val curve = analysis.energyCurve
+        val fallback = (durationMs * AI_MIX_DEFAULT_FRACTION).roundToLong().coerceIn(0L, latest)
+        if (!analysis.isUsable || curve.size < 8) return fallback
+        val lastSec = latest / 1000.0
+        val span = AiMix.SAMPLE_MS / 1000.0
+        // Skip the intro: a preview that opens on a fade-in is no sample.
+        val earliest = maxOf(analysis.introEndTime, durationMs / 1000.0 * 0.15).coerceAtMost(lastSec)
+        var best = -1.0
+        var bestStart = fallback / 1000.0
+        for (sample in curve) {
+            val from = sample.time
+            if (from < earliest || from > lastSec) continue
+            var total = 0.0
+            var count = 0
+            for (other in curve) {
+                if (other.time >= from && other.time < from + span) {
+                    total += other.energy
+                    count++
+                }
+            }
+            if (count == 0) continue
+            val mean = total / count
+            if (mean > best) {
+                best = mean
+                bestStart = from
+            }
+        }
+        // Back onto the phrase, or failing that the bar, the stretch opens on.
+        val snapTo = analysis.phraseBoundaries.lastOrNull { it <= bestStart && bestStart - it <= AI_MIX_SNAP_SEC }
+            ?: analysis.downbeats.lastOrNull { it <= bestStart && bestStart - it <= AI_MIX_SNAP_SEC }
+            ?: bestStart
+        return (snapTo * 1000).roundToLong().coerceIn(0L, latest)
     }
 
     /**
@@ -3746,6 +3895,21 @@ class CrossfadeController(
          * gets dropped.
          */
         const val ARM_LEAD_MS = 4_000L
+
+        /** How long before its blend AI Mix loads the next sample. */
+        const val AI_MIX_ARM_LEAD_MS = 8_000L
+
+        /** How far before its sample a track can be found playing and still be left alone. */
+        const val AI_MIX_SEAT_SLACK_MS = 2_000L
+
+        /** Kept clear of a file's end, so a sample never runs into the player's own end of track. */
+        const val AI_MIX_END_GUARD_MS = 1_500L
+
+        /** Where an unmeasured track's sample starts, as a fraction of its length. */
+        const val AI_MIX_DEFAULT_FRACTION = 0.33
+
+        /** How far back a sample start may move to begin on a phrase or bar. */
+        const val AI_MIX_SNAP_SEC = 8.0
 
         /**
          * The earliest, in wall-clock ms before the next item starts, that

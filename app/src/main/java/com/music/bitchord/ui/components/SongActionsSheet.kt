@@ -144,6 +144,12 @@ fun SongActionsSheet(
     onPlayNext: () -> Unit,
     onAddToQueue: () -> Unit,
     onStartRadio: () -> Unit,
+    /**
+     * Plays a set of 30-second samples, mixed — from this track's radio, or
+     * from the player, the queue already playing. Null hides the row. See
+     * [com.music.bitchord.playback.AiMix].
+     */
+    onAiMix: (() -> Unit)? = null,
     onDownload: () -> Unit,
     /**
      * Copies this track to the WebDAV server. Null hides the row — the caller
@@ -449,6 +455,14 @@ fun SongActionsSheet(
             accent = palette.accent,
             onClick = onStartRadio,
         )
+        onAiMix?.let {
+            ActionRow(
+                icon = BitChordIcons.AiMix,
+                label = stringResource(R.string.ai_mix),
+                accent = palette.accent,
+                onClick = it,
+            )
+        }
         ActionRow(
             icon = Icons.AutoMirrored.Rounded.PlaylistPlay,
             label = stringResource(R.string.play_next),

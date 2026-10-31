@@ -281,6 +281,7 @@ import com.music.bitchord.playback.PlayerDeepLink
 import com.music.bitchord.playback.QueueBuilder
 import com.music.bitchord.playback.QueueCoordinator
 import com.music.bitchord.playback.QueueCoordinator.asQueueEntry
+import com.music.bitchord.playback.AiMix
 import com.music.bitchord.playback.QueueShuffle
 import com.music.bitchord.playback.QueueSource
 import com.music.bitchord.data.model.QueueTier
@@ -5725,6 +5726,31 @@ private fun BitChordApp(
                 onPlayNext = { playNext(song); songActions = null },
                 onAddToQueue = { addToQueue(song); songActions = null },
                 onStartRadio = { startRadio(song); songActions = null },
+                // From the player, the queue already playing becomes the set,
+                // starting from where this track stands. From a list, the
+                // track's radio does: one song makes a sample, not a set.
+                onAiMix = when {
+                    fromPlayer -> {
+                        {
+                            songActions = null
+                            controller?.let { c ->
+                                AppSettings.setSmartFadeEnabled(true)
+                                AiMix.startNow(c.currentMediaItem?.mediaId, c.currentPosition)
+                                showQueueNotice(context.getString(R.string.ai_mix_started))
+                            }
+                        }
+                    }
+                    song.localUri == null && song.videoId.isNotBlank() -> {
+                        {
+                            songActions = null
+                            AppSettings.setSmartFadeEnabled(true)
+                            AiMix.arm()
+                            startRadioFrom(song, false)
+                            showQueueNotice(context.getString(R.string.ai_mix_started))
+                        }
+                    }
+                    else -> null
+                },
                 onToggleSpeedDial = if (song.videoId.isNotBlank() && song.localUri == null) {
                     {
                         val pinned = CustomizationSettings.toggleSpeedDial(
@@ -6711,6 +6737,14 @@ private fun BitChordApp(
                 onStartRadio = act { songs ->
                     songs.firstOrNull()?.let(startRadio)
                 }.takeIf { target.fromCard && remote },
+                onAiMix = act { songs ->
+                    if (songs.isNotEmpty()) {
+                        AppSettings.setSmartFadeEnabled(true)
+                        AiMix.arm()
+                        play(songs, 0)
+                        showQueueNotice(context.getString(R.string.ai_mix_started))
+                    }
+                },
                 favorite = artistFollow?.subscribed,
                 favoritePending = artistId != null && signedIn && !artistFollowAsked,
                 onToggleFavorite = artistId?.let { id ->
