@@ -1,6 +1,7 @@
 package com.music.bitchord.ui.screens
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,7 +21,12 @@ import org.jetbrains.compose.resources.painterResource
 import com.music.bitchord.sharedui.resources.spotify_logo
 import com.music.bitchord.sharedui.resources.Res
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -42,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.music.bitchord.R
+import com.music.bitchord.ui.icons.BitChordIcons
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.spotify.SpotifyLibrary
 import com.music.bitchord.data.spotify.SpotifyPlaylist
@@ -49,11 +56,15 @@ import com.music.bitchord.data.spotify.SpotifyTrack
 
 /**
  * The signed-in Spotify account's playlists. A tap opens one as an ordinary
- * playlist page ([onOpenPlaylist]) — this screen is only the way in.
+ * playlist page ([onOpenPlaylist]) — this screen is only the way in. Holding
+ * a row, or its overflow, offers pinning it to the speed dial
+ * ([onToggleSpeedDial]), with [isInSpeedDial] saying which way the row reads.
  */
 @Composable
 fun SpotifyLibraryScreen(
     onOpenPlaylist: (SpotifyPlaylist) -> Unit,
+    onToggleSpeedDial: (SpotifyPlaylist) -> Unit,
+    isInSpeedDial: (SpotifyPlaylist) -> Boolean,
     onOpenLogin: () -> Unit,
     onOpenTokenSetup: () -> Unit,
     contentPadding: PaddingValues,
@@ -142,24 +153,33 @@ fun SpotifyLibraryScreen(
                     subtitle = item.owner.orEmpty(),
                     imageUrl = item.imageUrl,
                     onClick = { onOpenPlaylist(item) },
+                    inSpeedDial = isInSpeedDial(item),
+                    onToggleSpeedDial = { onToggleSpeedDial(item) },
                 )
             }
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun LibraryRow(
     title: String,
     subtitle: String,
     imageUrl: String?,
     onClick: () -> Unit,
+    inSpeedDial: Boolean,
+    onToggleSpeedDial: () -> Unit,
 ) {
+    var menuOpen by remember { mutableStateOf(false) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 8.dp),
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = { menuOpen = true },
+            )
+            .padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
@@ -184,6 +204,39 @@ private fun LibraryRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        if (inSpeedDial) {
+            Icon(
+                imageVector = BitChordIcons.Pin,
+                contentDescription = stringResource(R.string.remove_from_speed_dial),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+        Box {
+            IconButton(onClick = { menuOpen = true }) {
+                Icon(
+                    imageVector = Icons.Rounded.MoreVert,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            stringResource(
+                                if (inSpeedDial) R.string.remove_from_speed_dial else R.string.add_to_speed_dial,
+                            ),
+                        )
+                    },
+                    leadingIcon = { Icon(BitChordIcons.Pin, contentDescription = null) },
+                    onClick = {
+                        menuOpen = false
+                        onToggleSpeedDial()
+                    },
                 )
             }
         }

@@ -3783,6 +3783,25 @@ private fun BitChordApp(
                                     type = BrowseType.PLAYLIST,
                                 )
                             },
+                            // Pinned under the same id its page opens with, so
+                            // the dial tile opens it the way this row does.
+                            onToggleSpeedDial = { playlist ->
+                                val pinned = CustomizationSettings.toggleSpeedDial(
+                                    ShelfItem(
+                                        title = playlist.name,
+                                        subtitle = playlist.owner ?: context.getString(R.string.spotify),
+                                        thumbnailUrl = playlist.imageUrl,
+                                        videoId = null,
+                                        browseId = SPOTIFY_PAGE_PREFIX + playlist.id,
+                                    ),
+                                )
+                                showQueueNotice(
+                                    context.getString(
+                                        if (pinned) R.string.added_to_speed_dial else R.string.removed_from_speed_dial,
+                                    ),
+                                )
+                            },
+                            isInSpeedDial = { playlist -> (SPOTIFY_PAGE_PREFIX + playlist.id) in speedDialPinnedIds },
                             onOpenLogin = { showSpotifyLogin = true },
                             onOpenTokenSetup = { showSpotifyCanvasAuth = true },
                             contentPadding = listPadding,
@@ -6542,7 +6561,8 @@ private fun BitChordApp(
                 // channel link, not a release, and nobody asked for it)
                 // and off anything with no real browse id behind it.
                 onShare = target.browseId
-                    ?.takeIf { remote && (target.type == BrowseType.ALBUM || target.type == BrowseType.PLAYLIST) }
+                    ?.takeIf { remote && !it.startsWith(SPOTIFY_PAGE_PREFIX) }
+                    ?.takeIf { target.type == BrowseType.ALBUM || target.type == BrowseType.PLAYLIST }
                     ?.let { id ->
                         {
                             val url = if (target.type == BrowseType.PLAYLIST) {
