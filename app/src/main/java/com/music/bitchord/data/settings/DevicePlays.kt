@@ -26,6 +26,14 @@ object DevicePlays {
     /** The tracks YouTube's history won't have, oldest first. */
     private val songs = LinkedHashMap<String, Song>()
 
+    /**
+     * Every track this device started lately, YouTube's included, oldest
+     * first, as a dial tile would show it. YouTube's history alone left the
+     * dial stale whenever it lagged, failed to load or never heard of a play,
+     * and only twenty rows of it reach Home; this is the dial's own record.
+     */
+    private val recent = LinkedHashMap<String, ShelfItem>()
+
     /** Moves whenever a track YouTube won't hear of starts, so the dial is built again. */
     val version = MutableStateFlow(0)
 
@@ -35,6 +43,7 @@ object DevicePlays {
         synchronized(this) {
             times.clear()
             songs.clear()
+            recent.clear()
             runCatching {
                 val saved = JSONObject(p.getString(KEY, null) ?: return@runCatching)
                 val started = saved.optJSONArray("times") ?: JSONArray()
@@ -56,6 +65,25 @@ object DevicePlays {
                         localPath = o.optStringOrNull("path"),
                     )
                 }
+                val played = saved.optJSONArray("recent") ?: JSONArray()
+                for (i in 0 until played.length()) {
+                    val o = played.getJSONObject(i)
+                    val id = o.getString("id")
+                    recent[id] = ShelfItem(
+                        title = o.optString("title"),
+                        subtitle = o.optString("artist"),
+                        thumbnailUrl = o.optStringOrNull("thumb"),
+                        videoId = id,
+                        browseId = null,
+                        isVideo = o.optBoolean("video", false),
+                    )
+                }
+                // Saved before every play was kept: the library's plays carry over.
+                if (!saved.has("recent")) {
+                    songs.values.forEach { song ->
+                        recent[song.videoId] = ShelfItem(song.title, song.artist, song.thumbnailUrl, song.videoId, null)
+                    }
+                }
             }
         }
     }
@@ -68,6 +96,11 @@ object DevicePlays {
             times.remove(id)
             times[id] = System.currentTimeMillis()
             while (times.size > MAX_TIMES) times.remove(times.keys.first())
+            if (song.title.isNotBlank()) {
+                recent.remove(id)
+                recent[id] = ShelfItem(song.title, song.artist, song.thumbnailUrl, id, null, isVideo = song.isVideo)
+                while (recent.size > MAX_RECENT) recent.remove(recent.keys.first())
+            }
             if (offYouTube) {
                 songs.remove(id)
                 songs[id] = Song(
@@ -83,7 +116,9 @@ object DevicePlays {
             }
             save()
         }
-        if (offYouTube) version.value++
+        // Every start, not only the library's: the dial leads with what was
+        // played last, and this is what keeps it so between Home's fetches.
+        version.value++
     }
 
     /** The saved track behind a dial tile played off YouTube, so it plays from its file again. */
@@ -91,14 +126,14 @@ object DevicePlays {
     fun song(videoId: String?): Song? = videoId?.let { songs[it] }
 
     /**
-     * YouTube's Recently played with this device's off-YouTube plays slotted
-     * in by when they were played. A YouTube row this device never played
+     * YouTube's Recently played with this device's own plays slotted in by
+     * when they were played. A YouTube row this device never played
      * (from another phone, or from before these were kept) takes the time of
      * the nearest row around it that it did, so YouTube's own order holds.
      */
     @Synchronized
     fun withDevicePlays(recents: List<ShelfItem>): List<ShelfItem> {
-        if (songs.isEmpty()) return recents
+        if (recent.isEmpty()) return recents
         val known = recents.map { item -> item.videoId?.let(times::get) }
         // Rows ahead of the first known one take its time; with none known at
         // all, YouTube's rows are taken as older than anything played here.
@@ -107,9 +142,7 @@ object DevicePlays {
             floor = minOf(floor, known[i] ?: floor)
             floor
         }
-        val local = songs.values.reversed().map { song ->
-            ShelfItem(song.title, song.artist, song.thumbnailUrl, song.videoId, null) to (times[song.videoId] ?: 0L)
-        }
+        val local = recent.values.reversed().map { item -> item to (times[item.videoId] ?: 0L) }
         val merged = ArrayList<ShelfItem>(recents.size + local.size)
         var i = 0
         var j = 0
@@ -136,7 +169,21 @@ object DevicePlays {
                     .put("path", song.localPath ?: JSONObject.NULL),
             )
         }
-        prefs?.edit()?.putString(KEY, JSONObject().put("times", started).put("songs", tracks).toString())?.apply()
+        val played = JSONArray()
+        recent.values.forEach { item ->
+            played.put(
+                JSONObject()
+                    .put("id", item.videoId)
+                    .put("title", item.title)
+                    .put("artist", item.subtitle)
+                    .put("thumb", item.thumbnailUrl ?: JSONObject.NULL)
+                    .put("video", item.isVideo),
+            )
+        }
+        prefs?.edit()?.putString(
+            KEY,
+            JSONObject().put("times", started).put("songs", tracks).put("recent", played).toString(),
+        )?.apply()
     }
 
     private fun JSONObject.optStringOrNull(key: String): String? =
@@ -149,6 +196,9 @@ object DevicePlays {
 
     /** More than the dial has room for. */
     private const val MAX_SONGS = 60
+
+    /** Enough that, folded into their albums and playlists, they still fill the dial. */
+    private const val MAX_RECENT = 120
 
     private val YOUTUBE_ID = Regex("""[A-Za-z0-9_-]{11}""")
 }
