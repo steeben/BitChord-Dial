@@ -98,6 +98,10 @@ internal class SharedCalls<T>(
         }
     }
 
+    /** Whether [key] has an answer still inside its TTL, or work on it running. */
+    fun holds(key: String): Boolean =
+        entries[key]?.let { it.work.isActive || now() - it.startedAtMs < ttlMs } == true
+
     /** Everything held, dropped — the configuration it was all about is gone. */
     fun clear() = entries.clear()
 

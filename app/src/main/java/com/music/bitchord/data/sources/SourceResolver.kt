@@ -385,11 +385,18 @@ object SourceResolver {
      *   stream already playing — which [worthSwapping] would reject anyway,
      *   but not before spending a search and a stream call on it. See the
      *   'isn't worth swapping ... off' log line this was written to stop.
+     * @param only when set, the config ids that are asked and no others: the
+     *   sources a previous search gave up waiting on, asked again in the
+     *   background — see [onDeadline].
+     * @param onDeadline told which sources were still running when the
+     *   search gave up on them, if it did.
      */
     suspend fun upgradeFor(
         target: TrackMatcher.Target,
         playing: StreamFormat? = null,
         servedBy: String? = null,
+        only: Set<String>? = null,
+        onDeadline: (stillRunning: Set<String>) -> Unit = {},
     ): SourceStream? {
         if (target.title.isBlank() || target.durationSec == null || target.isVideo) return null
         val request = requestForNow()
@@ -424,12 +431,15 @@ object SourceResolver {
         // and the seam then landed mid-song rather than near its start. Raced,
         // the same swap happens inside a second.
         val (source, chosen) = bestAcross(
-            rankedAbove(youtube.configId, active).filterNot { it.configId == servedBy },
+            rankedAbove(youtube.configId, active)
+                .filterNot { it.configId == servedBy }
+                .filter { only == null || it.configId in only },
             target,
             request,
             waitForAll = true,
             strictLength = true,
             requireSharedArtist = true,
+            onDeadline = onDeadline,
         ) { candidate, stream ->
             worthSwapping(stream.format, playing).also { worth ->
                 // Named rather than skipped silently. This is the one refusal
@@ -808,9 +818,10 @@ object SourceResolver {
         waitForAll: Boolean = false,
         strictLength: Boolean = false,
         requireSharedArtist: Boolean = false,
+        onDeadline: (stillRunning: Set<String>) -> Unit = {},
         accept: (MusicSource, SourceStream) -> Boolean = { _, _ -> true },
     ): Pair<MusicSource, SourceStream>? = coroutineScope {
-        val names = HashMap<Deferred<*>, String>()
+        val names = HashMap<Deferred<*>, MusicSource>()
         val running: MutableList<Deferred<Pair<MusicSource, SourceStream?>>> = sources
             .map { source ->
                 async {
@@ -822,7 +833,7 @@ object SourceResolver {
                         strictLength,
                         requireSharedArtist,
                     )
-                }.also { names[it] = source.displayName }
+                }.also { names[it] = source }
             }
             .toMutableList()
         var best: Pair<MusicSource, SourceStream>? = null
@@ -838,7 +849,11 @@ object SourceResolver {
                     else UPGRADE_GRACE_MS - (now - bestSince)
                 val waitMs = minOf(graceMs, deadline - now)
                 if (waitMs <= 0) {
-                    if (best == null) logDeadline(target, running.mapNotNull { names[it] })
+                    if (best == null) {
+                        val still = running.mapNotNull { names[it] }
+                        logDeadline(target, still.map { it.displayName })
+                        onDeadline(still.map { it.configId }.toSet())
+                    }
                     break
                 }
                 val first = withTimeoutOrNull(waitMs) {
@@ -847,7 +862,11 @@ object SourceResolver {
                     }
                 }
                 if (first == null) {
-                    if (best == null) logDeadline(target, running.mapNotNull { names[it] })
+                    if (best == null) {
+                        val still = running.mapNotNull { names[it] }
+                        logDeadline(target, still.map { it.displayName })
+                        onDeadline(still.map { it.configId }.toSet())
+                    }
                     break
                 }
                 // Anything that crossed the line while that one was being waited
@@ -1220,9 +1239,11 @@ object SourceResolver {
      * an addon's search and then its stream call to each run close to
      * [com.music.bitchord.data.sources.addon.AddonClient]'s ceiling: gglos
      * took 39s to search a cold track and then answered the stream call
-     * just after a 40s deadline had already given up on it.
+     * just after a 40s deadline had already given up on it. Past this the
+     * badge comes down and [com.music.bitchord.playback.QualityUpgrade]
+     * keeps asking the slow sources in the background.
      */
-    internal const val UPGRADE_DEADLINE_MS = 120_000L
+    internal const val UPGRADE_DEADLINE_MS = 75_000L
 
     /**
      * How close two runtimes have to be to be the same cut of a song.

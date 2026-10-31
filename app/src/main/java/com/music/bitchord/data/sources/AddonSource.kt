@@ -86,7 +86,7 @@ class AddonSource(
      */
     private suspend fun admitted(what: String): Boolean {
         if (shutOut(what)) return false
-        client.manifest().getOrNull()?.let(::recordPolicy)
+        client.manifestForRequest()?.let(::recordPolicy)
         return !shutOut(what)
     }
 

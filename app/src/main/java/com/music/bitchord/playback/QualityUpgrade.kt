@@ -64,9 +64,16 @@ object QualityUpgrade {
     /**
      * The most [lookAgain]'s fresh search may take before it is read as "no
      * better copy". Kept past [SourceResolver.UPGRADE_DEADLINE_MS] so that
-     * deadline, which still keeps whatever answer is in hand, normally wins.
+     * deadline, which still keeps whatever answer is in hand, normally wins,
+     * plus the background pass after it.
      */
-    private const val LOOK_AGAIN_BACKSTOP_MS = 135_000L
+    private const val LOOK_AGAIN_BACKSTOP_MS = 270_000L
+
+    /**
+     * How long [lookAgain] keeps asking, without the badge, the sources its
+     * first search gave up waiting on.
+     */
+    private const val BACKGROUND_LOOK_MS = 150_000L
 
     /**
      * A track playing on less than was asked for.
@@ -506,12 +513,36 @@ object QualityUpgrade {
             // [SourceResolver.upgradeFor] has its own deadline; this is the
             // backstop that guarantees the badge comes down even if a source
             // ignores it. Running out counts as an answer: nothing better.
+            val target = waiting.target.copy(durationSec = effectiveDurationSec)
+            var slow: Set<String> = emptySet()
             withTimeoutOrNull(LOOK_AGAIN_BACKSTOP_MS) {
                 SourceResolver.upgradeFor(
-                    waiting.target.copy(durationSec = effectiveDurationSec),
+                    target,
                     playing = waiting.playing,
                     servedBy = waiting.servedBy,
-                ).also { answered = true }
+                    onDeadline = { slow = it },
+                ).let { first ->
+                    // A deadline is not a no. The sources it gave up on are
+                    // usually still working (their calls run on and are
+                    // cached), and gglos in particular answers a cold track
+                    // well after any wait worth showing a badge for. The badge
+                    // comes down and they are asked again quietly; a late
+                    // answer puts it back up and swaps in like any other.
+                    if (first != null || slow.isEmpty()) return@let first
+                    NerdStats.onLosslessRaceEnd(mediaId)
+                    TrackLog.d(TAG, "'${target.title}': still asking the slow sources in the background", about = mediaId)
+                    withTimeoutOrNull(BACKGROUND_LOOK_MS) {
+                        SourceResolver.upgradeFor(
+                            target,
+                            playing = waiting.playing,
+                            servedBy = waiting.servedBy,
+                            only = slow,
+                        )
+                    }?.also {
+                        NerdStats.onLosslessRaceStart(mediaId)
+                        TrackLog.d(TAG, "'${target.title}': a slow source answered after all", about = mediaId)
+                    }
+                }.also { answered = true }
             }.also {
                 if (!answered) {
                     TrackLog.w(TAG, "no source answered within ${LOOK_AGAIN_BACKSTOP_MS / 1000}s; keeping current copy", about = mediaId)

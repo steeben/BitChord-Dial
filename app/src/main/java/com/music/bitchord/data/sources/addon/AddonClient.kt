@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -104,7 +105,7 @@ class AddonClient(rawBaseUrl: String) {
             if (failure is AddonNotFound) throw AddonException("No manifest at that URL")
             throw failure
         }
-    }
+    }.onSuccess { lastManifest = it }
 
     /**
      * Whether the search endpoint answers, asked without reference to a
@@ -172,6 +173,28 @@ class AddonClient(rawBaseUrl: String) {
         }
     }
 
+    /** The last manifest this addon answered with; see [manifestForRequest]. */
+    @Volatile
+    private var lastManifest: AddonManifest? = null
+
+    /**
+     * The manifest for a search or stream call to read its settings and
+     * policy from, without waiting on a refresh.
+     *
+     * Once its ten minutes run out, [manifest] fetches the document again,
+     * and every request queued behind that waited for it. A slow addon made
+     * that the longest step of all: gglos took 43s to send its manifest
+     * before the search it was holding up could even start. A manifest
+     * changes when the addon is redeployed, not between one track and the
+     * next, so the last good copy is used while a fresh one is fetched
+     * beside the request.
+     */
+    suspend fun manifestForRequest(): AddonManifest? {
+        val known = lastManifest ?: return manifest().getOrNull()
+        if (!manifests.holds(baseUrl)) calls.launch { manifest() }
+        return known
+    }
+
     // ── Settings passthrough ──────────────────────────────────────────────
 
     /**
@@ -203,7 +226,7 @@ class AddonClient(rawBaseUrl: String) {
      * quality. See [atmosHint].
      */
     private suspend fun settingsFor(tier: String): Map<String, String> {
-        val declared = manifest().getOrNull()?.settings.orEmpty()
+        val declared = manifestForRequest()?.settings.orEmpty()
         val params = LinkedHashMap<String, String>()
         declared.forEach { setting ->
             val key = setting.key.takeIf { it.isNotBlank() } ?: return@forEach
@@ -390,6 +413,7 @@ class AddonClient(rawBaseUrl: String) {
      */
     fun clear() {
         manifests.clear()
+        lastManifest = null
         searches.clear()
         streams.clear()
         quietUntilMs = 0L
