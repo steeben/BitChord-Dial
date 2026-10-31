@@ -4308,6 +4308,7 @@ private fun BitChordApp(
                             topPicksLoading = topPicksLoading,
                             listenerName = account?.name,
                             onTopPickClick = openTopPick,
+                            onMoodClick = { mood, label -> openTopPick(TopPicks.moodStation(mood), label) },
                             artworkMotion = artworkMotion,
                             onTopPickLongPress = { pick ->
                                 pick.browseId?.let { browseId ->

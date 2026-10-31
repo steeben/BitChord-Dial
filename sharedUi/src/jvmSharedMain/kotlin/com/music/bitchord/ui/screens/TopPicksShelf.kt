@@ -354,14 +354,14 @@ private fun TopPickCard(
         }
         if (branded) {
             Icon(
-                painter = painterResource(Res.drawable.ic_logo),
+                painter = painterResource(Res.drawable.ic_dial_logo),
                 contentDescription = null,
                 tint = Color.White,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(top = 12.dp, end = 12.dp)
                     .height(15.dp)
-                    .aspectRatio(730f / 484f),
+                    .aspectRatio(DIAL_LOGO_ASPECT),
             )
         }
         CardCaption(text, eyebrowColor, Modifier.align(Alignment.BottomStart))
@@ -1554,17 +1554,32 @@ internal fun FindYourMoodShelf(onClick: (TopPickMood, String) -> Unit, onShowAll
     val rowState = rememberLazyListState()
     Column(Modifier.padding(bottom = 26.dp)) {
         SectionHeader(stringResource(Res.string.find_your_mood), onShowAll = onShowAll)
-        ShelfRow(
-            contentPadding = PaddingValues(horizontal = PAGE_GUTTER),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            state = rowState,
-        ) {
-            items(TopPickMood.entries.filter { it.isCoreMood }, key = { it.name }) { mood ->
-                MoodTile(mood, onClick, Modifier.width(SHELF_CARD_WIDTH))
+        BoxWithConstraints {
+            // Big tiles, a little over two to a phone's width so the third
+            // peeks in, as official BitChord lays them out. Held back on a
+            // tablet the way the hero cards are.
+            val tileWidth = minOf((maxWidth - PAGE_GUTTER) / MOOD_TILES_ACROSS, MOOD_TILE_MAX_WIDTH)
+            ShelfRow(
+                contentPadding = PaddingValues(horizontal = PAGE_GUTTER),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                state = rowState,
+            ) {
+                items(TopPickMood.entries.filter { it.isCoreMood }, key = { it.name }) { mood ->
+                    MoodTile(mood, onClick, Modifier.width(tileWidth))
+                }
             }
         }
     }
 }
+
+/** How many Find Your Mood tiles fit across the row, the last one peeking. */
+private const val MOOD_TILES_ACROSS = 2.25f
+
+/** The widest a Find Your Mood tile gets, on a tablet. */
+private val MOOD_TILE_MAX_WIDTH = 220.dp
+
+/** Width over height of [Res.drawable.ic_dial_logo], the mark in a card's corner. */
+private const val DIAL_LOGO_ASPECT = 372f / 222f
 
 /**
  * Every mood and activity, laid out as the Library's Show all grid is — the
@@ -1612,14 +1627,14 @@ private fun MoodTile(mood: TopPickMood, onClick: (TopPickMood, String) -> Unit, 
             // Picks' own, one card at a time.
             MoodArt(mood, mood.style(), Modifier.fillMaxSize(), square = true, still = true)
             Icon(
-                painter = painterResource(Res.drawable.ic_logo),
+                painter = painterResource(Res.drawable.ic_dial_logo),
                 contentDescription = null,
                 tint = Color.White,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(top = 8.dp, end = 8.dp)
-                    .height(11.dp)
-                    .aspectRatio(730f / 484f),
+                    .padding(top = 10.dp, end = 10.dp)
+                    .height(13.dp)
+                    .aspectRatio(DIAL_LOGO_ASPECT),
             )
         }
         Spacer(Modifier.height(10.dp))

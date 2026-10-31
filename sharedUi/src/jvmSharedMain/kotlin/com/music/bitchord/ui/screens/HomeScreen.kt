@@ -71,6 +71,13 @@ import coil3.compose.AsyncImage
 import com.music.bitchord.data.model.CARD_ART_PX
 import com.music.bitchord.data.model.HEADER_ART_PX
 import com.music.bitchord.data.model.HomeShelf
+import com.music.bitchord.data.model.ShelfLayout
+import com.music.bitchord.data.model.TopPickMood
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import com.music.bitchord.data.model.TopPick
 import com.music.bitchord.data.model.ROW_ART_PX
 import com.music.bitchord.data.model.ShelfItem
@@ -202,8 +209,14 @@ fun HomeScreen(
     onTopPickLongPress: ((TopPick) -> Unit)? = null,
     /** Whether the Top Picks artwork may animate — see [LocalArtworkMotion]. */
     artworkMotion: Boolean = true,
+    /**
+     * Plays a mood's station from the Find Your Mood row. The row is only
+     * shown by a caller that passes this.
+     */
+    onMoodClick: ((TopPickMood, String) -> Unit)? = null,
 ) {
     val recentsViewType by AppUi.host.homeRecentsViewType.collectAsStateWithLifecycle()
+    var showAllMoods by remember { mutableStateOf(false) }
 
     PullToRefresh(
         refreshing = refreshing,
@@ -277,6 +290,17 @@ fun HomeScreen(
                 }
             }
         }
+        // Find Your Mood, a few rows down the feed — see [itemsIndexedShelves].
+        val moodsItem: (androidx.compose.foundation.lazy.LazyListScope.() -> Unit)? =
+            if (onMoodClick != null) {
+                {
+                    item(key = "find-your-mood") {
+                        FindYourMoodShelf(onClick = onMoodClick, onShowAll = { showAllMoods = true })
+                    }
+                }
+            } else {
+                null
+            }
         val density = LocalDensity.current
         val artistPageShown by rememberUpdatedState(
             (state as? UiState.Success)?.data?.getOrNull(1)?.title == ARTIST_DIAL_SHELF_TITLE,
@@ -378,6 +402,7 @@ fun HomeScreen(
                             if (dialLeads && !holdSpeedDial) bannerItem()
                             topPicksItem()
                         },
+                        moodsItem = moodsItem,
                         onSpeedDialReorder = onSpeedDialReorder,
                         recentsViewType = recentsViewType,
                         onRecentsViewTypeToggle = {
@@ -394,6 +419,31 @@ fun HomeScreen(
                 }
             }
         }
+        }
+    }
+
+    if (showAllMoods && onMoodClick != null) {
+        // Find Your Mood's Show all: every mood and activity, in a sheet over
+        // Home rather than a page of its own, so closing it leaves Home where
+        // it was.
+        ModalBottomSheet(
+            onDismissRequest = { showAllMoods = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        ) {
+            Text(
+                text = stringResource(Res.string.find_your_mood),
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.padding(horizontal = PAGE_GUTTER, vertical = 8.dp),
+            )
+            MoodGridPage(
+                gridState = rememberLazyGridState(),
+                onClick = { mood, label ->
+                    showAllMoods = false
+                    onMoodClick(mood, label)
+                },
+                contentPadding = PaddingValues(top = 8.dp, bottom = 32.dp),
+            )
         }
     }
 
@@ -463,6 +513,11 @@ private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexedShelves(
     dialHistoryLabel: String = "",
     /** Items to put straight after the lead page (or pages: the dials). */
     afterLead: (androidx.compose.foundation.lazy.LazyListScope.() -> Unit)? = null,
+    /**
+     * Find Your Mood: after Recents, as official BitChord has it, or a few
+     * shelves into the feed when Recents is hidden.
+     */
+    moodsItem: (androidx.compose.foundation.lazy.LazyListScope.() -> Unit)? = null,
     onSpeedDialReorder: ((List<ShelfItem>) -> Unit)? = null,
     recentsViewType: LibraryViewType,
     onRecentsViewTypeToggle: () -> Unit,
@@ -473,8 +528,17 @@ private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexedShelves(
     // ranked higher in Settings, the artists' dial turning up) would otherwise
     // give every shelf under it a new key, and each would fade out and back in.
     val seen = HashMap<String, Int>()
+    val recentsIndex = shelves.indexOfFirst { it.title.equals(RECENTS_TITLE, ignoreCase = true) }
+    // The shelf Find Your Mood goes in front of: the one after Recents, never
+    // above the dials or the row that follows them, and at the end when the
+    // feed is shorter than that.
+    val moodsBefore = maxOf(
+        if (recentsIndex >= 0) recentsIndex + 1 else leadCount + MOODS_FEED_OFFSET,
+        leadCount,
+    ).coerceAtMost(shelves.size)
     shelves.forEachIndexed { index, shelf ->
         if (index == leadCount) afterLead?.invoke(this)
+        if (index == moodsBefore) moodsItem?.invoke(this)
         val repeat = seen.getOrElse(shelf.title) { 0 }
         seen[shelf.title] = repeat + 1
         item(key = homeShelfKey(shelf.title) + if (repeat > 0) "#$repeat" else "") {
@@ -539,6 +603,24 @@ private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexedShelves(
                         currentSong = currentSong,
                         isPlaying = isPlaying,
                     )
+                } else if (shelf.layout == ShelfLayout.LIST) {
+                    // Listen again, Top songs, Trending: rows four to a
+                    // column, paging sideways, as official BitChord has them.
+                    ListShelf(
+                        shelf = shelf,
+                        onItemClick = openItem,
+                        onItemLongPress = onItemLongPress,
+                        currentSong = currentSong,
+                        isPlaying = isPlaying,
+                    )
+                } else if (shelf.layout == ShelfLayout.VIDEO) {
+                    VideoShelf(
+                        shelf = shelf,
+                        onItemClick = openItem,
+                        onItemLongPress = onItemLongPress,
+                        currentSong = currentSong,
+                        isPlaying = isPlaying,
+                    )
                 } else {
                     Shelf(
                         shelf = shelf,
@@ -552,6 +634,89 @@ private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexedShelves(
         }
     }
     if (shelves.size == leadCount) afterLead?.invoke(this)
+    if (moodsBefore == shelves.size && shelves.size >= leadCount) moodsItem?.invoke(this)
+}
+
+/** How many feed shelves Find Your Mood sits under when there is no Recents to follow. */
+private const val MOODS_FEED_OFFSET = 2
+
+/**
+ * A shelf YouTube lists as rows (Listen again, Top songs, Trending): four rows
+ * to a column, the columns paging sideways with the next one peeking in, the
+ * way Recents lays out. A music video keeps its own 16:9 still.
+ */
+@Composable
+private fun ListShelf(
+    shelf: HomeShelf,
+    onItemClick: (ShelfItem) -> Unit,
+    onItemLongPress: ((ShelfItem) -> Unit)?,
+    currentSong: Song?,
+    isPlaying: Boolean,
+) {
+    Column(Modifier.padding(bottom = 26.dp)) {
+        SectionHeader(shelf.title, shelf.subtitle)
+        BoxWithConstraints {
+            val columnWidth = trackColumnWidth(maxWidth)
+            ShelfRow(
+                contentPadding = PaddingValues(horizontal = PAGE_GUTTER),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items(shelf.items.chunked(RECENT_TRACKS_PER_COLUMN)) { column ->
+                    Column(Modifier.width(columnWidth)) {
+                        column.forEach { item ->
+                            val current = item.matchesCurrentlyPlaying(currentSong)
+                            CompactTrackRow(
+                                title = item.title,
+                                subtitle = localizeCardSubtitle(item.subtitle),
+                                thumbnailUrl = item.thumbnailUrl,
+                                onClick = { onItemClick(item) },
+                                onLongPress = onItemLongPress?.let { { it(item) } },
+                                isCurrent = current,
+                                isPlaying = current && isPlaying,
+                                isVideo = item.isVideo,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * A shelf of music videos: wide 16:9 cards, most of the screen across with
+ * the next one peeking in, as official BitChord's New music videos.
+ */
+@Composable
+private fun VideoShelf(
+    shelf: HomeShelf,
+    onItemClick: (ShelfItem) -> Unit,
+    onItemLongPress: ((ShelfItem) -> Unit)?,
+    currentSong: Song?,
+    isPlaying: Boolean,
+) {
+    Column(Modifier.padding(bottom = 26.dp)) {
+        SectionHeader(shelf.title, shelf.subtitle)
+        BoxWithConstraints {
+            val cardWidth = heroCardWidth(maxWidth)
+            ShelfRow(
+                contentPadding = PaddingValues(horizontal = PAGE_GUTTER),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                items(shelf.items) { item ->
+                    val current = item.matchesCurrentlyPlaying(currentSong)
+                    VideoShelfCard(
+                        item = item,
+                        onClick = { onItemClick(item) },
+                        onLongPress = onItemLongPress?.let { { it(item) } },
+                        modifier = Modifier.width(cardWidth),
+                        isCurrent = current,
+                        isPlaying = current && isPlaying,
+                    )
+                }
+            }
+        }
+    }
 }
 
 /** The same four-rows-per-page treatment used by an artist's Top songs. */
@@ -709,6 +874,8 @@ fun CompactTrackRow(
     onLongPress: (() -> Unit)?,
     isCurrent: Boolean = false,
     isPlaying: Boolean = false,
+    /** A music video: its still drawn at 16:9, as wide as it is, not cropped square. */
+    isVideo: Boolean = false,
 ) {
     Row(
         modifier = Modifier
@@ -718,13 +885,15 @@ fun CompactTrackRow(
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(48.dp)) {
+        val artWidth = if (isVideo) 48.dp * VIDEO_ASPECT else 48.dp
+        Box(Modifier.size(width = artWidth, height = 48.dp)) {
             AsyncImage(
-                model = thumbnailUrl.artworkAt(ROW_ART_PX),
+                // Video stills aren't resizable googleusercontent art.
+                model = if (isVideo) thumbnailUrl else thumbnailUrl.artworkAt(ROW_ART_PX),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(width = artWidth, height = 48.dp)
                     .clip(RoundedCornerShape(7.dp))
                     .thumbnailBorder(RoundedCornerShape(7.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant),
