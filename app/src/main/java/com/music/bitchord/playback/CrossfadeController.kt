@@ -1183,7 +1183,7 @@ class CrossfadeController(
         minOf(start + AiMix.SAMPLE_MS, durationMs - AI_MIX_END_GUARD_MS).coerceAtLeast(start)
 
     /**
-     * Where a track's 30-second sample starts: its loudest stretch when
+     * Where a track's sample starts: its loudest stretch when
      * analysis has measured one — the chorus or the drop, nearly always —
      * pulled back onto the phrase or bar it begins on, and otherwise a third
      * of the way in, about where a store's preview of the song would start.

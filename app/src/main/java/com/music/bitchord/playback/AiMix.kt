@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * AI Mix: the queue played as a DJ set of 30-second samples.
+ * AI Mix: the queue played as a DJ set of 50-second samples.
  *
  * Each track plays one [SAMPLE_MS] window, its hook rather than its intro,
  * and Automix blends it into the next track's window — see
@@ -27,9 +27,9 @@ import java.util.concurrent.ConcurrentHashMap
  */
 object AiMix {
     /** How long each track plays, its blend into the next included. */
-    const val SAMPLE_MS = 30_000L
+    const val SAMPLE_MS = 50_000L
 
-    /** How long two samples overlap. A third of a sample reads as a mix, not a skip. */
+    /** How long two samples overlap: long enough to read as a mix, not a skip. */
     const val BLEND_MS = 8_000L
 
     /** How long an [arm] waits for its queue before it lapses. */

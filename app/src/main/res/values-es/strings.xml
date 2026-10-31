@@ -1367,7 +1367,7 @@
     <string name="saved_on_this_device">Guardada en este dispositivo</string>
     <string name="search_spotify_hint">Buscar en Spotify</string>
     <string name="search_spotify_signed_out">Inicia sesión en Spotify desde la página de Spotify de la Biblioteca para buscar aquí.</string>
-    <string name="ai_mix_started">AI Mix: fragmentos de 30 segundos mezclados como una sesión de DJ</string>
+    <string name="ai_mix_started">AI Mix: fragmentos de 50 segundos mezclados como una sesión de DJ</string>
     <string name="ai_mix_enabled">(activado)</string>
     <string name="ai_mix_stopped">AI Mix desactivado</string>
 </resources>

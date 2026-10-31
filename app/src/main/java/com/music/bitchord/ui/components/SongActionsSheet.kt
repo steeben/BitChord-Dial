@@ -145,7 +145,7 @@ fun SongActionsSheet(
     onAddToQueue: () -> Unit,
     onStartRadio: () -> Unit,
     /**
-     * Plays a set of 30-second samples, mixed — from this track's radio, or
+     * Plays a set of 50-second samples, mixed — from this track's radio, or
      * from the player, the queue already playing. Null hides the row. See
      * [com.music.bitchord.playback.AiMix].
      */

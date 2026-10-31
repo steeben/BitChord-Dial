@@ -536,7 +536,7 @@
     <string name="ai_mix" translatable="false">AI Mix (beta)</string>
     <string name="ai_mix_enabled">(enabled)</string>
     <string name="ai_mix_stopped">AI Mix off</string>
-    <string name="ai_mix_started">AI Mix: 30-second samples, mixed like a DJ set</string>
+    <string name="ai_mix_started">AI Mix: 50-second samples, mixed like a DJ set</string>
     <string name="shared_link">Shared link</string>
     <string name="radio_started">%1$s radio started</string>
     <string name="saved_to_bitchord_folder">Saved to Music/BitChord</string>

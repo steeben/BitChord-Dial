@@ -1163,7 +1163,7 @@
     <string name="saved_on_this_device">이 기기에 저장됨</string>
     <string name="search_spotify_hint">Spotify 검색</string>
     <string name="search_spotify_signed_out">여기서 검색하려면 보관함의 Spotify 페이지에서 Spotify에 로그인하세요.</string>
-    <string name="ai_mix_started">AI Mix: 30초 샘플을 DJ 세트처럼 믹스</string>
+    <string name="ai_mix_started">AI Mix: 50초 샘플을 DJ 세트처럼 믹스</string>
     <string name="ai_mix_enabled">(사용 중)</string>
     <string name="ai_mix_stopped">AI Mix 꺼짐</string>
 </resources>

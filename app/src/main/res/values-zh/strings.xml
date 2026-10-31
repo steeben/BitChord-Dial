@@ -1372,7 +1372,7 @@
     <string name="saved_on_this_device">已保存在此设备上</string>
     <string name="search_spotify_hint">搜索 Spotify</string>
     <string name="search_spotify_signed_out">请在媒体库的 Spotify 页面登录 Spotify，即可在此搜索。</string>
-    <string name="ai_mix_started">AI Mix：30 秒片段，像 DJ 现场一样混音</string>
+    <string name="ai_mix_started">AI Mix：50 秒片段，像 DJ 现场一样混音</string>
     <string name="ai_mix_enabled">（已启用）</string>
     <string name="ai_mix_stopped">AI Mix 已关闭</string>
 </resources>

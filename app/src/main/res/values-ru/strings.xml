@@ -1427,7 +1427,7 @@
     <string name="saved_on_this_device">Сохранено на этом устройстве</string>
     <string name="search_spotify_hint">Поиск в Spotify</string>
     <string name="search_spotify_signed_out">Войдите в Spotify на странице Spotify в Медиатеке, чтобы искать здесь.</string>
-    <string name="ai_mix_started">AI Mix: 30-секундные фрагменты, сведённые как DJ-сет</string>
+    <string name="ai_mix_started">AI Mix: 50-секундные фрагменты, сведённые как DJ-сет</string>
     <string name="ai_mix_enabled">(включён)</string>
     <string name="ai_mix_stopped">AI Mix выключен</string>
 </resources>

@@ -1395,7 +1395,7 @@
     <string name="saved_on_this_device">Auf diesem Gerät gespeichert</string>
     <string name="search_spotify_hint">Spotify durchsuchen</string>
     <string name="search_spotify_signed_out">Melde dich auf der Spotify-Seite der Mediathek bei Spotify an, um hier zu suchen.</string>
-    <string name="ai_mix_started">AI Mix: 30-Sekunden-Ausschnitte, gemischt wie ein DJ-Set</string>
+    <string name="ai_mix_started">AI Mix: 50-Sekunden-Ausschnitte, gemischt wie ein DJ-Set</string>
     <string name="ai_mix_enabled">(aktiviert)</string>
     <string name="ai_mix_stopped">AI Mix aus</string>
 </resources>
