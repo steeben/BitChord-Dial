@@ -84,8 +84,8 @@ private const val REPAINT_TIMEOUT_MS = 700L
  */
 private const val REVEAL_DELAY_MS = 1_000L
 private const val REVEAL_WIPE_MS = 1_600
-/** Width of the wipe's soft edge, as a share of the corner-to-corner diagonal. */
-private const val REVEAL_WIPE_BAND = 0.45f
+/** See [CANVAS_REVEAL_WIPE_BAND]. */
+private const val REVEAL_WIPE_BAND = CANVAS_REVEAL_WIPE_BAND
 
 /**
  * The looping video that plays over a track's cover art, sized to fill and
@@ -393,10 +393,12 @@ internal fun AndroidCanvasArtworkPlayer(
     val sweeping = revealed && wipe.value < 1f
     val alpha by animateFloatAsState(
         targetValue = if (revealed) 1f else 0f,
-        // Long enough to read as a crossfade from the still artwork, and the
-        // length of the sweep while there is one, so the two land together.
+        // Long enough to read as a crossfade from the still artwork. Straight
+        // up while there is a sweep, which does the fading itself: that keeps
+        // the cover this reports equal to the sweep's progress, which is what
+        // a caller erasing its still art on the same front needs to follow.
         animationSpec = tween(
-            durationMillis = if (sweeping) REVEAL_WIPE_MS else 650,
+            durationMillis = if (sweeping) 0 else 650,
             easing = FastOutSlowInEasing,
         ),
         label = "canvasAlpha",

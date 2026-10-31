@@ -398,6 +398,13 @@ fun CanvasArtworkPlayer(
 /** The longest edge of a frame handed to [CanvasArtworkPlayer]'s onFrameCaptured. */
 const val CANVAS_FRAME_CAPTURE_PX = 128
 
+/**
+ * Width of the soft edge on a clip's first diagonal sweep, as a share of its
+ * corner-to-corner diagonal. Shared so the still art going out ahead of the
+ * clip can be erased on exactly the front the clip comes in behind.
+ */
+const val CANVAS_REVEAL_WIPE_BAND = 0.45f
+
 /** Media3's repeat modes, by value, so the transport can speak them without Media3. */
 object RepeatModes {
     const val OFF = 0

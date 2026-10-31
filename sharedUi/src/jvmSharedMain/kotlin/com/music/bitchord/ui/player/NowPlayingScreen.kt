@@ -97,6 +97,7 @@ import org.jetbrains.compose.resources.stringArrayResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.graphics.layer.drawLayer
@@ -139,6 +140,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
@@ -293,6 +295,48 @@ private fun Modifier.trimBy(top: Dp, bottom: Dp, fraction: () -> Float): Modifie
     layout(placeable.width, (placeable.height - cutTop - cutBottom).coerceAtLeast(0)) {
         placeable.place(0, -cutTop)
     }
+}
+
+/**
+ * Erases this layer behind a full-screen Canvas's first sweep, on the clip's
+ * own diagonal: the same soft front, at the same place on screen, that the clip
+ * comes in behind. Whatever wears it — the sleeve, the blur under it, the
+ * backdrop — leaves as one picture with the clip taking its place, rather than
+ * each on a timing of its own. [clipBounds] is the clip's view in root
+ * coordinates; [progress] is how far its sweep has got.
+ */
+private fun Modifier.canvasSweepOut(
+    enabled: () -> Boolean,
+    progress: () -> Float,
+    clipBounds: () -> Rect,
+): Modifier = composed {
+    val origin = remember { floatArrayOf(0f, 0f) }
+    onGloballyPositioned {
+        val at = it.positionInRoot()
+        origin[0] = at.x
+        origin[1] = at.y
+    }
+        // Offscreen, so the erase reaches only this layer's own pixels.
+        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+        .drawWithContent {
+            drawContent()
+            if (!enabled()) return@drawWithContent
+            val wipe = progress().coerceIn(0f, 1f)
+            val clip = clipBounds()
+            if (wipe <= 0f || clip.width <= 0f || clip.height <= 0f) return@drawWithContent
+            val start = -CANVAS_REVEAL_WIPE_BAND + wipe * (1f + CANVAS_REVEAL_WIPE_BAND)
+            val end = start + CANVAS_REVEAL_WIPE_BAND
+            val dx = clip.left - origin[0]
+            val dy = clip.top - origin[1]
+            drawRect(
+                brush = Brush.linearGradient(
+                    colors = listOf(Color.Black, Color.Transparent),
+                    start = Offset(dx + clip.width * start, dy + clip.height * start),
+                    end = Offset(dx + clip.width * end, dy + clip.height * end),
+                ),
+                blendMode = BlendMode.DstOut,
+            )
+        }
 }
 
 /** Folds this away to no height as [fraction] runs from 0 to 1, fading as it goes. */
@@ -1462,6 +1506,13 @@ fun NowPlayingScreen(
     var canvasPresented by remember(canvas?.url) { mutableStateOf(false) }
     LaunchedEffect(canvasRendered) {
         if (canvasRendered) {
+            // A full-screen clip's own layout waits for its sweep to finish:
+            // until then the still sleeve and its blur are what is on screen,
+            // going out ahead of the clip, and the clip's dim and glass deck
+            // arriving under them turned the lot grey before the sweep reached it.
+            if (spotifyCanvasFullscreen) {
+                snapshotFlow { canvasCover.floatValue >= 0.999f }.first { it }
+            }
             canvasPresented = true
         } else {
             delay(CANVAS_DROP_GRACE_MS)
@@ -1469,6 +1520,18 @@ fun NowPlayingScreen(
         }
     }
     val spotifyCanvasPresentation = spotifyCanvasFullscreen && canvasPresented
+    // The stretch between a full-screen clip's first frame and its layout
+    // taking over: the sleeve, its blur and the backdrop are swept out on the
+    // clip's diagonal (see [canvasSweepOut]) instead of each fading on its own.
+    val canvasSweepPhase = spotifyCanvasFullscreen && !canvasPresented
+    val currentCanvasSweepPhase by rememberUpdatedState(canvasSweepPhase)
+    // Where the clip's view sits on screen, for the sweep to line up with it.
+    val clipRootBounds = remember { arrayOf(Rect.Zero) }
+    val sweepOut: Modifier = Modifier.canvasSweepOut(
+        enabled = { currentCanvasSweepPhase },
+        progress = { canvasCover.floatValue },
+        clipBounds = { clipRootBounds[0] },
+    )
     // With "keep controls visible" on, a Canvas that would have hidden the
     // controls shrinks them to the foot of the screen instead: the song, its
     // live lyric and the transport stay, and everything else slides away.
@@ -2402,7 +2465,7 @@ fun NowPlayingScreen(
         val backdropCovered = spotifyCanvasPresentation && canvasCoversBackdrop
         // Faded out under the clip on the same curve as the sleeve above it.
         val backdropClipAlpha: () -> Float = {
-            if (spotifyCanvasFullscreen) {
+            if (spotifyCanvasFullscreen && !currentCanvasSweepPhase) {
                 val cover = canvasCover.floatValue
                 1f - cover * cover * cover * cover
             } else 1f
@@ -2435,7 +2498,7 @@ fun NowPlayingScreen(
                 trackKey = song.videoId,
                 modifier = Modifier.graphicsLayer {
                     alpha = (1f - fullArtworkBackdropAlpha) * backdropClipAlpha()
-                },
+                }.then(sweepOut),
             )
         } else if (!tabletArtworkBackdrop && !backdropCovered) {
             ArtworkMeshBackdrop(
@@ -2443,7 +2506,7 @@ fun NowPlayingScreen(
                 seam = if (canvasFirstPortrait) renderedCanvasBottom else if (heroMode) heroHeight else 0.dp,
                 modifier = Modifier.graphicsLayer {
                     alpha = (1f - fullArtworkBackdropAlpha) * backdropClipAlpha()
-                },
+                }.then(sweepOut),
             )
         }
         fullArtworkBlurContent(
@@ -2524,7 +2587,10 @@ fun NowPlayingScreen(
                             if (clipFullscreen || clipPortrait) Modifier.fillMaxSize()
                             else Modifier.fillMaxWidth().height(heroHeight),
                         )
-                        .hazeSource(playerHaze),
+                        .hazeSource(playerHaze)
+                        .onGloballyPositioned {
+                            clipRootBounds[0] = Rect(it.positionInRoot(), it.size.toSize())
+                        },
                 )
             }
         }
@@ -2574,6 +2640,7 @@ fun NowPlayingScreen(
                         .graphicsLayer {
                             alpha = heroT.value * (1f - 2f * p()).coerceIn(0f, 1f) * dockFade()
                         }
+                        .then(sweepOut)
                         .optimizedHazeEffect(
                             state = playerHaze,
                             style = HazeStyle(
@@ -3349,7 +3416,10 @@ fun NowPlayingScreen(
                             // let the dark backdrop show through mid-way, which
                             // read as a flicker between the art and the clip.
                             alpha = (
-                                if (heroClip != null) {
+                                if (heroClip != null && currentCanvasSweepPhase) {
+                                    // Swept out instead — see [canvasSweepOut].
+                                    1f
+                                } else if (heroClip != null) {
                                     val cover = canvasCover.floatValue
                                     1f - cover * cover * cover * cover
                                 } else if (outgoingClip != null) {
@@ -3365,6 +3435,7 @@ fun NowPlayingScreen(
                                 // thumbnail, and what flies to the mini player.
                                 (if (!videoMode || docking()) 1f else (p() * 2f - 1f).coerceIn(0f, 1f))
                         }
+                        .then(sweepOut)
                         .graphicsLayer {
                             val shown = sleeveShown()
                             // A drop shadow grounds a photo; on the flat
