@@ -360,7 +360,7 @@ private fun TopPickCard(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(top = 12.dp, end = 12.dp)
-                    .height(15.dp)
+                    .height(18.dp)
                     .aspectRatio(DIAL_LOGO_ASPECT),
             )
         }
@@ -1578,8 +1578,8 @@ private const val MOOD_TILES_ACROSS = 2.25f
 /** The widest a Find Your Mood tile gets, on a tablet. */
 private val MOOD_TILE_MAX_WIDTH = 220.dp
 
-/** Width over height of [Res.drawable.ic_dial_logo], the mark in a card's corner. */
-private const val DIAL_LOGO_ASPECT = 372f / 222f
+/** Width over height of [Res.drawable.ic_dial_logo], the 3x4 grid in a card's corner. */
+private const val DIAL_LOGO_ASPECT = 160f / 220f
 
 /**
  * Every mood and activity, laid out as the Library's Show all grid is — the
@@ -1633,7 +1633,7 @@ private fun MoodTile(mood: TopPickMood, onClick: (TopPickMood, String) -> Unit, 
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(top = 10.dp, end = 10.dp)
-                    .height(13.dp)
+                    .height(16.dp)
                     .aspectRatio(DIAL_LOGO_ASPECT),
             )
         }
