@@ -452,7 +452,10 @@ object AudioCache {
                 when {
                     rendition != null -> "$videoId#$rendition"
                     SourceResolver.canSubstituteForYouTube() ->
-                        "$videoId#alt${atmosKeySuffix()}".let { completeSibling(videoId, it) ?: it }
+                        "$videoId#alt${atmosKeySuffix()}".let { alt ->
+                            if (DirectSourceGate.isActive()) directKey(videoId, alt)
+                            else completeSibling(videoId, alt) ?: alt
+                        }
                     else -> completeSibling(videoId, videoId) ?: videoId
                 }
             }
@@ -512,6 +515,27 @@ object AudioCache {
         if (isOffline()) return siblings.firstOrNull(::isComplete)
         if (preferred != videoId) return null
         return siblings.firstOrNull { key -> isComplete(key) && isKeptOrigin(key) }
+    }
+
+    /**
+     * The entry Direct Source Stream plays a substitutable track from.
+     *
+     * `#alt` holds whatever answered first the last time the track played,
+     * and with the setting off that is nearly always YouTube's Opus. Reading
+     * it here played that Opus straight off disk without the resolver ever
+     * running, so the addons were never asked and the track started on
+     * YouTube instantly. While online, a YouTube-written `#alt` is passed
+     * over for a [DIRECT_SUFFIX] entry, which the resolver fills from an
+     * addon (or YouTube, when none answers) and [dropForeignEntries] clears
+     * once the track is done, so the addons are asked again on every play.
+     */
+    private fun directKey(videoId: String, alt: String): String {
+        if (!::cache.isInitialized) return alt
+        val heldFromYouTube = runCatching {
+            cache.getContentMetadata(alt).get(META_ORIGIN, null as String?) == Origin.YOUTUBE.name
+        }.getOrDefault(false)
+        if (!heldFromYouTube || isOffline()) return alt
+        return "$videoId$DIRECT_SUFFIX${atmosKeySuffix()}"
     }
 
     /**
@@ -1015,7 +1039,8 @@ object AudioCache {
             var dropped = 0
             cache.keys.toList().forEach { key ->
                 val meta = runCatching { cache.getContentMetadata(key) }.getOrNull() ?: return@forEach
-                val foreign = meta.get(META_ORIGIN, null as String?) == Origin.OTHER.name
+                val foreign = meta.get(META_ORIGIN, null as String?) == Origin.OTHER.name ||
+                    DIRECT_SUFFIX in key
                 val analysisOnly = meta.get(META_ANALYSIS, null as String?) != null &&
                     meta.get(META_PLAYBACK, null as String?) == null &&
                     meta.get(META_PLAYED, null as String?) == null
@@ -1086,6 +1111,9 @@ object AudioCache {
     private const val KEY_MATCHING_SCHEMA = "matching_schema"
     private const val MATCHING_SCHEMA = 2
     private const val ALT_SUFFIX = "#alt"
+
+    /** Direct Source Stream's own entry for a track; see [directKey]. */
+    private const val DIRECT_SUFFIX = "#direct"
 
     /**
      * Wraps [upstream] so everything played is written to disk on the way

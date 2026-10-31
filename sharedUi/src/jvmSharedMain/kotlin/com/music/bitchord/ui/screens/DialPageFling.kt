@@ -16,7 +16,7 @@ import kotlin.math.abs
 internal fun homeShelfKey(title: String): String = "shelf:$title"
 
 /** Keys the speed dial's page goes by in Home's list, real or placeholder. */
-internal val SPEED_DIAL_PAGE_KEYS: Set<Any> = setOf(homeShelfKey(SPEED_DIAL_SHELF_TITLE), "skeleton:speed-dial")
+val SPEED_DIAL_PAGE_KEYS: Set<Any> = setOf(homeShelfKey(SPEED_DIAL_SHELF_TITLE), "skeleton:speed-dial")
 
 /** The title the artists' dial goes by as a shelf: never shown, only matched on. */
 const val ARTIST_DIAL_SHELF_TITLE = "Artist dial"

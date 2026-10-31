@@ -58,20 +58,22 @@ object DirectSourceGate {
     private const val TAG = "BitChord"
 
     /** How far ahead of a transition the next track may be resolved and read ahead. */
-    const val WINDOW_MS = 25_000L
+    const val WINDOW_MS = 45_000L
 
     /**
      * How long playback waits for the addons before falling back to YouTube.
      *
      * Shorter than [WINDOW_MS] on purpose: a lookup started when the window
-     * opens is answered or given up on with ten seconds still to go, which is
+     * opens is answered or given up on with fifteen seconds still to go, which is
      * time for the YouTube fallback to resolve and buffer before the blend.
      *
      * A limit on the wait, not on the lookup, which runs on until the addon
      * client answers or gives up: a cold FLAC can take an addon longer than
-     * this to produce.
+     * this to produce. Thirty seconds rather than fifteen because gglos,
+     * often the only addon answering, takes most of that to search a cold
+     * track; a lookup it was about to win kept falling back to YouTube.
      */
-    const val LOOKUP_TIMEOUT_MS = 15_000L
+    const val LOOKUP_TIMEOUT_MS = 30_000L
 
     /**
      * Whether Direct Source Stream is on *and* has an addon to stream from.

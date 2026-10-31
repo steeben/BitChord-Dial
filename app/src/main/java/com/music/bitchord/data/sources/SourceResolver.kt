@@ -810,6 +810,7 @@ object SourceResolver {
         requireSharedArtist: Boolean = false,
         accept: (MusicSource, SourceStream) -> Boolean = { _, _ -> true },
     ): Pair<MusicSource, SourceStream>? = coroutineScope {
+        val names = HashMap<Deferred<*>, String>()
         val running: MutableList<Deferred<Pair<MusicSource, SourceStream?>>> = sources
             .map { source ->
                 async {
@@ -821,7 +822,7 @@ object SourceResolver {
                         strictLength,
                         requireSharedArtist,
                     )
-                }
+                }.also { names[it] = source.displayName }
             }
             .toMutableList()
         var best: Pair<MusicSource, SourceStream>? = null
@@ -836,12 +837,19 @@ object SourceResolver {
                 val graceMs = if (best == null) Long.MAX_VALUE
                     else UPGRADE_GRACE_MS - (now - bestSince)
                 val waitMs = minOf(graceMs, deadline - now)
-                if (waitMs <= 0) break
+                if (waitMs <= 0) {
+                    if (best == null) logDeadline(target, running.mapNotNull { names[it] })
+                    break
+                }
                 val first = withTimeoutOrNull(waitMs) {
                     select<Deferred<Pair<MusicSource, SourceStream?>>> {
                         running.forEach { candidate -> candidate.onAwait { candidate } }
                     }
-                } ?: break
+                }
+                if (first == null) {
+                    if (best == null) logDeadline(target, running.mapNotNull { names[it] })
+                    break
+                }
                 // Anything that crossed the line while that one was being waited
                 // on is already sitting there. Folding those in costs no time at
                 // all and is what lets rank break a tie between two sources that
@@ -878,6 +886,19 @@ object SourceResolver {
             running.forEach { it.cancel() }
         }
         best
+    }
+
+    /**
+     * Names the sources a patient search gave up on. Their addon calls keep
+     * running and are cached (see
+     * [com.music.bitchord.data.sources.module.SharedCalls]), so the next look at the
+     * track usually finds what they were about to say.
+     */
+    private fun logDeadline(target: TrackMatcher.Target, still: List<String>) {
+        TrackLog.w(
+            TAG,
+            "upgrade search for '${target.title}' hit its ${UPGRADE_DEADLINE_MS / 1000}s deadline; still waiting on ${still.joinToString()}",
+        )
     }
 
     /**
@@ -1195,9 +1216,13 @@ object SourceResolver {
 
     /**
      * The longest a [bestAcross] that waits for every source runs in all.
-     * Whatever is in hand by then is taken, and no answer is a no.
+     * Whatever is in hand by then is taken, and no answer is a no. Room for
+     * an addon's search and then its stream call to each run close to
+     * [com.music.bitchord.data.sources.addon.AddonClient]'s ceiling: gglos
+     * took 39s to search a cold track and then answered the stream call
+     * just after a 40s deadline had already given up on it.
      */
-    internal const val UPGRADE_DEADLINE_MS = 40_000L
+    internal const val UPGRADE_DEADLINE_MS = 120_000L
 
     /**
      * How close two runtimes have to be to be the same cut of a song.

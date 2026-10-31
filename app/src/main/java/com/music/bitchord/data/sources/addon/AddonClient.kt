@@ -357,7 +357,7 @@ class AddonClient(rawBaseUrl: String) {
      *
      * A blocking `execute()` ignores coroutine cancellation, so a caller that
      * had given up on an addon (the upgrade search's deadline, the queue moving
-     * on) still sat in `coroutineScope` until [client]'s 45 s ceiling ran out,
+     * on) still sat in `coroutineScope` until [client]'s call ceiling ran out,
      * once per request. Cancelling the coroutine now cancels the call.
      */
     private suspend fun Call.awaitResponse(): Response = suspendCancellableCoroutine { cont ->
@@ -524,7 +524,8 @@ class AddonClient(rawBaseUrl: String) {
          * is wider than that because a TorBox-backed addon cold-caching a long
          * FLAC spends twenty to thirty seconds before it can answer at all —
          * thirty-two was the worst a real Nebula addon took, and 35 s left no
-         * room once the call itself is added to the wait. The read timeout is
+         * room once the call itself is added to the wait; gglos has since taken 39 s
+         * to search a cold track and timed out at 45. The read timeout is
          * lifted above the ceiling for the same reason: that wait is silence,
          * not a slow trickle, so an inherited read timeout would fire first and
          * the ceiling here would never be reached.
@@ -532,7 +533,7 @@ class AddonClient(rawBaseUrl: String) {
         private val client: OkHttpClient by lazy {
             Http.client.newBuilder()
                 .readTimeout(60, TimeUnit.SECONDS)
-                .callTimeout(45, TimeUnit.SECONDS)
+                .callTimeout(55, TimeUnit.SECONDS)
                 .build()
         }
     }

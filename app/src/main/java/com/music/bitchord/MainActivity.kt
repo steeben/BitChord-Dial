@@ -161,6 +161,7 @@ import com.music.bitchord.ui.screens.ARTIST_DIAL_SHELF_TITLE
 import com.music.bitchord.ui.screens.SpeedDialLucky
 import com.music.bitchord.ui.screens.RecentArtistsScreen
 import com.music.bitchord.ui.screens.ARTIST_DIAL_PAGE_KEY
+import com.music.bitchord.ui.screens.SPEED_DIAL_PAGE_KEYS
 import com.music.bitchord.ui.screens.speedDialArtRequest
 import com.music.bitchord.ui.theme.Metropolis
 import com.music.bitchord.ui.components.HomeDialMenu
@@ -3097,9 +3098,14 @@ private fun BitChordApp(
             val layout = homeListState.layoutInfo
             val middle = (layout.viewportStartOffset + layout.viewportEndOffset) / 2
             val artists = layout.visibleItemsInfo.firstOrNull { it.key == ARTIST_DIAL_PAGE_KEY }
+            val dial = layout.visibleItemsInfo.firstOrNull { it.key in SPEED_DIAL_PAGE_KEYS }
             when {
                 artists != null && artists.offset <= middle && artists.offset + artists.size > middle ->
                     HomePage.ARTISTS
+                // Judged by the dial itself rather than by index: with the
+                // artists' dial off, index 1 is Explore's first shelf, and the
+                // title stayed "BitChord Dial" over it.
+                dial != null -> if (dial.offset + dial.size > middle) HomePage.DIAL else HomePage.EXPLORE
                 homeListState.firstVisibleItemIndex <= 1 && (artists == null || artists.offset > middle) ->
                     HomePage.DIAL
                 else -> HomePage.EXPLORE

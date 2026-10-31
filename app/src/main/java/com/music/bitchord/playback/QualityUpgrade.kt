@@ -66,7 +66,7 @@ object QualityUpgrade {
      * better copy". Kept past [SourceResolver.UPGRADE_DEADLINE_MS] so that
      * deadline, which still keeps whatever answer is in hand, normally wins.
      */
-    private const val LOOK_AGAIN_BACKSTOP_MS = 60_000L
+    private const val LOOK_AGAIN_BACKSTOP_MS = 135_000L
 
     /**
      * A track playing on less than was asked for.
