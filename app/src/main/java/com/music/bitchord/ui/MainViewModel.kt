@@ -28,6 +28,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.first
 import kotlin.coroutines.cancellation.CancellationException
 import com.music.bitchord.data.model.SPOTIFY_MISSING_PREFIX
+import com.music.bitchord.data.model.isUnresolvedSpotify
+import com.music.bitchord.data.model.isMatchMissing
+import com.music.bitchord.data.model.isMatchPending
 import com.music.bitchord.data.model.SPOTIFY_PENDING_PREFIX
 import com.music.bitchord.data.spotify.SPOTIFY_PAGE_PREFIX
 import com.music.bitchord.data.spotify.SpotifyImporter
@@ -125,8 +128,11 @@ import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
-/** What the Search tab searches: YouTube Music, or the Local Music folder on this device. */
-enum class SearchSource { YOUTUBE, LIBRARY, ADDONS }
+/**
+ * What the Search tab searches: YouTube Music, the Local Music folder on this
+ * device, the enabled addons, or Spotify's catalogue (played via YouTube Music).
+ */
+enum class SearchSource { YOUTUBE, LIBRARY, ADDONS, SPOTIFY }
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -275,6 +281,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _addonResults = MutableStateFlow<UiState<List<Song>>?>(null)
     val addonResults: StateFlow<UiState<List<Song>>?> = _addonResults.asStateFlow()
     private var addonSearchJob: Job? = null
+
+    /**
+     * The Spotify source's answer for the submitted query. Rows go up as
+     * Spotify's own hits, each waiting on its YouTube Music match the way a
+     * Spotify playlist page's rows do, and are swapped in place as the
+     * matches arrive. [spotifySearchTracks] keeps the raw hits in the same
+     * order so a row tapped before its match lands can be matched there and then.
+     */
+    private val _spotifyResults = MutableStateFlow<UiState<List<Song>>?>(null)
+    val spotifyResults: StateFlow<UiState<List<Song>>?> = _spotifyResults.asStateFlow()
+    private var spotifySearchTracks: List<SpotifyTrack> = emptyList()
+    private var spotifySearchJob: Job? = null
 
     /** The words typed into the Addons search before, newest first. */
     val addonSearchHistory: StateFlow<List<String>> = SearchHistory.addonRecent
@@ -2523,6 +2541,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             _results.value = null
             addonSearchJob?.cancel()
             _addonResults.value = null
+            spotifySearchJob?.cancel()
+            _spotifyResults.value = null
             // The list is about to switch from search results to recent
             // searches (or the empty state) — without this it can keep
             // whatever scroll offset the results list was left at, landing
@@ -2552,6 +2572,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _typeaheadResults.value = emptyList()
         if (_searchSource.value == SearchSource.ADDONS) {
             runAddonSearch(q)
+            return
+        }
+        if (_searchSource.value == SearchSource.SPOTIFY) {
+            runSpotifySearch(q)
             return
         }
         runSearch(anonymous = false)
@@ -2606,7 +2630,83 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         when (source) {
             SearchSource.LIBRARY -> loadLibrarySongs()
             SearchSource.YOUTUBE -> submitSearch()
-            SearchSource.ADDONS -> if (_query.value.isNotBlank()) submitSearch()
+            SearchSource.ADDONS, SearchSource.SPOTIFY -> if (_query.value.isNotBlank()) submitSearch()
+        }
+    }
+
+    /**
+     * Searches Spotify's catalogue for [q] and finds each hit on YouTube
+     * Music, the same lookup a Spotify playlist page does for its rows.
+     */
+    private fun runSpotifySearch(q: String) {
+        spotifySearchJob?.cancel()
+        _searchScrollReset.value += 1
+        if (AppSettings.spotifySpdcToken.value.isBlank()) {
+            spotifySearchTracks = emptyList()
+            _spotifyResults.value = UiState.Error(text(R.string.search_spotify_signed_out))
+            return
+        }
+        _spotifyResults.value = UiState.Loading
+        spotifySearchJob = viewModelScope.launch {
+            val tracks = runCatching { SpotifyLibrary.searchTracks(q, limit = SPOTIFY_SEARCH_LIMIT) }.getOrElse {
+                if (it is kotlinx.coroutines.CancellationException) throw it
+                spotifySearchTracks = emptyList()
+                _spotifyResults.value = UiState.Error(it.message ?: text(R.string.failed))
+                return@launch
+            }
+            spotifySearchTracks = tracks
+            _spotifyResults.value = UiState.Success(tracks.map { it.asPendingSong() })
+            val gate = Semaphore(SPOTIFY_MATCH_PARALLELISM)
+            coroutineScope {
+                tracks.forEachIndexed { index, track ->
+                    launch { gate.withPermit { matchSpotifySearchRow(index, track) } }
+                }
+            }
+        }
+    }
+
+    /** Finds [track] on YouTube Music and swaps it into row [index], unless that row has moved on. */
+    private suspend fun matchSpotifySearchRow(index: Int, track: SpotifyTrack): Song {
+        val current = (_spotifyResults.value as? UiState.Success<List<Song>>)?.data?.getOrNull(index)
+        if (current != null && !current.isMatchPending && spotifySearchTracks.getOrNull(index) === track) {
+            return current
+        }
+        val match = runCatching { SpotifyImporter.matchTrack(track) }.getOrNull()
+        val found = match?.copy(thumbnailUrl = match.thumbnailUrl ?: track.imageUrl)
+            ?: track.asPendingSong().copy(videoId = SPOTIFY_MISSING_PREFIX + track.id)
+        if (spotifySearchTracks.getOrNull(index) === track) {
+            val list = (_spotifyResults.value as? UiState.Success<List<Song>>)?.data
+            if (list != null && index < list.size && list[index].isMatchPending) {
+                _spotifyResults.value = UiState.Success(list.toMutableList().also { it[index] = found })
+            }
+        }
+        return found
+    }
+
+    /**
+     * Plays the Spotify search hits from row [index]. A row still waiting on
+     * its match is matched first rather than ignored, so a tap never does
+     * nothing; [play] gets the list as it stands once that row is playable.
+     */
+    fun playSpotifyResult(index: Int, play: (List<Song>, Int) -> Unit) {
+        val track = spotifySearchTracks.getOrNull(index) ?: return
+        val row = (_spotifyResults.value as? UiState.Success<List<Song>>)?.data?.getOrNull(index) ?: return
+        if (row.isMatchMissing) {
+            toast(text(R.string.spotify_track_unavailable))
+            return
+        }
+        if (!row.isMatchPending) {
+            (_spotifyResults.value as? UiState.Success<List<Song>>)?.data?.let { play(it, index) }
+            return
+        }
+        viewModelScope.launch {
+            val found = matchSpotifySearchRow(index, track)
+            if (found.isUnresolvedSpotify) {
+                toast(text(R.string.spotify_track_unavailable))
+                return@launch
+            }
+            val list = (_spotifyResults.value as? UiState.Success<List<Song>>)?.data ?: return@launch
+            play(list.toMutableList().also { if (index < it.size) it[index] = found }, index)
         }
     }
 
@@ -2974,6 +3074,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         private const val ADDON_SEARCH_LIMIT = 20
 
         private const val SPOTIFY_MATCH_PARALLELISM = 6
+        /** How many songs the Spotify search tab asks for. */
+        private const val SPOTIFY_SEARCH_LIMIT = 30
 
         /**
          * How long a keystroke waits before the typeahead is asked about it.
@@ -4177,6 +4279,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun text(id: Int): String = getApplication<Application>().getString(id)
+
+    private fun toast(message: String) =
+        android.widget.Toast.makeText(getApplication(), message, android.widget.Toast.LENGTH_SHORT).show()
 
 
     /**

@@ -65,4 +65,27 @@ class SpotifyLibraryTest {
         assertNull(SpotifyImporter.extractPlaylistId("https://open.spotify.com/playlist/short"))
         assertNull(SpotifyImporter.extractPlaylistId(""))
     }
+
+    @Test
+    fun searchReadsTrackHitsAndSkipsOthers() {
+        val root = json.parseToJsonElement(
+            """
+            {"data":{"searchV2":{"tracksV2":{"totalCount":2,"items":[
+              {"item":{"__typename":"TrackResponseWrapper","_uri":"spotify:track:s1","data":{
+                "__typename":"Track","name":"Hit",
+                "artists":{"items":[{"profile":{"name":"One"}},{"profile":{"name":"Two"}}]},
+                "albumOfTrack":{"name":"LP","coverArt":{"sources":[{"url":"https://small"},{"url":"https://big"}]}},
+                "duration":{"totalMilliseconds":200000}
+              }}},
+              {"item":{"__typename":"RestrictedContent","_uri":"spotify:track:s2","data":{"__typename":"RestrictedContent"}}}
+            ]}}}}
+            """.trimIndent(),
+        ).jsonObject
+        val track = parseSearchTracks(root).single()
+        assertEquals("s1", track.id)
+        assertEquals("Hit", track.title)
+        assertEquals("One, Two", track.artist)
+        assertEquals("LP", track.album)
+        assertEquals(200000, track.durationMs)
+    }
 }
