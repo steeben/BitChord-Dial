@@ -1102,6 +1102,7 @@ object SourceResolver {
                 durationSec = TrackMatcher.secondsOf(match.durationText),
                 sourceConfigId = source.configId,
             )
+            if (isPreview(source, stream, target.durationSec ?: stream.durationSec)) continue
             val served = stream.format
             if (!wantsLossless || served.isLossless == true || served.isDolbyAtmos || served.statesNothingLossy) {
                 TrackLog.d(
@@ -1128,6 +1129,67 @@ object SourceResolver {
             settleFor = betterOf(settleFor, stream.copy(belowRequest = true))
         }
         return settleFor
+    }
+
+    /**
+     * Whether [stream] is a short sample of the track rather than the track.
+     *
+     * Some Qobuz-backed addons hand out the catalogue's 30-second preview when
+     * their account can't stream the full file, under the full track's row and
+     * runtime. Nothing in the answer says so: the only tell is the size of the
+     * file. One ranged request reads the total length, and a file too small to
+     * hold [expectedSec] of audio even at a generously low bitrate is passed
+     * over so the next row, the next source or YouTube gets the track.
+     *
+     * YouTube and JioSaavn are not asked, and anything the check cannot read
+     * (no length, a manifest, a timeout) counts as the full track.
+     */
+    private suspend fun isPreview(source: MusicSource, stream: SourceStream, expectedSec: Int?): Boolean {
+        if (source.kind == SourceKind.YOUTUBE || source.kind == SourceKind.JIOSAAVN) return false
+        if (expectedSec == null || expectedSec < PREVIEW_MIN_TRACK_SEC) return false
+        val bytes = withTimeoutOrNull(PREVIEW_PROBE_MS) { totalBytesOf(stream) } ?: return false
+        val longestSec = longestSecondsIn(bytes, stream.format)
+        if (longestSec >= expectedSec * 6 / 10) return false
+        TrackLog.w(
+            TAG,
+            "${source.displayName}'s ${stream.format.summary} is ${bytes / 1024}kB, at most ~${longestSec}s of a " +
+                "${expectedSec}s track; a preview, passing",
+        )
+        return true
+    }
+
+    /**
+     * The most audio [bytes] of [format] could hold, at a bitrate set low
+     * enough that a real file of the track always clears it.
+     */
+    internal fun longestSecondsIn(bytes: Long, format: StreamFormat): Long {
+        val floorKbps = when {
+            format.isLossless == true -> if ((format.bitDepth ?: 16) > 16) 900 else 400
+            else -> format.kbps?.let { (it * 3 / 4).coerceAtLeast(64) } ?: 160
+        }
+        return bytes * 8 / (floorKbps * 1000L)
+    }
+
+    private val probeClient by lazy {
+        com.music.bitchord.data.Http.client.newBuilder()
+            .callTimeout(PREVIEW_PROBE_MS, java.util.concurrent.TimeUnit.MILLISECONDS)
+            .build()
+    }
+
+    /** The full size of [stream]'s file, from one ranged request, or null if it doesn't say. */
+    private suspend fun totalBytesOf(stream: SourceStream): Long? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        runCatching {
+            val request = okhttp3.Request.Builder().url(stream.url)
+                .apply { stream.headers.forEach { (k, v) -> header(k, v) } }
+                .header("Range", "bytes=0-0")
+                .build()
+            probeClient.newCall(request).execute().use { response ->
+                val type = response.header("Content-Type").orEmpty()
+                if ("mpegurl" in type || "dash" in type) return@use null
+                response.header("Content-Range")?.substringAfterLast('/')?.toLongOrNull()
+                    ?: response.takeIf { it.code == 200 }?.header("Content-Length")?.toLongOrNull()
+            }
+        }.getOrNull()
     }
 
     /**
@@ -1213,6 +1275,12 @@ object SourceResolver {
      * patience walking a whole result list.
      */
     private const val STREAM_ATTEMPTS = 3
+
+    /** Tracks shorter than this are never judged previews; see [isPreview]. */
+    private const val PREVIEW_MIN_TRACK_SEC = 60
+
+    /** How long [isPreview] waits to learn a file's size before assuming it is whole. */
+    private const val PREVIEW_PROBE_MS = 4_000L
 
     /**
      * How far a replacement's runtime may sit from the playing track's before

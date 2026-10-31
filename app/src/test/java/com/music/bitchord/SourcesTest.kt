@@ -1185,6 +1185,20 @@ class SourcesTest {
     private fun raceTarget() = TrackMatcher.Target(RACE_TITLE, RACE_ARTIST, durationSec = 120)
 
     @Test
+    fun `a 30 second preview is too small to be the track`() {
+        // 'Perfect Pinterest Garden' (170s) came back from a Qobuz addon as a
+        // 30s MP3: about 1.2 MB at 320 kbps.
+        val mp3 = StreamFormat(codec = "mp3", bitDepth = 16, sampleRateHz = 44_100)
+        assertTrue(SourceResolver.longestSecondsIn(1_200_000, mp3) < 170 * 6 / 10)
+        // The whole track at 128 kbps still clears the bar.
+        assertTrue(SourceResolver.longestSecondsIn(2_720_000, mp3) >= 170 * 6 / 10)
+        // A 24-bit FLAC preview (30s at ~1800 kbps) against the full file.
+        val flac = StreamFormat(codec = "flac", bitDepth = 24, sampleRateHz = 48_000)
+        assertTrue(SourceResolver.longestSecondsIn(6_750_000, flac) < 170 * 6 / 10)
+        assertTrue(SourceResolver.longestSecondsIn(38_000_000, flac) >= 170)
+    }
+
+    @Test
     fun `JioSaavn substitution refuses conflicting albums without a target album`() = runBlocking {
         val source = FakeSource(
             displayName = "JioSaavn",
