@@ -28,8 +28,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import com.music.bitchord.ui.components.SlideDownBottomSheet
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
+import com.music.bitchord.ui.components.IosSwitch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -119,13 +118,9 @@ fun LibraryDuplicatesScreen(
                         icon = Icons.Rounded.FilterAlt,
                         title = stringResource(R.string.hide_combined_duplicates),
                         trailing = {
-                            Switch(
+                            IosSwitch(
                                 checked = hide,
                                 onCheckedChange = AppSettings::setHideCombinedDuplicates,
-                                colors = SwitchDefaults.colors(
-                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                    checkedBorderColor = MaterialTheme.colorScheme.primary,
-                                ),
                             )
                         },
                         onClick = { AppSettings.setHideCombinedDuplicates(!hide) },

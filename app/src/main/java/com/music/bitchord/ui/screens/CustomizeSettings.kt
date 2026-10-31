@@ -16,8 +16,7 @@ import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
+import com.music.bitchord.ui.components.IosSwitch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -174,17 +173,13 @@ internal fun <T : Any> ReorderableToggleList(
                         modifier = Modifier.weight(1f),
                     )
                     val allowed = !entry.enabled || canDisable(working, entry.item)
-                    Switch(
+                    IosSwitch(
                         checked = entry.enabled,
                         enabled = allowed,
                         onCheckedChange = { on ->
                             working = working.map { if (it.item == entry.item) it.copy(enabled = on) else it }
                             currentOnChange(working)
                         },
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            checkedBorderColor = MaterialTheme.colorScheme.primary,
-                        ),
                     )
                 }
             }

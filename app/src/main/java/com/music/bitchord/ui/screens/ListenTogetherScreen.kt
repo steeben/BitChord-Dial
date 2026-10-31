@@ -49,8 +49,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import com.music.bitchord.ui.components.SlideDownBottomSheet
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
+import com.music.bitchord.ui.components.IosSwitch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -912,13 +911,9 @@ private fun InAParty(
                 title = stringResource(R.string.listen_together_host_only),
                 subtitle = stringResource(R.string.listen_together_host_only_subtitle),
                 trailing = {
-                    Switch(
+                    IosSwitch(
                         checked = state.hostOnlyControl,
                         onCheckedChange = onSetHostOnlyControl,
-                        colors = SwitchDefaults.colors(
-                            checkedTrackColor = MaterialTheme.colorScheme.primary,
-                            checkedBorderColor = MaterialTheme.colorScheme.primary,
-                        ),
                     )
                 },
                 onClick = { onSetHostOnlyControl(!state.hostOnlyControl) },

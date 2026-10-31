@@ -21,8 +21,7 @@ import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.SwitchAccount
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
+import com.music.bitchord.ui.components.IosSwitch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -165,7 +164,7 @@ fun AccountAndScrobblingScreen(
                         stringResource(R.string.enter_token_to_enable)
                     },
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = listenBrainzEnabled,
                             onCheckedChange = { checked ->
                                 if (checked && listenBrainzToken.isBlank()) {
@@ -174,10 +173,6 @@ fun AccountAndScrobblingScreen(
                                     AppSettings.setListenBrainzEnabled(checked)
                                 }
                             },
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = onOpenListenBrainzLogin,
@@ -189,13 +184,9 @@ fun AccountAndScrobblingScreen(
                         title = stringResource(R.string.scrobble_primary_artist_only),
                         subtitle = stringResource(R.string.scrobble_primary_artist_only_subtitle),
                         trailing = {
-                            Switch(
+                            IosSwitch(
                                 checked = listenBrainzPrimaryArtistOnly,
                                 onCheckedChange = AppSettings::setListenBrainzPrimaryArtistOnly,
-                                colors = SwitchDefaults.colors(
-                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                    checkedBorderColor = MaterialTheme.colorScheme.primary,
-                                ),
                             )
                         },
                         onClick = { AppSettings.setListenBrainzPrimaryArtistOnly(!listenBrainzPrimaryArtistOnly) },
@@ -211,7 +202,7 @@ fun AccountAndScrobblingScreen(
                         stringResource(R.string.tap_to_sign_in)
                     },
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = lastfmEnabled,
                             onCheckedChange = { checked ->
                                 if (checked && lastfmSessionKey.isBlank()) {
@@ -220,10 +211,6 @@ fun AccountAndScrobblingScreen(
                                     AppSettings.setLastfmEnabled(checked)
                                 }
                             },
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = {
@@ -245,13 +232,9 @@ fun AccountAndScrobblingScreen(
                         title = stringResource(R.string.scrobble_tracks),
                         subtitle = stringResource(R.string.scrobble_tracks_subtitle),
                         trailing = {
-                            Switch(
+                            IosSwitch(
                                 checked = lastfmScrobbleEnabled,
                                 onCheckedChange = AppSettings::setLastfmScrobbleEnabled,
-                                colors = SwitchDefaults.colors(
-                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                    checkedBorderColor = MaterialTheme.colorScheme.primary,
-                                ),
                             )
                         },
                         onClick = { AppSettings.setLastfmScrobbleEnabled(!lastfmScrobbleEnabled) },
@@ -262,13 +245,9 @@ fun AccountAndScrobblingScreen(
                         title = stringResource(R.string.scrobble_primary_artist_only),
                         subtitle = stringResource(R.string.scrobble_primary_artist_only_subtitle),
                         trailing = {
-                            Switch(
+                            IosSwitch(
                                 checked = lastfmPrimaryArtistOnly,
                                 onCheckedChange = AppSettings::setLastfmPrimaryArtistOnly,
-                                colors = SwitchDefaults.colors(
-                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                    checkedBorderColor = MaterialTheme.colorScheme.primary,
-                                ),
                             )
                         },
                         onClick = { AppSettings.setLastfmPrimaryArtistOnly(!lastfmPrimaryArtistOnly) },
@@ -279,13 +258,9 @@ fun AccountAndScrobblingScreen(
                         title = stringResource(R.string.now_playing),
                         subtitle = stringResource(R.string.lastfm_now_playing_subtitle),
                         trailing = {
-                            Switch(
+                            IosSwitch(
                                 checked = lastfmNowPlayingEnabled,
                                 onCheckedChange = AppSettings::setLastfmNowPlaying,
-                                colors = SwitchDefaults.colors(
-                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                    checkedBorderColor = MaterialTheme.colorScheme.primary,
-                                ),
                             )
                         },
                         onClick = { AppSettings.setLastfmNowPlaying(!lastfmNowPlayingEnabled) },

@@ -117,8 +117,7 @@ import com.music.bitchord.ui.components.SlideDownBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
+import com.music.bitchord.ui.components.IosSwitch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -648,14 +647,10 @@ fun SettingsScreen(
                             ),
                             enabled = dolbyAtmosSupported,
                             trailing = {
-                                Switch(
+                                IosSwitch(
                                     checked = dolbyAtmos && dolbyAtmosSupported,
                                     onCheckedChange = AppSettings::setDolbyAtmos,
                                     enabled = dolbyAtmosSupported,
-                                    colors = SwitchDefaults.colors(
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                        checkedBorderColor = MaterialTheme.colorScheme.primary,
-                                    ),
                                 )
                             },
                             onClick = { AppSettings.setDolbyAtmos(!dolbyAtmos) },
@@ -831,13 +826,9 @@ fun SettingsScreen(
                         title = loudnessTitle,
                         subtitle = stringResource(R.string.loudness_normalization_subtitle),
                         trailing = {
-                            Switch(
+                            IosSwitch(
                                 checked = loudnessNormalization,
                                 onCheckedChange = AppSettings::setLoudnessNormalization,
-                                colors = SwitchDefaults.colors(
-                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                    checkedBorderColor = MaterialTheme.colorScheme.primary,
-                                ),
                             )
                         },
                         onClick = { AppSettings.setLoudnessNormalization(!loudnessNormalization) },
@@ -886,13 +877,9 @@ fun SettingsScreen(
                             stringResource(R.string.automix_disabled_subtitle)
                         },
                         trailing = {
-                            Switch(
+                            IosSwitch(
                                 checked = smartFade,
                                 onCheckedChange = AppSettings::setSmartFadeEnabled,
-                                colors = SwitchDefaults.colors(
-                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                    checkedBorderColor = MaterialTheme.colorScheme.primary,
-                                ),
                             )
                         },
                         onClick = { AppSettings.setSmartFadeEnabled(!smartFade) },
@@ -930,13 +917,9 @@ fun SettingsScreen(
                             stringResource(R.string.skip_silence_subtitle)
                         },
                         trailing = {
-                            Switch(
+                            IosSwitch(
                                 checked = skipSilence,
                                 onCheckedChange = AppSettings::setSkipSilence,
-                                colors = SwitchDefaults.colors(
-                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                    checkedBorderColor = MaterialTheme.colorScheme.primary,
-                                ),
                             )
                         },
                         onClick = { AppSettings.setSkipSilence(!skipSilence) },
@@ -950,13 +933,9 @@ fun SettingsScreen(
                     title = pauseAtZeroVolumeTitle,
                     subtitle = stringResource(R.string.pause_at_zero_volume_subtitle),
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = pauseAtZeroVolume,
                             onCheckedChange = AppSettings::setPauseAtZeroVolume,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { AppSettings.setPauseAtZeroVolume(!pauseAtZeroVolume) },
@@ -982,13 +961,9 @@ fun SettingsScreen(
                             stringResource(R.string.spatial_audio_subtitle)
                         },
                         trailing = {
-                            Switch(
+                            IosSwitch(
                                 checked = spatialAudio,
                                 onCheckedChange = AppSettings::setSpatialAudio,
-                                colors = SwitchDefaults.colors(
-                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                    checkedBorderColor = MaterialTheme.colorScheme.primary,
-                                ),
                             )
                         },
                         onClick = { AppSettings.setSpatialAudio(!spatialAudio) },
@@ -1105,13 +1080,9 @@ fun SettingsScreen(
                     title = reduceAnimationTitle,
                     subtitle = stringResource(R.string.reduce_animation_subtitle),
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = reduceAnimation,
                             onCheckedChange = AppSettings::setReduceAnimation,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { AppSettings.setReduceAnimation(!reduceAnimation) },
@@ -1124,13 +1095,9 @@ fun SettingsScreen(
                     title = reduceDynamicBlurTitle,
                     subtitle = stringResource(R.string.reduce_dynamic_blur_subtitle),
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = reduceDynamicBlur,
                             onCheckedChange = AppSettings::setReduceDynamicBlur,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { AppSettings.setReduceDynamicBlur(!reduceDynamicBlur) },
@@ -1143,13 +1110,9 @@ fun SettingsScreen(
                     title = listenTogetherButtonTitle,
                     subtitle = stringResource(R.string.show_listen_together_button_subtitle),
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = listenTogetherButton,
                             onCheckedChange = AppSettings::setShowListenTogetherButton,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { AppSettings.setShowListenTogetherButton(!listenTogetherButton) },
@@ -1169,14 +1132,10 @@ fun SettingsScreen(
                     ),
                     enabled = liquidGlassSupported,
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = liquidGlass,
                             onCheckedChange = AppSettings::setLiquidGlass,
                             enabled = liquidGlassSupported,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     // The switch turns it on and off; the row opens its options.
@@ -1190,13 +1149,9 @@ fun SettingsScreen(
                     title = ambientTitle,
                     subtitle = stringResource(R.string.ambient_background_subtitle),
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = ambientBackground,
                             onCheckedChange = CustomizationSettings::setAmbientBackground,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { CustomizationSettings.setAmbientBackground(!ambientBackground) },
@@ -1210,13 +1165,9 @@ fun SettingsScreen(
                         title = ambientArtTitle,
                         subtitle = stringResource(R.string.ambient_follows_artwork_subtitle),
                         trailing = {
-                            Switch(
+                            IosSwitch(
                                 checked = ambientFollowsArtwork,
                                 onCheckedChange = CustomizationSettings::setAmbientFollowsArtwork,
-                                colors = SwitchDefaults.colors(
-                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                    checkedBorderColor = MaterialTheme.colorScheme.primary,
-                                ),
                             )
                         },
                         onClick = { CustomizationSettings.setAmbientFollowsArtwork(!ambientFollowsArtwork) },
@@ -1235,13 +1186,9 @@ fun SettingsScreen(
                         title = fullScreenCoverArtTitle,
                         subtitle = stringResource(R.string.full_screen_cover_art_subtitle),
                         trailing = {
-                            Switch(
+                            IosSwitch(
                                 checked = fullBleedArtwork,
                                 onCheckedChange = AppSettings::setFullBleedArtwork,
-                                colors = SwitchDefaults.colors(
-                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                    checkedBorderColor = MaterialTheme.colorScheme.primary,
-                                ),
                             )
                         },
                         onClick = { AppSettings.setFullBleedArtwork(!fullBleedArtwork) },
@@ -1255,13 +1202,9 @@ fun SettingsScreen(
                     title = legacyMeshGradientTitle,
                     subtitle = stringResource(R.string.legacy_mesh_gradient_subtitle),
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = legacyMeshGradient,
                             onCheckedChange = AppSettings::setLegacyMeshGradient,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { AppSettings.setLegacyMeshGradient(!legacyMeshGradient) },
@@ -1277,13 +1220,9 @@ fun SettingsScreen(
                     title = animatedCoverArtTitle,
                     subtitle = stringResource(R.string.animated_cover_art_subtitle),
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = animatedCanvas,
                             onCheckedChange = AppSettings::setAnimatedCanvas,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { AppSettings.setAnimatedCanvas(!animatedCanvas) },
@@ -1331,13 +1270,9 @@ fun SettingsScreen(
                     title = artistSignaturesTitle,
                     subtitle = stringResource(R.string.artist_signatures_subtitle),
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = signatureApiEnabled,
                             onCheckedChange = AppSettings::setSignatureApiEnabled,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { AppSettings.setSignatureApiEnabled(!signatureApiEnabled) },
@@ -1376,13 +1311,9 @@ fun SettingsScreen(
                     title = syncedLyricsTitle,
                     subtitle = stringResource(R.string.synced_lyrics_subtitle),
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = syncedLyrics,
                             onCheckedChange = AppSettings::setSyncedLyrics,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { AppSettings.setSyncedLyrics(!syncedLyrics) },
@@ -1397,13 +1328,9 @@ fun SettingsScreen(
                     title = lyricsBlurTitle,
                     subtitle = stringResource(R.string.blur_unfocused_lyrics_subtitle),
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = lyricsBlur,
                             onCheckedChange = AppSettings::setLyricsBlur,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { AppSettings.setLyricsBlur(!lyricsBlur) },
@@ -1527,13 +1454,9 @@ fun SettingsScreen(
                     title = keepExpandedTitle,
                     subtitle = stringResource(R.string.keep_nav_bar_expanded_subtitle),
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = keepNavBarExpanded,
                             onCheckedChange = CustomizationSettings::setKeepNavBarExpanded,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { CustomizationSettings.setKeepNavBarExpanded(!keepNavBarExpanded) },
@@ -1546,13 +1469,9 @@ fun SettingsScreen(
                     title = miniNextTitle,
                     subtitle = stringResource(R.string.mini_player_next_button_subtitle),
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = miniPlayerNextButton,
                             onCheckedChange = CustomizationSettings::setMiniPlayerNextButton,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { CustomizationSettings.setMiniPlayerNextButton(!miniPlayerNextButton) },
@@ -1565,13 +1484,9 @@ fun SettingsScreen(
                     title = wavyProgressTitle,
                     subtitle = stringResource(R.string.wavy_progress_bar_subtitle),
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = wavyProgressBar,
                             onCheckedChange = CustomizationSettings::setWavyProgressBar,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { CustomizationSettings.setWavyProgressBar(!wavyProgressBar) },
@@ -1584,13 +1499,9 @@ fun SettingsScreen(
                     title = cropThumbnailsTitle,
                     subtitle = stringResource(R.string.crop_thumbnails_subtitle),
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = cropThumbnails,
                             onCheckedChange = CustomizationSettings::setCropThumbnails,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { CustomizationSettings.setCropThumbnails(!cropThumbnails) },
@@ -1603,13 +1514,9 @@ fun SettingsScreen(
                     title = artistDialTitle,
                     subtitle = stringResource(R.string.artist_dial_subtitle),
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = artistDial,
                             onCheckedChange = CustomizationSettings::setArtistDial,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { CustomizationSettings.setArtistDial(!artistDial) },
@@ -1622,13 +1529,9 @@ fun SettingsScreen(
                     title = feelingLuckyTitle,
                     subtitle = stringResource(R.string.feeling_lucky_setting_subtitle),
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = feelingLucky,
                             onCheckedChange = CustomizationSettings::setFeelingLucky,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { CustomizationSettings.setFeelingLucky(!feelingLucky) },
@@ -1648,7 +1551,7 @@ fun SettingsScreen(
                         stringResource(R.string.high_performance_subtitle)
                     },
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = highPerformanceMode,
                             onCheckedChange = { enabled ->
                                 if (enabled) {
@@ -1657,10 +1560,6 @@ fun SettingsScreen(
                                     AppSettings.setHighPerformanceMode(false)
                                 }
                             },
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = {
@@ -1727,13 +1626,9 @@ fun SettingsScreen(
                     // opens the duplicates it found, to sort out one by one.
                     trailing = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Switch(
+                            IosSwitch(
                                 checked = hideCombinedDuplicates,
                                 onCheckedChange = AppSettings::setHideCombinedDuplicates,
-                                colors = SwitchDefaults.colors(
-                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                    checkedBorderColor = MaterialTheme.colorScheme.primary,
-                                ),
                             )
                             Spacer(Modifier.width(6.dp))
                             Chevron()
@@ -1749,13 +1644,9 @@ fun SettingsScreen(
                     title = filterNonMusicAudioTitle,
                     subtitle = stringResource(R.string.filter_non_music_audio_subtitle),
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = filterNonMusicAudio,
                             onCheckedChange = AppSettings::setFilterNonMusicAudio,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { AppSettings.setFilterNonMusicAudio(!filterNonMusicAudio) },
@@ -1777,13 +1668,9 @@ fun SettingsScreen(
                     title = showCacheFolderTitle,
                     subtitle = stringResource(R.string.show_cache_folder_subtitle),
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = showCacheFolder,
                             onCheckedChange = AppSettings::setShowCacheFolder,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { AppSettings.setShowCacheFolder(!showCacheFolder) },
@@ -1868,13 +1755,9 @@ fun SettingsScreen(
                         stringResource(R.string.replay_genres_disabled_subtitle)
                     },
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = replayGenres,
                             onCheckedChange = AppSettings::setReplayGenres,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { AppSettings.setReplayGenres(!replayGenres) },
@@ -1945,13 +1828,9 @@ fun SettingsScreen(
                     title = dontRepeatSongsTitle,
                     subtitle = stringResource(R.string.dont_repeat_songs_subtitle),
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = dontRepeatSuggestions,
                             onCheckedChange = AppSettings::setDontRepeatSuggestions,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { AppSettings.setDontRepeatSuggestions(!dontRepeatSuggestions) },
@@ -1964,13 +1843,9 @@ fun SettingsScreen(
                     title = stopMusicOnCloseTitle,
                     subtitle = stringResource(R.string.stop_music_on_close_subtitle),
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = stopOnTaskRemoved,
                             onCheckedChange = AppSettings::setStopOnTaskRemoved,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { AppSettings.setStopOnTaskRemoved(!stopOnTaskRemoved) },
@@ -1983,13 +1858,9 @@ fun SettingsScreen(
                     title = hideVolumeBarTitle,
                     subtitle = stringResource(R.string.hide_volume_bar_subtitle),
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = hideVolumeBar,
                             onCheckedChange = AppSettings::setHideVolumeBar,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { AppSettings.setHideVolumeBar(!hideVolumeBar) },
@@ -2002,13 +1873,9 @@ fun SettingsScreen(
                     title = hideSongStatusTitle,
                     subtitle = stringResource(R.string.hide_song_status_subtitle),
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = hideSongStatus,
                             onCheckedChange = AppSettings::setHideSongStatus,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { AppSettings.setHideSongStatus(!hideSongStatus) },
@@ -2021,13 +1888,9 @@ fun SettingsScreen(
                     title = showQueueHistoryTitle,
                     subtitle = stringResource(R.string.show_queue_history_subtitle),
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = showQueueHistory,
                             onCheckedChange = AppSettings::setShowQueueHistory,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { AppSettings.setShowQueueHistory(!showQueueHistory) },
@@ -2057,13 +1920,9 @@ fun SettingsScreen(
                     title = smartAlignmentTitle,
                     subtitle = stringResource(R.string.smart_version_alignment_subtitle),
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = smartVersionAlignment,
                             onCheckedChange = AppSettings::setSmartVersionAlignment,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { AppSettings.setSmartVersionAlignment(!smartVersionAlignment) },
@@ -2076,13 +1935,9 @@ fun SettingsScreen(
                     title = showNerdStatsTitle,
                     subtitle = stringResource(R.string.show_nerd_stats_subtitle),
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = nerdStats,
                             onCheckedChange = AppSettings::setShowNerdStats,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { AppSettings.setShowNerdStats(!nerdStats) },
@@ -2095,13 +1950,9 @@ fun SettingsScreen(
                     title = hideUserInfoTitle,
                     subtitle = stringResource(R.string.hide_user_info_subtitle),
                     trailing = {
-                        Switch(
+                        IosSwitch(
                             checked = hideUserInfo,
                             onCheckedChange = AppSettings::setHideUserInfo,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
                         )
                     },
                     onClick = { AppSettings.setHideUserInfo(!hideUserInfo) },
@@ -3635,14 +3486,10 @@ internal fun SettingsSubRow(
                 )
             }
         }
-        Switch(
+        IosSwitch(
             checked = checked,
             onCheckedChange = onCheckedChange,
             enabled = enabled,
-            colors = SwitchDefaults.colors(
-                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                checkedBorderColor = MaterialTheme.colorScheme.primary,
-            ),
         )
     }
 }
