@@ -173,8 +173,11 @@
     <string name="search_library_empty">Search the songs in your Local Music folder.</string>
     <string name="search_library_hint">Songs, Artists and Albums</string>
     <string name="search_addons_hint">Search your addons</string>
+    <string name="search_spotify_hint">Search Spotify</string>
     <string name="search_addons_empty">Search every enabled addon at once. Tracks play straight from the addon.</string>
     <string name="search_addons_no_results">No addon has “%1$s”.</string>
+    <string name="search_spotify_empty">Search Spotify’s catalogue. Songs play through YouTube Music.</string>
+    <string name="search_spotify_no_results">Spotify has nothing for “%1$s”.</string>
     <string name="search_library_no_results">Nothing in Local Music matches “%1$s”.</string>
     <string name="selected">Selected</string>
     <string name="share">Share</string>

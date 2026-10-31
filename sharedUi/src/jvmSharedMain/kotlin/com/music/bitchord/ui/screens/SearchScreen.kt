@@ -159,6 +159,13 @@ fun SearchScreen(
     onAddonHistoryClick: (String) -> Unit = {},
     onAddonHistoryRemove: (String) -> Unit = {},
     onAddonHistoryClear: () -> Unit = {},
+    /**
+     * Whether the page is showing Spotify's catalogue hits; see [spotifyResults].
+     * They render like the Addons list, each row matching on YouTube Music.
+     */
+    searchingSpotify: Boolean = false,
+    /** The Spotify source's songs for the submitted query; null until one is submitted. */
+    spotifyResults: UiState<List<Song>>? = null,
     /** The Library source's tracks for [query]; null while nothing is typed. */
     libraryResults: UiState<List<Song>>? = null,
     /** Files on the device are a running order to play through, not a station seed. */
@@ -192,14 +199,14 @@ fun SearchScreen(
     // MainViewModel.suggestions. Nothing below it is worth showing while it is
     // up: the results are for whatever was searched before this edit began,
     // and so are the filter tabs above them.
-    val suggesting = suggestions.isNotEmpty() && !searchingLibrary && !searchingAddons
+    val suggesting = suggestions.isNotEmpty() && !searchingLibrary && !searchingAddons && !searchingSpotify
     // Live media results arrive from the parallel typeahead pipeline; show
     // them only while the user is still typing (suggestions visible), so they
     // appear as a dropdown beneath the text completions rather than floating
     // after the search has committed.
     val showTypeahead = typeaheadResults.isNotEmpty() && suggesting
-    LaunchedEffect(listState, results, loadingMore, searchingLibrary, searchingAddons) {
-        if (results !is UiState.Success || searchingLibrary || searchingAddons) return@LaunchedEffect
+    LaunchedEffect(listState, results, loadingMore, searchingLibrary, searchingAddons, searchingSpotify) {
+        if (results !is UiState.Success || searchingLibrary || searchingAddons || searchingSpotify) return@LaunchedEffect
         snapshotFlow {
             val layout = listState.layoutInfo
             (layout.visibleItemsInfo.lastOrNull()?.index ?: -1) to layout.totalItemsCount
@@ -225,6 +232,8 @@ fun SearchScreen(
                         stringResource(Res.string.search_library_hint)
                     } else if (searchingAddons) {
                         stringResource(Res.string.search_addons_hint)
+                    } else if (searchingSpotify) {
+                        stringResource(Res.string.search_spotify_hint)
                     } else {
                         stringResource(Res.string.search_hint)
                     },
@@ -246,7 +255,7 @@ fun SearchScreen(
             // they stay up for an empty or failed search too, or picking a filter
             // that finds nothing would take away the control needed to leave it.
             // They are YouTube's categories, so the Library source has none.
-            if (results != null && !suggesting && !searchingLibrary && !searchingAddons) {
+            if (results != null && !suggesting && !searchingLibrary && !searchingAddons && !searchingSpotify) {
                 SearchFilterTabs(filter = filter, onFilterChange = onFilterChange)
             }
         }
@@ -257,10 +266,15 @@ fun SearchScreen(
             contentPadding = PaddingValues(bottom = contentPadding.calculateBottomPadding()),
         ) {
             when {
-                searchingLibrary || searchingAddons -> librarySearchResults(
+                searchingLibrary || searchingAddons || searchingSpotify -> librarySearchResults(
                     query = query.trim(),
-                    results = if (searchingAddons) addonResults else libraryResults,
+                    results = when {
+                        searchingSpotify -> spotifyResults
+                        searchingAddons -> addonResults
+                        else -> libraryResults
+                    },
                     addons = searchingAddons,
+                    spotify = searchingSpotify,
                     addonHistory = addonHistory,
                     onAddonHistoryClick = onAddonHistoryClick,
                     onAddonHistoryRemove = onAddonHistoryRemove,
@@ -427,6 +441,7 @@ private fun LazyListScope.librarySearchResults(
     query: String,
     results: UiState<List<Song>>?,
     addons: Boolean,
+    spotify: Boolean = false,
     addonHistory: List<String>,
     onAddonHistoryClick: (String) -> Unit,
     onAddonHistoryRemove: (String) -> Unit,
@@ -442,7 +457,13 @@ private fun LazyListScope.librarySearchResults(
             recentAddonSearches(addonHistory, onAddonHistoryClick, onAddonHistoryRemove, onAddonHistoryClear)
         } else item(key = "library:empty") {
             MessageState(
-                stringResource(if (addons) Res.string.search_addons_empty else Res.string.search_library_empty),
+                stringResource(
+                    when {
+                        spotify -> Res.string.search_spotify_empty
+                        addons -> Res.string.search_addons_empty
+                        else -> Res.string.search_library_empty
+                    },
+                ),
             )
         }
         UiState.Loading -> songListSkeleton(keyPrefix = "skeleton:search:library")
@@ -450,7 +471,9 @@ private fun LazyListScope.librarySearchResults(
         is UiState.Success -> if (results.data.isEmpty()) {
             item(key = "library:no-match") {
                 MessageState(
-                    if (addons) {
+                    if (spotify) {
+                        stringResource(Res.string.search_spotify_no_results, query)
+                    } else if (addons) {
                         stringResource(Res.string.search_addons_no_results, query)
                     } else {
                         stringResource(Res.string.search_library_no_results, query)
@@ -460,7 +483,14 @@ private fun LazyListScope.librarySearchResults(
         } else {
             val tracks = results.data
             val isCurrentRow = playingRowMatcher(tracks, currentSong)
-            itemsIndexed(tracks, key = { index, song -> "${if (addons) "addon" else "library"}_${song.videoId}_$index" }) { index, song ->
+            itemsIndexed(tracks, key = { index, song ->
+                val prefix = when {
+                    spotify -> "spotify"
+                    addons -> "addon"
+                    else -> "library"
+                }
+                "${prefix}_${song.videoId}_$index"
+            }) { index, song ->
                 SongRow(
                     song = song,
                     onClick = { onSongClick(tracks, index) },

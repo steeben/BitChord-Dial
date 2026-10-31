@@ -64,6 +64,8 @@ object SpotifyLibrary {
     /** Spotify's own Liked Songs artwork, the purple heart; the collection has no cover of its own. */
     private const val LIKED_COVER = "https://misc.scdn.co/liked-songs/liked-songs-640.png"
     private const val LIKED = "087278b20b743578a6262c2b0b4bcd20d879c503cc359a2285baf083ef944240"
+    /** The web player's own search page query, the one Meld reads Spotify's catalogue through. */
+    private const val SEARCH = "4801118d4a100f756e833d33984436a3899cff359c532f8fd3aaf174b60b3b49"
     /** The phone's canvas client sent this one; kept so its requests look unchanged. */
     private const val USER_AGENT =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) " +
@@ -111,6 +113,25 @@ object SpotifyLibrary {
             if (raw == 0 || offset >= total) break
         }
         collected
+    }
+
+    /**
+     * Spotify's catalogue searched for [query], songs only: the web player's
+     * search page query, signed with the same session as the library.
+     */
+    suspend fun searchTracks(query: String, limit: Int = 30): List<SpotifyTrack> = withContext(Dispatchers.IO) {
+        val variables = buildJsonObject {
+            put("searchTerm", query)
+            put("offset", 0)
+            put("limit", limit)
+            put("numberOfTopResults", 5)
+            put("includeAudiobooks", false)
+            put("includeArtistHasConcertsField", false)
+            put("includePreReleases", false)
+            put("includeLocalConcertsField", false)
+            put("includeAuthors", false)
+        }
+        parseSearchTracks(gql("searchDesktop", SEARCH, variables, authHeaders()))
     }
 
     private fun playlistPage(headers: Map<String, String>, offset: Int): Triple<List<SpotifyPlaylist>, Int, Int> {
@@ -265,6 +286,31 @@ internal fun parseTrackPage(root: JsonObject): Triple<List<SpotifyTrack>, Int, I
         )
     }
     return Triple(items, content.int("totalCount") ?: rawItems.size, rawItems.size)
+}
+
+/** The song hits of a `searchDesktop` answer, in Spotify's order. */
+internal fun parseSearchTracks(root: JsonObject): List<SpotifyTrack> {
+    val search = root.obj("data")?.obj("searchV2")
+        ?: throw IllegalStateException("Spotify search response was empty")
+    return search.obj("tracksV2")?.arr("items").orEmpty().mapNotNull { element ->
+        val wrapper = element.jsonObject.obj("item") ?: return@mapNotNull null
+        val data = wrapper.obj("data") ?: return@mapNotNull null
+        if (data.str("__typename").let { it != null && it != "Track" }) return@mapNotNull null
+        val title = data.str("name").orEmpty()
+        if (title.isBlank()) return@mapNotNull null
+        val uri = wrapper.str("_uri") ?: data.str("uri") ?: return@mapNotNull null
+        val album = data.obj("albumOfTrack")
+        SpotifyTrack(
+            id = uri.substringAfterLast(":"),
+            title = title,
+            artist = data.obj("artists")?.arr("items").orEmpty().mapNotNull { artist ->
+                artist.jsonObject.obj("profile")?.str("name")?.takeIf { it.isNotBlank() }
+            }.joinToString(", "),
+            album = album?.str("name"),
+            durationMs = data.obj("duration")?.int("totalMilliseconds") ?: 0,
+            imageUrl = album?.obj("coverArt")?.arr("sources")?.lastUrl(),
+        )
+    }
 }
 
 /** The Liked Songs page: `me.library.tracks`, each entry wrapping the track under `track`. */

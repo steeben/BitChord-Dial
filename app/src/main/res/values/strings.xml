@@ -33,6 +33,8 @@
     <string name="search_source_addons">Addons</string>
     <string name="search_addons_none">No addons are enabled. Add one in Settings → Sources.</string>
     <string name="search_addons_hint">Search your addons</string>
+    <string name="search_spotify_hint">Search Spotify</string>
+    <string name="search_spotify_signed_out">Sign in to Spotify from the Library\'s Spotify page to search it here.</string>
     <string name="audio_files_on_device">Audio files on device</string>
     <string name="on_device">On Device</string>
     <string name="playlists">Playlists</string>

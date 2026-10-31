@@ -1083,6 +1083,7 @@ private fun BitChordApp(
     val searchSource by viewModel.searchSource.collectAsStateWithLifecycle()
     val libraryResults by viewModel.libraryResults.collectAsStateWithLifecycle()
     val addonResults by viewModel.addonResults.collectAsStateWithLifecycle()
+    val spotifyResults by viewModel.spotifyResults.collectAsStateWithLifecycle()
     val signedIn by viewModel.signedIn.collectAsStateWithLifecycle()
     val incomingJamInvite by JamInviteLink.pending.collectAsStateWithLifecycle()
     var activeJamInviteCode by rememberSaveable { mutableStateOf<String?>(null) }
@@ -4502,6 +4503,7 @@ private fun BitChordApp(
                                         stringResource(R.string.search_source_youtube),
                                         stringResource(R.string.library),
                                         stringResource(R.string.search_source_addons),
+                                        stringResource(R.string.spotify),
                                     ),
                                     selectedIndex = searchSource.ordinal,
                                     onSelect = { index -> onSearchSourceChange(SearchSource.entries[index]) },
@@ -4512,6 +4514,8 @@ private fun BitChordApp(
                             libraryResults = libraryResults,
                             searchingAddons = searchSource == SearchSource.ADDONS,
                             addonResults = addonResults,
+                            searchingSpotify = searchSource == SearchSource.SPOTIFY,
+                            spotifyResults = spotifyResults,
                             addonHistory = viewModel.addonSearchHistory.collectAsStateWithLifecycle().value,
                             onAddonHistoryClick = { term ->
                                 viewModel.onQueryChange(term)
@@ -4523,7 +4527,21 @@ private fun BitChordApp(
                             // tapping the row there would give; the addons'
                             // hits play as a list of their own.
                             onLibrarySongClick = { songs, index ->
-                                playFrom(
+                                // Spotify's hits play through their YouTube Music
+                                // matches; a row still matching is matched first.
+                                if (searchSource == SearchSource.SPOTIFY) {
+                                    viewModel.playSpotifyResult(index) { resolved, at ->
+                                        playFrom(
+                                            resolved,
+                                            at,
+                                            QueueSource(
+                                                context.getString(R.string.spotify),
+                                                PlaybackSourceType.BROWSE,
+                                                "spotify:search",
+                                            ),
+                                        )
+                                    }
+                                } else playFrom(
                                     songs,
                                     index,
                                     if (searchSource == SearchSource.ADDONS) {
@@ -5052,6 +5070,8 @@ private fun BitChordApp(
                                 focusRequester = searchFieldFocus,
                                 placeholder = if (searchSource == SearchSource.ADDONS) {
                                     stringResource(R.string.search_addons_hint)
+                                } else if (searchSource == SearchSource.SPOTIFY) {
+                                    stringResource(R.string.search_spotify_hint)
                                 } else {
                                     org.jetbrains.compose.resources.stringResource(
                                         if (searchSource == SearchSource.LIBRARY) {
