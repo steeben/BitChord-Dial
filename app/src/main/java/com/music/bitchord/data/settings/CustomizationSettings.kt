@@ -370,10 +370,15 @@ object CustomizationSettings {
     }
 
     /**
-     * Up to [SPEED_DIAL_SIZE] items: pins first, then YouTube's own speed dial
-     * when the feed has one, then recently played, then the rest of the feed.
+     * Up to [SPEED_DIAL_SIZE] items: pins first, then recently played, then
+     * YouTube's own speed dial when the feed has one, then the rest of the feed.
      * A song played from an album or playlist stands for that album or
      * playlist, once, where its latest play would be (see [PlayedCollections]).
+     *
+     * Recently played goes ahead of YouTube's speed dial: that shelf ranks by
+     * how often something has been played, not how lately, so it barely moves
+     * from week to week and, coming first, filled the tiles after the pins
+     * with the same things however the listening changed.
      */
     fun buildSpeedDial(pins: List<ShelfItem>, shelves: List<HomeShelf>): List<ShelfItem> {
         fun shelf(title: String) = shelves.firstOrNull { it.title.equals(title, ignoreCase = true) }?.items.orEmpty()
@@ -385,7 +390,7 @@ object CustomizationSettings {
             .filterNot { it.title.equals(SPEED_DIAL_TITLE, true) || it.title.equals(RECENTS_TITLE, true) }
             .flatMap { it.items }
         val hidden = hiddenFromDial.value
-        return (pins + official + recents + rest)
+        return (pins + recents + official + rest)
             .filter { it.speedDialId != null && it.speedDialId !in hidden }
             .distinctBy { it.speedDialId }
             .take(SPEED_DIAL_SIZE)

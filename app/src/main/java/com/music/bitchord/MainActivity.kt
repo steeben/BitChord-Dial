@@ -1454,6 +1454,14 @@ private fun BitChordApp(
         // was last fetched is a change to exactly this page.
         if (currentFeed == MainViewModel.Feed.LIBRARY) viewModel.onLibraryShown()
     }
+    // Coming back to the app on Home is opening Home too: without this, the
+    // dial kept what it had when the app went to the background, however
+    // much was played from the notification or the lock screen meanwhile.
+    val feedOnResume by rememberUpdatedState(currentFeed)
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+        if (feedOnResume == MainViewModel.Feed.HOME) viewModel.onHomeShown()
+        onPauseOrDispose { }
+    }
 
     val currentPull = when (currentFeed) {
         MainViewModel.Feed.HOME -> homePull
