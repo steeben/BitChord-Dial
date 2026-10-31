@@ -1398,4 +1398,6 @@
     <string name="offline_playlist_empty">הפלייליסט עדיין ריק. אפשר להוסיף שירים מהתפריט שלהם.</string>
     <string name="offline_liked_empty">שירים שאהבת במכשיר הזה יופיעו כאן</string>
     <string name="saved_on_this_device">נשמר במכשיר הזה</string>
+    <string name="search_spotify_hint">חיפוש ב-Spotify</string>
+    <string name="search_spotify_signed_out">יש להתחבר ל-Spotify מעמוד Spotify בספרייה כדי לחפש כאן.</string>
 </resources>

@@ -1394,4 +1394,6 @@
     <string name="offline_playlist_empty">Cette playlist est encore vide. Ajoutez-y des titres depuis leur menu.</string>
     <string name="offline_liked_empty">Les titres que vous aimez sur cet appareil apparaissent ici</string>
     <string name="saved_on_this_device">Enregistrée sur cet appareil</string>
+    <string name="search_spotify_hint">Rechercher sur Spotify</string>
+    <string name="search_spotify_signed_out">Connectez-vous à Spotify depuis la page Spotify de la Bibliothèque pour y rechercher ici.</string>
 </resources>

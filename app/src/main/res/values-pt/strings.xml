@@ -1398,4 +1398,6 @@
     <string name="offline_playlist_empty">Esta playlist ainda está vazia. Adicione músicas pelo menu delas.</string>
     <string name="offline_liked_empty">As músicas que você curtir neste dispositivo aparecem aqui</string>
     <string name="saved_on_this_device">Salva neste dispositivo</string>
+    <string name="search_spotify_hint">Pesquisar no Spotify</string>
+    <string name="search_spotify_signed_out">Inicie sessão no Spotify na página Spotify da Biblioteca para pesquisar aqui.</string>
 </resources>

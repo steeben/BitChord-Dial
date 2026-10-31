@@ -1372,4 +1372,6 @@
     <string name="offline_playlist_empty">這個播放清單還是空的。可從歌曲選單中加入。</string>
     <string name="offline_liked_empty">你在這部裝置上喜歡的歌曲會顯示在這裡</string>
     <string name="saved_on_this_device">已儲存在這部裝置上</string>
+    <string name="search_spotify_hint">搜尋 Spotify</string>
+    <string name="search_spotify_signed_out">請在媒體庫的 Spotify 頁面登入 Spotify，即可在此搜尋。</string>
 </resources>

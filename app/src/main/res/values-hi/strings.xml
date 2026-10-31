@@ -1393,4 +1393,6 @@
     <string name="offline_playlist_empty">यह प्लेलिस्ट अभी खाली है। गानों के मेनू से उन्हें जोड़ें।</string>
     <string name="offline_liked_empty">इस डिवाइस पर पसंद किए गए गाने यहाँ दिखेंगे</string>
     <string name="saved_on_this_device">इस डिवाइस पर सेव किया गया</string>
+    <string name="search_spotify_hint">Spotify में खोजें</string>
+    <string name="search_spotify_signed_out">यहाँ खोजने के लिए लाइब्रेरी के Spotify पेज से Spotify में साइन इन करें।</string>
 </resources>

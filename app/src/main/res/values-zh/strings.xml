@@ -1370,4 +1370,6 @@
     <string name="offline_playlist_empty">此歌单还是空的。可从歌曲菜单中添加。</string>
     <string name="offline_liked_empty">你在此设备上喜欢的歌曲会显示在这里</string>
     <string name="saved_on_this_device">已保存在此设备上</string>
+    <string name="search_spotify_hint">搜索 Spotify</string>
+    <string name="search_spotify_signed_out">请在媒体库的 Spotify 页面登录 Spotify，即可在此搜索。</string>
 </resources>

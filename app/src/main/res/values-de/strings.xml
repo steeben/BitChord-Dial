@@ -1393,4 +1393,6 @@
     <string name="offline_playlist_empty">Diese Playlist ist noch leer. Füge Songs über ihr Menü hinzu.</string>
     <string name="offline_liked_empty">Songs, die dir auf diesem Gerät gefallen, erscheinen hier</string>
     <string name="saved_on_this_device">Auf diesem Gerät gespeichert</string>
+    <string name="search_spotify_hint">Spotify durchsuchen</string>
+    <string name="search_spotify_signed_out">Melde dich auf der Spotify-Seite der Mediathek bei Spotify an, um hier zu suchen.</string>
 </resources>

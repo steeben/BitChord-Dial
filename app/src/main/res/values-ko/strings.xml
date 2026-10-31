@@ -1161,4 +1161,6 @@
     <string name="offline_playlist_empty">아직 이 재생목록에 노래가 없습니다. 노래 메뉴에서 추가하세요.</string>
     <string name="offline_liked_empty">이 기기에서 좋아요한 노래가 여기에 표시됩니다</string>
     <string name="saved_on_this_device">이 기기에 저장됨</string>
+    <string name="search_spotify_hint">Spotify 검색</string>
+    <string name="search_spotify_signed_out">여기서 검색하려면 보관함의 Spotify 페이지에서 Spotify에 로그인하세요.</string>
 </resources>

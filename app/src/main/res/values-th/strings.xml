@@ -1376,4 +1376,6 @@
     <string name="offline_playlist_empty">เพลย์ลิสต์นี้ยังว่างอยู่ เพิ่มเพลงได้จากเมนูของเพลง</string>
     <string name="offline_liked_empty">เพลงที่คุณถูกใจในอุปกรณ์นี้จะแสดงที่นี่</string>
     <string name="saved_on_this_device">บันทึกไว้ในอุปกรณ์นี้</string>
+    <string name="search_spotify_hint">ค้นหาใน Spotify</string>
+    <string name="search_spotify_signed_out">ลงชื่อเข้าใช้ Spotify จากหน้า Spotify ในคลังเพลงเพื่อค้นหาที่นี่</string>
 </resources>
