@@ -1334,4 +1334,5 @@
     <string name="saved_on_this_device">Salvata su questo dispositivo</string>
     <string name="search_spotify_hint">Cerca su Spotify</string>
     <string name="search_spotify_signed_out">Accedi a Spotify dalla pagina Spotify della Libreria per cercare qui.</string>
+    <string name="ai_mix_started">AI Mix: estratti di 30 secondi mixati come un DJ set</string>
 </resources>

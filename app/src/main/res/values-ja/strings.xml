@@ -1373,4 +1373,5 @@
     <string name="saved_on_this_device">このデバイスに保存</string>
     <string name="search_spotify_hint">Spotify を検索</string>
     <string name="search_spotify_signed_out">ここで検索するには、ライブラリの Spotify ページから Spotify にログインしてください。</string>
+    <string name="ai_mix_started">AI Mix：30秒のサンプルを DJ セットのようにミックス</string>
 </resources>

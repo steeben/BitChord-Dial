@@ -1435,4 +1435,5 @@
     <string name="saved_on_this_device">Zapisano na tym urządzeniu</string>
     <string name="search_spotify_hint">Szukaj w Spotify</string>
     <string name="search_spotify_signed_out">Zaloguj się do Spotify na stronie Spotify w Bibliotece, aby tu wyszukiwać.</string>
+    <string name="ai_mix_started">AI Mix: 30-sekundowe fragmenty zmiksowane jak set DJ-a</string>
 </resources>

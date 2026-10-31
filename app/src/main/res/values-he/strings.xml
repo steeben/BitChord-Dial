@@ -1400,4 +1400,5 @@
     <string name="saved_on_this_device">נשמר במכשיר הזה</string>
     <string name="search_spotify_hint">חיפוש ב-Spotify</string>
     <string name="search_spotify_signed_out">יש להתחבר ל-Spotify מעמוד Spotify בספרייה כדי לחפש כאן.</string>
+    <string name="ai_mix_started">AI Mix: קטעים של 30 שניות, ממוקסים כמו סט של DJ</string>
 </resources>

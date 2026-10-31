@@ -1372,4 +1372,5 @@
     <string name="saved_on_this_device">Disimpan di perangkat ini</string>
     <string name="search_spotify_hint">Cari di Spotify</string>
     <string name="search_spotify_signed_out">Masuk ke Spotify dari halaman Spotify di Pustaka untuk mencari di sini.</string>
+    <string name="ai_mix_started">AI Mix: cuplikan 30 detik, dimiks seperti set DJ</string>
 </resources>

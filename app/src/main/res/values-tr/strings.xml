@@ -1352,4 +1352,5 @@
     <string name="saved_on_this_device">Bu cihaza kaydedildi</string>
     <string name="search_spotify_hint">Spotify\'da ara</string>
     <string name="search_spotify_signed_out">Burada aramak için Kitaplık\'taki Spotify sayfasından Spotify\'a giriş yap.</string>
+    <string name="ai_mix_started">AI Mix: DJ seti gibi karıştırılmış 30 saniyelik örnekler</string>
 </resources>
