@@ -1636,7 +1636,10 @@ private fun BitChordApp(
                 TrackLog.w("Player", "audio switch found no distinct official song", song.videoId)
                 // The switch is always offered now, so say when there was nothing to switch to.
                 if (song.videoId !in missingVersions) missingVersions += song.videoId
-                if (stillCurrent) showQueueNotice(versionContext.getString(R.string.no_audio_version))
+                // The automatic default stays quiet: the video simply plays on.
+                if (stillCurrent && !pauseWhileResolving) {
+                    showQueueNotice(versionContext.getString(R.string.no_audio_version))
+                }
                 if (stillCurrent && resumeAfterResolution) c.play()
                 return
             }
@@ -1820,6 +1823,23 @@ private fun BitChordApp(
         )
         playFrom(songs, index, source)
     }
+    // Songs play as their audio version by default, music videos included.
+    // The video row starts so the player fills at once, and its catalogue
+    // release is swapped in behind the loading state; when there isn't one
+    // the video plays on untouched. Picking Video from the song menu is the
+    // only way to watch: that choice is remembered for this occurrence
+    // ([keepVideoId] on revert, [convertedVideoId] on an audio-to-video
+    // switch) so it is not undone here. A Listen Together party plays one
+    // cut for everyone, so it is left alone there.
+    LaunchedEffect(player.song?.videoId, partyState.inParty) {
+        val song = player.song ?: return@LaunchedEffect
+        if (song.isVideo && !partyState.inParty &&
+            song.videoId != keepVideoId && song.videoId != convertedVideoId
+        ) {
+            switchToMusicOnly(song, pauseWhileResolving = true)
+        }
+    }
+
     LaunchedEffect(player.song?.videoId) {
         if (optimisticVersionSong?.videoId == player.song?.videoId ||
             (optimisticVersionSong != null && player.song?.videoId != convertedAudioId && player.song?.videoId != convertedVideoId && player.song?.videoId != keepVideoId)

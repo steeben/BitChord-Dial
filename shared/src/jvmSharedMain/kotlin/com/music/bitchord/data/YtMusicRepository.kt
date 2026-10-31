@@ -403,8 +403,9 @@ object YtMusicRepository {
      *
      * Returns [song] unchanged when it isn't a video, or when nothing better
      * turns up — playing the video's own audio track beats guessing at a
-     * substitute. This is deliberately an explicit action from the player,
-     * never part of normal queueing or playback.
+     * substitute. The player calls this for every video that starts, since
+     * songs play as their audio version by default, and again when the
+     * listener picks Song from the menu.
      *
      * [search] already drops video rows from its results (see
      * [InnertubeParser.parseSearch]), so every candidate here is audio-only
