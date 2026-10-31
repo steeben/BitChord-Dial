@@ -193,7 +193,11 @@ class AddonSource(
             if (!admitted("a search")) return@withContext emptyList()
             val tier = request?.tier ?: AddonClient.TIER_LOSSLESS
             val tracks = client.search(query, tier).getOrElse { failure ->
-                TrackLog.w(TAG, "${config.displayName}: search failed — ${failure.message}")
+                if (failure is AddonNotFound) {
+                    TrackLog.d(TAG, "${config.displayName}: search returned 404 for \"$query\"")
+                } else {
+                    TrackLog.w(TAG, "${config.displayName}: search failed — ${failure.message}")
+                }
                 return@withContext emptyList()
             }
             tracks.asSequence()
@@ -237,12 +241,15 @@ class AddonSource(
             val answer = result.getOrNull()
 
             if (answer == null) {
-                // A 404 is the addon saying it does not hold this recording,
-                // which is a miss and belongs in no log. Anything else is a
-                // fault worth a line, and both end the same way: whatever the
+                // A 404 is the addon saying it does not hold this recording:
+                // a miss, not a fault, but still named, because an addon that
+                // 404s every stream it lists looks exactly like one that is
+                // slow until it is. Both end the same way: whatever the
                 // search row had, else null so [SourceResolver] moves on.
                 val failure = result.exceptionOrNull()
-                if (failure !is AddonNotFound) {
+                if (failure is AddonNotFound) {
+                    TrackLog.d(TAG, "${config.displayName}: stream returned 404 for $trackId")
+                } else {
                     TrackLog.w(TAG, "${config.displayName}: stream failed for $trackId — ${failure?.message}")
                 }
                 return@withContext fromRow(trackId, tier)
