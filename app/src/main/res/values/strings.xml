@@ -533,7 +533,9 @@
     <string name="downloading_progress">Downloading · %1$d%%</string>
     <string name="starting">Starting</string>
     <string name="start_radio">Start radio</string>
-    <string name="ai_mix" translatable="false">AI Mix</string>
+    <string name="ai_mix" translatable="false">AI Mix (beta)</string>
+    <string name="ai_mix_enabled">(enabled)</string>
+    <string name="ai_mix_stopped">AI Mix off</string>
     <string name="ai_mix_started">AI Mix: 30-second samples, mixed like a DJ set</string>
     <string name="shared_link">Shared link</string>
     <string name="radio_started">%1$s radio started</string>

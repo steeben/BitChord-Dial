@@ -1313,4 +1313,6 @@
     <string name="search_spotify_hint">Tìm trên Spotify</string>
     <string name="search_spotify_signed_out">Đăng nhập Spotify từ trang Spotify trong Thư viện để tìm kiếm tại đây.</string>
     <string name="ai_mix_started">AI Mix: các đoạn 30 giây, phối như một set DJ</string>
+    <string name="ai_mix_enabled">(đang bật)</string>
+    <string name="ai_mix_stopped">Đã tắt AI Mix</string>
 </resources>

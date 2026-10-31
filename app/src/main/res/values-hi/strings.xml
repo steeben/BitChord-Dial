@@ -1396,4 +1396,6 @@
     <string name="search_spotify_hint">Spotify में खोजें</string>
     <string name="search_spotify_signed_out">यहाँ खोजने के लिए लाइब्रेरी के Spotify पेज से Spotify में साइन इन करें।</string>
     <string name="ai_mix_started">AI Mix: 30 सेकंड के नमूने, DJ सेट की तरह मिक्स किए गए</string>
+    <string name="ai_mix_enabled">(चालू)</string>
+    <string name="ai_mix_stopped">AI Mix बंद</string>
 </resources>

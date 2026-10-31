@@ -150,6 +150,8 @@ fun SongActionsSheet(
      * [com.music.bitchord.playback.AiMix].
      */
     onAiMix: (() -> Unit)? = null,
+    /** An AI Mix is playing: the row says so, in the accent. */
+    aiMixActive: Boolean = false,
     onDownload: () -> Unit,
     /**
      * Copies this track to the WebDAV server. Null hides the row — the caller
@@ -459,7 +461,9 @@ fun SongActionsSheet(
             ActionRow(
                 icon = BitChordIcons.AiMix,
                 label = stringResource(R.string.ai_mix),
+                value = if (aiMixActive) stringResource(R.string.ai_mix_enabled) else null,
                 accent = palette.accent,
+                highlighted = aiMixActive,
                 onClick = it,
             )
         }
@@ -1162,6 +1166,8 @@ internal fun ActionRow(
     enabled: Boolean = true,
     /** A dimmer line under the label — in a menu only, where it names where the row leads. */
     description: String? = null,
+    /** Icon, label and value all in [accent]: the row names a mode that is on. */
+    highlighted: Boolean = false,
     onClick: () -> Unit,
 ) {
     val menu = LocalActionRowStyle.current == ActionRowStyle.Menu
@@ -1173,9 +1179,9 @@ internal fun ActionRow(
             onClick = onClick,
             description = description,
             value = value,
-            iconTint = tint,
-            valueColor = accent.takeIf { tint != null },
-            labelColor = tint?.takeIf { it == MaterialTheme.colorScheme.error },
+            iconTint = if (highlighted) accent else tint,
+            valueColor = accent.takeIf { tint != null || highlighted },
+            labelColor = if (highlighted) accent else tint?.takeIf { it == MaterialTheme.colorScheme.error },
             enabled = enabled,
         )
         return
@@ -1188,7 +1194,7 @@ internal fun ActionRow(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = (tint ?: foreground).copy(alpha = alpha),
+            tint = (if (highlighted) accent else tint ?: foreground).copy(alpha = alpha),
             modifier = Modifier.size(if (menu) 20.dp else 22.dp),
         )
     }
@@ -1214,7 +1220,7 @@ internal fun ActionRow(
         Text(
             text = label,
             style = MaterialTheme.typography.bodyLarge,
-            color = foreground.copy(alpha = alpha),
+            color = (if (highlighted) accent else foreground).copy(alpha = alpha),
             maxLines = if (menu) 2 else Int.MAX_VALUE,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),

@@ -64,6 +64,7 @@ object AiMix {
             armedAt = 0L
             startedAt = now
             windows.clear()
+            SampleWindows.clear()
             _active.value = true
             return
         }
@@ -72,6 +73,7 @@ object AiMix {
         // for one queue: the second must not end the mix the first began.
         if (_active.value && now - startedAt <= SAME_QUEUE_MS) return
         windows.clear()
+        SampleWindows.clear()
         _active.value = false
     }
 
@@ -79,6 +81,7 @@ object AiMix {
     fun startNow(currentMediaId: String?, positionMs: Long) {
         armedAt = 0L
         windows.clear()
+        SampleWindows.clear()
         if (currentMediaId != null) windows[currentMediaId] = positionMs.coerceAtLeast(0L)
         _active.value = true
     }
@@ -86,6 +89,7 @@ object AiMix {
     fun stop() {
         armedAt = 0L
         windows.clear()
+        SampleWindows.clear()
         _active.value = false
     }
 

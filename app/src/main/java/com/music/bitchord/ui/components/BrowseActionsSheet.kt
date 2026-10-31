@@ -213,6 +213,8 @@ fun BrowseActionsSheet(
     onStartRadio: (() -> Unit)? = null,
     /** Plays these tracks as an AI Mix — see [com.music.bitchord.playback.AiMix]. Null hides the row. */
     onAiMix: (() -> Unit)? = null,
+    /** An AI Mix is playing: the row says so, in the accent. */
+    aiMixActive: Boolean = false,
     /** An artist's star: whether the account follows them, null while unknown or not offered. */
     favorite: Boolean? = null,
     onToggleFavorite: (() -> Unit)? = null,
@@ -265,8 +267,15 @@ fun BrowseActionsSheet(
                 }
                 onShuffle?.let { ActionRow(BitChordIcons.Shuffle, stringResource(R.string.shuffle), onClick = it) }
                 onStartRadio?.let { ActionRow(Icons.Rounded.Radio, stringResource(R.string.start_radio), onClick = it) }
-            onAiMix?.let { ActionRow(BitChordIcons.AiMix, stringResource(R.string.ai_mix), onClick = it) }
-                onAiMix?.let { ActionRow(BitChordIcons.AiMix, stringResource(R.string.ai_mix), onClick = it) }
+                onAiMix?.let {
+                    ActionRow(
+                        BitChordIcons.AiMix,
+                        stringResource(R.string.ai_mix),
+                        value = if (aiMixActive) stringResource(R.string.ai_mix_enabled) else null,
+                        highlighted = aiMixActive,
+                        onClick = it,
+                    )
+                }
                 if (favorite != null && onToggleFavorite != null) {
                     ActionRow(
                         if (favorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
@@ -296,6 +305,15 @@ fun BrowseActionsSheet(
             onPlay?.let { ActionRow(Icons.Rounded.PlayArrow, stringResource(R.string.play), onClick = it) }
             onShuffle?.let { ActionRow(BitChordIcons.Shuffle, stringResource(R.string.shuffle), onClick = it) }
             onStartRadio?.let { ActionRow(Icons.Rounded.Radio, stringResource(R.string.start_radio), onClick = it) }
+            onAiMix?.let {
+                ActionRow(
+                    BitChordIcons.AiMix,
+                    stringResource(R.string.ai_mix),
+                    value = if (aiMixActive) stringResource(R.string.ai_mix_enabled) else null,
+                    highlighted = aiMixActive,
+                    onClick = it,
+                )
+            }
             ActionRow(
                 Icons.AutoMirrored.Rounded.PlaylistPlay,
                 stringResource(R.string.play_next),

@@ -8803,6 +8803,14 @@ class PlaybackService : MediaLibraryService() {
                 castPrevious()
                 return
             }
+            // AI Mix plays every track from mid-song, always past the point
+            // where back restarts it, and a restart would land on the intro
+            // the mix skips. Back means the previous sample there.
+            if (AiMix.active.value && wrappedPlayer.hasPreviousMediaItem()) {
+                crossfade.onSkipRequested()
+                wrappedPlayer.seekToPreviousMediaItem()
+                return
+            }
             super.seekToPrevious()
         }
 

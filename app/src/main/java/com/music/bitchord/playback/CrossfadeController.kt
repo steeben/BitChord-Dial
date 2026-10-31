@@ -1093,13 +1093,16 @@ class CrossfadeController(
             }
         }
 
-        val end = minOf(start + AiMix.SAMPLE_MS, duration - AI_MIX_END_GUARD_MS)
+        val end = aiMixEnd(start, duration)
         val fade = minOf(AiMix.BLEND_MS, (end - start) / 3).coerceAtLeast(1_000L)
         if (end - fade <= 0L) return
         val position = player.currentPosition
+        SampleWindows.put(item.mediaId, SampleWindow(start, end))
+        // On the sample's own scale, which is the one the seek bar draws now.
+        val length = (end - start).toFloat()
         AppSettings.smartTransitionWindow.value = TransitionWindow(
-            start = ((end - fade).toFloat() / duration).coerceIn(0f, 1f),
-            end = (end.toFloat() / duration).coerceIn(0f, 1f),
+            start = ((end - fade - start) / length).coerceIn(0f, 1f),
+            end = 1f,
         )
         plannedTransition = item.mediaId to (end - fade)
 
@@ -1138,6 +1141,24 @@ class CrossfadeController(
         // on a stream nothing has fetched yet.
         if (end - fade - position > AI_MIX_ARM_LEAD_MS) return
         val cue = AiMix.windowStart(nextItem.mediaId, nextDuration) { sampleStartMs(nextItem, nextDuration) }
+        if (nextDuration > 0L) SampleWindows.put(nextItem.mediaId, SampleWindow(cue, aiMixEnd(cue, nextDuration)))
+
+        // The blend was due and never happened: the next sample would not load
+        // in time, or starved once it started. Arming again only filters this
+        // track away for another twelve seconds while it plays on past its
+        // sample, so cut to the next one instead and let it load in the
+        // session player, which waits for it as long as it takes.
+        if (position >= end - fade + AI_MIX_BLEND_GRACE_MS) {
+            TrackLog.w(
+                TAG,
+                "AI Mix: ${nextItem.mediaId} never came in under ${item.mediaId} " +
+                    "(at ${position}ms, blend was due at ${end - fade}ms); cutting to it at ${cue}ms",
+                about = null,
+            )
+            if (nextDuration > 0L) aiMixSeated = nextItem.mediaId
+            player.seekTo(nextIndex, cue)
+            return
+        }
         TrackLog.d(
             TAG,
             "AI Mix ${item.mediaId} [${start}..${end}ms] -> ${nextItem.mediaId} @${cue}ms over ${fade}ms",
@@ -1156,6 +1177,10 @@ class CrossfadeController(
             ),
         )
     }
+
+    /** Where a sample starting at [start] ends: [AiMix.SAMPLE_MS] on, kept clear of the file's end. */
+    private fun aiMixEnd(start: Long, durationMs: Long): Long =
+        minOf(start + AiMix.SAMPLE_MS, durationMs - AI_MIX_END_GUARD_MS).coerceAtLeast(start)
 
     /**
      * Where a track's 30-second sample starts: its loudest stretch when
@@ -1785,6 +1810,14 @@ class CrossfadeController(
         // up. Give up and let the queue move on plainly rather than fading into
         // silence.
         if (expired && !ready) return bail()
+        // AI Mix: the outgoing track's filter is already closing over a sample
+        // that has run out. Waiting the rest of the arm timeout leaves it
+        // playing on muffled; give up now and let [planAiMix] cut over.
+        if (!ready && AiMix.active.value && fadeEndMs > 0L &&
+            out.currentPosition >= fadeEndMs - fadeMs + AI_MIX_BLEND_GRACE_MS
+        ) {
+            return bail()
+        }
 
         // Both sinks write seconds ahead of the speaker. The standby fills its
         // whole buffer while it waits here, so its filter has to be at the
@@ -3895,6 +3928,12 @@ class CrossfadeController(
          * gets dropped.
          */
         const val ARM_LEAD_MS = 4_000L
+
+        /**
+         * How long past its due point an AI Mix blend may still be waiting on
+         * the next sample before the mix cuts to it instead.
+         */
+        const val AI_MIX_BLEND_GRACE_MS = 3_000L
 
         /** How long before its blend AI Mix loads the next sample. */
         const val AI_MIX_ARM_LEAD_MS = 8_000L

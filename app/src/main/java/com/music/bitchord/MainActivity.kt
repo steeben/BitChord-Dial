@@ -1306,6 +1306,7 @@ private fun BitChordApp(
     val controlsLocked = partyState.controlsLocked
     var queueNotice by remember { mutableStateOf<QueueActionNotice?>(null) }
     var queueNoticeId by remember { mutableIntStateOf(0) }
+    val aiMixActive by AiMix.active.collectAsStateWithLifecycle()
     val showQueueNotice: (String) -> Unit = { message ->
         queueNoticeId += 1
         queueNotice = QueueActionNotice(queueNoticeId, message)
@@ -5737,14 +5738,21 @@ private fun BitChordApp(
                 // From the player, the queue already playing becomes the set,
                 // starting from where this track stands. From a list, the
                 // track's radio does: one song makes a sample, not a set.
+                aiMixActive = aiMixActive,
+                // From the player, the row switches the mix on and off.
                 onAiMix = when {
                     fromPlayer -> {
                         {
                             songActions = null
-                            controller?.let { c ->
-                                AppSettings.setSmartFadeEnabled(true)
-                                AiMix.startNow(c.currentMediaItem?.mediaId, c.currentPosition)
-                                showQueueNotice(context.getString(R.string.ai_mix_started))
+                            if (aiMixActive) {
+                                AiMix.stop()
+                                showQueueNotice(context.getString(R.string.ai_mix_stopped))
+                            } else {
+                                controller?.let { c ->
+                                    AppSettings.setSmartFadeEnabled(true)
+                                    AiMix.startNow(c.currentMediaItem?.mediaId, c.currentPosition)
+                                    showQueueNotice(context.getString(R.string.ai_mix_started))
+                                }
                             }
                         }
                     }
@@ -6745,6 +6753,7 @@ private fun BitChordApp(
                 onStartRadio = act { songs ->
                     songs.firstOrNull()?.let(startRadio)
                 }.takeIf { target.fromCard && remote },
+                aiMixActive = aiMixActive,
                 onAiMix = act { songs ->
                     if (songs.isNotEmpty()) {
                         AppSettings.setSmartFadeEnabled(true)

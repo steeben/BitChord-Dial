@@ -1436,4 +1436,6 @@
     <string name="search_spotify_hint">Szukaj w Spotify</string>
     <string name="search_spotify_signed_out">Zaloguj się do Spotify na stronie Spotify w Bibliotece, aby tu wyszukiwać.</string>
     <string name="ai_mix_started">AI Mix: 30-sekundowe fragmenty zmiksowane jak set DJ-a</string>
+    <string name="ai_mix_enabled">(włączony)</string>
+    <string name="ai_mix_stopped">AI Mix wyłączony</string>
 </resources>

@@ -1016,7 +1016,13 @@ fun NowPlayingScreen(
     // One UI 9's wave progress, coloured off this sleeve — see [rememberWaveAccents].
     val wavyProgressBar by PlayerSettings.wavyProgressBar.collectAsStateWithLifecycle()
     // Read by the scrubber itself — see [PlayerScrubber.shown].
-    val shown: () -> Float = { scrub.shown(position.positionMs, durationMs) }
+    // AI Mix plays a sample of each track, and the bar and its times describe
+    // that sample rather than the whole song.
+    val sampleWindows by com.music.bitchord.playback.SampleWindows.windows.collectAsStateWithLifecycle()
+    val sample = sampleWindows[song.videoId]?.takeIf { durationMs > 0L && it.lengthMs > 0L }
+    val barStartMs = sample?.startMs ?: 0L
+    val barDurationMs = sample?.lengthMs ?: durationMs
+    val shown: () -> Float = { scrub.shown(position.positionMs - barStartMs, barDurationMs) }
     // Back restarts the track rather than stepping back once it is a few
     // seconds in. Derived, so this scope hears about the playhead once, when
     // it crosses that point, rather than on every tick.
@@ -1710,7 +1716,15 @@ fun NowPlayingScreen(
         // into a rattle, and the beat that matters is the one that says where
         // the playhead landed.
         haptics.play(Haptic.Select)
-        scrub.release(onSeekFraction)
+        scrub.release { fraction ->
+            onSeekFraction(
+                if (sample != null) {
+                    ((barStartMs + fraction * barDurationMs) / durationMs).coerceIn(0f, 1f)
+                } else {
+                    fraction
+                },
+            )
+        }
     }
     val onVolumeChange: (Float) -> Unit = volume::drag
     val onVolumeChangeFinished: () -> Unit = volume::release
@@ -1987,7 +2001,7 @@ fun NowPlayingScreen(
                 scrubber = {
                     PlayerScrubber(
                         shown = shown,
-                        durationMs = durationMs,
+                        durationMs = barDurationMs,
                         loading = versionAligning || audioVersionSwitching,
                         mixing = mixing && !scrub.scrubbing,
                         transitionWindow = transitionWindow
@@ -2215,7 +2229,7 @@ fun NowPlayingScreen(
                         scrubber = {
                             PlayerScrubber(
                                 shown = shown,
-                                durationMs = durationMs,
+                                durationMs = barDurationMs,
                                 loading = versionAligning || audioVersionSwitching,
                                 mixing = mixing && !scrub.scrubbing,
                                 transitionWindow = transitionWindow
@@ -4205,7 +4219,7 @@ fun NowPlayingScreen(
             ) {
             PlayerScrubber(
                 shown = shown,
-                durationMs = durationMs,
+                durationMs = barDurationMs,
                 loading = versionSwitching,
                 mixing = mixing && !scrub.scrubbing,
                 // Hidden while scrubbing: the planner is still describing

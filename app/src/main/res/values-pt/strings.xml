@@ -1401,4 +1401,6 @@
     <string name="search_spotify_hint">Pesquisar no Spotify</string>
     <string name="search_spotify_signed_out">Inicie sessão no Spotify na página Spotify da Biblioteca para pesquisar aqui.</string>
     <string name="ai_mix_started">AI Mix: amostras de 30 segundos mixadas como um set de DJ</string>
+    <string name="ai_mix_enabled">(ativado)</string>
+    <string name="ai_mix_stopped">AI Mix desativado</string>
 </resources>

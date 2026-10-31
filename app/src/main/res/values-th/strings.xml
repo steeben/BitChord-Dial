@@ -1379,4 +1379,6 @@
     <string name="search_spotify_hint">ค้นหาใน Spotify</string>
     <string name="search_spotify_signed_out">ลงชื่อเข้าใช้ Spotify จากหน้า Spotify ในคลังเพลงเพื่อค้นหาที่นี่</string>
     <string name="ai_mix_started">AI Mix: ตัวอย่าง 30 วินาที มิกซ์แบบเซ็ต DJ</string>
+    <string name="ai_mix_enabled">(เปิดอยู่)</string>
+    <string name="ai_mix_stopped">ปิด AI Mix</string>
 </resources>
