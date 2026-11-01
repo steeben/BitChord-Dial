@@ -65,6 +65,8 @@ import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import com.music.bitchord.ui.components.LikeHeart
+import com.music.bitchord.ui.components.rememberLikeAnimation
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -694,6 +696,8 @@ internal fun CircleGlyph(
     onClick: () -> Unit,
     active: Boolean = false,
     haptic: Haptic = Haptic.Tap,
+    /** Draws the glyph instead of [icon] — the like heart's burst. */
+    glyph: (@Composable () -> Unit)? = null,
 ) {
     val haptics = rememberHaptics()
     val discAlpha by animateFloatAsState(
@@ -723,19 +727,52 @@ internal fun CircleGlyph(
             },
         contentAlignment = Alignment.Center,
     ) {
-        Crossfade(
-            targetState = icon,
-            animationSpec = tween(durationMillis = 180),
-            label = "playerMenuGlyph",
-        ) { glyph ->
-            Icon(
-                imageVector = glyph,
-                contentDescription = contentDescription,
-                tint = PlayerInk,
-                modifier = Modifier.size(19.dp),
-            )
+        if (glyph != null) {
+            glyph()
+        } else {
+            Crossfade(
+                targetState = icon,
+                animationSpec = tween(durationMillis = 180),
+                label = "playerMenuGlyph",
+            ) { vector ->
+                Icon(
+                    imageVector = vector,
+                    contentDescription = contentDescription,
+                    tint = PlayerInk,
+                    modifier = Modifier.size(19.dp),
+                )
+            }
         }
     }
+}
+
+/** The player's like control: [CircleGlyph] with the animated [LikeHeart]. */
+@Composable
+internal fun LikeCircleGlyph(
+    liked: Boolean,
+    contentDescription: String,
+    onToggleLike: () -> Unit,
+) {
+    val animation = rememberLikeAnimation()
+    CircleGlyph(
+        icon = if (liked) BitChordIcons.HeartFilled else BitChordIcons.Heart,
+        contentDescription = contentDescription,
+        onClick = {
+            animation.onToggle(wasLiked = liked)
+            onToggleLike()
+        },
+        active = liked,
+        haptic = if (liked) Haptic.ToggleOff else Haptic.ToggleOn,
+        glyph = {
+            LikeHeart(
+                liked = liked,
+                animation = animation,
+                tint = PlayerInk,
+                size = 19.dp,
+                contentDescription = contentDescription,
+            )
+        },
+    )
 }
 
 /**

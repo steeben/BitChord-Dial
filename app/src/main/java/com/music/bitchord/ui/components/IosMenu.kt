@@ -59,6 +59,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
@@ -210,6 +211,8 @@ fun RowScope.IosMenuQuickAction(
     label: String,
     tint: Color? = null,
     enabled: Boolean = true,
+    /** Draws the glyph in place of [icon], given its tint and size — the like heart. */
+    iconContent: (@Composable (tint: Color, size: Dp) -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     val colors = iosMenuColors()
@@ -227,12 +230,16 @@ fun RowScope.IosMenuQuickAction(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = tint ?: color,
-            modifier = Modifier.size(23.dp),
-        )
+        if (iconContent != null) {
+            iconContent(tint ?: color, 23.dp)
+        } else {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint ?: color,
+                modifier = Modifier.size(23.dp),
+            )
+        }
         Spacer(Modifier.height(6.dp))
         Text(
             text = label,
@@ -267,6 +274,8 @@ fun IosMenuRow(
     valueColor: Color? = null,
     enabled: Boolean = true,
     trailing: (@Composable () -> Unit)? = null,
+    /** Draws the glyph in place of [icon], given its tint and size — the like heart. */
+    iconContent: (@Composable (tint: Color, size: Dp) -> Unit)? = null,
 ) {
     val colors = iosMenuColors()
     val interaction = remember { MutableInteractionSource() }
@@ -296,7 +305,9 @@ fun IosMenuRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.width(28.dp), contentAlignment = Alignment.Center) {
-            if (icon != null) {
+            if (iconContent != null) {
+                iconContent((iconTint ?: foreground).copy(alpha = alpha), 21.dp)
+            } else if (icon != null) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,

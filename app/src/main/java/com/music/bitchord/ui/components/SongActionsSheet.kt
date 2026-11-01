@@ -89,6 +89,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.music.bitchord.ui.player.ThinSlider
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
@@ -281,6 +282,23 @@ fun SongActionsSheet(
     }
     val liked = likeStatus == LikeStatus.LIKE
     val disliked = likeStatus == LikeStatus.DISLIKE
+    // The heart pops red and settles back to the row's ink: a liked track
+    // rests monochrome, and the red only shows while the burst plays.
+    val likeAnimation = rememberLikeAnimation()
+    val likeHeart: @Composable (Color, Dp) -> Unit = { heartTint, heartSize ->
+        LikeHeart(
+            liked = liked,
+            animation = likeAnimation,
+            tint = heartTint,
+            size = heartSize,
+            filledIcon = Icons.Rounded.Favorite,
+            outlineIcon = Icons.Rounded.FavoriteBorder,
+        )
+    }
+    val toggleLike = {
+        likeAnimation.onToggle(wasLiked = liked)
+        onToggleLike()
+    }
     // A local file or a finished download has no YouTube identity behind it to
     // rate, save, queue into a playlist, fetch again, or share a link for.
     val isOffline = song.localUri != null
@@ -297,8 +315,8 @@ fun SongActionsSheet(
                     IosMenuQuickAction(
                         icon = if (liked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                         label = stringResource(if (liked) R.string.remove_from_liked else R.string.like),
-                        tint = if (liked) palette.accent else null,
-                        onClick = onToggleLike,
+                        iconContent = likeHeart,
+                        onClick = toggleLike,
                     )
                 }
                 // No dislike for a device file: there is no recommendation
@@ -379,9 +397,9 @@ fun SongActionsSheet(
                 ActionRow(
                     icon = if (liked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                     label = if (liked) stringResource(R.string.remove_from_liked) else stringResource(R.string.like),
-                    tint = if (liked) palette.accent else null,
                     accent = palette.accent,
-                    onClick = onToggleLike,
+                    iconContent = likeHeart,
+                    onClick = toggleLike,
                 )
             }
             ActionRow(
@@ -404,9 +422,9 @@ fun SongActionsSheet(
                 ActionRow(
                     icon = if (liked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                     label = if (liked) stringResource(R.string.remove_from_liked) else stringResource(R.string.like),
-                    tint = if (liked) palette.accent else null,
                     accent = palette.accent,
-                    onClick = onToggleLike,
+                    iconContent = likeHeart,
+                    onClick = toggleLike,
                 )
                 ActionRow(
                     icon = if (disliked) Icons.Rounded.ThumbDown else Icons.Rounded.ThumbDownOffAlt,
@@ -1168,6 +1186,8 @@ internal fun ActionRow(
     description: String? = null,
     /** Icon, label and value all in [accent]: the row names a mode that is on. */
     highlighted: Boolean = false,
+    /** Draws the glyph in place of [icon], given its tint and size — the like heart. */
+    iconContent: (@Composable (tint: Color, size: Dp) -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     val menu = LocalActionRowStyle.current == ActionRowStyle.Menu
@@ -1183,6 +1203,7 @@ internal fun ActionRow(
             valueColor = accent.takeIf { tint != null || highlighted },
             labelColor = if (highlighted) accent else tint?.takeIf { it == MaterialTheme.colorScheme.error },
             enabled = enabled,
+            iconContent = iconContent,
         )
         return
     }
@@ -1191,12 +1212,18 @@ internal fun ActionRow(
     val foreground = if (menu) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onBackground
     val alpha = if (enabled) 1f else 0.4f
     val iconView: @Composable () -> Unit = {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = (if (highlighted) accent else tint ?: foreground).copy(alpha = alpha),
-            modifier = Modifier.size(if (menu) 20.dp else 22.dp),
-        )
+        val iconTint = (if (highlighted) accent else tint ?: foreground).copy(alpha = alpha)
+        val iconSize = if (menu) 20.dp else 22.dp
+        if (iconContent != null) {
+            iconContent(iconTint, iconSize)
+        } else {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(iconSize),
+            )
+        }
     }
     Row(
         modifier = Modifier

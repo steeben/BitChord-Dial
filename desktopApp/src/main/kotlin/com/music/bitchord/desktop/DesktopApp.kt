@@ -1,7 +1,9 @@
 package com.music.bitchord.desktop
 
 import androidx.compose.foundation.lazy.LazyListState
+import com.music.bitchord.ui.components.LikeHeart
 import com.music.bitchord.ui.components.LocalShelfRowChrome
+import com.music.bitchord.ui.components.rememberLikeAnimation
 import com.music.bitchord.ui.components.ShelfRowChrome
 import com.music.bitchord.ui.components.ShelfRow
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -6884,12 +6886,20 @@ private fun DesktopCollectionSongRow(
                 }
             }
             onToggleLike?.let { onLike ->
-                IconButton(onClick = { onLike(song) }, modifier = Modifier.size(34.dp)) {
-                    Icon(
-                        if (liked) BitChordIcons.HeartFilled else BitChordIcons.Heart,
-                        "Favorite",
-                        tint = if (liked) DesktopAccent else DesktopSecondary,
-                        modifier = Modifier.size(18.dp),
+                val likeAnimation = rememberLikeAnimation()
+                IconButton(
+                    onClick = {
+                        likeAnimation.onToggle(wasLiked = liked)
+                        onLike(song)
+                    },
+                    modifier = Modifier.size(34.dp),
+                ) {
+                    LikeHeart(
+                        liked = liked,
+                        animation = likeAnimation,
+                        tint = DesktopSecondary,
+                        size = 18.dp,
+                        contentDescription = "Favorite",
                     )
                 }
             }
@@ -7292,7 +7302,15 @@ private fun DesktopSongRow(
             }
         }
         if (onToggleLike != null) {
-            IconButton(onClick = { onToggleLike(song) }) { Icon(if (liked) BitChordIcons.HeartFilled else BitChordIcons.Heart, "Favorite", tint = if (liked) DesktopAccent else DesktopSecondary) }
+            val likeAnimation = rememberLikeAnimation()
+            IconButton(
+                onClick = {
+                    likeAnimation.onToggle(wasLiked = liked)
+                    onToggleLike(song)
+                },
+            ) {
+                LikeHeart(liked = liked, animation = likeAnimation, tint = DesktopSecondary, size = 24.dp, contentDescription = "Favorite")
+            }
         }
         if (onDownload != null) {
             if (downloadInProgress) {

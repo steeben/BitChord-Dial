@@ -4089,14 +4089,12 @@ fun NowPlayingScreen(
                     // device's own Liked playlist and needs no account.
                     if (signedIn || song.localUri != null) {
                         val liked = likeStatus == LikeStatus.LIKE
-                        CircleGlyph(
-                            icon = if (liked) BitChordIcons.HeartFilled else BitChordIcons.Heart,
+                        LikeCircleGlyph(
+                            liked = liked,
                             contentDescription = stringResource(
                                 if (liked) Res.string.remove_from_liked else Res.string.like,
                             ),
-                            onClick = onToggleLike,
-                            active = liked,
-                            haptic = if (liked) Haptic.ToggleOff else Haptic.ToggleOn,
+                            onToggleLike = onToggleLike,
                         )
                         Spacer(Modifier.width(8.dp))
                     }
