@@ -4867,6 +4867,19 @@ class PlaybackService : MediaLibraryService() {
             this@PlaybackService.player?.takeIf { canSpliceUpgrade(it, mediaId) }?.let {
                 outcome = spliceInUpgrade(it, mediaId, upgradedItem, now.duration, stream.format)
             }
+            if (outcome == UpgradeBlend.UNMATCHED) {
+                val current = this@PlaybackService.player
+                if (current == null || current.currentMediaItem?.mediaId != mediaId) {
+                    QualityUpgrade.shelve(mediaId, stream)
+                    return@withContext
+                }
+                // Not blended: two copies the splice could not line up are
+                // two copies a blend cannot line up either, and crossing
+                // between them is heard as the song playing double.
+                TrackLog.d("BitChord", "upgrade held: the copies differ, so it goes in at the next pause, seek or quiet moment", about = mediaId)
+                splicedUpgrade = mediaId to upgradedItem
+                installUpgradeSoon(current, mediaId, "unmatched", UNMATCHED_INSTALL_WAIT_MS)
+            }
             var attempts = if (outcome == UpgradeBlend.CUT) 0 else UPGRADE_BLEND_ATTEMPTS
             while (attempts < UPGRADE_BLEND_ATTEMPTS) {
                 val current = this@PlaybackService.player ?: break
@@ -4885,7 +4898,9 @@ class PlaybackService : MediaLibraryService() {
             }
             val swappedAt: Long
             val upgradedPlayer: ExoPlayer
-            if (outcome == UpgradeBlend.BLENDED || outcome == UpgradeBlend.SPLICED) {
+            if (outcome == UpgradeBlend.BLENDED || outcome == UpgradeBlend.SPLICED ||
+                outcome == UpgradeBlend.UNMATCHED
+            ) {
                 upgradedPlayer = this@PlaybackService.player ?: return@withContext
                 swappedAt = upgradedPlayer.currentPosition
             } else {
@@ -4912,7 +4927,7 @@ class PlaybackService : MediaLibraryService() {
             TrackLog.d("BitChord", "upgraded to ${stream.format.summary} at ${swappedAt}ms ($upgradedSourceName)")
             // A splice was measured against the file it plays, and installs
             // nothing a length check could catch out.
-            if (outcome != UpgradeBlend.SPLICED) {
+            if (outcome != UpgradeBlend.SPLICED && outcome != UpgradeBlend.UNMATCHED) {
                 watchUpgrade(mediaId, now.uri, swappedAt, now.duration, previousFormat)
             }
             if (QualityUpgrade.continueAfterLossySwap(mediaId)) {
@@ -5041,8 +5056,8 @@ class PlaybackService : MediaLibraryService() {
         return rates.isEmpty() || rates.any { it >= rateHz }
     }
 
-    /** The job waiting for a moment to install a hi-res splice for real. */
-    private var hiResInstallJob: Job? = null
+    /** The job waiting for a moment to install a held upgrade for real. */
+    private var upgradeInstallJob: Job? = null
 
     /**
      * Main thread. A spliced-in copy at a rate the output can carry natively
@@ -5051,26 +5066,28 @@ class PlaybackService : MediaLibraryService() {
      * for real as soon as the cost of doing so — a third of a second of
      * silence — can be hidden: at the next pause, or inside the first
      * near-silent stretch the sink sees coming, or, failing either within
-     * [HI_RES_INSTALL_WAIT_MS], straight away.
+     * [waitMs], straight away. Also how an upgrade that could not be spliced
+     * at all ([UpgradeBlend.UNMATCHED]) gets in, held in [splicedUpgrade]
+     * while the old copy keeps playing untouched.
      */
-    private fun installHiResSoon(activePlayer: ExoPlayer, mediaId: String, rateHz: Int) {
-        hiResInstallJob?.cancel()
+    private fun installUpgradeSoon(activePlayer: ExoPlayer, mediaId: String, what: String, waitMs: Long) {
+        upgradeInstallJob?.cancel()
         val splice = activeFilter.splice
         splice.findQuietPoint(splice.processedMediaUs)
-        hiResInstallJob = scope.launch(Dispatchers.Main) {
-            val giveUpAt = SystemClock.elapsedRealtime() + HI_RES_INSTALL_WAIT_MS
+        upgradeInstallJob = scope.launch(Dispatchers.Main) {
+            val giveUpAt = SystemClock.elapsedRealtime() + waitMs
             try {
                 while (isActive) {
                     if (player !== activePlayer || splicedUpgrade?.first != mediaId) return@launch
                     if (!activePlayer.playWhenReady) {
-                        TrackLog.d("BitChord", "hi-res ${rateHz}Hz upgrade installed while paused", about = mediaId)
+                        TrackLog.d("BitChord", "$what upgrade installed while paused", about = mediaId)
                         installSplicedUpgrade(activePlayer, activePlayer.currentPosition)
                         return@launch
                     }
                     val quietUs = splice.quietPointUs
                     if (quietUs != C.TIME_UNSET) {
                         val atMs = quietUs / 1000
-                        TrackLog.d("BitChord", "hi-res ${rateHz}Hz upgrade will install in the quiet at ${atMs}ms", about = mediaId)
+                        TrackLog.d("BitChord", "$what upgrade will install in the quiet at ${atMs}ms", about = mediaId)
                         activePlayer.createMessage { _, _ -> installSplicedUpgrade(activePlayer, atMs) }
                             .setLooper(Looper.getMainLooper())
                             .setPosition(activePlayer.currentMediaItemIndex, atMs)
@@ -5079,7 +5096,7 @@ class PlaybackService : MediaLibraryService() {
                         return@launch
                     }
                     if (SystemClock.elapsedRealtime() >= giveUpAt) {
-                        TrackLog.d("BitChord", "hi-res ${rateHz}Hz upgrade installed now; no quiet moment came", about = mediaId)
+                        TrackLog.d("BitChord", "$what upgrade installed now; no quiet moment came", about = mediaId)
                         installSplicedUpgrade(activePlayer, activePlayer.currentPosition)
                         return@launch
                     }
@@ -5252,7 +5269,7 @@ class PlaybackService : MediaLibraryService() {
                         "new ${feed.sourceRate}Hz enc ${feed.outputEncoding} into ${rate}Hz/${channels}ch, " +
                         "capture at ${captureStartUs / 1000}ms, new copy from ${firstUs / 1000}ms)",
                 )
-                return UpgradeBlend.CUT
+                return UpgradeBlend.UNMATCHED
             }
             val lagFrames = located.lagFrames
             val match = located.match
@@ -5278,7 +5295,7 @@ class PlaybackService : MediaLibraryService() {
                 publishNerdStats()
             }
             if (outputCarriesRate(feed.sourceRate) && feed.sourceRate > rate) {
-                installHiResSoon(activePlayer, mediaId, feed.sourceRate)
+                installUpgradeSoon(activePlayer, mediaId, "hi-res ${feed.sourceRate}Hz", HI_RES_INSTALL_WAIT_MS)
             }
             TrackLog.d(
                 "BitChord",
@@ -5307,6 +5324,14 @@ class PlaybackService : MediaLibraryService() {
 
         /** The stand-by never lined up closely enough to cross over. Nothing was touched. */
         UNALIGNED,
+
+        /**
+         * The splice measured both copies and they did not match: a different
+         * master or edit, or too little in common to line up. Blending those
+         * is heard as the song playing twice, so the new copy is held and
+         * installed at the next pause, seek or quiet moment instead.
+         */
+        UNMATCHED,
 
         /** The upgrade is spliced into the playing player's own audio; see [spliceInUpgrade]. */
         SPLICED,
@@ -10028,8 +10053,11 @@ class PlaybackService : MediaLibraryService() {
         /** Rates from here up are worth installing for real on an output that carries them. */
         const val HI_RES_INSTALL_MIN_HZ = 88_200
 
-        /** Longest [installHiResSoon] waits for a pause or a quiet moment. */
+        /** Longest [installUpgradeSoon] waits on a hi-res splice for a pause or a quiet moment. */
         const val HI_RES_INSTALL_WAIT_MS = 10_000L
+
+        /** How long an unmatched upgrade waits for a pause or a quiet moment before cutting in anyway. */
+        const val UNMATCHED_INSTALL_WAIT_MS = 30_000L
         const val HI_RES_INSTALL_POLL_MS = 100L
 
         /** How much of the playing audio [spliceInUpgrade] measures the new copy against. */
