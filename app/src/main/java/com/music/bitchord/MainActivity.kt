@@ -131,6 +131,7 @@ import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.BlurEffect
 import kotlinx.coroutines.NonCancellable
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -3288,7 +3289,13 @@ private fun BitChordApp(
         // One back step out of Settings, or out of any tab but Home, lands on
         // Home rather than exiting — only Home itself hands back to the system,
         // which is what actually closes/minimizes the app.
-        BackHandler(enabled = showSettings && !showSpotify && !showAccountScrobbling && !showSources && !showListenTogether && !showEqualizer && !showReplay) {
+        //
+        // Predictive, as a release page is: the swipe softens Settings with
+        // the same blur and fade, and letting go short brings it back.
+        SettingsPredictiveBack(
+            enabled = showSettings && !showSpotify && !showAccountScrobbling && !showSources && !showListenTogether && !showEqualizer && !showReplay,
+            progress = detailBackProgress,
+        ) {
             showSettings = false
             // Only when Settings was the whole of what was on screen. Opened
             // over Replay or over a release page, closing it reveals that again
@@ -3298,10 +3305,11 @@ private fun BitChordApp(
         // After Settings' own, so it is asked first: back leaves the page, not Settings.
         BackHandler(enabled = settingsSubScreen == LIBRARY_DUPLICATES_SCREEN) { settingsSubScreen = null }
         // A category's page steps back to Settings' main page, not out of Settings.
-        BackHandler(
+        SettingsPredictiveBack(
             enabled = showSettings && MenuNav.settingsSection != null && settingsSubScreen == null &&
                 !showSpotify && !showAccountScrobbling && !showSources && !showListenTogether &&
                 !showEqualizer && !showReplay,
+            progress = detailBackProgress,
         ) { MenuNav.settingsSection = null }
         BackHandler(
             enabled = detail == null && !showSettings && !showAccountScrobbling && !showSpotify &&
@@ -8118,4 +8126,32 @@ private fun rememberHomeFeed(
         CustomizationSettings.setLastSpeedDial(dial)
     }
     return HomeFeed(arrangedHomeState, holdSavedDial, artistDialPinnedIds)
+}
+
+/**
+ * Back out of Settings (or one of its category pages) with the swipe shown on
+ * [progress] — the same value a release page's back swipe drives, so Settings
+ * blurs and fades under the finger exactly as those pages do. Let go short and
+ * it eases back into focus; carried through, [onBack] closes it and the blur
+ * eases off as the page underneath comes in.
+ */
+@Composable
+private fun SettingsPredictiveBack(
+    enabled: Boolean,
+    progress: Animatable<Float, AnimationVector1D>,
+    onBack: () -> Unit,
+) {
+    val currentOnBack by rememberUpdatedState(onBack)
+    PredictiveBackHandler(enabled = enabled) { events ->
+        try {
+            events.collect { event -> progress.snapTo(event.progress) }
+            currentOnBack()
+            progress.animateTo(0f, tween(220))
+        } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
+            kotlinx.coroutines.withContext(NonCancellable) {
+                progress.animateTo(0f, tween(180))
+            }
+            throw cancelled
+        }
+    }
 }

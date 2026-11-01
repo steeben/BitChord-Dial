@@ -77,6 +77,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.MutableFloatState
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.derivedStateOf
@@ -1254,6 +1255,10 @@ fun NowPlayingScreen(
     // no longer a whole-player recomposition standing behind it as a backstop.
     KeepScreenOn(enabled = lyricsOpen)
 
+    // How far a predictive back swipe out of the lyrics or the queue has got,
+    // 0..1. Read only in draw — see [panelBackSwipe].
+    val panelBack = rememberPanelBackSwipe()
+
     // Back out of the lyrics panel to the player, and only from the player
     // itself out to the mini player.
     //
@@ -1261,10 +1266,29 @@ fun NowPlayingScreen(
     // Controls being visible must not insert an extra navigation level. Back
     // always leaves lyrics in one step, whether it starts over the lyrics list
     // or over the half-player at the bottom.
-    PlayerBackHandler(enabled = lyricsOpen, onBack = closeLyrics)
+    //
+    // Predictive on Android 14 and up: while the swipe is held the open panel
+    // shrinks and sinks toward the player under it (see [panelBackSwipe]),
+    // and letting go short springs it back. The two panels are never up
+    // together, so they share the one value.
+    PlayerPredictiveBackHandler(
+        enabled = lyricsOpen,
+        onProgress = panelBack.follow,
+        onCancel = panelBack.release,
+    ) {
+        panelBack.commit()
+        closeLyrics()
+    }
 
-    // Back out of the queue to the player.
-    PlayerBackHandler(enabled = queueOpen) { queueOpen = false }
+    // Back out of the queue to the player, the same way.
+    PlayerPredictiveBackHandler(
+        enabled = queueOpen,
+        onProgress = panelBack.follow,
+        onCancel = panelBack.release,
+    ) {
+        panelBack.commit()
+        queueOpen = false
+    }
 
     // The audio output, lyrics provider and Listen Together drawers handle
     // back themselves, so a predictive swipe can slide them down — see
@@ -2438,7 +2462,7 @@ fun NowPlayingScreen(
                         LyricsTranslationMotion(
                             trigger = lyricsTranslation.transition,
                             reduceMotion = lyricsTranslation.reduceMotion,
-                            modifier = panelModifier,
+                            modifier = panelModifier.panelBackSwipe(panelBack.progress),
                         ) { particleProgress ->
                             // [controlsOpen] is a constant `true`: that flag
                             // exists because the portrait player hides its
@@ -2480,7 +2504,7 @@ fun NowPlayingScreen(
                         onMove = onMoveInQueue,
                         onClear = onClearQueue,
                         onDragActiveChange = onQueueDragActiveChange,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().panelBackSwipe(panelBack.progress),
                     )
                 },
             )
@@ -4110,7 +4134,8 @@ fun NowPlayingScreen(
                                 // still mid-collapse doubled the same movement in
                                 // two places on screen at once, and composing them
                                 // there was what made the collapse stutter.
-                                .graphicsLayer { alpha = if (lyricsPanelVisible) panelFade.value else 0f },
+                                .graphicsLayer { alpha = if (lyricsPanelVisible) panelFade.value else 0f }
+                                .panelBackSwipe(panelBack.progress),
                         ) { particleProgress ->
                             LyricsPanel(
                                 lines = lyrics.orEmpty(),
@@ -4232,7 +4257,8 @@ fun NowPlayingScreen(
                                 } else {
                                     0f
                                 }
-                            },
+                            }
+                            .panelBackSwipe(panelBack.progress),
                     ) {
                         InlineQueue(
                             queue = queue,
@@ -4586,3 +4612,67 @@ private suspend fun AwaitPointerEventScope.followQueueDrag(
 }
 
 private const val NEIGHBOUR_MESH_DELAY_MS = 1500L
+
+/** How much smaller the lyrics or the queue is drawn at the end of a back swipe. */
+private const val PANEL_BACK_SHRINK = 0.08f
+
+/** How far it sinks toward the player by then. */
+private val PANEL_BACK_SINK = 28.dp
+
+/** How much of it has faded by then. */
+private const val PANEL_BACK_FADE = 0.45f
+
+/**
+ * A predictive back swipe out of the lyrics or the queue, as the panel draws
+ * it. [follow] and [release] go straight to [PlayerPredictiveBackHandler];
+ * [commit] goes with the close itself, in the same callback, so the panel is
+ * hidden in the same frame its swipe is let go of rather than drawn once more
+ * at full size.
+ */
+private class PanelBackSwipe(private val value: MutableFloatState, private val held: MutableState<Boolean>) {
+    val progress: () -> Float = { value.floatValue }
+    val follow: (Float) -> Unit = { p ->
+        held.value = true
+        value.floatValue = p
+    }
+    val release: () -> Unit = { held.value = false }
+    fun commit() {
+        held.value = false
+        value.floatValue = 0f
+    }
+}
+
+@Composable
+private fun rememberPanelBackSwipe(): PanelBackSwipe {
+    val value = remember { mutableFloatStateOf(0f) }
+    val held = remember { mutableStateOf(false) }
+    // A swipe let go short springs the panel back; a new one takes it over
+    // from wherever the spring has got to.
+    LaunchedEffect(held.value) {
+        if (held.value) return@LaunchedEffect
+        val from = value.floatValue
+        if (from == 0f) return@LaunchedEffect
+        animate(
+            initialValue = from,
+            targetValue = 0f,
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        ) { v, _ -> value.floatValue = v }
+    }
+    return remember { PanelBackSwipe(value, held) }
+}
+
+/**
+ * The lyrics or the queue following a back swipe: a little smaller, lower and
+ * fainter the further it goes, the player it is about to give way to showing
+ * through. Drawn only, so the swipe recomposes nothing.
+ */
+private fun Modifier.panelBackSwipe(progress: () -> Float): Modifier = graphicsLayer {
+    val p = progress().coerceIn(0f, 1f)
+    if (p > 0f) {
+        val scale = 1f - PANEL_BACK_SHRINK * p
+        scaleX = scale
+        scaleY = scale
+        translationY = PANEL_BACK_SINK.toPx() * p
+        alpha = 1f - PANEL_BACK_FADE * p
+    }
+}
