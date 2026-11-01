@@ -1034,7 +1034,7 @@ fun NowPlayingScreen(
     // one above is the new song's and starts again from nothing.
     var outgoingClip by remember { mutableStateOf<CanvasArtwork?>(null) }
     var outgoingAspect by remember { mutableFloatStateOf(0f) }
-    val outgoingFade = remember { Animatable(0f) }
+    val outgoingFade = remember { Animatable(1f) }
     // How much of the new sleeve the outgoing clip still covers, as it reports it.
     val outgoingCover = remember { mutableFloatStateOf(0f) }
     // The clip last seen on screen, for the handoff above. Plain fields: it is
@@ -1046,6 +1046,9 @@ fun NowPlayingScreen(
         outgoingFade.snapTo(1f)
         outgoingFade.animateTo(0f, tween(durationMillis = CANVAS_OUTGOING_FADE_MS, easing = FastOutSlowInEasing))
         outgoingClip = null
+        // Ready for the next handoff, whose first frame is drawn before this
+        // effect gets to run again.
+        outgoingFade.snapTo(1f)
     }
     // v1.5's backdrop, kept behind a switch — see [PlayerSettings.legacyMeshGradient].
     val legacyMesh by PlayerSettings.legacyMeshGradient.collectAsStateWithLifecycle()
@@ -1585,6 +1588,14 @@ fun NowPlayingScreen(
     val heroClipMounted = canvas?.takeIf {
         heroMode && (!(lyricsOpen || queueOpen) || !collapseDone)
     }
+    // Worked out here as well as in the SideEffect below, for the one pass in
+    // which the song has moved on but [outgoingClip] isn't set yet: decided only
+    // there, that pass mounted the next song's clip — a flash of it — and then
+    // swapped the last one back in on a player that had to start it over.
+    val handingOffClip = lastShownClip[0]?.takeIf { last ->
+        last.url != canvas?.url && outgoingClip == null &&
+            heroMode && !lyricsOpen && !queueOpen && !collapseStarted
+    }
     SideEffect {
         val shownNow = heroClip?.takeIf { canvasRendered }
         val last = lastShownClip[0]
@@ -1594,7 +1605,7 @@ fun NowPlayingScreen(
         } else if (last != null && last.url != canvas?.url) {
             // Its song has moved on with the clip still up: let it go slowly.
             // Not over a panel or mid-collapse, where it was already leaving.
-            if (heroMode && !lyricsOpen && !queueOpen && !collapseStarted && outgoingClip == null) {
+            if (handingOffClip != null) {
                 outgoingAspect = lastShownAspect[0]
                 outgoingCover.floatValue = 1f
                 outgoingClip = last
@@ -1606,8 +1617,12 @@ fun NowPlayingScreen(
     }
     // What the one player below is showing: the outgoing clip while it fades,
     // then this track's.
-    val clipOnScreen = outgoingClip ?: heroClipMounted
-    val clipOnScreenAspect = if (outgoingClip != null) outgoingAspect else canvasAspect
+    val clipOnScreen = outgoingClip ?: handingOffClip ?: heroClipMounted
+    val clipOnScreenAspect = when {
+        outgoingClip != null -> outgoingAspect
+        handingOffClip != null -> lastShownAspect[0]
+        else -> canvasAspect
+    }
     val clipFullscreen = spotifyCanvasOnPhone &&
         clipOnScreen?.source == CanvasSource.SPOTIFY
     val clipPortrait = !clipFullscreen &&
@@ -2536,8 +2551,12 @@ fun NowPlayingScreen(
         // Mount once, behind the controls. A known portrait aspect changes the
         // invisible view to full-player bounds before its first frame is shown.
         if (heroMode && heroHeight > 0.dp) {
-            clipOnScreen?.let { clip ->
-                val outgoing = outgoingClip != null
+            clipOnScreen?.let { clip -> key(clip.url) {
+                val outgoing = outgoingClip != null || handingOffClip != null
+                // Keyed on the clip: the player's listeners hold the state of
+                // the clip they were made for, so a player handed a different
+                // one wrote the new clip's size into the old one's and never
+                // showed it. Each clip gets its own.
                 CanvasArtworkPlayer(
                     canvas = clip,
                     isPlaying = isPlaying,
@@ -2572,7 +2591,7 @@ fun NowPlayingScreen(
                     // Compose layer around it.
                     presentationAlpha = {
                         (1f - 2f * p()).coerceIn(0f, 1f) * dockFade() *
-                            (if (outgoingClip != null) outgoingFade.value else 1f)
+                            (if (outgoing) outgoingFade.value else 1f)
                     },
                     onRenderedChanged = { if (!outgoing) canvasRendered = it },
                     onFrameCaptured = {
@@ -2612,7 +2631,7 @@ fun NowPlayingScreen(
                             clipRootBounds[0] = Rect(it.positionInRoot(), it.size.toSize())
                         },
                 )
-            }
+            } }
         }
         }
 
@@ -3441,15 +3460,18 @@ fun NowPlayingScreen(
                             // let the dark backdrop show through mid-way, which
                             // read as a flicker between the art and the clip.
                             alpha = (
-                                if (heroClip != null && currentCanvasSweepPhase) {
+                                if (handingOffClip != null) {
+                                    0f
+                                } else if (outgoingClip != null) {
+                                    // Coming back in as the last track's clip
+                                    // leaves, whether or not the next has one.
+                                    1f - outgoingCover.floatValue
+                                } else if (heroClip != null && currentCanvasSweepPhase) {
                                     // Swept out instead — see [canvasSweepOut].
                                     1f
                                 } else if (heroClip != null) {
                                     val cover = canvasCover.floatValue
                                     1f - cover * cover * cover * cover
-                                } else if (outgoingClip != null) {
-                                    // Coming back in as the last track's clip leaves.
-                                    1f - outgoingCover.floatValue
                                 } else {
                                     1f
                                 }
