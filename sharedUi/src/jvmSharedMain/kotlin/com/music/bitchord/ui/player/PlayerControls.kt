@@ -605,23 +605,13 @@ internal fun PlayerActionRow(
                 label = "playerBottomPill",
             ) { showQueueModes ->
                 if (showQueueModes) {
+                    // Shuffle in the middle, where the output capsule has it,
+                    // so it stays put as the queue opens and closes.
                     // Always three-up, unlike the output/party capsule — so it
                     // always takes the narrower spacing. See
                     // [PILL_SEGMENT_WIDTH_TRIPLE]. Glass like the output
                     // capsule it stands in for.
                     Pill(glass = LocalPlayerGlass.current) {
-                        PillSegment(
-                            icon = BitChordIcons.Shuffle,
-                            contentDescription = stringResource(
-                                if (shuffleEnabled) Res.string.shuffle_on else Res.string.shuffle_off,
-                            ),
-                            onClick = onToggleShuffle,
-                            highlighted = shuffleEnabled,
-                            haptic = if (shuffleEnabled) Haptic.ToggleOff else Haptic.ToggleOn,
-                            tapWindowMs = SHUFFLE_TAP_WINDOW_MS,
-                            width = PILL_SEGMENT_WIDTH_TRIPLE,
-                        )
-                        PillDivider()
                         PillSegment(
                             icon = if (repeatMode == RepeatModes.ONE) null else BitChordIcons.Repeat,
                             label = if (repeatMode == RepeatModes.ONE) "1" else null,
@@ -641,6 +631,18 @@ internal fun PlayerActionRow(
                                 RepeatModes.ONE -> Haptic.ToggleOff
                                 else -> Haptic.Select
                             },
+                            width = PILL_SEGMENT_WIDTH_TRIPLE,
+                        )
+                        PillDivider()
+                        PillSegment(
+                            icon = BitChordIcons.Shuffle,
+                            contentDescription = stringResource(
+                                if (shuffleEnabled) Res.string.shuffle_on else Res.string.shuffle_off,
+                            ),
+                            onClick = onToggleShuffle,
+                            highlighted = shuffleEnabled,
+                            haptic = if (shuffleEnabled) Haptic.ToggleOff else Haptic.ToggleOn,
+                            tapWindowMs = SHUFFLE_TAP_WINDOW_MS,
                             width = PILL_SEGMENT_WIDTH_TRIPLE,
                         )
                         PillDivider()
