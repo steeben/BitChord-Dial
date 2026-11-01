@@ -1144,10 +1144,10 @@ fun NowPlayingScreen(
                 else -> LastPlayerScreen.MAIN
             },
         )
-        // The queue opens on its own, the controls stood down so the list has
-        // the screen; scrolling it brings them back (and hides them again)
-        // without this effect firing again.
-        if (queueOpen) queueControlsOpen = false
+        // The queue opens with the controls up at the foot of the screen; they
+        // only stand down once the list is scrolled forward (and come back on
+        // scrolling back), without this effect firing again.
+        if (queueOpen) queueControlsOpen = true
     }
     // Change the panel and its controls in the same snapshot. Driving the
     // controls from a LaunchedEffect left one composed frame where lyrics were
@@ -1171,7 +1171,7 @@ fun NowPlayingScreen(
         // With the queue rather than after it, for the reason [openLyrics]
         // gives: left to the effect above, it was a second recomposition of
         // the whole player on the sleeve's first frame of moving.
-        if (opening) queueControlsOpen = false
+        if (opening) queueControlsOpen = true
         queueOpen = opening
         if (opening) closeLyrics()
     }
@@ -2978,7 +2978,7 @@ fun NowPlayingScreen(
                                                 haptics.play(
                                                     if (open) Haptic.Expand else Haptic.Tap,
                                                 )
-                                                if (open) queueControlsOpen = false
+                                                if (open) queueControlsOpen = true
                                                 queueOpen = open
                                             }
                                             queueReleased++
@@ -3034,7 +3034,7 @@ fun NowPlayingScreen(
                                     onSettle = { open ->
                                         if (open != queueOpen) {
                                             haptics.play(if (open) Haptic.Expand else Haptic.Tap)
-                                            if (open) queueControlsOpen = false
+                                            if (open) queueControlsOpen = true
                                             queueOpen = open
                                         }
                                         queueReleased++
@@ -3056,7 +3056,7 @@ fun NowPlayingScreen(
                                 onSettle = { open ->
                                     if (open != queueOpen) {
                                         haptics.play(if (open) Haptic.Expand else Haptic.Tap)
-                                        if (open) queueControlsOpen = false
+                                        if (open) queueControlsOpen = true
                                         queueOpen = open
                                     }
                                     queueReleased++
