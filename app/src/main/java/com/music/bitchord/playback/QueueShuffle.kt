@@ -151,6 +151,8 @@ object QueueShuffle {
      */
     internal fun isNextItemImminent(player: Player): Boolean {
         if (isCrossfadeTransitioning?.invoke() == true) return true
+        // A live stream's duration is its moving window, not a track length.
+        if (runCatching { player.isCurrentMediaItemLive }.getOrDefault(false)) return false
         val duration = runCatching { player.duration }.getOrDefault(0L)
         val position = runCatching { player.currentPosition }.getOrDefault(0L)
         if (duration > 0 && duration != androidx.media3.common.C.TIME_UNSET && position >= 0) {

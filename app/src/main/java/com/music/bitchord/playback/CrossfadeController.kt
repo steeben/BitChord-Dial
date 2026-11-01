@@ -996,6 +996,14 @@ class CrossfadeController(
             AppSettings.smartTransitionWindow.value = null
             return
         }
+        // A live station has no end to blend out of. Its "duration" is the
+        // playlist's moving window, about 30 seconds, and the playhead sits a
+        // fixed distance from its edge, so every tick would read as a track
+        // seconds from finishing.
+        if (player.isCurrentMediaItemLive) {
+            AppSettings.smartTransitionWindow.value = null
+            return
+        }
 
         val duration = player.duration
         if (duration == C.TIME_UNSET || duration <= 0L) return

@@ -4979,6 +4979,9 @@ class PlaybackService : MediaLibraryService() {
         val item = player.currentMediaItem ?: return null
         if (item.mediaId != mediaId) return null
         val uri = item.localConfiguration?.uri?.toString() ?: return null
+        // A live station has no better copy anywhere, and whatever a source
+        // search matched on its title would be some other recording entirely.
+        if (player.isCurrentMediaItemLive || StreamContainer.isServingLive(mediaId)) return null
         // One mid-track lossy improvement (typically Opus → JioSaavn) must not
         // prevent the requested lossless copy from replacing it. Two marked
         // URIs get distinct cache entries through [QualityUpgrade.upgradedUri].

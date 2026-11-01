@@ -167,6 +167,37 @@ object StreamContainer {
      */
     fun manifestServing(mediaId: String): String? = serving[mediaId]?.let(::manifestMimeOf)
 
+    /**
+     * Whether [url] belongs to a live broadcast: its HLS playlist, a variant
+     * playlist under it, or one of its segments.
+     *
+     * googlevideo writes most of a live URL's parameters as path segments
+     * (`/source/yt_live_broadcast/`, `/live/1/`) rather than as a query, and
+     * playlists come from `manifest.googlevideo.com`'s `hls_playlist` and
+     * `hls_variant` paths. Plain string tests on purpose, so the JVM tests can
+     * run this without Android's `Uri`.
+     */
+    fun isLiveBroadcastUrl(url: String): Boolean {
+        val lower = url.lowercase(Locale.ROOT)
+        return "yt_live_broadcast" in lower ||
+            "/live/1/" in lower ||
+            "&live=1" in lower || "?live=1" in lower ||
+            "/api/manifest/hls_playlist/" in lower ||
+            "/api/manifest/hls_variant/" in lower
+    }
+
+    /**
+     * Whether [mediaId] is currently being served a live broadcast.
+     *
+     * A live playlist is reloaded from one unchanging URL every few seconds and
+     * answers differently each time. Read through the disk cache, the first
+     * copy is complete and is served back for every reload after it, so the
+     * player sees a window that never moves: it plays the 30 seconds that were
+     * there when the station opened and then runs out. [AudioCache] asks this
+     * to keep live streams off the disk entirely.
+     */
+    fun isServingLive(mediaId: String): Boolean = serving[mediaId]?.let(::isLiveBroadcastUrl) == true
+
     private const val REOPEN_PARAMETER = "manifest_reopen"
     private const val MAX_REMEMBERED = 64
 }

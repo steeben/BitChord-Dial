@@ -1133,7 +1133,7 @@ object AudioCache {
 
             override fun open(dataSpec: DataSpec): Long {
                 val scheme = dataSpec.uri.scheme
-                activeDs = if (scheme == "file" || scheme == "content") {
+                activeDs = if (scheme == "file" || scheme == "content" || isLive(dataSpec.uri)) {
                     upstreamDs
                 } else {
                     cacheDs
@@ -1151,6 +1151,22 @@ object AudioCache {
             }
         }
     }
+
+    /**
+     * A live broadcast is never cached. Its playlists are reloaded from the
+     * same URL and change every time, so a cached copy freezes the window
+     * (the station that played 30 seconds and stopped), and its segments are
+     * a stream with no end that would only fill the disk. The master playlist
+     * arrives as `bitchord://watch?v=…` and is known by what that track was
+     * last served; the variant playlists and segments are googlevideo URLs and
+     * say so themselves.
+     */
+    private fun isLive(uri: Uri): Boolean =
+        if (uri.scheme == "bitchord") {
+            uri.getQueryParameter("v")?.let(StreamContainer::isServingLive) == true
+        } else {
+            StreamContainer.isLiveBroadcastUrl(uri.toString())
+        }
 
     private fun cacheFactory(upstream: DataSource.Factory) = CacheDataSource.Factory()
         .setCache(cache)
