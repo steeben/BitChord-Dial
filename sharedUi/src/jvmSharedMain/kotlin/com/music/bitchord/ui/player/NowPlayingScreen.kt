@@ -1255,9 +1255,18 @@ fun NowPlayingScreen(
     // no longer a whole-player recomposition standing behind it as a backstop.
     KeepScreenOn(enabled = lyricsOpen)
 
-    // How far a predictive back swipe out of the lyrics or the queue has got,
-    // 0..1. Read only in draw — see [panelBackSwipe].
+    // How far a predictive back swipe out of the lyrics has got, 0..1. Read
+    // only in draw — see [panelBackSwipe].
     val panelBack = rememberPanelBackSwipe()
+
+    // Whether a finger is on the sleeve right now. Parks the settle below rather
+    // than leaving the two to write the same value on alternate frames.
+    var queueDragging by remember { mutableStateOf(false) }
+    // Bumped when a drag hands the value back, so the settle runs again even
+    // though [queueOpen] may not have moved: a swipe that gave up short of
+    // [QUEUE_CARRY_FRACTION] has to fall back to 0 just as surely as one that
+    // carried has to finish reaching 1.
+    var queueReleased by remember { mutableIntStateOf(0) }
 
     // Back out of the lyrics panel to the player, and only from the player
     // itself out to the mini player.
@@ -1280,14 +1289,42 @@ fun NowPlayingScreen(
         closeLyrics()
     }
 
-    // Back out of the queue to the player, the same way.
+    // Back out of the queue to the player. In portrait the swipe moves the
+    // sleeve exactly as a pull down over the controls does (see
+    // [dragPanelClosed]): it takes hold of [queueSlide] and walks it from the
+    // queue back toward the full player as the swipe goes, a swipe let go
+    // short settles back into the queue, and one that commits finishes the
+    // close from wherever the swipe left it, with the same tap. The landscape
+    // player has no sleeve to move, so its queue pane keeps the shrink-and-fade.
+    val queueBackMovesSleeve = !landscapePlayerAvailable(windowWidth, windowHeight)
     PlayerPredictiveBackHandler(
         enabled = queueOpen,
-        onProgress = panelBack.follow,
-        onCancel = panelBack.release,
+        onProgress = { progress ->
+            if (queueBackMovesSleeve) {
+                queueDragging = true
+                queueSlide.floatValue = (1f - progress).coerceIn(0f, 1f)
+            } else {
+                panelBack.follow(progress)
+            }
+        },
+        onCancel = {
+            if (queueBackMovesSleeve) {
+                queueDragging = false
+                queueReleased++
+            } else {
+                panelBack.release()
+            }
+        },
     ) {
-        panelBack.commit()
-        queueOpen = false
+        if (queueBackMovesSleeve) {
+            haptics.play(Haptic.Tap)
+            queueDragging = false
+            queueOpen = false
+            queueReleased++
+        } else {
+            panelBack.commit()
+            queueOpen = false
+        }
     }
 
     // The audio output, lyrics provider and Listen Together drawers handle
@@ -1323,14 +1360,8 @@ fun NowPlayingScreen(
     //
     // Read only inside layout and draw lambdas and the thresholds below, never
     // as a value here — see [p].
-    // Whether a finger is on the sleeve right now. Parks the settle below rather
-    // than leaving the two to write the same value on alternate frames.
-    var queueDragging by remember { mutableStateOf(false) }
-    // Bumped when a drag hands the value back, so the settle runs again even
-    // though [queueOpen] may not have moved: a swipe that gave up short of
-    // [QUEUE_CARRY_FRACTION] has to fall back to 0 just as surely as one that
-    // carried has to finish reaching 1.
-    var queueReleased by remember { mutableIntStateOf(0) }
+    // [queueDragging] and [queueReleased] are declared further up, with the
+    // queue's back handler, which drives them too.
     LaunchedEffect(queueOpen, queueDragging, queueReleased) {
         if (queueDragging) return@LaunchedEffect
         val target = if (queueOpen) 1f else 0f
@@ -4255,8 +4286,7 @@ fun NowPlayingScreen(
                                 } else {
                                     0f
                                 }
-                            }
-                            .panelBackSwipe(panelBack.progress),
+                            },
                     ) {
                         InlineQueue(
                             queue = queue,
