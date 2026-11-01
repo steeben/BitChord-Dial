@@ -1308,6 +1308,66 @@ private val MARQUEE_GAP = 48.dp
 /** How long a line sits back at its start before the next pass — the "5 seconds" rest. */
 private const val MARQUEE_REST_MS = 5_000L
 
+/** Width of the soft edge a scrolling line melts into instead of a hard cut. */
+private val MARQUEE_FADE = 14.dp
+
+/**
+ * What [marqueeEdgeFade] needs to know about the line it masks, filled in from
+ * inside the clipped box once the line has been measured. Everything is read at
+ * draw time, so the crawl only ever redraws the mask, never recomposes.
+ */
+private class MarqueeFadeState {
+    var offset: () -> Float = { 0f }
+    var travelPx: Int by mutableStateOf(0)
+    var fadePx: Float by mutableStateOf(0f)
+}
+
+/**
+ * Feathers the ends of a scrolling line rather than cutting it off sharp.
+ *
+ * The right edge fades whenever the line overflows, since there is always more
+ * text past it. The left edge fades only once the line is moving: at rest the
+ * first letters sit flush at the start and should read clearly, so the left
+ * fade ramps in over the first [MARQUEE_FADE] of travel and back out over the
+ * last, landing at rest with no seam when the copy snaps home.
+ */
+private fun Modifier.marqueeEdgeFade(state: MarqueeFadeState): Modifier = this
+    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+    .drawWithContent {
+        drawContent()
+        val travel = state.travelPx
+        if (travel <= 0) return@drawWithContent
+        val w = size.width
+        val edge = state.fadePx.coerceAtMost(w / 2f)
+        if (edge <= 0f) return@drawWithContent
+        val moved = -state.offset()
+        val leftStrength = (minOf(moved, travel - moved).coerceIn(0f, edge)) / edge
+        if (leftStrength > 0f) {
+            drawRect(
+                brush = Brush.horizontalGradient(
+                    0f to Color.Black.copy(alpha = 1f - leftStrength),
+                    1f to Color.Black,
+                    startX = 0f,
+                    endX = edge,
+                ),
+                topLeft = Offset.Zero,
+                size = Size(edge, size.height),
+                blendMode = BlendMode.DstIn,
+            )
+        }
+        drawRect(
+            brush = Brush.horizontalGradient(
+                0f to Color.Black,
+                1f to Color.Transparent,
+                startX = w - edge,
+                endX = w,
+            ),
+            topLeft = Offset(w - edge, 0f),
+            size = Size(edge, size.height),
+            blendMode = BlendMode.DstIn,
+        )
+    }
+
 /** Artist's head start is ceded to the title when both are scrolling, so they don't start as one block. */
 internal const val MARQUEE_ARTIST_STAGGER_MS = 3_000L
 
@@ -1361,7 +1421,8 @@ internal fun MarqueeText(
             )
             return@Row
         }
-        BoxWithConstraints(Modifier.weight(1f, fill = false).clipToBounds()) {
+        val marqueeFade = remember { MarqueeFadeState() }
+        BoxWithConstraints(Modifier.weight(1f, fill = false).clipToBounds().marqueeEdgeFade(marqueeFade)) {
             val maxWidthPx = constraints.maxWidth
             val layout = remember(text, style, maxWidthPx) {
                 textMeasurer.measure(text = text, style = style, maxLines = 1, softWrap = false)
@@ -1378,6 +1439,9 @@ internal fun MarqueeText(
             }
 
             val offsetX = remember { Animatable(0f) }
+            marqueeFade.offset = { offsetX.value }
+            marqueeFade.travelPx = travelPx
+            marqueeFade.fadePx = with(density) { MARQUEE_FADE.toPx() }
             LaunchedEffect(text, travelPx, startDelayMillis) {
                 offsetX.snapTo(0f)
                 if (travelPx <= 0) return@LaunchedEffect
@@ -1475,7 +1539,8 @@ internal fun ArtistCreditsMarquee(
             CreditLine(segments = segments, style = style, color = color, onOpenArtist = onOpenArtist)
             return@Row
         }
-        BoxWithConstraints(Modifier.weight(1f, fill = false).clipToBounds()) {
+        val marqueeFade = remember { MarqueeFadeState() }
+        BoxWithConstraints(Modifier.weight(1f, fill = false).clipToBounds().marqueeEdgeFade(marqueeFade)) {
             val maxWidthPx = constraints.maxWidth
             // Measured as one string, exactly as the single-line version measured
             // it, so the line starts crawling at the same moment and travels the
@@ -1491,6 +1556,9 @@ internal fun ArtistCreditsMarquee(
             }
 
             val offsetX = remember { Animatable(0f) }
+            marqueeFade.offset = { offsetX.value }
+            marqueeFade.travelPx = travelPx
+            marqueeFade.fadePx = with(density) { MARQUEE_FADE.toPx() }
             LaunchedEffect(text, travelPx, startDelayMillis) {
                 offsetX.snapTo(0f)
                 if (travelPx <= 0) return@LaunchedEffect
