@@ -1,5 +1,6 @@
 package com.music.bitchord.ui
 
+import com.music.bitchord.data.spotify.SpotifyLikeSync
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -836,7 +837,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * on a round trip before the heart fills reads as the tap not having
      * registered, and people tap again.
      */
-    fun setLike(videoId: String, status: LikeStatus) {
+    fun setLike(videoId: String, status: LikeStatus, song: Song? = null) {
         if (!requireSignIn()) return
         val previous = likeStatusOf(videoId)
         if (previous == status) return
@@ -844,6 +845,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             YtMusicRepository.rate(videoId, status).fold(
                 onSuccess = {
+                    // Mirrored only once YouTube has taken it, so a refused
+                    // like never lands on Spotify alone.
+                    if (song != null) {
+                        if (status == LikeStatus.LIKE) {
+                            SpotifyLikeSync.mirror(song.title, song.artist, liked = true)
+                        } else if (previous == LikeStatus.LIKE) {
+                            SpotifyLikeSync.mirror(song.title, song.artist, liked = false)
+                        }
+                    }
                     // Liked Music is now out of date either way.
                     libraryStale = true
                     if (status != LikeStatus.LIKE) dropFromLikedLists(videoId)
@@ -917,9 +927,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** The heart: liked becomes neutral, anything else becomes liked. */
-    fun toggleLike(videoId: String) = setLike(
+    fun toggleLike(videoId: String, song: Song? = null) = setLike(
         videoId,
         if (likeStatusOf(videoId) == LikeStatus.LIKE) LikeStatus.INDIFFERENT else LikeStatus.LIKE,
+        song,
     )
 
     /** As [toggleLike], for the thumb-down. */

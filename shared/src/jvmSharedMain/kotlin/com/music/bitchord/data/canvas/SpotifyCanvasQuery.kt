@@ -92,9 +92,12 @@ object SpotifyCanvasQuery {
 
     // ---- The live hash --------------------------------------------------
 
-    /** `"canvas","query","<64 hex>"`, the way the web player's bundle declares its operations. */
+    /**
+     * `"canvas","query","<64 hex>"`, the way the web player's bundle declares its operations;
+     * mutations (`"addToLibrary","mutation",…`) are declared the same way.
+     */
     private val OPERATION_DECLARATION =
-        Regex("""["'](\w+)["']\s*,\s*["']query["']\s*,\s*["']([0-9a-f]{64})["']""")
+        Regex("""["'](\w+)["']\s*,\s*["'](?:query|mutation)["']\s*,\s*["']([0-9a-f]{64})["']""")
 
     /** [operation]'s hash as declared in a piece of the web player's JavaScript, if it's there. */
     fun findQueryHash(script: String, operation: String = OPERATION): String? =
@@ -118,6 +121,9 @@ object SpotifyCanvasQuery {
         private val fetch: (String) -> String?,
         private val now: () -> Long = System::currentTimeMillis,
         private val maxScripts: Int = 8,
+        /** The operation whose hash this tracks; [canvasHash] is named for the default. */
+        private val operation: String = OPERATION,
+        private val fallback: String = KNOWN_CANVAS_HASH,
     ) {
         @Volatile private var hash: String? = null
         @Volatile private var checkedAt = 0L
@@ -127,19 +133,22 @@ object SpotifyCanvasQuery {
             val current = hash
             val age = now() - checkedAt
             if (!forceRefresh && checkedAt != 0L && age < (if (current != null) FOUND_TTL_MS else MISSED_TTL_MS)) {
-                return current ?: KNOWN_CANVAS_HASH
+                return current ?: fallback
             }
             checkedAt = now()
             val found = lookUp()
             if (found != null) hash = found
-            return hash ?: KNOWN_CANVAS_HASH
+            return hash ?: fallback
         }
+
+        /** The same as [canvasHash], for a tracker built for another [operation]. */
+        fun hash(forceRefresh: Boolean = false): String = canvasHash(forceRefresh)
 
         private fun lookUp(): String? {
             val html = fetch("https://open.spotify.com/") ?: return null
             for (script in webPlayerScripts(html).take(maxScripts)) {
                 val body = fetch(script) ?: continue
-                findQueryHash(body)?.let { return it }
+                findQueryHash(body, operation)?.let { return it }
             }
             return null
         }

@@ -516,6 +516,12 @@ object AppSettings {
     val prioritizeSpotifyCanvas = MutableStateFlow(false)
 
     /**
+     * Mirrors the heart onto Spotify's Liked Songs through the same `sp_dc`
+     * session Canvas uses. Off by default: it writes to another account.
+     */
+    val spotifyLikeSync = MutableStateFlow(false)
+
+    /**
      * Secondary artist art: an artist-signature API used only when Apple Music
      * has no title logo. On by default against [DEFAULT_SIGNATURE_API_URL];
      * a blank URL means the user removed it and the lookup is skipped.
@@ -981,6 +987,7 @@ object AppSettings {
         canvasOverCellular.value = prefs.getBoolean(KEY_CANVAS_OVER_CELLULAR, false)
         spotifyCanvasAutoHide.value = prefs.getBoolean(KEY_SPOTIFY_CANVAS_AUTO_HIDE, true)
         prioritizeSpotifyCanvas.value = prefs.getBoolean(KEY_PRIORITIZE_SPOTIFY_CANVAS, false)
+        spotifyLikeSync.value = prefs.getBoolean(KEY_SPOTIFY_LIKE_SYNC, false)
         signatureApiEnabled.value = prefs.getBoolean(KEY_SIGNATURE_API_ENABLED, true)
         signatureApiUrl.value = normalizeSignatureApiUrl(
             prefs.getString(KEY_SIGNATURE_API_URL, DEFAULT_SIGNATURE_API_URL).orEmpty(),
@@ -1571,6 +1578,11 @@ object AppSettings {
     fun setPrioritizeSpotifyCanvas(value: Boolean) {
         prioritizeSpotifyCanvas.value = value
         prefs.edit().putBoolean(KEY_PRIORITIZE_SPOTIFY_CANVAS, value).apply()
+    }
+
+    fun setSpotifyLikeSync(value: Boolean) {
+        spotifyLikeSync.value = value
+        prefs.edit().putBoolean(KEY_SPOTIFY_LIKE_SYNC, value).apply()
     }
 
     fun setSignatureApiEnabled(value: Boolean) {
@@ -2207,6 +2219,7 @@ object AppSettings {
     private const val KEY_CANVAS_OVER_CELLULAR = "canvas_over_cellular"
     private const val KEY_SPOTIFY_CANVAS_AUTO_HIDE = "spotify_canvas_auto_hide"
     private const val KEY_PRIORITIZE_SPOTIFY_CANVAS = "prioritize_spotify_canvas"
+    private const val KEY_SPOTIFY_LIKE_SYNC = "spotify_like_sync"
     private const val KEY_FULL_BLEED_ARTWORK = "full_bleed_artwork"
     private const val KEY_LEGACY_MESH_GRADIENT = "legacy_mesh_gradient"
     private const val KEY_LAST_PLAYER_SCREEN = "last_player_screen"

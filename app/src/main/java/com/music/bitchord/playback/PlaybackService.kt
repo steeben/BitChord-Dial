@@ -3423,8 +3423,16 @@ class PlaybackService : MediaLibraryService() {
         // the optimistic state with YouTube in the background.
         LikeState.set(videoId, target)
         refreshCustomLayouts()
+        val metadata = player?.currentMediaItem?.takeIf { it.mediaId == videoId }?.mediaMetadata
         favoriteActionJob = scope.launch {
             YtMusicRepository.rate(videoId, target)
+                .onSuccess {
+                    com.music.bitchord.data.spotify.SpotifyLikeSync.mirror(
+                        metadata?.title?.toString(),
+                        metadata?.artist?.toString(),
+                        liked = target == LikeStatus.LIKE,
+                    )
+                }
                 .onFailure {
                     LikeState.set(videoId, previous)
                     refreshCustomLayouts()

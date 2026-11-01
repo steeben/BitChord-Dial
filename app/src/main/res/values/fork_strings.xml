@@ -36,6 +36,8 @@
     <string name="speed_dial_pins_empty">Nothing is pinned yet. Hold a song, album or playlist and choose Add to speed dial.</string>
     <string name="speed_dial_pins_note">Drag the handles to reorder your pins. Switch one off to unpin it.</string>
     <string name="spotify_canvas_compact_controls">Keep controls visible</string>
+    <string name="spotify_like_sync">Like songs on Spotify too</string>
+    <string name="spotify_like_sync_subtitle">Liking or un-liking a song here also saves or removes it from your Spotify Liked Songs, using the sp_dc cookie below</string>
     <string name="spotify_canvas_compact_controls_subtitle">Instead of hiding, the controls shrink to the bottom of the screen, keeping the song, live lyrics and play controls</string>
     <string name="start_screen">Start screen</string>
     <string name="start_screen_subtitle">The page the app opens to</string>

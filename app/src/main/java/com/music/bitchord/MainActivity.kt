@@ -1206,7 +1206,7 @@ private fun BitChordApp(
         }
     }
     val toggleLikeOf: (Song) -> Unit = { song ->
-        if (song.localUri != null) OfflinePlaylists.toggleLike(song) else viewModel.toggleLike(song.videoId)
+        if (song.localUri != null) OfflinePlaylists.toggleLike(song) else viewModel.toggleLike(song.videoId, song)
     }
     // Which tracks are being held on YouTube's own upload, so the player's menu
     // offers the way back out of a revert rather than the revert again.
