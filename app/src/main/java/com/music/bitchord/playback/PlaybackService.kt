@@ -996,6 +996,10 @@ class PlaybackService : MediaLibraryService() {
                 mediaItem.mediaId == swappingMediaId
             ) {
                 swappingMediaId = null
+                // Not a new listen, but AutoPlay still has to follow it: a
+                // swap to another version changes the id its load in flight
+                // is checking against, and that load then gives up quietly.
+                rearmAutoplayIfSeedChanged(exoPlayer)
                 return
             }
 
@@ -2560,6 +2564,9 @@ class PlaybackService : MediaLibraryService() {
             refreshAutoplayIfQueueEmpty()
             return
         }
+        // A version swap lands here instead of on a transition, so nothing
+        // else tells AutoPlay its seed is gone.
+        rearmAutoplayIfSeedChanged(incoming)
         swappingMediaId = null
 
         onTrackBecameCurrent(
@@ -3250,6 +3257,25 @@ class PlaybackService : MediaLibraryService() {
                 } != null
             }
         }
+
+    /**
+     * Restarts AutoPlay when the current item is no longer the one it was
+     * seeded from without a transition having said so: a version swap.
+     *
+     * Playing a music video swaps its audio version in straight away, by
+     * default. The AutoPlay load started for the video checks the current id
+     * before it queues anything, finds the audio id instead, and stops; the
+     * swap itself is kept from looking like a track change, so nothing ran
+     * the load again and AutoPlay sat on with an empty queue behind the song.
+     */
+    private fun rearmAutoplayIfSeedChanged(exoPlayer: ExoPlayer) {
+        val currentId = exoPlayer.currentMediaItem?.mediaId ?: return
+        if (autoplaySeed == currentId) return
+        autoplayLoadJob?.cancel()
+        autoplayLoadJob = null
+        autoplaySeed = null
+        loadAutoplayForCurrentTrack()
+    }
 
     /** AutoPlay tracks ahead of the current one as of the last queue edit. */
     private var autoplayAheadSeen = 0
