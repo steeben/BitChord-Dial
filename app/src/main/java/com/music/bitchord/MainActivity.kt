@@ -5768,18 +5768,14 @@ private fun BitChordApp(
                                 AiMix.stop()
                                 showQueueNotice(context.getString(R.string.ai_mix_stopped))
                             } else {
-                                controller?.let { c ->
-                                    AppSettings.setSmartFadeEnabled(true)
-                                    AiMix.startNow(c.currentMediaItem?.mediaId, c.currentPosition)
-                                    showQueueNotice(context.getString(R.string.ai_mix_started))
-                                }
+                                AiMix.startNow()
+                                showQueueNotice(context.getString(R.string.ai_mix_started))
                             }
                         }
                     }
                     song.localUri == null && song.videoId.isNotBlank() -> {
                         {
                             songActions = null
-                            AppSettings.setSmartFadeEnabled(true)
                             AiMix.arm()
                             startRadioFrom(song, false)
                             showQueueNotice(context.getString(R.string.ai_mix_started))
@@ -6776,7 +6772,6 @@ private fun BitChordApp(
                 aiMixActive = aiMixActive,
                 onAiMix = act { songs ->
                     if (songs.isNotEmpty()) {
-                        AppSettings.setSmartFadeEnabled(true)
                         AiMix.arm()
                         play(songs, 0)
                         showQueueNotice(context.getString(R.string.ai_mix_started))

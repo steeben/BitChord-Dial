@@ -43,6 +43,9 @@ object AiMix {
 
     @Volatile private var armedAt = 0L
 
+    /** Set when a mix begins, so the track playing then is moved onto its sample. */
+    @Volatile private var reseat = false
+
     /** When the running mix took up its queue; see [onNewQueue]. */
     @Volatile private var startedAt = 0L
 
@@ -65,6 +68,7 @@ object AiMix {
             startedAt = now
             windows.clear()
             SampleWindows.clear()
+            reseat = true
             _active.value = true
             return
         }
@@ -77,17 +81,24 @@ object AiMix {
         _active.value = false
     }
 
-    /** Mixes the queue already playing, the current track's sample starting where it stands. */
-    fun startNow(currentMediaId: String?, positionMs: Long) {
+    /**
+     * Mixes the queue already playing. The current track moves to the sample
+     * it would have played had the mix begun before it, wherever it stands.
+     */
+    fun startNow() {
         armedAt = 0L
         windows.clear()
         SampleWindows.clear()
-        if (currentMediaId != null) windows[currentMediaId] = positionMs.coerceAtLeast(0L)
+        reseat = true
         _active.value = true
     }
 
+    /** Whether the playing track still has to be moved onto its sample; asking clears it. */
+    fun takeReseat(): Boolean = reseat.also { reseat = false }
+
     fun stop() {
         armedAt = 0L
+        reseat = false
         windows.clear()
         SampleWindows.clear()
         _active.value = false

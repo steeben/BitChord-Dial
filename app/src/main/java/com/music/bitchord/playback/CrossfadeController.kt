@@ -1064,6 +1064,12 @@ class CrossfadeController(
         begin(fade, endMs = duration, smart = false)
     }
 
+    /**
+     * Automix, as the blend in flight sees it: the setting, or an AI Mix,
+     * which runs on Automix without switching the setting on.
+     */
+    private fun automixOn(): Boolean = AppSettings.smartFadeEnabled.value || AiMix.active.value
+
     /** The track [planAiMix] last moved onto its sample, so it is moved there once. */
     private var aiMixSeated: String? = null
 
@@ -1077,25 +1083,22 @@ class CrossfadeController(
      *
      * Rides the same arm-and-blend machinery as Automix, ending the outgoing
      * track at its window's end rather than its outro and cueing the incoming
-     * one at its window's start rather than its intro. Automix has to stay on
-     * for it, since that is what a blend checks to keep running: switching it
-     * off ends the mix.
+     * one at its window's start rather than its intro. It runs whether or not
+     * Automix is switched on in settings, and leaves that setting alone.
      */
     private fun planAiMix(player: ExoPlayer) {
-        if (!AppSettings.smartFadeEnabled.value) {
-            AiMix.stop()
-            AppSettings.smartTransitionWindow.value = null
-            return
-        }
         val item = player.currentMediaItem ?: return
         val duration = player.duration.takeIf { it != C.TIME_UNSET && it > 0L } ?: return
         val start = AiMix.windowStart(item.mediaId, duration) { sampleStartMs(item, duration) }
 
         // A track reached any way but a blend — the first of the mix, a skip,
-        // a tap in the queue — starts at its sample, not at its intro.
-        if (aiMixSeated != item.mediaId) {
+        // a tap in the queue — starts at its sample, not at its intro. A mix
+        // switched on mid-song moves to the sample too, back or forward.
+        val reseat = AiMix.takeReseat()
+        if (reseat || aiMixSeated != item.mediaId) {
             aiMixSeated = item.mediaId
-            if (player.currentPosition < start - AI_MIX_SEAT_SLACK_MS) {
+            val off = player.currentPosition - start
+            if (off < -AI_MIX_SEAT_SLACK_MS || (reseat && off > AI_MIX_SEAT_SLACK_MS)) {
                 player.seekTo(start)
                 return
             }
@@ -2084,7 +2087,7 @@ class CrossfadeController(
         // [configuredFadeMs] at zero, and reading that as "turned off" would
         // end every Automix on its first tick.
         val settingSwitchedOff = if (smartFadeActive) {
-            !AppSettings.smartFadeEnabled.value
+            !automixOn()
         } else {
             configuredFadeMs() <= 0L
         }
@@ -2914,7 +2917,7 @@ class CrossfadeController(
         val player = active()
         val item = player.currentMediaItem
         val text = when {
-            !AppSettings.smartFadeEnabled.value || item == null || ListenTogether.state.value.inParty -> null
+            !automixOn() || item == null || ListenTogether.state.value.inParty -> null
             else -> describeAutomix(player, item)
         }
         if (AppSettings.automixDetail.value != text) AppSettings.automixDetail.value = text
@@ -3092,7 +3095,7 @@ class CrossfadeController(
 
     /** Still a next track, still playing, still switched on — by whichever setting armed this one. */
     private fun stillWorthFading(): Boolean {
-        val stillOn = if (smartFadeActive) AppSettings.smartFadeEnabled.value else configuredFadeMs() > 0L
+        val stillOn = if (smartFadeActive) automixOn() else configuredFadeMs() > 0L
         return stillOn && (outgoing ?: active()).hasNextMediaItem()
     }
 
