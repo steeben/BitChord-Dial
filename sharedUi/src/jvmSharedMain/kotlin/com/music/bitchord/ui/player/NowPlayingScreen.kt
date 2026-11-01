@@ -12,6 +12,7 @@ import com.music.bitchord.sharedui.resources.*
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.expandHorizontally
@@ -304,11 +305,16 @@ private fun Modifier.trimBy(top: Dp, bottom: Dp, fraction: () -> Float): Modifie
  * backdrop — leaves as one picture with the clip taking its place, rather than
  * each on a timing of its own. [clipBounds] is the clip's view in root
  * coordinates; [progress] is how far its sweep has got.
+ *
+ * With [reveal] it is the other way round: the layer shows only where the clip
+ * already has, for what belongs to the clip — its dim and the glass under the
+ * controls — to come in with it rather than after it.
  */
 private fun Modifier.canvasSweepOut(
     enabled: () -> Boolean,
     progress: () -> Float,
     clipBounds: () -> Rect,
+    reveal: Boolean = false,
 ): Modifier = composed {
     val origin = remember { floatArrayOf(0f, 0f) }
     onGloballyPositioned {
@@ -323,7 +329,11 @@ private fun Modifier.canvasSweepOut(
             if (!enabled()) return@drawWithContent
             val wipe = progress().coerceIn(0f, 1f)
             val clip = clipBounds()
-            if (wipe <= 0f || clip.width <= 0f || clip.height <= 0f) return@drawWithContent
+            if (clip.width <= 0f || clip.height <= 0f) return@drawWithContent
+            if (wipe <= 0f) {
+                if (reveal) drawRect(Color.Transparent, blendMode = BlendMode.Clear)
+                return@drawWithContent
+            }
             val start = -CANVAS_REVEAL_WIPE_BAND + wipe * (1f + CANVAS_REVEAL_WIPE_BAND)
             val end = start + CANVAS_REVEAL_WIPE_BAND
             val dx = clip.left - origin[0]
@@ -334,7 +344,7 @@ private fun Modifier.canvasSweepOut(
                     start = Offset(dx + clip.width * start, dy + clip.height * start),
                     end = Offset(dx + clip.width * end, dy + clip.height * end),
                 ),
-                blendMode = BlendMode.DstOut,
+                blendMode = if (reveal) BlendMode.DstIn else BlendMode.DstOut,
             )
         }
 }
@@ -1532,6 +1542,16 @@ fun NowPlayingScreen(
         progress = { canvasCover.floatValue },
         clipBounds = { clipRootBounds[0] },
     )
+    val sweepIn: Modifier = Modifier.canvasSweepOut(
+        enabled = { currentCanvasSweepPhase },
+        progress = { canvasCover.floatValue },
+        clipBounds = { clipRootBounds[0] },
+        reveal = true,
+    )
+    // The clip's dim and its glass deck are up for the sweep too, swept in
+    // with it — left until the layout took over, the clip came in at full
+    // brightness with nothing behind the controls, and both arrived after.
+    val canvasChromeUp = spotifyCanvasPresentation || (canvasSweepPhase && canvasRendered)
     // With "keep controls visible" on, a Canvas that would have hidden the
     // controls shrinks them to the foot of the screen instead: the song, its
     // live lyric and the transport stay, and everything else slides away.
@@ -2686,13 +2706,15 @@ fun NowPlayingScreen(
         // above the video. When the deck slides away this layer leaves with
         // it as well.
         AnimatedVisibility(
-            visible = spotifyCanvasPresentation && (spotifyCanvasControlsOpen || canvasCompactMode),
+            visible = canvasChromeUp && (spotifyCanvasControlsOpen || canvasCompactMode),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 // Shorter behind the compact controls, so more of the clip shows.
                 .fillMaxHeight(0.56f - 0.24f * canvasCompact.value),
-            enter = fadeIn(tween(SPOTIFY_CANVAS_CONTROLS_ANIMATION_MS)) + playerDeckSlideIn(),
+            // Arriving with the sweep, which brings it in itself.
+            enter = if (canvasSweepPhase) EnterTransition.None
+                else fadeIn(tween(SPOTIFY_CANVAS_CONTROLS_ANIMATION_MS)) + playerDeckSlideIn(),
             exit = fadeOut(tween(SPOTIFY_CANVAS_CONTROLS_ANIMATION_MS)) + playerDeckSlideOut(),
         ) {
             // Subscribe only while Spotify's glass layer exists. Static art and
@@ -2701,6 +2723,7 @@ fun NowPlayingScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .then(sweepIn)
                     .then(
                         if (reduceDynamicBlur || !renderEffectBlurSupported) {
                             // A real backdrop RenderEffect is unavailable on
@@ -2760,17 +2783,19 @@ fun NowPlayingScreen(
         // beneath it never reached the glass and the deck stayed bright.
         val spotifyCanvasDim = animateFloatAsState(
             targetValue = when {
-                spotifyCanvasPresentation && spotifyCanvasControlsOpen -> 0.5f
+                canvasChromeUp && spotifyCanvasControlsOpen -> 0.5f
                 canvasCompactMode -> 0.15f
                 else -> 0f
             },
-            animationSpec = tween(SPOTIFY_CANVAS_CONTROLS_ANIMATION_MS),
+            // Straight up under the sweep, which brings it in itself.
+            animationSpec = tween(if (canvasSweepPhase) 0 else SPOTIFY_CANVAS_CONTROLS_ANIMATION_MS),
             label = "spotifyCanvasDim",
         )
         val spotifyCanvasDimShowing by remember { derivedStateOf { spotifyCanvasDim.value > 0f } }
-        if (spotifyCanvasPresentation || spotifyCanvasDimShowing) {
+        if (canvasChromeUp || spotifyCanvasDimShowing) {
             Box(
                 Modifier.matchParentSize()
+                    .then(sweepIn)
                     .graphicsLayer { alpha = spotifyCanvasDim.value }
                     .background(Color.Black),
             )
