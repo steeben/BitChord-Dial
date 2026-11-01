@@ -1129,9 +1129,23 @@ class PlaybackService : MediaLibraryService() {
             // the loop ends, or a listener who cycles repeat on and straight
             // back off is left with a queue that simply stops after the playing
             // track.
+            // Outside a party, Repeat all and AutoPlay are one or the other:
+            // with both lit the player looped a lone song while the queue
+            // promised more music. Turning repeat-all on turns AutoPlay off,
+            // and its tracks go rather than wait in the stash for a loop end
+            // that would put them back with AutoPlay off. In a party AutoPlay
+            // is the party's setting, so the old pause-and-restore stands.
+            val partyNow = ListenTogether.state.value
+            val autoplayYields = repeatMode == Player.REPEAT_MODE_ALL &&
+                !partyNow.inParty && AppSettings.autoplay.value
+            if (autoplayYields) AppSettings.setAutoplay(false)
             when {
                 repeatMode == Player.REPEAT_MODE_ALL -> {
                     stashAutoplayTracks()
+                    if (autoplayYields) {
+                        repeatAllStash = emptyList()
+                        repeatAllStashSeed = null
+                    }
                     // A bounded context may retain physical history before its
                     // final current item. Materialise the logical next cycle
                     // before native repeat-all can wrap into that history.
@@ -3052,6 +3066,12 @@ class PlaybackService : MediaLibraryService() {
             return
         }
         if (enabled) {
+            // The other half of the rule in onRepeatModeChanged: AutoPlay on
+            // takes repeat-all off, or it would sit lit and do nothing.
+            player?.takeIf { it.repeatMode == Player.REPEAT_MODE_ALL }?.let {
+                AppSettings.setRepeatMode(Player.REPEAT_MODE_OFF)
+                it.repeatMode = Player.REPEAT_MODE_OFF
+            }
             autoplayLoadJob?.cancel()
             autoplayLoadJob = null
             autoplaySeed = null
@@ -7368,6 +7388,12 @@ class PlaybackService : MediaLibraryService() {
         // the previous service instance's value. Only assigning `true` made a
         // stale enabled state consume the first tap meant to enable Shuffle.
         QueueShuffle.setEnabled(AppSettings.shuffleEnabled.value)
+        // Saved from before Repeat all and AutoPlay excluded each other, both
+        // can be on. AutoPlay keeps its place: it is the one a listener notices
+        // missing, as a queue that ends at one song.
+        if (AppSettings.repeatMode.value == Player.REPEAT_MODE_ALL && AppSettings.autoplay.value) {
+            AppSettings.setRepeatMode(Player.REPEAT_MODE_OFF)
+        }
         player.repeatMode = AppSettings.repeatMode.value
     }
 
