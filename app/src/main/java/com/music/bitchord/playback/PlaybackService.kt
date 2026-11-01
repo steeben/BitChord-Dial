@@ -2536,6 +2536,14 @@ class PlaybackService : MediaLibraryService() {
         incoming.addListener(playbackListener)
         incoming.addAnalyticsListener(formatListener)
 
+        // The stand-by was handed a copy of the queue when the swap began,
+        // and a blend takes seconds. Anything that changed the queue in the
+        // meantime — AutoPlay's batch landing is the usual case — went onto
+        // the outgoing player, which is about to be cleared. Bring it across
+        // before that, with the listener already attached so the edit is seen
+        // as the queue change it is.
+        carryQueueAcross(outgoing, incoming)
+
         mediaSession?.player = newSessionPlayer(incoming, requireNotNull(crossfade))
         crossfade?.onSessionPlayerChanged()
 
@@ -2545,7 +2553,13 @@ class PlaybackService : MediaLibraryService() {
         outgoing.volume = 1f
 
         refreshCustomLayouts()
-        if (!asNewTrack) return
+        if (!asNewTrack) {
+            // Same play of the same song, so no track change runs AutoPlay
+            // again. If its load ended while the stand-by was lined up, the
+            // queue can be sitting empty with nothing left to notice it.
+            refreshAutoplayIfQueueEmpty()
+            return
+        }
         swappingMediaId = null
 
         onTrackBecameCurrent(
@@ -2554,6 +2568,35 @@ class PlaybackService : MediaLibraryService() {
             reason = Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED,
             alreadyAudible = true,
         )
+    }
+
+    /**
+     * Makes everything around the current item on [incoming] match [outgoing],
+     * leaving each player's own current item alone (a version swap or an
+     * upgrade is exactly a different current item). Ranges that already match
+     * are not touched, so the common case — no edit during the swap — costs
+     * nothing and fires no timeline change.
+     */
+    private fun carryQueueAcross(outgoing: ExoPlayer, incoming: ExoPlayer) {
+        val outIndex = outgoing.currentMediaItemIndex
+        val inIndex = incoming.currentMediaItemIndex
+        if (outIndex < 0 || inIndex < 0) return
+        val outCount = outgoing.mediaItemCount
+        val inCount = incoming.mediaItemCount
+        // Tail first: editing it leaves the current index where it is, which
+        // the head edit below relies on.
+        val tail = (outIndex + 1 until outCount).map(outgoing::getMediaItemAt)
+        val inTail = (inIndex + 1 until inCount).map(incoming::getMediaItemAt)
+        if (tail != inTail) incoming.replaceMediaItems(inIndex + 1, inCount, tail)
+        val head = (0 until outIndex).map(outgoing::getMediaItemAt)
+        val inHead = (0 until inIndex).map(incoming::getMediaItemAt)
+        if (head != inHead) incoming.replaceMediaItems(0, inIndex, head)
+        if (tail != inTail || head != inHead) {
+            TrackLog.d(
+                "BitChord",
+                "swap: carried a queue edit across (${inTail.size}→${tail.size} after, ${inHead.size}→${head.size} before)",
+            )
+        }
     }
 
     /** Reopens the current song through YouTube and remembers that choice. */
