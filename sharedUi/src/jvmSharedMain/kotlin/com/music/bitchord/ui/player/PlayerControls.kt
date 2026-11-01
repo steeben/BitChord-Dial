@@ -1,5 +1,7 @@
 package com.music.bitchord.ui.player
 
+import com.music.bitchord.ui.components.PlayPauseGlyph
+import com.music.bitchord.ui.components.pressPulse
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -484,7 +486,8 @@ internal fun TransportRow(
             }
         } else {
             TransportGlyph(
-                icon = if (isPlaying) Res.drawable.ic_player_pause else Res.drawable.ic_player_play,
+                icon = null,
+                playing = isPlaying,
                 contentDescription = stringResource(if (isPlaying) Res.string.pause else Res.string.play),
                 size = playSize,
                 touchSize = playTouch,
@@ -705,9 +708,11 @@ internal fun CircleGlyph(
         label = "glyphDisc",
     )
     val glass = LocalPlayerGlass.current
+    val interaction = remember { MutableInteractionSource() }
     Box(
         modifier = Modifier
             .size(34.dp)
+            .pressPulse(interaction, color = PlayerInk, spread = 1.7f)
             .let { sized ->
                 // Liquid glass when it is on, with the old disc's tint over it
                 // only while active, so a liked heart still reads as on.
@@ -719,7 +724,7 @@ internal fun CircleGlyph(
                 }
             }
             .clickable(
-                interactionSource = remember { MutableInteractionSource() },
+                interactionSource = interaction,
                 indication = null,
             ) {
                 haptics.play(haptic)
@@ -782,7 +787,8 @@ internal fun LikeCircleGlyph(
  */
 @Composable
 private fun TransportGlyph(
-    icon: DrawableResource,
+    /** Null draws [PlayPauseGlyph] instead, folding between the two by [playing]. */
+    icon: DrawableResource?,
     contentDescription: String,
     size: androidx.compose.ui.unit.Dp,
     touchSize: androidx.compose.ui.unit.Dp = size,
@@ -791,6 +797,7 @@ private fun TransportGlyph(
     haptic: Haptic = Haptic.Tap,
     /** Vertical squash of the glyph alone; its width and touch box are untouched. */
     heightScale: Float = 1f,
+    playing: Boolean = false,
 ) {
     val haptics = rememberHaptics()
     // Faded rather than hidden: the row keeps its shape at the ends of a queue.
@@ -798,11 +805,13 @@ private fun TransportGlyph(
         targetValue = if (enabled) 1f else 0.3f,
         label = "transportAlpha",
     )
+    val interaction = remember { MutableInteractionSource() }
     Box(
         modifier = Modifier
             .size(touchSize)
+            .pressPulse(interaction, color = PlayerInk, radius = size * 0.9f)
             .clickable(
-                interactionSource = remember { MutableInteractionSource() },
+                interactionSource = interaction,
                 indication = null,
                 enabled = enabled,
             ) {
@@ -811,14 +820,23 @@ private fun TransportGlyph(
             },
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            painter = painterResource(icon),
-            contentDescription = contentDescription,
-            tint = PlayerInk.copy(alpha = alpha),
-            modifier = Modifier
-                .size(size)
-                .then(if (heightScale != 1f) Modifier.graphicsLayer { scaleY = heightScale } else Modifier),
-        )
+        if (icon == null) {
+            PlayPauseGlyph(
+                isPlaying = playing,
+                tint = PlayerInk.copy(alpha = alpha),
+                contentDescription = contentDescription,
+                modifier = Modifier.size(size),
+            )
+        } else {
+            Icon(
+                painter = painterResource(icon),
+                contentDescription = contentDescription,
+                tint = PlayerInk.copy(alpha = alpha),
+                modifier = Modifier
+                    .size(size)
+                    .then(if (heightScale != 1f) Modifier.graphicsLayer { scaleY = heightScale } else Modifier),
+            )
+        }
     }
 }
 
@@ -1013,13 +1031,16 @@ private fun PillSegment(
 ) {
     val haptics = rememberHaptics()
     val lastTap = remember { mutableLongStateOf(-tapWindowMs) }
+    val interaction = remember { MutableInteractionSource() }
     Box(
         modifier = Modifier
             .width(width)
             .height(BOTTOM_ACTION_SIZE)
             .background(if (highlighted) Color.White.copy(alpha = 0.14f) else Color.Transparent)
+            // Inside the capsule's clip, so it glows within its own segment.
+            .pressPulse(interaction, color = PlayerInk)
             .clickable(
-                interactionSource = remember { MutableInteractionSource() },
+                interactionSource = interaction,
                 indication = null,
                 enabled = !loading,
             ) {
@@ -1214,14 +1235,16 @@ private fun BottomGlyph(
     // costs no recomposition. Starts a full window in the past so the first tap
     // is never the one that gets swallowed.
     val lastTap = remember { mutableLongStateOf(-tapWindowMs) }
+    val interaction = remember { MutableInteractionSource() }
     Box(
         modifier = Modifier
             .size(BOTTOM_ACTION_SIZE)
+            .pressPulse(interaction, color = PlayerInk)
             // No disc behind it, lit or not: being lit is the glyph going
             // from dimmed to full white.
             .clip(CircleShape)
             .combinedClickable(
-                interactionSource = remember { MutableInteractionSource() },
+                interactionSource = interaction,
                 indication = null,
                 onLongClick = onLongClick?.let { longClick ->
                     {

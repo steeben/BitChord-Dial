@@ -356,11 +356,11 @@ fun IosMenuRow(
 /**
  * A menu hung off a button rather than lifted out of a list — the ⋮ on a row,
  * the ⋯ on a release page and the player's ⋯ all open their menu this way. The
- * panel lines its trailing edge up with [anchor]'s and grows out of the corner
- * nearest the button: for one in the lower half of the screen, as the player's
- * ⋯ is, it settles at the bottom and grows from its bottom corner; for one
- * higher up, a row's ⋮ near the top of a list, it hangs down from the button's
- * top and grows from its top corner. With no anchor it takes the bottom end.
+ * panel lines its trailing edge up with [anchor]'s and grows out of the button
+ * itself: for one in the lower half of the screen, as the player's ⋯ is, it
+ * settles at the bottom; for one higher up, a row's ⋮ near the top of a list,
+ * it hangs down from the button's top. With no anchor it takes the bottom end
+ * and grows from its bottom corner.
  *
  * Drawn in place, over whatever it is composed on top of, on [iosMenuPanel]'s
  * material: Liquid Glass bending [backdrop] while that is on, the page's
@@ -478,6 +478,19 @@ fun <T : Any> IosMenuPopover(
         val lowest = (bottom - panel.height).coerceAtLeast(top)
         val hangsDown = anchorBounds != null && anchorBounds.center.y < height / 2f
         val panelY = if (hangsDown) anchorBounds!!.top.roundToInt().coerceIn(top, lowest) else lowest
+        // Grown out of the button that opened it, wherever that lands against
+        // the panel — the player's ⋯ sits well above the panel's bottom
+        // corner, and growing from that corner read as rising off the screen
+        // edge. Kept within a little of the panel so a far-off anchor can't
+        // fling it in from across the screen.
+        val origin = if (anchorBounds != null && panel.width > 0 && panel.height > 0) {
+            TransformOrigin(
+                ((anchorBounds.center.x - panelX) / panel.width).coerceIn(-0.15f, 1.15f),
+                ((anchorBounds.center.y - panelY) / panel.height).coerceIn(-0.6f, 1.6f),
+            )
+        } else {
+            TransformOrigin(1f, if (hangsDown) 0f else 1f)
+        }
 
         layout(width, height) {
             scrimPlaceable.place(0, 0)
@@ -485,7 +498,7 @@ fun <T : Any> IosMenuPopover(
                 val p = progress.value
                 alpha = (p * 2.5f).coerceIn(0f, 1f)
                 if (!reduceMotion) {
-                    transformOrigin = TransformOrigin(1f, if (hangsDown) 0f else 1f)
+                    transformOrigin = origin
                     val scale = lerp(0.3f, 1f, p)
                     scaleX = scale
                     scaleY = scale

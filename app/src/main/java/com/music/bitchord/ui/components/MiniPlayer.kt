@@ -1,5 +1,6 @@
 package com.music.bitchord.ui.components
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.music.bitchord.data.AudioOnlyVideos
 import com.music.bitchord.R
 
@@ -21,9 +22,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -541,15 +539,17 @@ fun MiniPlayer(
                     )
                 }
             } else {
+                val playPausePress = remember { MutableInteractionSource() }
                 IconButton(
                     onClick = {
                         haptics.play(if (isPlaying) Haptic.Pause else Haptic.Resume)
                         onPlayPause()
                     },
-                    modifier = Modifier.size(GLYPH_SLOT),
+                    modifier = Modifier.pressPulse(playPausePress, color = MaterialTheme.colorScheme.onBackground).size(GLYPH_SLOT),
+                    interactionSource = playPausePress,
                 ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                    PlayPauseGlyph(
+                        isPlaying = isPlaying,
                         contentDescription = stringResource(if (isPlaying) R.string.pause else R.string.play),
                         tint = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.size(GLYPH_SIZE),
@@ -561,13 +561,15 @@ fun MiniPlayer(
                 Spacer(Modifier.width(TRANSPORT_GAP))
                 // Faded and inert rather than removed while the host holds the
                 // controls, so the bar keeps its shape — see [controlsLocked].
+                val nextPress = remember { MutableInteractionSource() }
                 IconButton(
                     onClick = {
                         haptics.play(Haptic.SkipNext)
                         onNext()
                     },
                     enabled = !controlsLocked,
-                    modifier = Modifier.size(GLYPH_SLOT),
+                    modifier = Modifier.pressPulse(nextPress, color = MaterialTheme.colorScheme.onBackground).size(GLYPH_SLOT),
+                    interactionSource = nextPress,
                 ) {
                     MiniPlayerNextGlyph(
                         tint = MaterialTheme.colorScheme.onBackground

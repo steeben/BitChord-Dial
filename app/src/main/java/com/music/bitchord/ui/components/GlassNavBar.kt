@@ -30,9 +30,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -478,15 +475,17 @@ private fun GlassNowPlaying(
                     )
                 }
             } else {
+                val playPausePress = remember { MutableInteractionSource() }
                 IconButton(
                     onClick = {
                         haptics.play(if (isPlaying) Haptic.Pause else Haptic.Resume)
                         onPlayPause()
                     },
-                    modifier = Modifier.size(glyphSlot),
+                    modifier = Modifier.pressPulse(playPausePress, color = contentColor).size(glyphSlot),
+                    interactionSource = playPausePress,
                 ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                    PlayPauseGlyph(
+                        isPlaying = isPlaying,
                         contentDescription = stringResource(if (isPlaying) R.string.pause else R.string.play),
                         tint = contentColor,
                         modifier = Modifier.size(glyphSize),
@@ -498,13 +497,15 @@ private fun GlassNowPlaying(
             // survive that, not a second transport button.
             if (!isInline && showNext) {
                 Spacer(Modifier.width(8.dp))
+                val nextPress = remember { MutableInteractionSource() }
                 IconButton(
                     onClick = {
                         haptics.play(Haptic.SkipNext)
                         onNext()
                     },
                     enabled = !controlsLocked,
-                    modifier = Modifier.size(glyphSlot),
+                    modifier = Modifier.pressPulse(nextPress, color = contentColor).size(glyphSlot),
+                    interactionSource = nextPress,
                 ) {
                     MiniPlayerNextGlyph(
                         tint = contentColor.copy(alpha = if (controlsLocked) 0.3f else 1f),
