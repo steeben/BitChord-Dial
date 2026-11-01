@@ -203,6 +203,12 @@ import com.music.bitchord.playback.audio.bitperfect.BitPerfectOutput
 import com.music.bitchord.data.settings.AutomixPerformanceMode
 import com.music.bitchord.R
 import com.music.bitchord.ui.components.lightweightLiquidGlass
+import com.music.bitchord.ui.components.SquareLogo
+import com.music.bitchord.ui.components.homeTitleWithDial
+import com.music.bitchord.ui.theme.LocalNowPlayingTint
+import com.music.bitchord.ui.theme.Metropolis
+import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 import com.music.bitchord.data.sources.DeviceCodecs
 import com.music.bitchord.data.settings.AudioQuality
 import com.music.bitchord.data.settings.DownloadQuality
@@ -1966,75 +1972,10 @@ fun SettingsScreen(
             MessageState(stringResource(R.string.settings_search_empty, searchQuery))
         }
 
-        // The version line is the page's colophon, not a setting: it belongs to
-        // the whole list, so it goes when the list is narrowed to a few rows.
+        // The page's colophon, not a setting: it belongs to the whole list,
+        // so it goes when the list is narrowed to a few rows.
         if (section == null && searchQuery.isBlank()) {
-        Text(
-            text = buildAnnotatedString {
-                append("bitchord $version  ")
-                val linkStyles = TextLinkStyles(
-                    style = SpanStyle(
-                        color = MaterialTheme.colorScheme.primary,
-                        textDecoration = TextDecoration.Underline,
-                    ),
-                )
-                withLink(LinkAnnotation.Url(FORK_AUTHOR_URL, linkStyles)) {
-                    append("GitHub")
-                }
-                append("\n~YouTube Music & Listen Together Backend")
-            },
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 24.dp, bottom = 8.dp),
-        )
-        // This build's own colophon: where it comes from and where its updates are.
-        val forkNotice = stringResource(R.string.fork_notice)
-        val forkReleases = stringResource(R.string.fork_releases)
-        val forkObtainX = stringResource(R.string.fork_obtainx)
-        Text(
-            text = buildAnnotatedString {
-                val linkStyles = TextLinkStyles(
-                    style = SpanStyle(
-                        color = MaterialTheme.colorScheme.primary,
-                        textDecoration = TextDecoration.Underline,
-                    ),
-                )
-                // The upstream app's name in the notice is the link to its site.
-                val upstream = forkNotice.indexOf(UPSTREAM_NAME)
-                if (upstream >= 0) {
-                    append(forkNotice.substring(0, upstream))
-                    withLink(LinkAnnotation.Url(UPSTREAM_WEBSITE_URL, linkStyles)) {
-                        append(UPSTREAM_NAME)
-                    }
-                    append(forkNotice.substring(upstream + UPSTREAM_NAME.length))
-                } else {
-                    append(forkNotice)
-                }
-                append("\n")
-                withLink(LinkAnnotation.Url(FORK_RELEASES_URL, linkStyles)) {
-                    append(forkReleases)
-                }
-                append("\n\n")
-                append(forkObtainX)
-                append("\n")
-                withLink(LinkAnnotation.Url(OBTAINX_GITHUB_URL, linkStyles)) {
-                    append("GitHub")
-                }
-                append("  ")
-                withLink(LinkAnnotation.Url(OBTAINX_FDROID_URL, linkStyles)) {
-                    append("F-Droid")
-                }
-            },
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 8.dp),
-        )
+            SettingsColophon(version = version, onShowUpdate = onShowUpdate)
         }
     }
 
@@ -3687,12 +3628,116 @@ internal fun SegmentedControl(
     }
 }
 
-/** Whoever keeps this fork. */
-private const val FORK_AUTHOR_URL = "https://github.com/steeben"
-/** The app this one was forked from, and its site. */
-private const val UPSTREAM_NAME = "BitChord"
-private const val UPSTREAM_WEBSITE_URL = "https://bitchord.kushagrasingh.in/"
-/** This fork's releases, for updates. */
-private const val FORK_RELEASES_URL = "https://github.com/steeben/BitChord-Dial/releases"
-private const val OBTAINX_GITHUB_URL = "https://github.com/bikram-agarwal/ObtainX"
-private const val OBTAINX_FDROID_URL = "https://f-droid.org/packages/dev.bikram.obtainx/"
+/** This app's own repository, linked from the foot of the page. */
+private const val REPO_URL = "https://github.com/steeben/BitChord-Dial"
+
+/** The least time the logo spins for, so a quick check still reads as one: a lap. */
+private const val MIN_CHECK_SPIN_MS = 1_100L
+
+/**
+ * The foot of the main settings page: the app's name set as Home's title,
+ * the version and a link to the repository under it, a frosted glass button
+ * that checks for an update, and the 3x4 mark, small, below that. The mark
+ * runs Home's refresh spinner for as long as the check takes.
+ */
+@Composable
+private fun SettingsColophon(version: String, onShowUpdate: () -> Unit) {
+    val update by com.music.bitchord.data.AppUpdateChecker.available.collectAsStateWithLifecycle()
+    var checking by remember { mutableStateOf(false) }
+    var lastResult by remember { mutableStateOf<com.music.bitchord.data.AppUpdateChecker.CheckResult?>(null) }
+    val scope = rememberCoroutineScope()
+    val dialColor = LocalNowPlayingTint.current ?: MaterialTheme.colorScheme.onBackground
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 24.dp, end = 24.dp, top = 28.dp, bottom = 12.dp),
+    ) {
+        Text(
+            text = homeTitleWithDial(stringResource(R.string.app_name), dialColor),
+            color = MaterialTheme.colorScheme.onBackground,
+            fontFamily = Metropolis,
+            fontWeight = FontWeight.W800,
+            fontSize = 30.sp,
+            maxLines = 1,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = buildAnnotatedString {
+                append("v$version  ·  ")
+                withLink(
+                    LinkAnnotation.Url(
+                        REPO_URL,
+                        TextLinkStyles(
+                            style = SpanStyle(
+                                color = MaterialTheme.colorScheme.primary,
+                                textDecoration = TextDecoration.Underline,
+                            ),
+                        ),
+                    ),
+                ) {
+                    append("GitHub")
+                }
+            },
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 6.dp),
+        )
+
+        val buttonShape = RoundedCornerShape(50)
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .padding(top = 18.dp)
+                .lightweightLiquidGlass(
+                    shape = buttonShape,
+                    fallbackColor = frostedSurfaceColor(MaterialTheme.colorScheme.surfaceVariant),
+                )
+                .clickable(enabled = !checking) {
+                    if (update != null) {
+                        onShowUpdate()
+                    } else {
+                        checking = true
+                        scope.launch {
+                            val started = System.currentTimeMillis()
+                            val result = com.music.bitchord.data.AppUpdateChecker.check()
+                            val left = MIN_CHECK_SPIN_MS - (System.currentTimeMillis() - started)
+                            if (left > 0) delay(left)
+                            checking = false
+                            lastResult = result
+                            if (result == com.music.bitchord.data.AppUpdateChecker.CheckResult.UPDATE) onShowUpdate()
+                        }
+                    }
+                }
+                .padding(horizontal = 22.dp, vertical = 11.dp),
+        ) {
+            Text(
+                text = when {
+                    checking -> stringResource(R.string.checking_for_updates)
+                    update != null -> stringResource(R.string.update_ready, update?.version.orEmpty())
+                    lastResult == com.music.bitchord.data.AppUpdateChecker.CheckResult.UP_TO_DATE ->
+                        stringResource(R.string.up_to_date, com.music.bitchord.BuildConfig.VERSION_NAME)
+                    lastResult == com.music.bitchord.data.AppUpdateChecker.CheckResult.NO_RELEASES ->
+                        stringResource(R.string.no_releases_yet)
+                    lastResult == com.music.bitchord.data.AppUpdateChecker.CheckResult.FAILED ->
+                        stringResource(R.string.update_check_failed)
+                    else -> stringResource(R.string.check_for_updates)
+                },
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+
+        SquareLogo(
+            color = dialColor,
+            refreshing = checking,
+            modifier = Modifier
+                .padding(top = 20.dp)
+                .height(28.dp),
+        )
+    }
+}
