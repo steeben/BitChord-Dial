@@ -1,5 +1,6 @@
 package com.music.bitchord.ui.components
 
+import com.music.bitchord.data.AudioOnlyVideos
 import com.music.bitchord.R
 
 import androidx.compose.foundation.background
@@ -480,8 +481,12 @@ fun MiniPlayer(
             val artCorner = if (shapeChoice == MiniPlayerShape.CIRCULAR) 20.dp else ART_CORNER
             // A music video plays here at its own 16:9, as the web player's
             // mini player does, rather than cropped into the square cover.
+            // A video with no song version playing as audio only is a song
+            // here: a square cover cropped from its thumbnail, no picture.
+            val audioOnlyVideos by AudioOnlyVideos.ids.collectAsStateWithLifecycle()
+            val showsVideo = song.isVideo && song.videoId !in audioOnlyVideos
             val artWidth by animateDpAsState(
-                targetValue = if (song.isVideo) VIDEO_ART_WIDTH else 40.dp,
+                targetValue = if (showsVideo) VIDEO_ART_WIDTH else 40.dp,
                 label = "miniArtWidth",
             )
             Box(
@@ -501,7 +506,7 @@ fun MiniPlayer(
                 )
                 // A music video keeps playing in the cover's place, cropped to
                 // it — the full player, when it is up, takes the picture over.
-                if (song.isVideo) {
+                if (showsVideo) {
                     AndroidMusicVideo(
                         videoId = song.videoId,
                         fit = false,

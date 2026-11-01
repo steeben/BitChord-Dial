@@ -60,8 +60,12 @@ class LetterboxCrop : Transformation() {
             val request = chain.request
             val url = request.data.toString()
             if (!isVideoThumbnail(url)) return chain.proceed()
-            // Settings › Layout › Crop thumbnails.
-            if (!com.music.bitchord.data.settings.CustomizationSettings.cropThumbnails.value) return chain.proceed()
+            // Settings › Layout › Crop thumbnails. Always, for a video playing
+            // as audio only: its thumbnail is that track's album art, and the
+            // player's square crop of a letterboxed frame would keep the bars.
+            if (!com.music.bitchord.data.settings.CustomizationSettings.cropThumbnails.value &&
+                videoIdOf(url)?.let { it in AudioOnlyVideos } != true
+            ) return chain.proceed()
             return chain.withRequest(
                 request.newBuilder().transformations(request.transformations + LetterboxCrop()).build(),
             ).proceed()
@@ -74,5 +78,9 @@ class LetterboxCrop : Transformation() {
 
         fun isVideoThumbnail(url: String): Boolean =
             url.contains("i.ytimg.com/vi") || url.contains("img.youtube.com/vi")
+
+        /** The video a thumbnail URL belongs to: `…/vi/<id>/…` (or `vi_webp`). */
+        private fun videoIdOf(url: String): String? =
+            Regex("/vi(?:_webp)?/([A-Za-z0-9_-]{11})/").find(url)?.groupValues?.get(1)
     }
 }

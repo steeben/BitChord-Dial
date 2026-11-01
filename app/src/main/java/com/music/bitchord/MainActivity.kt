@@ -1,5 +1,6 @@
 package com.music.bitchord
 
+import com.music.bitchord.data.AudioOnlyVideos
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -1388,6 +1389,8 @@ private fun BitChordApp(
     // Tracks whose other cut a switch looked for and didn't find: their menu
     // row reads "not found" from then on instead of offering it again.
     val missingVersions = remember { mutableStateListOf<String>() }
+    // Music videos with no song version, playing as audio only — see [AudioOnlyVideos].
+    val audioOnlyVideos by AudioOnlyVideos.ids.collectAsStateWithLifecycle()
     // A conversion is deliberately scoped to the current listening session.
     // Keeping the complete original row here lets Revert restore the exact
     // video upload, including its title and playlist identity, rather than
@@ -1657,11 +1660,18 @@ private fun BitChordApp(
             // to release the loading state and resume it immediately.
             if (audio == null || audio.videoId == song.videoId) {
                 TrackLog.w("Player", "audio switch found no distinct official song", song.videoId)
-                // The switch is always offered now, so say when there was nothing to switch to.
-                if (song.videoId !in missingVersions) missingVersions += song.videoId
-                // The automatic default stays quiet: the video simply plays on.
-                if (stillCurrent && !pauseWhileResolving) {
-                    showQueueNotice(versionContext.getString(R.string.no_audio_version))
+                // No song version to swap in: the video's own audio carries
+                // on, untouched, and only its picture goes. The player then
+                // treats it as a song, its thumbnail cropped into the cover.
+                if (song.isVideo && stillCurrent) {
+                    TrackLog.d("Player", "audio switch playing the video as audio only", song.videoId)
+                    AudioOnlyVideos.add(song.videoId)
+                } else if (song.videoId !in missingVersions) {
+                    // The switch is always offered, so say when there was nothing to switch to.
+                    missingVersions += song.videoId
+                    if (stillCurrent && !pauseWhileResolving) {
+                        showQueueNotice(versionContext.getString(R.string.no_audio_version))
+                    }
                 }
                 if (stillCurrent && resumeAfterResolution) c.play()
                 return
@@ -5667,7 +5677,9 @@ private fun BitChordApp(
             fun versionAlignmentPending(targetId: String): Boolean =
                 AppSettings.smartVersionAlignment.value &&
                     VersionAudioAligner.getCachedOffsetMs(song.videoId, targetId) == null
-            val menuIsAudioVersion = if (optimisticVersionSong != null) {
+            val menuIsAudioVersion = if (song.videoId in audioOnlyVideos) {
+                true
+            } else if (optimisticVersionSong != null) {
                 !optimisticVersionSong!!.isVideo
             } else {
                 !song.isVideo && convertedVideoId != song.videoId
@@ -5692,6 +5704,12 @@ private fun BitChordApp(
                     val originalAudio = convertedFromAudio
                     when {
                         c == null -> Unit
+                        // Played as audio only (no song version exists):
+                        // the picture comes back, and stays for this play.
+                        song.videoId in audioOnlyVideos -> {
+                            keepVideoId = song.videoId
+                            AudioOnlyVideos.remove(song.videoId)
+                        }
                         original != null && (
                             convertedAudioId == song.videoId ||
                                 convertedAudioId == versionEffectiveSong.videoId ||

@@ -161,6 +161,7 @@ import com.music.bitchord.ui.icons.BitChordIcons
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.data.canvas.CanvasArtwork
 import com.music.bitchord.data.canvas.CanvasSource
+import com.music.bitchord.data.AudioOnlyVideos
 import com.music.bitchord.data.lyrics.LyricLine
 import com.music.bitchord.data.lyrics.LyricsSource
 import com.music.bitchord.data.settings.LastPlayerScreen
@@ -613,6 +614,9 @@ fun fullBleedArtworkAvailable(windowWidth: Dp): Boolean =
  * Whether a player given the whole of a window this wide is still narrow enough
  * to run its artwork edge to edge.
  */
+/** The key a music video shown as the Canvas goes by — see [CanvasArtwork.musicVideoId]. */
+private const val MUSIC_VIDEO_CANVAS_SCHEME = "bitchord-music-video:"
+
 private fun playerFillsWindow(windowWidth: Dp): Boolean =
     windowWidth <= PLAYER_MAX_WIDTH + PLAYER_GUTTER * 2
 
@@ -900,7 +904,13 @@ fun NowPlayingScreen(
     // Remote tracks whose art lives inside the file resolve it here, once —
     // every surface below reads the same value rather than each triggering
     // its own extraction.
-    val remoteArt = rememberRemoteArtworkUrl(song)
+    val audioOnlyVideos by AudioOnlyVideos.ids.collectAsStateWithLifecycle()
+    // A music video playing as audio only has its thumbnail for a cover. Marked
+    // so the request is made afresh the moment the track turns audio-only, and
+    // the image loader crops the frame's letterbox bars off it for the sleeve.
+    val remoteArt = rememberRemoteArtworkUrl(song)?.let {
+        if (song.isVideo && song.videoId in audioOnlyVideos) "$it#audio-only" else it
+    }
     // Fetch the covers of the next two tracks ahead of time, small copy first, so
     // a skip lands on art that is already on the device. On a slow connection
     // the full-size cover is what made the player sit on a grey tile.
@@ -981,8 +991,21 @@ fun NowPlayingScreen(
     val mixing by PlayerSettings.smartMixInProgress.collectAsStateWithLifecycle()
     // A music video plays its own picture where the sleeve is — see
     // [MusicVideoSurface] — and takes the place of any animated cover.
-    val videoMode = showsMusicVideo(song)
-    val canvas = rememberCanvasArtwork(song)?.takeUnless { videoMode }?.let {
+    val musicVideo = showsMusicVideo(song) && song.videoId !in audioOnlyVideos
+    // On a phone held upright the music video is the Canvas: cropped to the
+    // whole screen behind the controls, with the Canvas's dim, deck and sweep.
+    // Wider players, and the phone turned sideways, keep the 16:9 picture.
+    val videoAsCanvas = musicVideo && playerFillsWindow(windowWidth)
+    val videoMode = musicVideo && !videoAsCanvas
+    val canvas = if (videoAsCanvas) {
+        remember(song.videoId) {
+            CanvasArtwork(
+                url = "$MUSIC_VIDEO_CANVAS_SCHEME${song.videoId}",
+                source = CanvasSource.SPOTIFY,
+                musicVideoId = song.videoId,
+            )
+        }
+    } else rememberCanvasArtwork(song)?.takeUnless { musicVideo }?.let {
         // Apple's 3:4 rendition runs under the whole phone screen, the way its
         // own player shows it; the square one stays the fallback.
         val tall = it.portraitUrl
@@ -1593,7 +1616,7 @@ fun NowPlayingScreen(
     // there, that pass mounted the next song's clip — a flash of it — and then
     // swapped the last one back in on a player that had to start it over.
     val handingOffClip = lastShownClip[0]?.takeIf { last ->
-        last.url != canvas?.url && outgoingClip == null &&
+        last.url != canvas?.url && outgoingClip == null && last.musicVideoId == null &&
             heroMode && !lyricsOpen && !queueOpen && !collapseStarted
     }
     SideEffect {

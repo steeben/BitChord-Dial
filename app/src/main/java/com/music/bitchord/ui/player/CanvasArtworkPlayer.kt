@@ -45,6 +45,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.annotation.RequiresApi
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -964,6 +965,11 @@ private fun mimeTypeOf(url: String): String? {
 /** The phone's decoder behind [CanvasArtworkPlayer] — see [PlayerHost.CanvasVideo]. */
 @Composable
 internal fun AndroidCanvasVideo(spec: CanvasVideoSpec, modifier: Modifier) {
+    val musicVideoId = spec.canvas.musicVideoId
+    if (musicVideoId != null) {
+        AndroidMusicVideoCanvas(musicVideoId, spec, modifier)
+        return
+    }
     AndroidCanvasArtworkPlayer(
         canvas = spec.canvas,
         isPlaying = spec.isPlaying,
@@ -983,3 +989,132 @@ internal fun AndroidCanvasVideo(spec: CanvasVideoSpec, modifier: Modifier) {
         pausedForTransition = spec.pausedForTransition,
     )
 }
+
+/**
+ * The playing music video standing in as the phone player's Canvas: the same
+ * full-screen layer, crop, diagonal first sweep and cover reporting as a
+ * looping clip, but its frames come from [MusicVideoEngine] — the one decoder
+ * held to the audio — rather than from a player of its own.
+ *
+ * Claims the engine's picture over the mini player while it is mounted and
+ * the app is on screen; nothing is decoded for it otherwise.
+ */
+@OptIn(UnstableApi::class)
+@Composable
+private fun AndroidMusicVideoCanvas(videoId: String, spec: CanvasVideoSpec, modifier: Modifier) {
+    val foreground = rememberIsForeground()
+    var textureView by remember { mutableStateOf<TextureView?>(null) }
+    DisposableEffect(textureView, foreground) {
+        val target = textureView
+        val release = if (target != null && foreground) {
+            MusicVideoEngine.claim(target, MUSIC_VIDEO_CANVAS_PRIORITY)
+        } else null
+        onDispose { release?.invoke() }
+    }
+
+    val shownId by MusicVideoEngine.shownVideoId.collectAsStateWithLifecycle()
+    val frameOn by MusicVideoEngine.frameOn.collectAsStateWithLifecycle()
+    val engineAspect by MusicVideoEngine.aspect.collectAsStateWithLifecycle()
+    val playing by MusicVideoEngine.playing.collectAsStateWithLifecycle()
+    val rendered = textureView != null && frameOn === textureView && shownId == videoId
+    // Unknown until this video's first frame is up: the engine's aspect is
+    // the last video's until then.
+    val clipAspect = if (rendered) engineAspect else 0f
+
+    val currentPresentationAlpha by rememberUpdatedState(spec.presentationAlpha)
+    val reportRendered by rememberUpdatedState(spec.onRenderedChanged)
+    val reportCover by rememberUpdatedState(spec.onCoverChanged)
+    val reportAspect by rememberUpdatedState(spec.onAspectRatioChanged)
+    LaunchedEffect(clipAspect) { reportAspect(clipAspect) }
+
+    // The first frame gets the Canvas's own entrance: a beat, then the sweep
+    // in from the top-left corner. A frame coming back after the surface was
+    // lost (the app off screen, a rotation) simply fades back.
+    var revealed by remember { mutableStateOf(false) }
+    var revealedOnce by remember { mutableStateOf(false) }
+    val wipe = remember { Animatable(1f) }
+    LaunchedEffect(rendered) {
+        if (!rendered) {
+            revealed = false
+            return@LaunchedEffect
+        }
+        if (revealedOnce) {
+            wipe.snapTo(1f)
+            revealed = true
+            return@LaunchedEffect
+        }
+        wipe.snapTo(0f)
+        delay(REVEAL_DELAY_MS)
+        revealedOnce = true
+        revealed = true
+        wipe.animateTo(1f, tween(durationMillis = REVEAL_WIPE_MS, easing = LinearEasing))
+    }
+    LaunchedEffect(revealed) { reportRendered(revealed) }
+
+    val sweeping = revealed && wipe.value < 1f
+    val alpha by animateFloatAsState(
+        targetValue = if (revealed) 1f else 0f,
+        animationSpec = tween(durationMillis = if (sweeping) 0 else 650, easing = FastOutSlowInEasing),
+        label = "musicVideoCanvasAlpha",
+    )
+    LaunchedEffect(Unit) {
+        snapshotFlow { alpha * wipe.value * currentPresentationAlpha() }.collect { reportCover(it) }
+    }
+
+    // A video being watched keeps the screen awake, as the 16:9 player does.
+    val awake = rendered && playing
+    LaunchedEffect(textureView, awake) { textureView?.keepScreenOn = awake }
+    DisposableEffect(Unit) {
+        onDispose {
+            textureView?.keepScreenOn = false
+            reportRendered(false)
+            reportCover(0f)
+            reportAspect(0f)
+        }
+    }
+
+    AndroidView(
+        factory = { viewContext ->
+            val texture = TextureView(viewContext).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                )
+                isOpaque = false
+                this.alpha = 0f
+                // A resize nothing in composition asked for still has to re-crop.
+                addOnLayoutChangeListener { v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
+                    if (right - left != oldRight - oldLeft || bottom - top != oldBottom - oldTop) {
+                        (v as TextureView).applyContentTransform(
+                            MusicVideoEngine.aspect.value, CanvasContentMode.CROP, false,
+                        )
+                    }
+                }
+            }
+            textureView = texture
+            FadingBottomFrame(viewContext).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                )
+                addView(texture)
+            }
+        },
+        update = { frame ->
+            val view = frame.getChildAt(0) as TextureView
+            view.alpha = alpha * spec.presentationAlpha()
+            // Always cropped to cover: the video is the whole screen's backdrop.
+            if (frame.applied.transformDiffers(engineAspect, CanvasContentMode.CROP, false, view.width, view.height)) {
+                view.applyContentTransform(engineAspect, CanvasContentMode.CROP, false)
+            }
+            frame.wipe = wipe.value
+        },
+        onRelease = { frame ->
+            if (textureView === frame.getChildAt(0)) textureView = null
+        },
+        modifier = modifier,
+    )
+}
+
+/** Above the 16:9 player's surface (1) and the mini player's (0). */
+private const val MUSIC_VIDEO_CANVAS_PRIORITY = 2

@@ -36,6 +36,12 @@ data class CanvasArtwork(
      * else keeps the square [url].
      */
     val portraitUrl: String? = null,
+    /**
+     * Set when this "clip" is the playing music video itself, shown as the
+     * phone player's Canvas. [url] is then only a key: the picture comes
+     * from the music video engine, held to the audio, not from a looping file.
+     */
+    val musicVideoId: String? = null,
 ) {
     /**
      * Whether this clip really belongs to the track we asked about.

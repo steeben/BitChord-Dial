@@ -31,6 +31,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import com.music.bitchord.data.AudioOnlyVideos
 import com.music.bitchord.data.Http
 import com.music.bitchord.data.TrackLog
 import com.music.bitchord.data.innertube.InnerTubeXResolver
@@ -206,6 +207,12 @@ object MusicVideoEngine {
         }
     }
 
+    init {
+        // A video turned audio-only drops its picture at once, and a revert
+        // brings it back, without waiting for the next track change.
+        scope.launch { AudioOnlyVideos.ids.collect { refresh() } }
+    }
+
     /** The app's MediaController, whose position the picture follows. Main thread. */
     fun attach(controller: Player?) {
         if (this.controller === controller) return
@@ -280,7 +287,7 @@ object MusicVideoEngine {
     /** The track the picture should be of: the controller's, when it is a music video. */
     private fun wanted(): Song? {
         val song = controller?.currentMediaItem?.toSong() ?: return null
-        return song.takeIf { it.isVideo && it.videoId !in noPicture }
+        return song.takeIf { it.isVideo && it.videoId !in noPicture && it.videoId !in AudioOnlyVideos }
     }
 
     private fun refresh() {
