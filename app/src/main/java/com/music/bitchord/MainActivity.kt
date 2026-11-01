@@ -3,6 +3,7 @@ package com.music.bitchord
 import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.net.Uri
@@ -134,6 +135,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalDensity
@@ -740,6 +742,26 @@ private fun BitChordApp(
     // The DAC's own volume while direct USB output owns it; the full player
     // has its own bar for that, so the HUD stays out of its way.
     androidx.compose.runtime.SideEffect { VolumeHud.suppressed = showNowPlaying }
+    // Phones keep the menus upright: only the player turns to landscape.
+    // Tablets, and a foldable while it's open, follow auto-rotate everywhere.
+    // Read from the live configuration, so folding or unfolding decides again.
+    // The player's own fullscreen nudge (ScreenOrientation) hands back the
+    // unlocked state it found while open, and this re-locks after it closes.
+    val orientationContext = LocalContext.current
+    val orientationActivity = remember(orientationContext) {
+        generateSequence(orientationContext) { (it as? android.content.ContextWrapper)?.baseContext }
+            .filterIsInstance<android.app.Activity>()
+            .firstOrNull()
+    }
+    val largeScreen = LocalConfiguration.current.smallestScreenWidthDp >= 600
+    LaunchedEffect(orientationActivity, largeScreen, showNowPlaying) {
+        orientationActivity?.requestedOrientation =
+            if (largeScreen || showNowPlaying) {
+                ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            } else {
+                ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            }
+    }
     // Where the two ends of opening and closing the player meet: the mini
     // player's cover reports itself here, the sheet its offset, and the player
     // flies its artwork between them — see [PlayerDock].

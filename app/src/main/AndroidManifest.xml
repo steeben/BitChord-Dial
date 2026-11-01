@@ -93,8 +93,10 @@
             android:resource="@xml/automotive_app_desc" />
 
         <!--
-          No android:screenOrientation here, deliberately: the app follows the
-          system's own auto-rotate setting on every device, phones included.
+          No android:screenOrientation here, deliberately: it is set at run
+          time instead. On phones the menus are held in portrait and only the
+          player follows auto-rotate; tablets and an unfolded foldable follow it
+          everywhere (see the orientation effect in BitChordApp).
 
           [android:configChanges] is the other half of that: without it, a
           rotation the system now allows is still a full Activity restart,
