@@ -163,6 +163,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.data.canvas.CanvasArtwork
 import com.music.bitchord.data.canvas.CanvasSource
 import com.music.bitchord.data.AudioOnlyVideos
+import com.music.bitchord.data.CanvasAudioFixes
+import com.music.bitchord.data.VideoCanvases
 import com.music.bitchord.data.lyrics.LyricLine
 import com.music.bitchord.data.lyrics.LyricsSource
 import com.music.bitchord.data.settings.LastPlayerScreen
@@ -509,6 +511,13 @@ private var lastControlSpread: Dp = 0.dp
  * start on the card and then grow it out into the banner it was a moment ago.
  */
 private var lastHeroSettled = false
+
+/**
+ * The Canvas last presented in full, kept past this screen: back from the
+ * queue or the lyrics, or turned to landscape and back, the same Canvas comes
+ * back as it was, rather than from the still sleeve with its entrance again.
+ */
+private var lastPresentedCanvasUrl: String? = null
 
 /**
  * How much of the sheet's travel the rest of the player has gone by before
@@ -998,21 +1007,47 @@ fun NowPlayingScreen(
     // Wider players, and the phone turned sideways, keep the 16:9 picture.
     val videoAsCanvas = musicVideo && playerFillsWindow(windowWidth)
     val videoMode = musicVideo && !videoAsCanvas
-    val canvas = if (videoAsCanvas) {
-        remember(song.videoId) {
+    // Fixes the listener made from the ⋯ menu — see [CanvasAudioFixes].
+    val canvasFixes by CanvasAudioFixes.state.collectAsStateWithLifecycle()
+    val videoPictures by VideoCanvases.pictures.collectAsStateWithLifecycle()
+    val canvasLookup = rememberCanvasLookup(song)
+    // A song that replaced a music video keeps that video's picture as its
+    // Canvas when it has none of its own — once the search for one is over,
+    // so a clip found a moment later never pushes the video out mid-play.
+    val pictureVideoId = videoPictures[song.videoId]?.takeIf {
+        !musicVideo && canvasLookup.allowed && playerFillsWindow(windowWidth) &&
+            song.videoId !in canvasFixes.hiddenVideoCanvas &&
+            (canvasLookup.canvas == null || song.videoId in canvasFixes.hiddenCanvas) &&
+            canvasLookup.settled
+    }
+    val canvas = if (videoAsCanvas || pictureVideoId != null) {
+        val pictureId = pictureVideoId ?: song.videoId
+        remember(pictureId) {
             CanvasArtwork(
-                url = "$MUSIC_VIDEO_CANVAS_SCHEME${song.videoId}",
+                url = "$MUSIC_VIDEO_CANVAS_SCHEME$pictureId",
                 source = CanvasSource.SPOTIFY,
-                musicVideoId = song.videoId,
+                musicVideoId = pictureId,
             )
         }
-    } else rememberCanvasArtwork(song)?.takeUnless { musicVideo }?.let {
+    } else canvasLookup.canvas?.takeUnless { musicVideo || song.videoId in canvasFixes.hiddenCanvas }?.let {
         // Apple's 3:4 rendition runs under the whole phone screen, the way its
         // own player shows it; the square one stays the fallback.
         val tall = it.portraitUrl
         if (tall != null && playerFillsWindow(windowWidth)) {
             it.copy(url = tall, fallbackUrl = it.url, portraitUrl = null)
         } else it
+    }
+    // Told to the ⋯ menu, so "fix mismatched Canvas/audio" knows what is on screen.
+    SideEffect {
+        CanvasAudioFixes.showing.value = CanvasAudioFixes.Showing(
+            songVideoId = song.videoId,
+            kind = when {
+                pictureVideoId != null -> CanvasAudioFixes.Shown.VIDEO_PICTURE
+                canvas != null && !videoAsCanvas -> CanvasAudioFixes.Shown.CANVAS
+                else -> CanvasAudioFixes.Shown.NONE
+            },
+            pictureVideoId = pictureVideoId,
+        )
     }
     // Whether the picture has a frame on screen; the still frame shows until then.
     var videoRendered by remember(song.videoId) { mutableStateOf(false) }
@@ -1034,7 +1069,10 @@ fun NowPlayingScreen(
     // sleeve never flashes back in under a clip that never went away, and
     // the Spotify deck keeps its state and captured measurements instead of
     // snapping open mid-loop. A different clip resets them with itself.
-    val canvasRenderedState = remember(canvas?.url) { mutableStateOf(false) }
+    // A Canvas coming back (see [lastPresentedCanvasUrl]) is taken to be up
+    // from the first frame; the clip says otherwise at once if it can't be.
+    val canvasReturning = canvas?.musicVideoId != null && canvas.url == lastPresentedCanvasUrl
+    val canvasRenderedState = remember(canvas?.url) { mutableStateOf(canvasReturning) }
     var canvasRendered by canvasRenderedState
     var canvasFrame by remember(canvas?.url) { mutableStateOf<ImageBitmap?>(null) }
     // Spotify's phone presentation starts with the full control deck over its
@@ -1594,17 +1632,19 @@ fun NowPlayingScreen(
     // The clip's decoder can report a missed frame for a moment and then carry
     // on. Followed straight away, that flipped the whole Canvas layout off and
     // back on, which looked like a flicker; a short grace period rides it out.
-    var canvasPresented by remember(canvas?.url) { mutableStateOf(false) }
+    var canvasPresented by remember(canvas?.url) { mutableStateOf(canvasReturning) }
     LaunchedEffect(canvasRendered) {
         if (canvasRendered) {
             // A full-screen clip's own layout waits for its sweep to finish:
             // until then the still sleeve and its blur are what is on screen,
             // going out ahead of the clip, and the clip's dim and glass deck
             // arriving under them turned the lot grey before the sweep reached it.
-            if (spotifyCanvasFullscreen) {
+            // Not for one coming back, which has no sweep to wait for.
+            if (spotifyCanvasFullscreen && canvas?.url != lastPresentedCanvasUrl) {
                 snapshotFlow { canvasCover.floatValue >= 0.999f }.first { it }
             }
             canvasPresented = true
+            lastPresentedCanvasUrl = canvas?.url
         } else {
             delay(CANVAS_DROP_GRACE_MS)
             canvasPresented = false

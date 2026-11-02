@@ -40,7 +40,23 @@ import kotlinx.coroutines.launch
  * null — a miss is the normal answer.
  */
 @Composable
-internal fun rememberCanvasArtwork(song: Song): CanvasArtwork? {
+internal fun rememberCanvasArtwork(song: Song): CanvasArtwork? = rememberCanvasLookup(song).canvas
+
+/**
+ * A track's Canvas as it is being looked up: the clip found so far, and
+ * whether the search is over — so a stand-in (the song's own music video)
+ * can take the slot once it is clear nothing else is coming, rather than
+ * showing first and being pushed out by a clip found a moment later.
+ */
+internal class CanvasLookup(
+    val canvas: CanvasArtwork?,
+    val settled: Boolean,
+    /** Whether a Canvas may stream on this connection at all. */
+    val allowed: Boolean,
+)
+
+@Composable
+internal fun rememberCanvasLookup(song: Song): CanvasLookup {
     val canvasEnabled by PlayerSettings.animatedCanvas.collectAsStateWithLifecycle()
     val canvasOverCellular by PlayerSettings.canvasOverCellular.collectAsStateWithLifecycle()
     val prioritizeSpotifyCanvas by PlayerSettings.prioritizeSpotifyCanvas.collectAsStateWithLifecycle()
@@ -57,9 +73,11 @@ internal fun rememberCanvasArtwork(song: Song): CanvasArtwork? {
     // clean; the same-titled-impostor case is guarded where the clip is
     // adopted, by [CanvasArtwork.matches].
     var canvas by remember(song.title, song.artist) { mutableStateOf<CanvasArtwork?>(null) }
+    var settled by remember(song.videoId) { mutableStateOf(false) }
     LaunchedEffect(song.videoId, song.albumName, canvasAllowedNow, prioritizeSpotifyCanvas) {
         if (!canvasAllowedNow) {
             canvas = null
+            settled = true
             return@LaunchedEffect
         }
         // Anything already settled for this track paints immediately: a
@@ -83,9 +101,10 @@ internal fun rememberCanvasArtwork(song: Song): CanvasArtwork? {
         // Keep what an earlier pass found if this one comes back empty, rather
         // than pulling a playing clip out from under itself.
         canvas = PlayerPlatform.host.canvasFor(song) ?: canvas
+        settled = true
     }
 
-    return canvas
+    return CanvasLookup(canvas, settled, canvasAllowedNow)
 }
 
 /**

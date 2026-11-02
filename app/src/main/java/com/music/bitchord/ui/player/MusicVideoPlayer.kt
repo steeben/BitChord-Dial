@@ -32,6 +32,8 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import com.music.bitchord.data.AudioOnlyVideos
+import com.music.bitchord.data.CanvasAudioFixes
+import com.music.bitchord.data.VideoCanvases
 import com.music.bitchord.data.Http
 import com.music.bitchord.data.TrackLog
 import com.music.bitchord.data.innertube.InnerTubeXResolver
@@ -104,6 +106,18 @@ object MusicVideoEngine {
 
     /** The video loaded (or loading) into [player]. */
     private var loadedId: String? = null
+
+    /**
+     * The song the loaded picture stands in for as its Canvas, when that song
+     * is not the video itself — see [VideoCanvases]. Null for a music video
+     * playing as itself.
+     */
+    private var loadedFor: String? = null
+
+    /** Song time minus picture time for [loadedFor]; zero until measured. */
+    private var pictureOffsetMs = 0L
+    private var measureJob: Job? = null
+    private var appContext: Context? = null
     private var loadJob: Job? = null
     private var syncJob: Job? = null
     private var releaseJob: Job? = null
@@ -199,7 +213,7 @@ object MusicVideoEngine {
             // Above 1080p YouTube serves VP9 and AV1, which not every phone
             // decodes: one more try on the H.264 ladder before giving up.
             if (loadedCap > AUTO_HEIGHT && stepDown.add(id)) {
-                load(id)
+                load(id, standInSong())
                 return
             }
             noPicture += id
@@ -211,6 +225,21 @@ object MusicVideoEngine {
         // A video turned audio-only drops its picture at once, and a revert
         // brings it back, without waiting for the next track change.
         scope.launch { AudioOnlyVideos.ids.collect { refresh() } }
+        // A song gaining its music video as a stand-in Canvas, or a fix from
+        // the ⋯ menu, is followed at once too.
+        scope.launch { VideoCanvases.pictures.collect { refresh() } }
+        scope.launch {
+            CanvasAudioFixes.state.collect {
+                val song = loadedFor
+                val id = loadedId
+                if (song != null && id != null) {
+                    pictureOffsetMs = CanvasPictureSync.knownOffsetMs(id, song) ?: pictureOffsetMs
+                    lastSeekAt = 0L
+                    sync()
+                }
+                refresh()
+            }
+        }
     }
 
     /** The app's MediaController, whose position the picture follows. Main thread. */
@@ -233,6 +262,7 @@ object MusicVideoEngine {
         surfaces.removeAll { it.view === view }
         surfaces += Surface(view, priority)
         val app = view.context.applicationContext
+        appContext = app
         if (prefs == null) {
             prefs = app.getSharedPreferences("music_video", Context.MODE_PRIVATE).also { stored ->
                 val held = stored.getInt(KEY_QUALITY, 0).takeIf { it > 0 }
@@ -284,25 +314,62 @@ object MusicVideoEngine {
         }
     }
 
-    /** The track the picture should be of: the controller's, when it is a music video. */
-    private fun wanted(): Song? {
+    /**
+     * The picture to show, and the song it stands in for when that is a
+     * different track: the controller's track when it is a music video, or
+     * the music video a song replaced, as that song's Canvas.
+     */
+    private fun wanted(): Pair<String, Song?>? {
         val song = controller?.currentMediaItem?.toSong() ?: return null
-        return song.takeIf { it.isVideo && it.videoId !in noPicture && it.videoId !in AudioOnlyVideos }
+        if (song.isVideo) {
+            return (song.videoId to null).takeIf {
+                song.videoId !in noPicture && song.videoId !in AudioOnlyVideos
+            }
+        }
+        val picture = VideoCanvases.pictureFor(song.videoId) ?: return null
+        if (picture in noPicture || song.videoId in CanvasAudioFixes.state.value.hiddenVideoCanvas) return null
+        return picture to song
     }
 
     private fun refresh() {
-        val song = if (surfaces.isEmpty()) null else wanted()
-        if (song == null) {
+        val wanted = if (surfaces.isEmpty()) null else wanted()
+        if (wanted == null) {
             // The picture is kept through the grace period after its last
             // surface goes; a track change to one with none drops it now.
-            if (surfaces.isNotEmpty() || wanted()?.videoId != loadedId) unload()
+            if (surfaces.isNotEmpty() || wanted()?.first != loadedId) unload()
             return
         }
-        if (song.videoId == loadedId) {
+        val (pictureId, standInFor) = wanted
+        if (pictureId == loadedId && standInFor?.videoId == loadedFor) {
             startSync()
             return
         }
-        load(song.videoId)
+        load(pictureId, standInFor)
+    }
+
+    /** The picture's moment for an audio position — see [pictureOffsetMs]. */
+    private fun pictureTime(audioPos: Long): Long =
+        if (loadedFor == null) audioPos else audioPos - pictureOffsetMs
+
+    /**
+     * Lines a stand-in picture up with the song it stands in for: the
+     * listener's own fix, or a shift already measured, or else a measurement
+     * now — until it lands the picture runs from where the song is.
+     */
+    private fun alignStandIn(pictureId: String, song: Song) {
+        measureJob?.cancel()
+        val known = CanvasPictureSync.knownOffsetMs(pictureId, song.videoId)
+        pictureOffsetMs = known ?: 0L
+        if (known != null) return
+        val context = appContext ?: return
+        measureJob = scope.launch {
+            val measured = CanvasPictureSync.measure(context, pictureId, song) ?: return@launch
+            if (loadedId == pictureId && loadedFor == song.videoId) {
+                pictureOffsetMs = measured
+                lastSeekAt = 0L
+                sync()
+            }
+        }
     }
 
     /**
@@ -318,8 +385,12 @@ object MusicVideoEngine {
         val id = loadedId ?: return
         streams.remove(id)
         stepDown.remove(id)
-        load(id)
+        load(id, standInSong())
     }
+
+    /** The song the loaded picture stands in for, if it is still the one playing. */
+    private fun standInSong(): Song? =
+        loadedFor?.let { id -> controller?.currentMediaItem?.toSong()?.takeIf { it.videoId == id } }
 
     /** The height asked for: the held one, else what Auto opens at for this connection. */
     private fun capFor(videoId: String): Int {
@@ -329,9 +400,11 @@ object MusicVideoEngine {
         return if (videoId in stepDown) minOf(held, AUTO_HEIGHT) else held
     }
 
-    private fun load(videoId: String) {
+    private fun load(videoId: String, standInFor: Song? = null) {
         unload()
         loadedId = videoId
+        loadedFor = standInFor?.videoId
+        if (standInFor != null) alignStandIn(videoId, standInFor) else pictureOffsetMs = 0L
         val cap = capFor(videoId)
         loadedCap = cap
         loadJob = scope.launch {
@@ -362,8 +435,8 @@ object MusicVideoEngine {
                 .createMediaSource(MediaItem.fromUri(stream.url))
             if (stream.aspect > 0f) _aspect.value = stream.aspect
             _quality.value = _quality.value.copy(heights = stream.heights, activeHeight = stream.height)
-            val start = controller?.currentPosition?.coerceAtLeast(0L) ?: 0L
-            exo.setMediaSource(source, start + seekLeadMs)
+            val start = pictureTime(controller?.currentPosition?.coerceAtLeast(0L) ?: 0L)
+            exo.setMediaSource(source, (start + seekLeadMs).coerceAtLeast(0L))
             exo.playWhenReady = controller?.isPlaying == true
             exo.prepare()
             lastSeekAt = System.currentTimeMillis()
@@ -386,7 +459,10 @@ object MusicVideoEngine {
         loadJob = null
         syncJob?.cancel()
         syncJob = null
+        measureJob?.cancel()
+        measureJob = null
         loadedId = null
+        loadedFor = null
         _shownVideoId.value = null
         _frameOn.value = null
         _quality.value = _quality.value.copy(heights = emptyList(), activeHeight = null)
@@ -413,7 +489,7 @@ object MusicVideoEngine {
         val exo = player ?: return
         if (loadedId == null || exo.playbackState == Player.STATE_IDLE || exo.playbackState == Player.STATE_ENDED) return
         val speed = audio.playbackParameters.speed
-        val audioPos = audio.currentPosition
+        val audioPos = pictureTime(audio.currentPosition)
         val now = System.currentTimeMillis()
         if (!audio.isPlaying) {
             exo.playWhenReady = false

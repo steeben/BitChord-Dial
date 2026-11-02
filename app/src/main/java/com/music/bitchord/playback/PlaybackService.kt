@@ -208,6 +208,11 @@ const val EXTRA_BOUNDED_CONTEXT_CONTINUATION = "bitchord.boundedContext.continua
 /** Session command used to smoothly swap the current track's version (film vs release). */
 const val ACTION_SWAP_VERSION = "com.music.bitchord.action.SWAP_VERSION"
 const val EXTRA_SWAP_MEDIA_ITEM = "bitchord.swap.media_item"
+/**
+ * The swap replaces a track that has only just been picked: the target starts
+ * from its own beginning, with no alignment pass, and plays once it is in.
+ */
+const val EXTRA_SWAP_FROM_START = "bitchord.swap.from_start"
 
 /** Session command used by the media notification's and the 4×1 widget's Favorite button. */
 const val ACTION_TOGGLE_FAVORITE = "com.music.bitchord.action.TOGGLE_FAVORITE"
@@ -2157,6 +2162,7 @@ class PlaybackService : MediaLibraryService() {
     private fun smoothSwapCurrentTrackVersion(
         targetMediaItem: MediaItem,
         onSwapCommitted: (() -> Unit)? = null,
+        fromStart: Boolean = false,
     ) {
         val activePlayer = player ?: return
         val currentIndex = activePlayer.currentMediaItemIndex
@@ -2199,6 +2205,21 @@ class PlaybackService : MediaLibraryService() {
                 AppSettings.versionAlignmentInProgress.value = true
             }
             try {
+                // A music video swapped for its song the moment it was picked:
+                // the listener asked to hear the song from its start, so there
+                // is no position to carry over and nothing to measure. Waiting
+                // on an alignment here held the track paused for as long as
+                // the measurement took, and it never resumed on its own.
+                if (fromStart) {
+                    activePlayer.replaceMediaItem(currentIndex, targetMediaItem)
+                    activePlayer.seekTo(currentIndex, 0L)
+                    activePlayer.prepare()
+                    activePlayer.play()
+                    onSwapCommitted?.invoke()
+                    refreshCustomLayouts()
+                    swappingMediaId = null
+                    return@launch
+                }
                 val startPosition = activePlayer.currentPosition
                 val alignmentOffsetMs = if (smartAlignEnabled) {
                     prepareVersionAlignment(sourceSong, targetSong, startPosition)
@@ -9166,7 +9187,10 @@ class PlaybackService : MediaLibraryService() {
                     val bundle = args.getBundle(EXTRA_SWAP_MEDIA_ITEM)
                     if (bundle != null) {
                         val targetSong = songFromBundle(bundle)
-                        smoothSwapCurrentTrackVersion(targetSong.toMediaItem())
+                        smoothSwapCurrentTrackVersion(
+                            targetSong.toMediaItem(),
+                            fromStart = args.getBoolean(EXTRA_SWAP_FROM_START, false),
+                        )
                     }
                 }
                 ACTION_QUEUE_DRAG -> {

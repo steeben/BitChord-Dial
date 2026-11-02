@@ -1028,14 +1028,28 @@ private fun AndroidMusicVideoCanvas(videoId: String, spec: CanvasVideoSpec, modi
     LaunchedEffect(clipAspect) { reportAspect(clipAspect) }
 
     // The first frame gets the Canvas's own entrance: a beat, then the sweep
-    // in from the top-left corner. A frame coming back after the surface was
-    // lost (the app off screen, a rotation) simply fades back.
-    var revealed by remember { mutableStateOf(false) }
-    var revealedOnce by remember { mutableStateOf(false) }
+    // in from the top-left corner. Only ever once per video: coming back to it
+    // — from the queue or the lyrics, or a turn to landscape and back — finds
+    // the Canvas already up, standing in with the frame it was last showing
+    // until the live picture lands, rather than putting the still sleeve back
+    // and running the entrance again.
+    val memoryKey = "$MUSIC_VIDEO_FRAME_KEY$videoId"
+    var revealedOnce by remember(videoId) { mutableStateOf(videoId in MusicVideoCanvasMemory.revealed) }
+    var placeholder by remember(videoId) {
+        mutableStateOf(CanvasFrameMemory.get(memoryKey)?.takeIf { revealedOnce })
+    }
+    var revealed by remember(videoId) { mutableStateOf(placeholder != null) }
     val wipe = remember { Animatable(1f) }
-    LaunchedEffect(rendered) {
+    LaunchedEffect(placeholder != null, rendered) {
+        if (placeholder == null) return@LaunchedEffect
+        // Held under the live picture for its first moment, then let go; and
+        // given up on if the picture is not coming back.
+        delay(if (rendered) PLACEHOLDER_FADE_MS else MUSIC_VIDEO_PLACEHOLDER_WAIT_MS)
+        placeholder = null
+    }
+    LaunchedEffect(rendered, placeholder != null) {
         if (!rendered) {
-            revealed = false
+            revealed = placeholder != null
             return@LaunchedEffect
         }
         if (revealedOnce) {
@@ -1046,15 +1060,29 @@ private fun AndroidMusicVideoCanvas(videoId: String, spec: CanvasVideoSpec, modi
         wipe.snapTo(0f)
         delay(REVEAL_DELAY_MS)
         revealedOnce = true
+        MusicVideoCanvasMemory.revealed += videoId
         revealed = true
         wipe.animateTo(1f, tween(durationMillis = REVEAL_WIPE_MS, easing = LinearEasing))
     }
     LaunchedEffect(revealed) { reportRendered(revealed) }
+    // The frame on screen, kept fresh for the next time this Canvas comes
+    // back. Read every few seconds while it plays, since a surface can be
+    // torn down (a rotation) before anything here hears it is going.
+    LaunchedEffect(rendered, revealedOnce) {
+        if (!rendered || !revealedOnce) return@LaunchedEffect
+        while (true) {
+            withFrameMillis { }
+            textureView?.captureWhole(MUSIC_VIDEO_FRAME_PX)?.let { CanvasFrameMemory.put(memoryKey, it.asImageBitmap()) }
+            delay(MUSIC_VIDEO_FRAME_REFRESH_MS)
+        }
+    }
 
     val sweeping = revealed && wipe.value < 1f
+    // Straight in when it is coming back: the Canvas never left.
+    val returning = placeholder != null
     val alpha by animateFloatAsState(
         targetValue = if (revealed) 1f else 0f,
-        animationSpec = tween(durationMillis = if (sweeping) 0 else 650, easing = FastOutSlowInEasing),
+        animationSpec = tween(durationMillis = if (sweeping || returning) 0 else 650, easing = FastOutSlowInEasing),
         label = "musicVideoCanvasAlpha",
     )
     LaunchedEffect(Unit) {
@@ -1073,6 +1101,17 @@ private fun AndroidMusicVideoCanvas(videoId: String, spec: CanvasVideoSpec, modi
         }
     }
 
+    Box(modifier) {
+    placeholder?.let { frame ->
+        Image(
+            bitmap = frame,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .matchParentSize()
+                .graphicsLayer { this.alpha = currentPresentationAlpha() },
+        )
+    }
     AndroidView(
         factory = { viewContext ->
             val texture = TextureView(viewContext).apply {
@@ -1112,9 +1151,30 @@ private fun AndroidMusicVideoCanvas(videoId: String, spec: CanvasVideoSpec, modi
         onRelease = { frame ->
             if (textureView === frame.getChildAt(0)) textureView = null
         },
-        modifier = modifier,
+        modifier = Modifier.matchParentSize(),
     )
+    }
 }
 
 /** Above the 16:9 player's surface (1) and the mini player's (0). */
 private const val MUSIC_VIDEO_CANVAS_PRIORITY = 2
+
+/** Keys a music video's last frame in [CanvasFrameMemory], apart from any clip URL. */
+private const val MUSIC_VIDEO_FRAME_KEY = "music-video-frame:"
+
+/** The size that frame is kept at: a stand-in for a second or two, not a still worth keeping sharp. */
+private const val MUSIC_VIDEO_FRAME_PX = 720
+
+/** How often the music video Canvas's frame is read back for its next return. */
+private const val MUSIC_VIDEO_FRAME_REFRESH_MS = 2_000L
+
+/**
+ * How long a returning music video Canvas holds its last frame for the live
+ * picture: longer than a clip's, since the stream may have to be fetched again.
+ */
+private const val MUSIC_VIDEO_PLACEHOLDER_WAIT_MS = 6_000L
+
+/** Music video Canvases that have made their entrance this session. */
+private object MusicVideoCanvasMemory {
+    val revealed: MutableSet<String> = java.util.Collections.synchronizedSet(HashSet())
+}

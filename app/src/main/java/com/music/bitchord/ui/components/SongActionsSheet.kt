@@ -32,6 +32,7 @@ import androidx.compose.material.icons.rounded.RemoveCircleOutline
 import androidx.compose.material.icons.rounded.Title
 import androidx.compose.material.icons.rounded.FormatClear
 import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.History
@@ -205,6 +206,13 @@ fun SongActionsSheet(
     /** Which cut is playing now, so the row can offer the other one. */
     isAudioVersion: Boolean = false,
     /**
+     * The ways the playing track's Canvas and audio can be put right when they
+     * don't belong together, each remembered for the song. Opened in place
+     * under one row; null or empty hides it. See
+     * [com.music.bitchord.data.CanvasAudioFixes].
+     */
+    canvasAudioFixes: List<SongMenuChoice>? = null,
+    /**
      * A switch already looked for the other cut and found none: the row says
      * so, greyed out, rather than offering the same dead end again.
      */
@@ -258,6 +266,7 @@ fun SongActionsSheet(
     presentation: SongActionsPresentation = SongActionsPresentation.Sheet,
 ) {
     var showingSongInfo by remember(song.videoId) { mutableStateOf(false) }
+    var showingCanvasAudioFixes by remember(song.videoId) { mutableStateOf(false) }
     var pickingSleepTimer by remember { mutableStateOf(false) }
     val menu = presentation == SongActionsPresentation.Menu
     // The held-row menu has no pages to swap, so there Song Info opens as a dialog.
@@ -383,6 +392,28 @@ fun SongActionsSheet(
                     enabled = !audioVersionMissing,
                     onClick = it,
                 )
+            }
+            GroupSeparator(palette)
+        }
+
+        canvasAudioFixes?.takeIf { it.isNotEmpty() }?.let { choices ->
+            ActionRow(
+                icon = Icons.Rounded.Build,
+                label = stringResource(R.string.fix_canvas_audio_mismatch),
+                accent = palette.accent,
+                highlighted = showingCanvasAudioFixes,
+                onClick = { showingCanvasAudioFixes = !showingCanvasAudioFixes },
+            )
+            if (showingCanvasAudioFixes) {
+                choices.forEach { choice ->
+                    ActionRow(
+                        icon = choice.icon,
+                        label = choice.label,
+                        description = choice.description,
+                        accent = palette.accent,
+                        onClick = choice.onClick,
+                    )
+                }
             }
             GroupSeparator(palette)
         }
@@ -1385,3 +1416,11 @@ internal fun SheetHeading(text: String) {
         modifier = Modifier.padding(start = 22.dp, end = 22.dp, top = 16.dp, bottom = 4.dp),
     )
 }
+
+/** One of a handful of answers a menu row opens onto — see [SongActionsSheet]'s canvasAudioFixes. */
+class SongMenuChoice(
+    val icon: ImageVector,
+    val label: String,
+    val description: String? = null,
+    val onClick: () -> Unit,
+)

@@ -66,6 +66,26 @@ class VersionAudioAlignerCorrelationTest {
     }
 
     @Test
+    fun `a repeat of the opening near the window's end does not outrank the real alignment`() {
+        // The field case: the two cuts open together, but the opening riff
+        // comes round again thirty-eight seconds in. Over the seven seconds a
+        // 38 s lag overlaps, that repeat correlates perfectly; over the whole
+        // window, the true zero lag only very well.
+        val random = Random(11)
+        val size = 4_500 // 45 s at 100 fps
+        val repeatAt = 3_800
+        val source = FloatArray(size) { random.nextFloat() }
+        val target = FloatArray(size) { index ->
+            if (index >= repeatAt) source[index - repeatAt]
+            else source[index] + random.nextFloat() * 0.6f
+        }
+
+        val result = VersionAudioAligner.crossCorrelate(source, target)
+
+        assertEquals(0, result.lagFrames)
+    }
+
+    @Test
     fun `empty envelopes yield no measurable correlation`() {
         val result = VersionAudioAligner.crossCorrelate(FloatArray(0), FloatArray(500))
         assertEquals(0, result.lagFrames)
@@ -88,6 +108,8 @@ class VersionAudioAlignerCorrelationTest {
 
         var bestLag = 0
         var bestCorrelation = -1.0
+        var bestScore = Double.NEGATIVE_INFINITY
+        val fullOverlap = min(sourceEnv.size, targetEnv.size).toDouble()
 
         val minLag = max(-maxLagFrames, -(sourceEnv.size - minOverlapFrames))
         val maxLag = min(maxLagFrames, targetEnv.size - minOverlapFrames)
@@ -121,7 +143,9 @@ class VersionAudioAlignerCorrelationTest {
             val denom = sqrt(denSrc * denTgt)
             if (denom > 1e-6) {
                 val r = num / denom
-                if (r > bestCorrelation) {
+                val score = r * sqrt(overlapLen / fullOverlap)
+                if (score > bestScore) {
+                    bestScore = score
                     bestCorrelation = r
                     bestLag = lag
                 }

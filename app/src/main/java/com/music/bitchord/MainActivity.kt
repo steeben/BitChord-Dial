@@ -1,6 +1,8 @@
 package com.music.bitchord
 
 import com.music.bitchord.data.AudioOnlyVideos
+import com.music.bitchord.data.CanvasAudioFixes
+import com.music.bitchord.data.VideoCanvases
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -90,6 +92,10 @@ import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Sort
 import androidx.compose.material.icons.rounded.Upgrade
+import androidx.compose.material.icons.rounded.HideImage
+import androidx.compose.material.icons.rounded.Sync
+import androidx.compose.material.icons.rounded.VideocamOff
+import androidx.compose.material.icons.automirrored.rounded.Undo
 import com.music.bitchord.data.listentogether.ServerConnectionState
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -326,6 +332,7 @@ import com.music.bitchord.ui.components.ReorderPlaylistSheet
 import com.music.bitchord.ui.components.LongPressOrigin
 import com.music.bitchord.ui.components.SongActionsPresentation
 import com.music.bitchord.ui.components.SongActionsSheet
+import com.music.bitchord.ui.components.SongMenuChoice
 import com.music.bitchord.ui.components.IosMenuPopover
 import com.music.bitchord.ui.components.MenuAnchor
 import com.music.bitchord.ui.components.HeldContextMenu
@@ -386,6 +393,7 @@ import androidx.media3.common.Player
 import com.music.bitchord.data.YtMusicRepository
 import com.music.bitchord.ui.player.NowPlayingScreen
 import com.music.bitchord.ui.player.MusicVideoEngine
+import com.music.bitchord.ui.player.CanvasPictureSync
 import com.music.bitchord.ui.player.PlayerSheetMotion
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.drawBehind
@@ -1645,10 +1653,30 @@ private fun BitChordApp(
             switchingAudioVersion
         ) return
 
-        val resumeAfterResolution = pauseWhileResolving && c.playWhenReady
+        // The play the listener asked for, read before this switch pauses it.
+        // A track started through the service (an album's bounded queue, say)
+        // can reach this screen a beat before its play state does, so a fresh
+        // track that isn't playing yet is given a moment to say whether it is
+        // going to — read too early, the switch held it paused for good.
+        val wantsPlay = pauseWhileResolving && (
+            c.playWhenReady || (
+                c.currentPosition < FRESH_TRACK_WINDOW_MS &&
+                    withTimeoutOrNull(PLAY_INTENT_WAIT_MS) {
+                        while (!c.playWhenReady) delay(25)
+                        true
+                    } == true
+                )
+            )
+        // Looked again after the wait: the listener may have moved on, or a
+        // menu switch may have started meanwhile.
+        if (c.currentMediaItem?.mediaId != song.videoId || switchingAudioVersion) return
         switchingAudioVersion = true
+        val resumeAfterResolution = pauseWhileResolving && wantsPlay
+        // Picked just now and meant to play: the song starts from its own
+        // beginning, so there is nothing to align and nothing to wait for.
+        val fromStart = resumeAfterResolution && c.currentPosition < FRESH_TRACK_WINDOW_MS
         keepVideoId = null
-        val holdUntilAligned = AppSettings.smartVersionAlignment.value
+        val holdUntilAligned = AppSettings.smartVersionAlignment.value && !fromStart
         if (holdUntilAligned) AppSettings.versionAlignmentInProgress.value = true
         if (pauseWhileResolving) c.pause()
         try {
@@ -1664,7 +1692,14 @@ private fun BitChordApp(
                 // No song version to swap in: the video's own audio carries
                 // on, untouched, and only its picture goes. The player then
                 // treats it as a song, its thumbnail cropped into the cover.
-                if (song.isVideo && stillCurrent) {
+                if (song.isVideo && stillCurrent && pauseWhileResolving && canvasAllowedNow()) {
+                    // Picked, not asked to be audio only, and Canvases are on
+                    // for this connection: the video's own picture is this
+                    // song's Canvas, rather than nothing. "Convert to audio"
+                    // from the menu still hides it.
+                    TrackLog.d("Player", "audio switch keeping the video's picture as the Canvas", song.videoId)
+                    keepVideoId = song.videoId
+                } else if (song.isVideo && stillCurrent) {
                     TrackLog.d("Player", "audio switch playing the video as audio only", song.videoId)
                     AudioOnlyVideos.add(song.videoId)
                 } else if (song.videoId !in missingVersions) {
@@ -1684,6 +1719,9 @@ private fun BitChordApp(
 
             convertedFromVideo = song
             convertedAudioId = audio.videoId
+            // The video stays on hand as the song's Canvas, for when the song
+            // has none of its own.
+            VideoCanvases.link(audio.videoId, song.videoId)
             TrackLog.d("Player", "audio switch applying '${audio.title}' (${audio.videoId})", song.videoId)
             val target = audio.copy(
                 isVideoOrigin = true,
@@ -1696,6 +1734,17 @@ private fun BitChordApp(
             )
             if (!holdUntilAligned || VersionAudioAligner.getCachedOffsetMs(song.videoId, target.videoId) != null) {
                 optimisticVersionSong = target
+            }
+            if (fromStart) {
+                TrackLog.d("Player", "audio switch starting the song from the top", song.videoId)
+                c.swapToVersion(target, fromStart = true)
+                // The service can decline a swap (mid-Automix, mid-upgrade);
+                // the video then plays on as it is rather than sitting paused.
+                scope.launch {
+                    delay(FROM_START_SWAP_GRACE_MS)
+                    if (c.currentMediaItem?.mediaId == song.videoId && !c.playWhenReady) c.play()
+                }
+                return
             }
             // Let go of the bar *before* the command goes out: the service
             // raises it again the moment its own job starts, and releasing
@@ -1870,7 +1919,14 @@ private fun BitChordApp(
         if (song.isVideo && !partyState.inParty &&
             song.videoId != keepVideoId && song.videoId != convertedVideoId
         ) {
-            switchToMusicOnly(song, pauseWhileResolving = true)
+            if (CanvasAudioFixes.keepsVideoAudio(song.videoId)) {
+                // Fixed from the ⋯ menu: the "official song" found for this
+                // video is a different recording, so the video plays as it is.
+                TrackLog.d("Player", "audio switch skipped: kept on the video's own audio", song.videoId)
+                keepVideoId = song.videoId
+            } else {
+                switchToMusicOnly(song, pauseWhileResolving = true)
+            }
         }
     }
 
@@ -5797,6 +5853,104 @@ private fun BitChordApp(
                 value = song.localUri == null &&
                     withContext(Dispatchers.IO) { AudioCache.holds(song.videoId) }
             }
+            // Fixes for a Canvas and an audio that don't belong together, kept
+            // for the song — see [CanvasAudioFixes]. Only for the playing track,
+            // and only the ones that fit what is on screen for it.
+            val canvasShowing by CanvasAudioFixes.showing.collectAsStateWithLifecycle()
+            val canvasFixState by CanvasAudioFixes.state.collectAsStateWithLifecycle()
+            val canvasAudioFixChoices: List<SongMenuChoice>? =
+                if (fromPlayer && controller?.currentMediaItem?.mediaId == song.videoId) {
+                    val shownHere = canvasShowing?.takeIf { it.songVideoId == song.videoId }
+                    // The music video this song stands in for, when it does.
+                    val sourceVideo = VideoCanvases.pictureFor(song.videoId)
+                    val saved = { showQueueNotice(context.getString(R.string.canvas_fix_saved)) }
+                    buildList {
+                        if (sourceVideo != null) {
+                            add(
+                                SongMenuChoice(
+                                    icon = BitChordIcons.MusicNote,
+                                    label = context.getString(R.string.canvas_fix_wrong_audio),
+                                    description = context.getString(R.string.canvas_fix_wrong_audio_detail),
+                                ) {
+                                    songActions = null
+                                    CanvasAudioFixes.keepVideoAudio(sourceVideo)
+                                    val c = controller
+                                    val original = convertedFromVideo?.takeIf { it.videoId == sourceVideo }
+                                    if (c != null && original != null && !partyState.inParty) {
+                                        keepVideoId = original.videoId
+                                        convertedFromVideo = null
+                                        convertedAudioId = null
+                                        if (!versionAlignmentPending(original.videoId)) optimisticVersionSong = original
+                                        c.swapToVersion(original)
+                                    }
+                                    saved()
+                                },
+                            )
+                        }
+                        if (shownHere?.kind == CanvasAudioFixes.Shown.CANVAS) {
+                            add(
+                                SongMenuChoice(
+                                    icon = Icons.Rounded.HideImage,
+                                    label = context.getString(R.string.canvas_fix_wrong_canvas),
+                                    description = context.getString(R.string.canvas_fix_wrong_canvas_detail),
+                                ) {
+                                    songActions = null
+                                    CanvasAudioFixes.hideCanvas(song.videoId)
+                                    saved()
+                                },
+                            )
+                        }
+                        val picture = shownHere?.pictureVideoId
+                        if (shownHere?.kind == CanvasAudioFixes.Shown.VIDEO_PICTURE && picture != null) {
+                            add(
+                                SongMenuChoice(
+                                    icon = Icons.Rounded.VideocamOff,
+                                    label = context.getString(R.string.canvas_fix_wrong_video),
+                                    description = context.getString(R.string.canvas_fix_wrong_video_detail),
+                                ) {
+                                    songActions = null
+                                    CanvasAudioFixes.hideVideoCanvas(song.videoId)
+                                    saved()
+                                },
+                            )
+                            add(
+                                SongMenuChoice(
+                                    icon = Icons.Rounded.Sync,
+                                    label = context.getString(R.string.canvas_fix_resync),
+                                    description = context.getString(R.string.canvas_fix_resync_detail),
+                                ) {
+                                    songActions = null
+                                    showQueueNotice(context.getString(R.string.canvas_fix_resyncing))
+                                    scope.launch {
+                                        val measured = CanvasPictureSync.measure(context, picture, song, force = true)
+                                        if (measured != null) {
+                                            CanvasAudioFixes.setSyncOffset(picture, song.videoId, measured)
+                                            showQueueNotice(context.getString(R.string.canvas_fix_resynced))
+                                        } else {
+                                            showQueueNotice(context.getString(R.string.canvas_fix_resync_failed))
+                                        }
+                                    }
+                                },
+                            )
+                        }
+                        if (canvasFixState.touches(song.videoId) ||
+                            sourceVideo?.let(canvasFixState::touches) == true
+                        ) {
+                            add(
+                                SongMenuChoice(
+                                    icon = Icons.AutoMirrored.Rounded.Undo,
+                                    label = context.getString(R.string.canvas_fix_reset),
+                                ) {
+                                    songActions = null
+                                    CanvasAudioFixes.reset(*listOfNotNull(song.videoId, sourceVideo).toTypedArray())
+                                    showQueueNotice(context.getString(R.string.canvas_fix_reset_done))
+                                },
+                            )
+                        }
+                    }
+                } else {
+                    null
+                }
             SongActionsSheet(
                 song = song,
                 presentation = presentation,
@@ -6054,6 +6208,7 @@ private fun BitChordApp(
                 upgradeQualityInProgress = fromPlayer && song.videoId in qualityUpgradesInFlight,
                 onToggleAudioVersion = onToggleVersion,
                 isAudioVersion = menuIsAudioVersion,
+                canvasAudioFixes = canvasAudioFixChoices,
                 audioVersionMissing = song.videoId in missingVersions,
                 // Hidden outright when there's no real YouTube id behind
                 // this row to build a link from — SongActionsSheet already
@@ -7914,6 +8069,20 @@ private fun formatDurationText(ms: Long): String {
  * from the end plays the outro instead.
  */
 private const val SEEK_END_GUARD_MS = 1_000L
+
+/** A video this close to its start was only just picked — see switchToMusicOnly. */
+private const val FRESH_TRACK_WINDOW_MS = 3_000L
+
+/** How long a from-the-top swap gets to land before the video is played as it is. */
+private const val FROM_START_SWAP_GRACE_MS = 2_000L
+
+/** How long a just-picked track gets for its play state to reach the controller. */
+private const val PLAY_INTENT_WAIT_MS = 600L
+
+/** Whether a Canvas may stream on the connection the phone is on now. */
+private fun canvasAllowedNow(): Boolean =
+    AppSettings.animatedCanvas.value &&
+        (AppSettings.meteredConnection.value != true || AppSettings.canvasOverCellular.value)
 
 /**
  * How far a detail page scrolls before its title moves up into the bar.

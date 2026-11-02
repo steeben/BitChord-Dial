@@ -116,6 +116,12 @@ object VersionAudioAligner {
         return offsetCache[sourceVideoId to targetVideoId]
     }
 
+    /** Drops a measured pair, so the next ask measures it afresh. */
+    fun forget(sourceVideoId: String, targetVideoId: String) {
+        offsetCache.remove(sourceVideoId to targetVideoId)
+        offsetCache.remove(targetVideoId to sourceVideoId)
+    }
+
     /**
      * Calculates or retrieves the time offset (in milliseconds) from [sourceSong] to [targetSong].
      * Target timestamp = (source timestamp + offsetMs).
@@ -357,6 +363,13 @@ object VersionAudioAligner {
 
         var bestLag = 0
         var bestCorrelation = -1.0
+        var bestScore = Double.NEGATIVE_INFINITY
+        // The longest overlap any lag can have. A lag is judged on its
+        // correlation weighted by how much of that it actually overlaps: a
+        // correlation over three seconds is easy to get by chance, and a song
+        // whose opening riff comes round again half a minute in matched that
+        // repeat — the switch to the song then landed thirty seconds in.
+        val fullOverlap = min(sourceEnv.size, targetEnv.size).coerceAtLeast(1).toDouble()
 
         // lag d means targetEnv[i + d] corresponds to sourceEnv[i]
         val minLag = max(-maxLagFrames, -(sourceEnv.size - minOverlapFrames))
@@ -401,7 +414,9 @@ object VersionAudioAligner {
             val denom = sqrt(denSrc * denTgt)
             if (denom > 1e-6) {
                 val r = num / denom
-                if (r > bestCorrelation) {
+                val score = overlapWeighted(r, overlapLen, fullOverlap)
+                if (score > bestScore) {
+                    bestScore = score
                     bestCorrelation = r
                     bestLag = lag
                 }
@@ -410,6 +425,15 @@ object VersionAudioAligner {
 
         return Correlation(bestLag, bestCorrelation, minLag, maxLag)
     }
+
+    /**
+     * A lag's correlation, discounted by the share of the windows it overlaps.
+     * The square root keeps a real intro shift (a third of the window
+     * overlapping, say) well ahead of chance, while a few seconds' overlap
+     * has to correlate far better than a full one to win.
+     */
+    fun overlapWeighted(r: Double, overlapLen: Int, fullOverlap: Double): Double =
+        r * sqrt((overlapLen / fullOverlap).coerceIn(0.0, 1.0))
 
     /**
      * Σ source[i]·target[i+lag] for every lag the search may ask about,
