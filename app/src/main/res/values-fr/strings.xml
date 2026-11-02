@@ -390,6 +390,9 @@
     <string name="integrate_spotify_canvas">Configurer Spotify Canvas</string>
     <string name="lastfm_login">Connexion à Last.fm</string>
     <string name="lastfm_login_description">Connectez-vous avec votre compte Last.fm pour activer le scrobbling.</string>
+    <string name="lastfm_api_key">Clé API</string>
+    <string name="lastfm_shared_secret">Secret partagé</string>
+    <string name="lastfm_own_api_description">Cette version n\'a pas de compte API Last.fm. Créez-en un gratuitement sur last.fm/api/account/create et collez ici sa clé API et son secret partagé.</string>
     <string name="lastfm_now_playing_subtitle">Met à jour Last.fm avec ce que vous écoutez</string>
     <string name="lead_with_song">Mettre la chanson en avant</string>
     <string name="lead_with_song_subtitle">Place le titre sur la ligne en gras au lieu de l\'artiste</string>

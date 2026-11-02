@@ -408,6 +408,9 @@
     <string name="integrate_spotify_canvas">Настроить Spotify Canvas</string>
     <string name="lastfm_login">Вход в Last.fm</string>
     <string name="lastfm_login_description">Войдите в свой аккаунт Last.fm, чтобы включить скробблинг.</string>
+    <string name="lastfm_api_key">Ключ API</string>
+    <string name="lastfm_shared_secret">Общий секрет</string>
+    <string name="lastfm_own_api_description">В этой сборке нет API-аккаунта Last.fm. Создайте его бесплатно на last.fm/api/account/create и вставьте сюда ключ API и общий секрет.</string>
     <string name="lastfm_now_playing_subtitle">Обновляет Last.fm информацией о том, что вы сейчас слушаете</string>
     <string name="lead_with_song">Сначала песня</string>
     <string name="lead_with_song_subtitle">Помещает название на жирную строку вместо исполнителя</string>

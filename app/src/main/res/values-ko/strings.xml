@@ -567,6 +567,9 @@
     <string name="integrate_spotify_canvas">Spotify Canvas 설정</string>
     <string name="lastfm_login">Last.fm 로그인</string>
     <string name="lastfm_login_description">스크로블을 켜려면 Last.fm 계정으로 로그인하세요.</string>
+    <string name="lastfm_api_key">API 키</string>
+    <string name="lastfm_shared_secret">공유 시크릿</string>
+    <string name="lastfm_own_api_description">이 빌드에는 Last.fm API 계정이 없습니다. last.fm/api/account/create에서 무료로 만든 뒤 API 키와 공유 시크릿을 여기에 붙여넣으세요.</string>
     <string name="lastfm_now_playing_subtitle">지금 듣는 곡을 Last.fm에 업데이트합니다</string>
     <string name="scrobble_primary_artist_only">주 아티스트만 스크로블</string>
     <string name="scrobble_primary_artist_only_subtitle">음악에 여러 아티스트가 참여한 경우 첫 아티스트만 사용</string>

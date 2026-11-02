@@ -375,6 +375,9 @@
     <string name="integrate_spotify_canvas">Siapkan Spotify Canvas</string>
     <string name="lastfm_login">Login Last.fm</string>
     <string name="lastfm_login_description">Masuk dengan akun Last.fm Anda untuk mengaktifkan scrobbling.</string>
+    <string name="lastfm_api_key">Kunci API</string>
+    <string name="lastfm_shared_secret">Rahasia bersama</string>
+    <string name="lastfm_own_api_description">Build ini tidak memiliki akun API Last.fm. Buat gratis di last.fm/api/account/create lalu tempel kunci API dan rahasia bersamanya di sini.</string>
     <string name="lastfm_now_playing_subtitle">Perbarui Last.fm dengan apa yang sedang Anda dengarkan</string>
     <string name="lead_with_song">Utamakan lagu</string>
     <string name="lead_with_song_subtitle">Menempatkan judul pada baris tebal, bukan artis</string>

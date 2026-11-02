@@ -376,6 +376,9 @@
     <string name="integrate_spotify_canvas">設定 Spotify Canvas</string>
     <string name="lastfm_login">Last.fm 登入</string>
     <string name="lastfm_login_description">使用你的 Last.fm 賬號登入以啟用 Scrobbling。</string>
+    <string name="lastfm_api_key">API 金鑰</string>
+    <string name="lastfm_shared_secret">共用密鑰</string>
+    <string name="lastfm_own_api_description">此版本沒有 Last.fm API 帳戶。請在 last.fm/api/account/create 免費建立一個，然後在此貼上其 API 金鑰和共用密鑰。</string>
     <string name="lastfm_now_playing_subtitle">將你正在收聽的內容更新到 Last.fm</string>
     <string name="lead_with_song">優先顯示歌曲</string>
     <string name="lead_with_song_subtitle">將歌曲標題顯示在粗體行，而不是藝人名</string>

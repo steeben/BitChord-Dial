@@ -61,6 +61,11 @@ jobs:
       # stops on translation leftovers already in the upstream strings, which
       # have nothing to do with whether the build works.
       - name: Build
+        # Last.fm's API account for this build; app/build.gradle.kts reads these
+        # from the environment. Unset, the login sheet asks for the user's own.
+        env:
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
         run: |
           if [ -n "$SHARED_KEYSTORE" ]; then
             ./gradlew assembleDevBenchmark -x lintVitalDevBenchmark -PnoBenchmarkSuffix \

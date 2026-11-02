@@ -430,6 +430,9 @@
     <string name="integrate_spotify_canvas">Spotify Canvas\'ı kur</string>
     <string name="lastfm_login">Last.fm girişi</string>
     <string name="lastfm_login_description">Scrobbling\'i etkinleştirmek için Last.fm hesabınızla giriş yapın.</string>
+    <string name="lastfm_api_key">API anahtarı</string>
+    <string name="lastfm_shared_secret">Paylaşılan gizli anahtar</string>
+    <string name="lastfm_own_api_description">Bu sürümde Last.fm API hesabı yok. last.fm/api/account/create adresinden ücretsiz oluşturup API anahtarını ve paylaşılan gizli anahtarı buraya yapıştırın.</string>
     <string name="lastfm_now_playing_subtitle">Last.fm\'i ne dinlediğinle güncelle</string>
     <string name="scrobble_primary_artist_only">Yalnızca birincil sanatçıyı scrobble et</string>
     <string name="scrobble_primary_artist_only_subtitle">Bir parçanın birden fazla sanatçısı olduğunda ilk sanatçıyı kullan</string>

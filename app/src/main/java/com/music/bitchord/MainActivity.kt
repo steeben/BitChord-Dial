@@ -7515,7 +7515,11 @@ private fun BitChordApp(
                 tokenInput = tokenInput,
                 onTokenInputChange = { tokenInput = it },
                 onSave = {
-                    AppSettings.setListenBrainzToken(tokenInput.trim())
+                    val token = tokenInput.trim()
+                    AppSettings.setListenBrainzToken(token)
+                    // Saving a token is the user turning ListenBrainz on; without
+                    // this the switch stayed off and nothing was submitted.
+                    AppSettings.setListenBrainzEnabled(token.isNotBlank())
                     showListenBrainzLogin = false
                 },
                 onDismiss = { showListenBrainzLogin = false },
@@ -7527,7 +7531,17 @@ private fun BitChordApp(
             var passwordInput by remember { mutableStateOf("") }
             var lastfmError by remember { mutableStateOf<String?>(null) }
             var lastfmLoading by remember { mutableStateOf(false) }
+            // A build made without the LASTFM_API_KEY / LASTFM_SECRET secrets
+            // has no API account to sign with, so the user brings their own.
+            val buildHasLastfmApi = BuildConfig.LASTFM_API_KEY.isNotBlank() && BuildConfig.LASTFM_SECRET.isNotBlank()
+            var apiKeyInput by remember { mutableStateOf(if (buildHasLastfmApi) "" else AppSettings.lastfmApiKey.value) }
+            var apiSecretInput by remember { mutableStateOf(if (buildHasLastfmApi) "" else AppSettings.lastfmSecret.value) }
             LastfmLoginAlert(
+                showApiCredentials = !buildHasLastfmApi,
+                apiKeyInput = apiKeyInput,
+                onApiKeyInputChange = { apiKeyInput = it },
+                apiSecretInput = apiSecretInput,
+                onApiSecretInputChange = { apiSecretInput = it },
                 hazeState = hazeState,
                 usernameInput = usernameInput,
                 onUsernameInputChange = { usernameInput = it },
@@ -7540,12 +7554,15 @@ private fun BitChordApp(
                     lastfmError = null
                     scope.launch {
                         try {
-                            LastFM.initialize(
-                                apiKey = AppSettings.lastfmApiKey.value,
-                                secret = AppSettings.lastfmSecret.value,
-                            )
+                            val apiKey = if (buildHasLastfmApi) AppSettings.lastfmApiKey.value else apiKeyInput.trim()
+                            val apiSecret = if (buildHasLastfmApi) AppSettings.lastfmSecret.value else apiSecretInput.trim()
+                            LastFM.initialize(apiKey = apiKey, secret = apiSecret)
                             LastFM.getMobileSession(usernameInput.trim(), passwordInput)
                                 .onSuccess { auth ->
+                                    if (!buildHasLastfmApi) {
+                                        AppSettings.setLastfmApiKey(apiKey)
+                                        AppSettings.setLastfmSecret(apiSecret)
+                                    }
                                     AppSettings.setLastfmSessionKey(auth.session.key)
                                     AppSettings.setLastfmUsername(auth.session.name)
                                     AppSettings.setLastfmEnabled(true)

@@ -375,6 +375,9 @@
     <string name="integrate_spotify_canvas">Spotify Canvasを設定</string>
     <string name="lastfm_login">Last.fmログイン</string>
     <string name="lastfm_login_description">Last.fmアカウントでログインするとスクロブリングが有効になります。</string>
+    <string name="lastfm_api_key">APIキー</string>
+    <string name="lastfm_shared_secret">共有シークレット</string>
+    <string name="lastfm_own_api_description">このビルドには Last.fm API アカウントがありません。last.fm/api/account/create で無料作成し、APIキーと共有シークレットをここに貼り付けてください。</string>
     <string name="lastfm_now_playing_subtitle">今聴いているものをLast.fmに反映します</string>
     <string name="lead_with_song">曲名を先頭に</string>
     <string name="lead_with_song_subtitle">太字の行にアーティストではなく曲名を表示します</string>

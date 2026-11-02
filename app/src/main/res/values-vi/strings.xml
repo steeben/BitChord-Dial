@@ -430,6 +430,9 @@
     <string name="integrate_spotify_canvas">Thiết lập Spotify Canvas</string>
     <string name="lastfm_login">Đăng nhập Last.fm</string>
     <string name="lastfm_login_description">Đăng nhập bằng tài khoản Last.fm của bạn để bật tính năng scrobbling.</string>
+    <string name="lastfm_api_key">Khóa API</string>
+    <string name="lastfm_shared_secret">Bí mật dùng chung</string>
+    <string name="lastfm_own_api_description">Bản dựng này không có tài khoản API Last.fm. Hãy tạo miễn phí tại last.fm/api/account/create rồi dán khóa API và bí mật dùng chung vào đây.</string>
     <string name="lastfm_now_playing_subtitle">Cập nhật lên Last.fm nội dung bạn đang nghe</string>
     <string name="scrobble_primary_artist_only">Chỉ scrobble nghệ sĩ chính</string>
     <string name="scrobble_primary_artist_only_subtitle">Chỉ dùng nghệ sĩ đầu tiên khi bản nhạc ghi nhận nhiều nghệ sĩ</string>

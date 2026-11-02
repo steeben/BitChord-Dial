@@ -114,7 +114,19 @@ fun LastfmLoginAlert(
     loading: Boolean,
     onSignIn: () -> Unit,
     onDismiss: () -> Unit,
+    /**
+     * Shown when the build carries no Last.fm API account of its own: Last.fm
+     * signs every request with an app's key and secret, so without one the
+     * username and password alone can never sign in.
+     */
+    showApiCredentials: Boolean = false,
+    apiKeyInput: String = "",
+    onApiKeyInputChange: (String) -> Unit = {},
+    apiSecretInput: String = "",
+    onApiSecretInputChange: (String) -> Unit = {},
 ) {
+    val credentialsReady = !showApiCredentials || (apiKeyInput.isNotBlank() && apiSecretInput.isNotBlank())
+    val canSignIn = !loading && usernameInput.isNotBlank() && passwordInput.isNotBlank() && credentialsReady
     AlertScaffold(hazeState = hazeState, onDismiss = onDismiss) {
         Column(
             modifier = Modifier
@@ -151,16 +163,42 @@ fun LastfmLoginAlert(
                 isPassword = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(
-                    onDone = { if (usernameInput.isNotBlank() && passwordInput.isNotBlank()) onSignIn() },
+                    onDone = { if (canSignIn) onSignIn() },
                 ),
             )
+            if (showApiCredentials) {
+                Text(
+                    text = stringResource(R.string.lastfm_own_api_description),
+                    modifier = Modifier.padding(top = 14.dp, bottom = 8.dp),
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 17.sp),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    textAlign = TextAlign.Center,
+                )
+                PillTextField(
+                    value = apiKeyInput,
+                    onValueChange = onApiKeyInputChange,
+                    placeholder = stringResource(R.string.lastfm_api_key),
+                    enabled = !loading,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                )
+                Spacer(Modifier.height(8.dp))
+                PillTextField(
+                    value = apiSecretInput,
+                    onValueChange = onApiSecretInputChange,
+                    placeholder = stringResource(R.string.lastfm_shared_secret),
+                    enabled = !loading,
+                    isPassword = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { if (canSignIn) onSignIn() }),
+                )
+            }
         }
         AlertRule()
         AlertAction(
             label = if (loading) stringResource(R.string.signing_in) else stringResource(R.string.sign_in),
             emphasised = true,
             onClick = onSignIn,
-            enabled = !loading && usernameInput.isNotBlank() && passwordInput.isNotBlank(),
+            enabled = canSignIn,
         )
         AlertRule()
         AlertAction(

@@ -389,6 +389,9 @@
     <string name="integrate_spotify_canvas">Spotify Canvas सेट अप करें</string>
     <string name="lastfm_login">Last.fm लॉगिन</string>
     <string name="lastfm_login_description">स्क्रॉबलिंग चालू करने के लिए अपने Last.fm खाते से साइन इन करें।</string>
+    <string name="lastfm_api_key">API कुंजी</string>
+    <string name="lastfm_shared_secret">साझा सीक्रेट</string>
+    <string name="lastfm_own_api_description">इस बिल्ड में Last.fm API खाता नहीं है। last.fm/api/account/create पर मुफ़्त में एक बनाएँ और उसकी API कुंजी और साझा सीक्रेट यहाँ पेस्ट करें।</string>
     <string name="lastfm_now_playing_subtitle">आप जो सुन रहे हैं उससे Last.fm अपडेट करें</string>
     <string name="lead_with_song">गाने को आगे रखें</string>
     <string name="lead_with_song_subtitle">कलाकार की जगह शीर्षक को बोल्ड लाइन पर रखता है</string>
