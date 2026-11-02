@@ -1403,4 +1403,19 @@
     <string name="ai_mix_started">AI Mix: קטעים של 50 שניות, ממוקסים כמו סט של DJ</string>
     <string name="ai_mix_enabled">(מופעל)</string>
     <string name="ai_mix_stopped">AI Mix כבוי</string>
+    <string name="fix_canvas_audio_mismatch">תיקון Canvas/אודיו שאינם תואמים</string>
+    <string name="canvas_fix_wrong_audio">האודיו הוא שיר אחר</string>
+    <string name="canvas_fix_wrong_audio_detail">מעכשיו לנגן את האודיו של הסרטון עצמו</string>
+    <string name="canvas_fix_wrong_canvas">ה-Canvas הוא הקליפ הלא נכון</string>
+    <string name="canvas_fix_wrong_canvas_detail">להסתיר אותו בשיר הזה</string>
+    <string name="canvas_fix_wrong_video">הסרטון לא תואם לשיר</string>
+    <string name="canvas_fix_wrong_video_detail">להפסיק להשתמש בו כ-Canvas של השיר הזה</string>
+    <string name="canvas_fix_resync">ה-Canvas לא מסונכרן</string>
+    <string name="canvas_fix_resync_detail">ליישר אותו שוב לשיר</string>
+    <string name="canvas_fix_reset">ביטול התיקונים לשיר הזה</string>
+    <string name="canvas_fix_saved">נשמר לשיר הזה</string>
+    <string name="canvas_fix_resyncing">מיישר את ה-Canvas לשיר…</string>
+    <string name="canvas_fix_resynced">ה-Canvas יושר לשיר</string>
+    <string name="canvas_fix_resync_failed">לא ניתן היה ליישר את ה-Canvas לשיר הזה</string>
+    <string name="canvas_fix_reset_done">התיקונים לשיר הזה בוטלו</string>
 </resources>

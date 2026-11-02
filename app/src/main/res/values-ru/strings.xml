@@ -1430,4 +1430,19 @@
     <string name="ai_mix_started">AI Mix: 50-секундные фрагменты, сведённые как DJ-сет</string>
     <string name="ai_mix_enabled">(включён)</string>
     <string name="ai_mix_stopped">AI Mix выключен</string>
+    <string name="fix_canvas_audio_mismatch">Исправить несовпадение Canvas и звука</string>
+    <string name="canvas_fix_wrong_audio">Звук — другая песня</string>
+    <string name="canvas_fix_wrong_audio_detail">Отныне воспроизводить звук самого видео</string>
+    <string name="canvas_fix_wrong_canvas">Canvas — не тот клип</string>
+    <string name="canvas_fix_wrong_canvas_detail">Скрыть для этой песни</string>
+    <string name="canvas_fix_wrong_video">Видео не подходит к песне</string>
+    <string name="canvas_fix_wrong_video_detail">Не использовать его как Canvas этой песни</string>
+    <string name="canvas_fix_resync">Canvas не синхронизирован</string>
+    <string name="canvas_fix_resync_detail">Заново выровнять по песне</string>
+    <string name="canvas_fix_reset">Отменить исправления для этой песни</string>
+    <string name="canvas_fix_saved">Сохранено для этой песни</string>
+    <string name="canvas_fix_resyncing">Выравнивание Canvas по песне…</string>
+    <string name="canvas_fix_resynced">Canvas выровнен по песне</string>
+    <string name="canvas_fix_resync_failed">Не удалось выровнять Canvas по этой песне</string>
+    <string name="canvas_fix_reset_done">Исправления для этой песни отменены</string>
 </resources>

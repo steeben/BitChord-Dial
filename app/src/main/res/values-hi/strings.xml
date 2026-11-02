@@ -1398,4 +1398,19 @@
     <string name="ai_mix_started">AI Mix: 50 सेकंड के नमूने, DJ सेट की तरह मिक्स किए गए</string>
     <string name="ai_mix_enabled">(चालू)</string>
     <string name="ai_mix_stopped">AI Mix बंद</string>
+    <string name="fix_canvas_audio_mismatch">बेमेल Canvas/ऑडियो ठीक करें</string>
+    <string name="canvas_fix_wrong_audio">ऑडियो कोई और गाना है</string>
+    <string name="canvas_fix_wrong_audio_detail">अब से वीडियो का अपना ऑडियो चलाएँ</string>
+    <string name="canvas_fix_wrong_canvas">Canvas गलत क्लिप है</string>
+    <string name="canvas_fix_wrong_canvas_detail">इस गाने के लिए इसे छिपाएँ</string>
+    <string name="canvas_fix_wrong_video">वीडियो गाने से मेल नहीं खाता</string>
+    <string name="canvas_fix_wrong_video_detail">इसे इस गाने के Canvas के रूप में इस्तेमाल न करें</string>
+    <string name="canvas_fix_resync">Canvas सिंक में नहीं है</string>
+    <string name="canvas_fix_resync_detail">इसे गाने के साथ फिर से मिलाएँ</string>
+    <string name="canvas_fix_reset">इस गाने के सुधार पूर्ववत करें</string>
+    <string name="canvas_fix_saved">इस गाने के लिए सहेजा गया</string>
+    <string name="canvas_fix_resyncing">Canvas को गाने के साथ मिलाया जा रहा है…</string>
+    <string name="canvas_fix_resynced">Canvas गाने के साथ मिल गया</string>
+    <string name="canvas_fix_resync_failed">Canvas को इस गाने के साथ नहीं मिलाया जा सका</string>
+    <string name="canvas_fix_reset_done">इस गाने के सुधार पूर्ववत किए गए</string>
 </resources>

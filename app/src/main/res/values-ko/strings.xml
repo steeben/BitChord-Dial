@@ -1166,4 +1166,19 @@
     <string name="ai_mix_started">AI Mix: 50초 샘플을 DJ 세트처럼 믹스</string>
     <string name="ai_mix_enabled">(사용 중)</string>
     <string name="ai_mix_stopped">AI Mix 꺼짐</string>
+    <string name="fix_canvas_audio_mismatch">맞지 않는 Canvas/오디오 수정</string>
+    <string name="canvas_fix_wrong_audio">오디오가 다른 곡임</string>
+    <string name="canvas_fix_wrong_audio_detail">이제부터 동영상 자체의 오디오 재생</string>
+    <string name="canvas_fix_wrong_canvas">Canvas가 잘못된 클립임</string>
+    <string name="canvas_fix_wrong_canvas_detail">이 곡에서 숨기기</string>
+    <string name="canvas_fix_wrong_video">동영상이 곡과 맞지 않음</string>
+    <string name="canvas_fix_wrong_video_detail">이 곡의 Canvas로 사용하지 않기</string>
+    <string name="canvas_fix_resync">Canvas 싱크가 맞지 않음</string>
+    <string name="canvas_fix_resync_detail">곡에 다시 맞추기</string>
+    <string name="canvas_fix_reset">이 곡의 수정 취소</string>
+    <string name="canvas_fix_saved">이 곡에 저장됨</string>
+    <string name="canvas_fix_resyncing">Canvas를 곡에 맞추는 중…</string>
+    <string name="canvas_fix_resynced">Canvas를 곡에 맞춤</string>
+    <string name="canvas_fix_resync_failed">Canvas를 이 곡에 맞출 수 없음</string>
+    <string name="canvas_fix_reset_done">이 곡의 수정을 취소함</string>
 </resources>

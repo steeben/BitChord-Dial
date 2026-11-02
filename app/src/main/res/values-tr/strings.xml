@@ -1355,4 +1355,19 @@
     <string name="ai_mix_started">AI Mix: DJ seti gibi karıştırılmış 50 saniyelik örnekler</string>
     <string name="ai_mix_enabled">(etkin)</string>
     <string name="ai_mix_stopped">AI Mix kapalı</string>
+    <string name="fix_canvas_audio_mismatch">Uyuşmayan Canvas/sesi düzelt</string>
+    <string name="canvas_fix_wrong_audio">Ses başka bir şarkı</string>
+    <string name="canvas_fix_wrong_audio_detail">Bundan sonra videonun kendi sesini çal</string>
+    <string name="canvas_fix_wrong_canvas">Canvas yanlış klip</string>
+    <string name="canvas_fix_wrong_canvas_detail">Bu şarkı için gizle</string>
+    <string name="canvas_fix_wrong_video">Video şarkıyla uyuşmuyor</string>
+    <string name="canvas_fix_wrong_video_detail">Bu şarkının Canvas\'ı olarak kullanma</string>
+    <string name="canvas_fix_resync">Canvas senkronize değil</string>
+    <string name="canvas_fix_resync_detail">Şarkıyla yeniden hizala</string>
+    <string name="canvas_fix_reset">Bu şarkının düzeltmelerini geri al</string>
+    <string name="canvas_fix_saved">Bu şarkı için kaydedildi</string>
+    <string name="canvas_fix_resyncing">Canvas şarkıyla hizalanıyor…</string>
+    <string name="canvas_fix_resynced">Canvas şarkıyla hizalandı</string>
+    <string name="canvas_fix_resync_failed">Canvas bu şarkıyla hizalanamadı</string>
+    <string name="canvas_fix_reset_done">Bu şarkının düzeltmeleri geri alındı</string>
 </resources>

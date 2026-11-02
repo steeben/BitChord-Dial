@@ -1377,4 +1377,19 @@
     <string name="ai_mix_started">AI Mix：50 秒片段，像 DJ 現場一樣混音</string>
     <string name="ai_mix_enabled">（已啟用）</string>
     <string name="ai_mix_stopped">AI Mix 已關閉</string>
+    <string name="fix_canvas_audio_mismatch">修正不相符的 Canvas/音訊</string>
+    <string name="canvas_fix_wrong_audio">音訊是另一首歌</string>
+    <string name="canvas_fix_wrong_audio_detail">今後播放影片本身的音訊</string>
+    <string name="canvas_fix_wrong_canvas">Canvas 是錯誤的片段</string>
+    <string name="canvas_fix_wrong_canvas_detail">為這首歌隱藏</string>
+    <string name="canvas_fix_wrong_video">影片與歌曲不符</string>
+    <string name="canvas_fix_wrong_video_detail">不再用作這首歌的 Canvas</string>
+    <string name="canvas_fix_resync">Canvas 不同步</string>
+    <string name="canvas_fix_resync_detail">重新與歌曲對齊</string>
+    <string name="canvas_fix_reset">復原這首歌的修正</string>
+    <string name="canvas_fix_saved">已為這首歌儲存</string>
+    <string name="canvas_fix_resyncing">正在將 Canvas 與歌曲對齊…</string>
+    <string name="canvas_fix_resynced">Canvas 已與歌曲對齊</string>
+    <string name="canvas_fix_resync_failed">無法將 Canvas 與這首歌對齊</string>
+    <string name="canvas_fix_reset_done">已復原這首歌的修正</string>
 </resources>

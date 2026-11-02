@@ -1376,4 +1376,19 @@
     <string name="ai_mix_started">AI Mix：50秒のサンプルを DJ セットのようにミックス</string>
     <string name="ai_mix_enabled">（有効）</string>
     <string name="ai_mix_stopped">AI Mix オフ</string>
+    <string name="fix_canvas_audio_mismatch">Canvasと音声の不一致を修正</string>
+    <string name="canvas_fix_wrong_audio">音声が別の曲</string>
+    <string name="canvas_fix_wrong_audio_detail">今後は動画自体の音声を再生</string>
+    <string name="canvas_fix_wrong_canvas">Canvasが間違ったクリップ</string>
+    <string name="canvas_fix_wrong_canvas_detail">この曲では非表示にする</string>
+    <string name="canvas_fix_wrong_video">動画が曲と合っていない</string>
+    <string name="canvas_fix_wrong_video_detail">この曲のCanvasとして使わない</string>
+    <string name="canvas_fix_resync">Canvasがずれている</string>
+    <string name="canvas_fix_resync_detail">曲に合わせ直す</string>
+    <string name="canvas_fix_reset">この曲の修正を取り消す</string>
+    <string name="canvas_fix_saved">この曲に保存しました</string>
+    <string name="canvas_fix_resyncing">Canvasを曲に合わせています…</string>
+    <string name="canvas_fix_resynced">Canvasを曲に合わせました</string>
+    <string name="canvas_fix_resync_failed">Canvasをこの曲に合わせられませんでした</string>
+    <string name="canvas_fix_reset_done">この曲の修正を取り消しました</string>
 </resources>

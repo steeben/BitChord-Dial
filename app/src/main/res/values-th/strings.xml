@@ -1381,4 +1381,19 @@
     <string name="ai_mix_started">AI Mix: ตัวอย่าง 50 วินาที มิกซ์แบบเซ็ต DJ</string>
     <string name="ai_mix_enabled">(เปิดอยู่)</string>
     <string name="ai_mix_stopped">ปิด AI Mix</string>
+    <string name="fix_canvas_audio_mismatch">แก้ Canvas/เสียงที่ไม่ตรงกัน</string>
+    <string name="canvas_fix_wrong_audio">เสียงเป็นเพลงอื่น</string>
+    <string name="canvas_fix_wrong_audio_detail">เล่นเสียงของวิดีโอเองตั้งแต่นี้ไป</string>
+    <string name="canvas_fix_wrong_canvas">Canvas เป็นคลิปที่ผิด</string>
+    <string name="canvas_fix_wrong_canvas_detail">ซ่อนสำหรับเพลงนี้</string>
+    <string name="canvas_fix_wrong_video">วิดีโอไม่ตรงกับเพลง</string>
+    <string name="canvas_fix_wrong_video_detail">เลิกใช้เป็น Canvas ของเพลงนี้</string>
+    <string name="canvas_fix_resync">Canvas ไม่ตรงจังหวะ</string>
+    <string name="canvas_fix_resync_detail">จัดให้ตรงกับเพลงอีกครั้ง</string>
+    <string name="canvas_fix_reset">เลิกทำการแก้ไขของเพลงนี้</string>
+    <string name="canvas_fix_saved">บันทึกไว้สำหรับเพลงนี้</string>
+    <string name="canvas_fix_resyncing">กำลังจัด Canvas ให้ตรงกับเพลง…</string>
+    <string name="canvas_fix_resynced">จัด Canvas ให้ตรงกับเพลงแล้ว</string>
+    <string name="canvas_fix_resync_failed">จัด Canvas ให้ตรงกับเพลงนี้ไม่ได้</string>
+    <string name="canvas_fix_reset_done">เลิกทำการแก้ไขของเพลงนี้แล้ว</string>
 </resources>

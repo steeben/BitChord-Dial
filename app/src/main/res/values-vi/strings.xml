@@ -1315,4 +1315,19 @@
     <string name="ai_mix_started">AI Mix: các đoạn 50 giây, phối như một set DJ</string>
     <string name="ai_mix_enabled">(đang bật)</string>
     <string name="ai_mix_stopped">Đã tắt AI Mix</string>
+    <string name="fix_canvas_audio_mismatch">Sửa Canvas/âm thanh không khớp</string>
+    <string name="canvas_fix_wrong_audio">Âm thanh là bài hát khác</string>
+    <string name="canvas_fix_wrong_audio_detail">Từ giờ phát âm thanh của chính video</string>
+    <string name="canvas_fix_wrong_canvas">Canvas là đoạn clip sai</string>
+    <string name="canvas_fix_wrong_canvas_detail">Ẩn nó cho bài hát này</string>
+    <string name="canvas_fix_wrong_video">Video không khớp với bài hát</string>
+    <string name="canvas_fix_wrong_video_detail">Ngừng dùng nó làm Canvas của bài hát này</string>
+    <string name="canvas_fix_resync">Canvas bị lệch</string>
+    <string name="canvas_fix_resync_detail">Căn lại theo bài hát</string>
+    <string name="canvas_fix_reset">Hoàn tác sửa đổi cho bài hát này</string>
+    <string name="canvas_fix_saved">Đã lưu cho bài hát này</string>
+    <string name="canvas_fix_resyncing">Đang căn Canvas theo bài hát…</string>
+    <string name="canvas_fix_resynced">Đã căn Canvas theo bài hát</string>
+    <string name="canvas_fix_resync_failed">Không thể căn Canvas theo bài hát này</string>
+    <string name="canvas_fix_reset_done">Đã hoàn tác sửa đổi cho bài hát này</string>
 </resources>

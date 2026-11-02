@@ -1370,4 +1370,19 @@
     <string name="ai_mix_started">AI Mix: fragmentos de 50 segundos mezclados como una sesión de DJ</string>
     <string name="ai_mix_enabled">(activado)</string>
     <string name="ai_mix_stopped">AI Mix desactivado</string>
+    <string name="fix_canvas_audio_mismatch">Corregir Canvas/audio que no coinciden</string>
+    <string name="canvas_fix_wrong_audio">El audio es otra canción</string>
+    <string name="canvas_fix_wrong_audio_detail">Reproducir el audio del propio vídeo a partir de ahora</string>
+    <string name="canvas_fix_wrong_canvas">El Canvas es el clip equivocado</string>
+    <string name="canvas_fix_wrong_canvas_detail">Ocultarlo para esta canción</string>
+    <string name="canvas_fix_wrong_video">El vídeo no coincide con la canción</string>
+    <string name="canvas_fix_wrong_video_detail">Dejar de usarlo como Canvas de esta canción</string>
+    <string name="canvas_fix_resync">El Canvas no está sincronizado</string>
+    <string name="canvas_fix_resync_detail">Volver a alinearlo con la canción</string>
+    <string name="canvas_fix_reset">Deshacer correcciones de esta canción</string>
+    <string name="canvas_fix_saved">Guardado para esta canción</string>
+    <string name="canvas_fix_resyncing">Alineando el Canvas con la canción…</string>
+    <string name="canvas_fix_resynced">Canvas alineado con la canción</string>
+    <string name="canvas_fix_resync_failed">No se pudo alinear el Canvas con esta canción</string>
+    <string name="canvas_fix_reset_done">Correcciones de esta canción deshechas</string>
 </resources>

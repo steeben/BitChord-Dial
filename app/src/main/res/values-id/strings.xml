@@ -1375,4 +1375,19 @@
     <string name="ai_mix_started">AI Mix: cuplikan 50 detik, dimiks seperti set DJ</string>
     <string name="ai_mix_enabled">(aktif)</string>
     <string name="ai_mix_stopped">AI Mix nonaktif</string>
+    <string name="fix_canvas_audio_mismatch">Perbaiki Canvas/audio yang tidak cocok</string>
+    <string name="canvas_fix_wrong_audio">Audio adalah lagu lain</string>
+    <string name="canvas_fix_wrong_audio_detail">Putar audio video itu sendiri mulai sekarang</string>
+    <string name="canvas_fix_wrong_canvas">Canvas adalah klip yang salah</string>
+    <string name="canvas_fix_wrong_canvas_detail">Sembunyikan untuk lagu ini</string>
+    <string name="canvas_fix_wrong_video">Video tidak cocok dengan lagu</string>
+    <string name="canvas_fix_wrong_video_detail">Berhenti memakainya sebagai Canvas lagu ini</string>
+    <string name="canvas_fix_resync">Canvas tidak sinkron</string>
+    <string name="canvas_fix_resync_detail">Selaraskan lagi dengan lagu</string>
+    <string name="canvas_fix_reset">Urungkan perbaikan untuk lagu ini</string>
+    <string name="canvas_fix_saved">Disimpan untuk lagu ini</string>
+    <string name="canvas_fix_resyncing">Menyelaraskan Canvas dengan lagu…</string>
+    <string name="canvas_fix_resynced">Canvas diselaraskan dengan lagu</string>
+    <string name="canvas_fix_resync_failed">Tidak dapat menyelaraskan Canvas dengan lagu ini</string>
+    <string name="canvas_fix_reset_done">Perbaikan untuk lagu ini diurungkan</string>
 </resources>

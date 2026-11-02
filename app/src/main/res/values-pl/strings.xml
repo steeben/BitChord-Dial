@@ -1438,4 +1438,19 @@
     <string name="ai_mix_started">AI Mix: 50-sekundowe fragmenty zmiksowane jak set DJ-a</string>
     <string name="ai_mix_enabled">(włączony)</string>
     <string name="ai_mix_stopped">AI Mix wyłączony</string>
+    <string name="fix_canvas_audio_mismatch">Napraw niedopasowany Canvas/dźwięk</string>
+    <string name="canvas_fix_wrong_audio">Dźwięk to inna piosenka</string>
+    <string name="canvas_fix_wrong_audio_detail">Odtwarzaj odtąd dźwięk samego teledysku</string>
+    <string name="canvas_fix_wrong_canvas">Canvas to niewłaściwy klip</string>
+    <string name="canvas_fix_wrong_canvas_detail">Ukryj go dla tej piosenki</string>
+    <string name="canvas_fix_wrong_video">Teledysk nie pasuje do piosenki</string>
+    <string name="canvas_fix_wrong_video_detail">Przestań używać go jako Canvas tej piosenki</string>
+    <string name="canvas_fix_resync">Canvas jest niezsynchronizowany</string>
+    <string name="canvas_fix_resync_detail">Dopasuj go ponownie do piosenki</string>
+    <string name="canvas_fix_reset">Cofnij poprawki dla tej piosenki</string>
+    <string name="canvas_fix_saved">Zapisano dla tej piosenki</string>
+    <string name="canvas_fix_resyncing">Dopasowywanie Canvas do piosenki…</string>
+    <string name="canvas_fix_resynced">Canvas dopasowany do piosenki</string>
+    <string name="canvas_fix_resync_failed">Nie udało się dopasować Canvas do tej piosenki</string>
+    <string name="canvas_fix_reset_done">Cofnięto poprawki dla tej piosenki</string>
 </resources>
