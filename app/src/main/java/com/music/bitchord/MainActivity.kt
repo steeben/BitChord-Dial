@@ -1074,6 +1074,7 @@ private fun BitChordApp(
     val holdSavedDial = homeFeed.holdSavedDial
     val arrangedHomeState = homeFeed.state
     val artistDialPinnedIds = homeFeed.artistDialPinnedIds
+    val speedDialsOn = homeFeed.speedDials
     val homeLoadingMore by viewModel.homeLoadingMore.collectAsStateWithLifecycle()
     val homeRecentlyPlayedLoading by viewModel.homeRecentlyPlayedLoading.collectAsStateWithLifecycle()
     val topPicks by viewModel.topPicks.collectAsStateWithLifecycle()
@@ -3229,7 +3230,10 @@ private fun BitChordApp(
                 // artists' dial off, index 1 is Explore's first shelf, and the
                 // title stayed "BitChord Dial" over it.
                 dial != null -> if (dial.offset + dial.size > middle) HomePage.DIAL else HomePage.EXPLORE
-                homeListState.firstVisibleItemIndex <= 1 && (artists == null || artists.offset > middle) ->
+                // Read here rather than collected: turning the dials off changes
+                // the list, which runs this again.
+                CustomizationSettings.speedDials.value &&
+                    homeListState.firstVisibleItemIndex <= 1 && (artists == null || artists.offset > middle) ->
                     HomePage.DIAL
                 else -> HomePage.EXPLORE
             }
@@ -3249,6 +3253,10 @@ private fun BitChordApp(
     // up so the tiles are already filled in when it lifts.
     var dialArtReady by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
+        if (!CustomizationSettings.speedDials.value) {
+            dialArtReady = true
+            return@LaunchedEffect
+        }
         val firstPage = CustomizationSettings.buildSpeedDial(
             CustomizationSettings.speedDialPins.value,
             listOf(HomeShelf(CustomizationSettings.SPEED_DIAL_TITLE, CustomizationSettings.lastSpeedDial.value)),
@@ -4389,7 +4397,7 @@ private fun BitChordApp(
                             dialLabels = dialLabels,
                             dialLabelOverrides = dialHiddenLabels,
                             dialPinIcon = dialPinIcon,
-                            skeletonSpeedDialFirst = true,
+                            skeletonSpeedDialFirst = speedDialsOn,
                             listState = homeListState,
                             currentSong = player.song,
                             isPlaying = player.isPlaying,
@@ -5989,7 +5997,7 @@ private fun BitChordApp(
                     }
                     else -> null
                 },
-                onToggleSpeedDial = if (song.videoId.isNotBlank() && song.localUri == null) {
+                onToggleSpeedDial = if (speedDialsOn && song.videoId.isNotBlank() && song.localUri == null) {
                     {
                         val pinned = CustomizationSettings.toggleSpeedDial(
                             ShelfItem(
@@ -6865,7 +6873,7 @@ private fun BitChordApp(
                         }
                     },
                 inSpeedDial = target.browseId in speedDialPinnedIds || target.browseId in artistDialPinnedIds,
-                onToggleSpeedDial = target.browseId?.takeIf { remote }?.let { id ->
+                onToggleSpeedDial = target.browseId?.takeIf { remote && speedDialsOn }?.let { id ->
                     {
                         val pinned = CustomizationSettings.toggleSpeedDial(
                             ShelfItem(
@@ -7431,13 +7439,13 @@ private fun BitChordApp(
                 artistPinned = artist != null &&
                     (artist.browseId in artistDialPinnedIds || artist.browseId in speedDialPinnedIds),
                 radioPinned = radioItem?.videoId?.let { it in speedDialPinnedIds || it in artistDialPinnedIds } == true,
-                onPinArtist = artistItem?.let { item ->
+                onPinArtist = artistItem?.takeIf { speedDialsOn }?.let { item ->
                     {
                         artistMenuOpen = false
                         announcePin(CustomizationSettings.toggleSpeedDial(item))
                     }
                 },
-                onPinRadio = radioItem?.let { item ->
+                onPinRadio = radioItem?.takeIf { speedDialsOn }?.let { item ->
                     {
                         artistMenuOpen = false
                         announcePin(CustomizationSettings.toggleSpeedDial(item))
@@ -8252,6 +8260,8 @@ private class HomeFeed(
     /** Whether last launch's dial is still standing in for this one's. */
     val holdSavedDial: Boolean,
     val artistDialPinnedIds: Set<String>,
+    /** Whether Home has its dials at all — see [CustomizationSettings.speedDials]. */
+    val speedDials: Boolean,
 )
 
 /**
@@ -8272,7 +8282,9 @@ private fun rememberHomeFeed(
     // than shuffling with every response that lands.
     val lastSpeedDial by CustomizationSettings.lastSpeedDial.collectAsStateWithLifecycle()
     val homeFresh by viewModel.homeFresh.collectAsStateWithLifecycle()
-    val holdSavedDial = !homeFresh && lastSpeedDial.isNotEmpty()
+    // With the dials off Home is only the sections, so there's no dial to hold.
+    val speedDialsOn by CustomizationSettings.speedDials.collectAsStateWithLifecycle()
+    val holdSavedDial = speedDialsOn && !homeFresh && lastSpeedDial.isNotEmpty()
     // A track from the library has started: YouTube's history won't move for
     // it, so the dial is built again here instead.
     val devicePlays by DevicePlays.version.collectAsStateWithLifecycle()
@@ -8297,7 +8309,7 @@ private fun rememberHomeFeed(
     }
     // The feed as Home draws it: the speed dial, then YouTube Music's shelves
     // in the order it gives them.
-    val baseHomeState = remember(homeState, speedDialPins, holdSavedDial, lastSpeedDial, hiddenFromDial, devicePlays) {
+    val baseHomeState = remember(homeState, speedDialPins, holdSavedDial, lastSpeedDial, hiddenFromDial, devicePlays, speedDialsOn) {
         val savedDial = if (holdSavedDial) {
             CustomizationSettings.buildSpeedDial(
                 speedDialPins,
@@ -8314,7 +8326,11 @@ private fun rememberHomeFeed(
                 state
             }
             is UiState.Success -> {
-                val dial = savedDial ?: CustomizationSettings.buildSpeedDial(speedDialPins, state.data)
+                val dial = if (speedDialsOn) {
+                    savedDial ?: CustomizationSettings.buildSpeedDial(speedDialPins, state.data)
+                } else {
+                    emptyList()
+                }
                 val feed = state.data.filterNot {
                     it.title.equals(CustomizationSettings.SPEED_DIAL_TITLE, ignoreCase = true)
                 }
@@ -8388,7 +8404,7 @@ private fun rememberHomeFeed(
             ?: return@LaunchedEffect
         CustomizationSettings.setLastSpeedDial(dial)
     }
-    return HomeFeed(arrangedHomeState, holdSavedDial, artistDialPinnedIds)
+    return HomeFeed(arrangedHomeState, holdSavedDial, artistDialPinnedIds, speedDialsOn)
 }
 
 /**

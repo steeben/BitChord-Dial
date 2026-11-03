@@ -1399,4 +1399,6 @@
     <string name="canvas_fix_resynced">Canvas alineado con la canción</string>
     <string name="canvas_fix_resync_failed">No se pudo alinear el Canvas con esta canción</string>
     <string name="canvas_fix_reset_done">Correcciones de esta canción deshechas</string>
+    <string name="speed_dials_setting">Marcación rápida</string>
+    <string name="speed_dials_setting_subtitle">Abre Inicio en las páginas de marcación rápida. Desactivado, Inicio es solo la lista de secciones</string>
 </resources>

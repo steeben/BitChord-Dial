@@ -1404,4 +1404,6 @@
     <string name="canvas_fix_resynced">Canvas diselaraskan dengan lagu</string>
     <string name="canvas_fix_resync_failed">Tidak dapat menyelaraskan Canvas dengan lagu ini</string>
     <string name="canvas_fix_reset_done">Perbaikan untuk lagu ini diurungkan</string>
+    <string name="speed_dials_setting">Panggilan cepat</string>
+    <string name="speed_dials_setting_subtitle">Buka Beranda di halaman panggilan cepat. Nonaktif, Beranda hanya berisi daftar bagian</string>
 </resources>

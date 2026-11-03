@@ -1195,4 +1195,6 @@
     <string name="canvas_fix_resynced">Canvas를 곡에 맞춤</string>
     <string name="canvas_fix_resync_failed">Canvas를 이 곡에 맞출 수 없음</string>
     <string name="canvas_fix_reset_done">이 곡의 수정을 취소함</string>
+    <string name="speed_dials_setting">단축 다이얼</string>
+    <string name="speed_dials_setting_subtitle">홈을 단축 다이얼 페이지로 엽니다. 끄면 홈은 섹션 목록만 표시됩니다</string>
 </resources>

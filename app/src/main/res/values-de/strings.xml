@@ -1427,4 +1427,6 @@
     <string name="canvas_fix_resynced">Canvas am Song ausgerichtet</string>
     <string name="canvas_fix_resync_failed">Canvas konnte nicht am Song ausgerichtet werden</string>
     <string name="canvas_fix_reset_done">Korrekturen für diesen Song rückgängig gemacht</string>
+    <string name="speed_dials_setting">Kurzwahl</string>
+    <string name="speed_dials_setting_subtitle">Startseite auf den Kurzwahl-Seiten öffnen. Aus: Die Startseite ist nur die Liste der Bereiche</string>
 </resources>

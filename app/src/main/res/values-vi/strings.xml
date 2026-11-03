@@ -1344,4 +1344,6 @@
     <string name="canvas_fix_resynced">Đã căn Canvas theo bài hát</string>
     <string name="canvas_fix_resync_failed">Không thể căn Canvas theo bài hát này</string>
     <string name="canvas_fix_reset_done">Đã hoàn tác sửa đổi cho bài hát này</string>
+    <string name="speed_dials_setting">Quay số nhanh</string>
+    <string name="speed_dials_setting_subtitle">Mở Trang chủ ở các trang quay số nhanh. Khi tắt, Trang chủ chỉ là danh sách các mục</string>
 </resources>

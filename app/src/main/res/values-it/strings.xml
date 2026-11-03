@@ -1366,4 +1366,6 @@
     <string name="canvas_fix_resynced">Canvas allineato al brano</string>
     <string name="canvas_fix_resync_failed">Impossibile allineare il Canvas a questo brano</string>
     <string name="canvas_fix_reset_done">Correzioni per questo brano annullate</string>
+    <string name="speed_dials_setting">Composizione rapida</string>
+    <string name="speed_dials_setting_subtitle">Apri la Home sulle pagine di composizione rapida. Se disattivato, la Home è solo l\'elenco delle sezioni</string>
 </resources>

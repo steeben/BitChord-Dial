@@ -1405,4 +1405,6 @@
     <string name="canvas_fix_resynced">Canvasを曲に合わせました</string>
     <string name="canvas_fix_resync_failed">Canvasをこの曲に合わせられませんでした</string>
     <string name="canvas_fix_reset_done">この曲の修正を取り消しました</string>
+    <string name="speed_dials_setting">スピードダイヤル</string>
+    <string name="speed_dials_setting_subtitle">ホームをスピードダイヤルのページで開きます。オフにすると、ホームはセクションの一覧だけになります</string>
 </resources>

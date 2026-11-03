@@ -1432,4 +1432,6 @@
     <string name="canvas_fix_resynced">ה-Canvas יושר לשיר</string>
     <string name="canvas_fix_resync_failed">לא ניתן היה ליישר את ה-Canvas לשיר הזה</string>
     <string name="canvas_fix_reset_done">התיקונים לשיר הזה בוטלו</string>
+    <string name="speed_dials_setting">חיוג מהיר</string>
+    <string name="speed_dials_setting_subtitle">פתיחת דף הבית בדפי החיוג המהיר. כשכבוי, דף הבית הוא רק רשימת המקטעים</string>
 </resources>

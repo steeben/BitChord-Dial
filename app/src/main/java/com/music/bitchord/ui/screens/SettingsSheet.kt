@@ -340,6 +340,7 @@ fun SettingsScreen(
     val miniPlayerNextButton by CustomizationSettings.miniPlayerNextButton.collectAsStateWithLifecycle()
     val wavyProgressBar by CustomizationSettings.wavyProgressBar.collectAsStateWithLifecycle()
     val cropThumbnails by CustomizationSettings.cropThumbnails.collectAsStateWithLifecycle()
+    val speedDials by CustomizationSettings.speedDials.collectAsStateWithLifecycle()
     val artistDial by CustomizationSettings.artistDial.collectAsStateWithLifecycle()
 
     val feelingLucky by CustomizationSettings.feelingLucky.collectAsStateWithLifecycle()
@@ -1514,8 +1515,24 @@ fun SettingsScreen(
                     onClick = { CustomizationSettings.setCropThumbnails(!cropThumbnails) },
                 )
             }
+            val speedDialsTitle = stringResource(R.string.speed_dials_setting)
+            row(speedDialsTitle, "speed dial", "dial", "home", "pages", "snap", "pins", "disable") {
+                SettingsRow(
+                    icon = Icons.Rounded.Apps,
+                    title = speedDialsTitle,
+                    subtitle = stringResource(R.string.speed_dials_setting_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = speedDials,
+                            onCheckedChange = CustomizationSettings::setSpeedDials,
+                        )
+                    },
+                    onClick = { CustomizationSettings.setSpeedDials(!speedDials) },
+                )
+            }
+            // The dials' own settings, only while Home has dials.
             val artistDialTitle = stringResource(R.string.artist_dial)
-            row(artistDialTitle, "artists", "speed dial", "dial", "favorite", "most played") {
+            if (speedDials) row(artistDialTitle, "artists", "speed dial", "dial", "favorite", "most played") {
                 SettingsRow(
                     icon = Icons.Rounded.Person,
                     title = artistDialTitle,
@@ -1530,7 +1547,7 @@ fun SettingsScreen(
                 )
             }
             val feelingLuckyTitle = stringResource(R.string.feeling_lucky_setting)
-            row(feelingLuckyTitle, "lucky", "random", "dice", "radio", "speed dial", "shuffle") {
+            if (speedDials) row(feelingLuckyTitle, "lucky", "random", "dice", "radio", "speed dial", "shuffle") {
                 SettingsRow(
                     icon = Icons.Rounded.Casino,
                     title = feelingLuckyTitle,

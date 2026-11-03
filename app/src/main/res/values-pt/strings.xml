@@ -1432,4 +1432,6 @@
     <string name="canvas_fix_resynced">Canvas alinhado com a música</string>
     <string name="canvas_fix_resync_failed">Não foi possível alinhar o Canvas com esta música</string>
     <string name="canvas_fix_reset_done">Correções desta música desfeitas</string>
+    <string name="speed_dials_setting">Discagem rápida</string>
+    <string name="speed_dials_setting_subtitle">Abre o Início nas páginas de discagem rápida. Desativado, o Início é só a lista de seções</string>
 </resources>

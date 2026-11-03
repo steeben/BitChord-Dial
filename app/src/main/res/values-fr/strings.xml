@@ -1428,4 +1428,6 @@
     <string name="canvas_fix_resynced">Canvas aligné sur la chanson</string>
     <string name="canvas_fix_resync_failed">Impossible d\'aligner le Canvas sur cette chanson</string>
     <string name="canvas_fix_reset_done">Corrections de cette chanson annulées</string>
+    <string name="speed_dials_setting">Numérotation rapide</string>
+    <string name="speed_dials_setting_subtitle">Ouvre l\'accueil sur les pages de numérotation rapide. Désactivé, l\'accueil n\'est que la liste des sections</string>
 </resources>

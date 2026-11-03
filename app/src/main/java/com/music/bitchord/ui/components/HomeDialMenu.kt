@@ -1,5 +1,10 @@
 package com.music.bitchord.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,7 +32,8 @@ import dev.chrisbanes.haze.HazeState
 
 /**
  * What Home's "…" button opens, on the same glass as the Library's menu,
- * grown out of the top bar's right end: the dial's own settings — its grid,
+ * grown out of the top bar's right end: whether Home has dials at all, then
+ * the dial's own settings — its grid,
  * the artists' dial, the die, the tile names, the pin badges, how the tiles
  * are edged — applied as they are touched.
  */
@@ -37,6 +43,7 @@ fun HomeDialMenu(
     hazeState: HazeState,
     onDismiss: () -> Unit,
 ) {
+    val speedDials by CustomizationSettings.speedDials.collectAsStateWithLifecycle()
     val rows by CustomizationSettings.speedDialRows.collectAsStateWithLifecycle()
     val artistDial by CustomizationSettings.artistDial.collectAsStateWithLifecycle()
     val feelingLucky by CustomizationSettings.feelingLucky.collectAsStateWithLifecycle()
@@ -45,31 +52,41 @@ fun HomeDialMenu(
     val tileStyle by CustomizationSettings.dialTileStyle.collectAsStateWithLifecycle()
     GlassMenuPanel(visible = visible, hazeState = hazeState, onDismiss = onDismiss) {
         Column(Modifier.widthIn(min = 280.dp, max = 340.dp)) {
-            MenuHeading(stringResource(R.string.speed_dial_grid))
-            // On glass of its own, so the track reads as frosted over the panel.
-            SegmentedControl(
-                options = listOf("3 × 3", "3 × 4"),
-                selectedIndex = rows - 3,
-                onSelect = { CustomizationSettings.setSpeedDialRows(it + 3) },
-                glass = true,
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp),
-            )
-            DialSwitch(stringResource(R.string.artist_dial), artistDial, CustomizationSettings::setArtistDial)
-            DialSwitch(stringResource(R.string.feeling_lucky_setting), feelingLucky, CustomizationSettings::setFeelingLucky)
-            DialSwitch(stringResource(R.string.dial_labels_default), labels, CustomizationSettings::setDialLabels)
-            DialSwitch(stringResource(R.string.dial_pin_icon), pinIcon, CustomizationSettings::setDialPinIcon)
-            MenuHeading(stringResource(R.string.dial_tile_style))
-            SegmentedControl(
-                options = listOf(
-                    stringResource(R.string.dial_tile_style_none),
-                    stringResource(R.string.dial_tile_style_edge),
-                    stringResource(R.string.dial_tile_style_glass),
-                ),
-                selectedIndex = tileStyle.ordinal,
-                onSelect = { CustomizationSettings.setDialTileStyle(DialTileStyle.entries[it]) },
-                glass = true,
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp),
-            )
+            DialSwitch(stringResource(R.string.speed_dials_setting), speedDials, CustomizationSettings::setSpeedDials)
+            // The rest only means anything while there are dials to set up.
+            AnimatedVisibility(
+                visible = speedDials,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically(),
+            ) {
+                Column {
+                    MenuHeading(stringResource(R.string.speed_dial_grid))
+                    // On glass of its own, so the track reads as frosted over the panel.
+                    SegmentedControl(
+                        options = listOf("3 × 3", "3 × 4"),
+                        selectedIndex = rows - 3,
+                        onSelect = { CustomizationSettings.setSpeedDialRows(it + 3) },
+                        glass = true,
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp),
+                    )
+                    DialSwitch(stringResource(R.string.artist_dial), artistDial, CustomizationSettings::setArtistDial)
+                    DialSwitch(stringResource(R.string.feeling_lucky_setting), feelingLucky, CustomizationSettings::setFeelingLucky)
+                    DialSwitch(stringResource(R.string.dial_labels_default), labels, CustomizationSettings::setDialLabels)
+                    DialSwitch(stringResource(R.string.dial_pin_icon), pinIcon, CustomizationSettings::setDialPinIcon)
+                    MenuHeading(stringResource(R.string.dial_tile_style))
+                    SegmentedControl(
+                        options = listOf(
+                            stringResource(R.string.dial_tile_style_none),
+                            stringResource(R.string.dial_tile_style_edge),
+                            stringResource(R.string.dial_tile_style_glass),
+                        ),
+                        selectedIndex = tileStyle.ordinal,
+                        onSelect = { CustomizationSettings.setDialTileStyle(DialTileStyle.entries[it]) },
+                        glass = true,
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp),
+                    )
+                }
+            }
         }
     }
 }

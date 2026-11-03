@@ -1406,4 +1406,6 @@
     <string name="canvas_fix_resynced">Canvas 已與歌曲對齊</string>
     <string name="canvas_fix_resync_failed">無法將 Canvas 與這首歌對齊</string>
     <string name="canvas_fix_reset_done">已復原這首歌的修正</string>
+    <string name="speed_dials_setting">快速撥號</string>
+    <string name="speed_dials_setting_subtitle">在快速撥號頁面開啟首頁。關閉後，首頁僅顯示區塊列表</string>
 </resources>

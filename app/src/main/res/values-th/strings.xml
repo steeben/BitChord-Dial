@@ -1410,4 +1410,6 @@
     <string name="canvas_fix_resynced">จัด Canvas ให้ตรงกับเพลงแล้ว</string>
     <string name="canvas_fix_resync_failed">จัด Canvas ให้ตรงกับเพลงนี้ไม่ได้</string>
     <string name="canvas_fix_reset_done">เลิกทำการแก้ไขของเพลงนี้แล้ว</string>
+    <string name="speed_dials_setting">โทรด่วน</string>
+    <string name="speed_dials_setting_subtitle">เปิดหน้าหลักที่หน้าโทรด่วน เมื่อปิด หน้าหลักจะเป็นเพียงรายการหมวด</string>
 </resources>

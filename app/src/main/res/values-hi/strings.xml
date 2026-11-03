@@ -1427,4 +1427,6 @@
     <string name="canvas_fix_resynced">Canvas गाने के साथ मिल गया</string>
     <string name="canvas_fix_resync_failed">Canvas को इस गाने के साथ नहीं मिलाया जा सका</string>
     <string name="canvas_fix_reset_done">इस गाने के सुधार पूर्ववत किए गए</string>
+    <string name="speed_dials_setting">स्पीड डायल</string>
+    <string name="speed_dials_setting_subtitle">होम को स्पीड डायल पेजों पर खोलें। बंद होने पर होम सिर्फ़ सेक्शन की सूची है</string>
 </resources>

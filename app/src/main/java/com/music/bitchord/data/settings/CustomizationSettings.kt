@@ -60,6 +60,12 @@ object CustomizationSettings {
     val cropThumbnails = MutableStateFlow(true)
 
     /**
+     * Whether Home has its dials at all. Off, Home is the plain list of
+     * sections, with no dial pages to snap between and nothing to pin to.
+     */
+    val speedDials = MutableStateFlow(true)
+
+    /**
      * A second dial under the speed dial, of artists: the ones pinned to it,
      * then the most played. Off, artists are pinned to the speed dial itself.
      */
@@ -158,6 +164,7 @@ object CustomizationSettings {
         keepNavBarExpanded.value = p.getBoolean(KEY_KEEP_NAV_EXPANDED, false)
         miniPlayerNextButton.value = p.getBoolean(KEY_MINI_PLAYER_NEXT, false)
         cropThumbnails.value = p.getBoolean(KEY_CROP_THUMBNAILS, true)
+        speedDials.value = p.getBoolean(KEY_SPEED_DIALS, true)
         artistDial.value = p.getBoolean(KEY_ARTIST_DIAL, true)
         feelingLucky.value = p.getBoolean(KEY_FEELING_LUCKY, true)
         speedDialRows.value = p.getInt(KEY_SPEED_DIAL_ROWS, DEFAULT_SPEED_DIAL_ROWS).takeIf { it in 3..4 }
@@ -336,6 +343,12 @@ object CustomizationSettings {
     fun setFeelingLucky(value: Boolean) {
         feelingLucky.value = value
         prefs?.edit()?.putBoolean(KEY_FEELING_LUCKY, value)?.apply()
+    }
+
+    /** Pins are kept while the dials are off, so turning them back on restores them. */
+    fun setSpeedDials(value: Boolean) {
+        speedDials.value = value
+        prefs?.edit()?.putBoolean(KEY_SPEED_DIALS, value)?.apply()
     }
 
     /** Turning it on moves pinned artists onto their dial; off, back onto the speed dial. */
@@ -611,6 +624,7 @@ object CustomizationSettings {
     private const val KEY_LAST_SPEED_DIAL = "custom_last_speed_dial"
     private const val KEY_MINI_PLAYER_NEXT = "custom_mini_player_next"
     private const val KEY_CROP_THUMBNAILS = "custom_crop_thumbnails"
+    private const val KEY_SPEED_DIALS = "custom_speed_dials"
     private const val KEY_ARTIST_DIAL = "custom_artist_dial"
     private const val KEY_FEELING_LUCKY = "custom_feeling_lucky"
     private const val KEY_ARTIST_DIAL_PINS = "custom_artist_dial_pins"

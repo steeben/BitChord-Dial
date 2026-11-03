@@ -1459,4 +1459,6 @@
     <string name="canvas_fix_resynced">Canvas выровнен по песне</string>
     <string name="canvas_fix_resync_failed">Не удалось выровнять Canvas по этой песне</string>
     <string name="canvas_fix_reset_done">Исправления для этой песни отменены</string>
+    <string name="speed_dials_setting">Быстрый набор</string>
+    <string name="speed_dials_setting_subtitle">Открывать главную на страницах быстрого набора. Если выключено, главная — это просто список разделов</string>
 </resources>
