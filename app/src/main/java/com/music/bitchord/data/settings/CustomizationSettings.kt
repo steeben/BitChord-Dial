@@ -692,11 +692,11 @@ object CustomizationSettings {
     const val MAX_GLASS_SATURATION = 2f
 
     /**
-     * The New style as it ships, and the glass the app ships with: 40% of the
-     * theme's surface under the veil, a 3dp frost, a slight colour lift, and a
+     * The New style as it ships, and the glass the app ships with: 20% of the
+     * theme's surface under the veil (80% transparency), a 3dp frost, a slight colour lift, and a
      * black tint shaded 30% on dark pages and 10% on light ones.
      */
-    const val DEFAULT_CLEAR_GLASS_TRANSPARENCY = 0.6f
+    const val DEFAULT_CLEAR_GLASS_TRANSPARENCY = 0.8f
     const val DEFAULT_CLEAR_GLASS_BLUR = 3f
     const val DEFAULT_CLEAR_GLASS_SATURATION = 1.1f
     val DEFAULT_CLEAR_GLASS_TINT: GlassTint get() = GlassTint.BLACK
