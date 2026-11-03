@@ -638,6 +638,15 @@
     <string name="lastfm_api_key">API key</string>
     <string name="lastfm_shared_secret">Shared secret</string>
     <string name="lastfm_own_api_description">This build has no Last.fm API account. Create one free at last.fm/api/account/create and paste its API key and shared secret here.</string>
+    <string name="lastfm_browser_description">You will be sent to last.fm to allow BitChord to scrobble. Your password stays with Last.fm.</string>
+    <string name="lastfm_browser_waiting">Tap Allow on last.fm, then come back here. BitChord finishes signing in on its own.</string>
+    <string name="lastfm_browser_sign_in">Continue on last.fm</string>
+    <string name="lastfm_browser_done">I have allowed access</string>
+    <string name="lastfm_use_password">Use password instead</string>
+    <string name="lastfm_use_browser">Sign in on last.fm instead</string>
+    <string name="lastfm_browser_not_approved">Not allowed yet. Tap Allow on the last.fm page first.</string>
+    <string name="lastfm_browser_expired">That sign-in request expired. Start again.</string>
+    <string name="lastfm_browser_unavailable">No browser found to open last.fm.</string>
     <string name="lastfm_now_playing_subtitle">Update Last.fm with what you are listening to</string>
     <string name="scrobble_primary_artist_only">Only scrobble primary artist</string>
     <string name="scrobble_primary_artist_only_subtitle">Use the first artist when a track credits multiple artists</string>

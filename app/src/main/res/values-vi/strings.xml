@@ -435,6 +435,15 @@
     <string name="lastfm_api_key">Khóa API</string>
     <string name="lastfm_shared_secret">Bí mật dùng chung</string>
     <string name="lastfm_own_api_description">Bản dựng này không có tài khoản API Last.fm. Hãy tạo miễn phí tại last.fm/api/account/create rồi dán khóa API và bí mật dùng chung vào đây.</string>
+    <string name="lastfm_browser_description">Bạn sẽ được chuyển đến last.fm để cho phép BitChord scrobble. Mật khẩu của bạn chỉ ở lại Last.fm.</string>
+    <string name="lastfm_browser_waiting">Nhấn Cho phép trên last.fm rồi quay lại đây. BitChord sẽ tự hoàn tất đăng nhập.</string>
+    <string name="lastfm_browser_sign_in">Tiếp tục trên last.fm</string>
+    <string name="lastfm_browser_done">Tôi đã cho phép truy cập</string>
+    <string name="lastfm_use_password">Dùng mật khẩu</string>
+    <string name="lastfm_use_browser">Đăng nhập qua last.fm</string>
+    <string name="lastfm_browser_not_approved">Chưa được cho phép. Hãy nhấn Cho phép trên trang last.fm trước.</string>
+    <string name="lastfm_browser_expired">Yêu cầu đăng nhập đã hết hạn. Hãy bắt đầu lại.</string>
+    <string name="lastfm_browser_unavailable">Không tìm thấy trình duyệt để mở last.fm.</string>
     <string name="lastfm_now_playing_subtitle">Cập nhật lên Last.fm nội dung bạn đang nghe</string>
     <string name="scrobble_primary_artist_only">Chỉ scrobble nghệ sĩ chính</string>
     <string name="scrobble_primary_artist_only_subtitle">Chỉ dùng nghệ sĩ đầu tiên khi bản nhạc ghi nhận nhiều nghệ sĩ</string>

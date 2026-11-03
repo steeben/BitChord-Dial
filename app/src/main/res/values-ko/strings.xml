@@ -570,6 +570,15 @@
     <string name="lastfm_api_key">API 키</string>
     <string name="lastfm_shared_secret">공유 시크릿</string>
     <string name="lastfm_own_api_description">이 빌드에는 Last.fm API 계정이 없습니다. last.fm/api/account/create에서 무료로 만든 뒤 API 키와 공유 시크릿을 여기에 붙여넣으세요.</string>
+    <string name="lastfm_browser_description">BitChord의 스크로블을 허용하려면 last.fm으로 이동합니다. 비밀번호는 Last.fm에만 남습니다.</string>
+    <string name="lastfm_browser_waiting">last.fm에서 허용을 탭한 뒤 여기로 돌아오세요. BitChord가 알아서 로그인을 마칩니다.</string>
+    <string name="lastfm_browser_sign_in">last.fm에서 계속</string>
+    <string name="lastfm_browser_done">접근을 허용했습니다</string>
+    <string name="lastfm_use_password">비밀번호로 로그인</string>
+    <string name="lastfm_use_browser">last.fm에서 로그인</string>
+    <string name="lastfm_browser_not_approved">아직 허용되지 않았습니다. 먼저 last.fm 페이지에서 허용을 탭하세요.</string>
+    <string name="lastfm_browser_expired">로그인 요청이 만료되었습니다. 다시 시작하세요.</string>
+    <string name="lastfm_browser_unavailable">last.fm을 열 브라우저가 없습니다.</string>
     <string name="lastfm_now_playing_subtitle">지금 듣는 곡을 Last.fm에 업데이트합니다</string>
     <string name="scrobble_primary_artist_only">주 아티스트만 스크로블</string>
     <string name="scrobble_primary_artist_only_subtitle">음악에 여러 아티스트가 참여한 경우 첫 아티스트만 사용</string>

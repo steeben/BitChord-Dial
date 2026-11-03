@@ -179,6 +179,8 @@ import com.music.bitchord.ui.components.dialTileGlassEdge
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.music.bitchord.auth.DiscordLoginScreen
@@ -7531,17 +7533,103 @@ private fun BitChordApp(
             var passwordInput by remember { mutableStateOf("") }
             var lastfmError by remember { mutableStateOf<String?>(null) }
             var lastfmLoading by remember { mutableStateOf(false) }
+            var lastfmUsePassword by remember { mutableStateOf(false) }
+            // The token last.fm handed out for browser approval, while it waits on "Allow".
+            var lastfmBrowserToken by remember { mutableStateOf<String?>(null) }
             // A build made without the LASTFM_API_KEY / LASTFM_SECRET secrets
             // has no API account to sign with, so the user brings their own.
             val buildHasLastfmApi = BuildConfig.LASTFM_API_KEY.isNotBlank() && BuildConfig.LASTFM_SECRET.isNotBlank()
             var apiKeyInput by remember { mutableStateOf(if (buildHasLastfmApi) "" else AppSettings.lastfmApiKey.value) }
             var apiSecretInput by remember { mutableStateOf(if (buildHasLastfmApi) "" else AppSettings.lastfmSecret.value) }
+            fun lastfmApiKey() = if (buildHasLastfmApi) AppSettings.lastfmApiKey.value else apiKeyInput.trim()
+            fun lastfmApiSecret() = if (buildHasLastfmApi) AppSettings.lastfmSecret.value else apiSecretInput.trim()
+            fun finishLastfmSignIn(auth: LastFM.Authentication) {
+                if (!buildHasLastfmApi) {
+                    AppSettings.setLastfmApiKey(lastfmApiKey())
+                    AppSettings.setLastfmSecret(lastfmApiSecret())
+                }
+                AppSettings.setLastfmSessionKey(auth.session.key)
+                AppSettings.setLastfmUsername(auth.session.name)
+                AppSettings.setLastfmEnabled(true)
+                // Signing in is asking to scrobble; leaving this off made a
+                // fresh sign-in look connected while nothing was sent.
+                AppSettings.setLastfmScrobbleEnabled(true)
+                lastfmBrowserToken = null
+                showLastfmLogin = false
+            }
+            // Trades the approved token for a session. [quiet] is the automatic
+            // try on returning to the app, which says nothing if the user simply
+            // hasn't tapped Allow yet.
+            fun confirmLastfmBrowser(quiet: Boolean) {
+                val token = lastfmBrowserToken ?: return
+                if (lastfmLoading) return
+                lastfmLoading = true
+                if (!quiet) lastfmError = null
+                scope.launch {
+                    LastFM.getSession(token)
+                        .onSuccess { finishLastfmSignIn(it) }
+                        .onFailure { e ->
+                            val code = (e as? LastFM.LastFmException)?.code
+                            when (code) {
+                                // Not approved yet.
+                                14 -> if (!quiet) lastfmError = context.getString(R.string.lastfm_browser_not_approved)
+                                // Expired or unknown token: start over.
+                                4, 15 -> {
+                                    lastfmBrowserToken = null
+                                    lastfmError = context.getString(R.string.lastfm_browser_expired)
+                                }
+                                else -> if (!quiet) lastfmError = e.message ?: context.getString(R.string.login_failed)
+                            }
+                        }
+                    lastfmLoading = false
+                }
+            }
+            LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+                if (lastfmBrowserToken != null) confirmLastfmBrowser(quiet = true)
+            }
             LastfmLoginAlert(
                 showApiCredentials = !buildHasLastfmApi,
                 apiKeyInput = apiKeyInput,
                 onApiKeyInputChange = { apiKeyInput = it },
                 apiSecretInput = apiSecretInput,
                 onApiSecretInputChange = { apiSecretInput = it },
+                usePassword = lastfmUsePassword,
+                onToggleMode = {
+                    lastfmUsePassword = !lastfmUsePassword
+                    lastfmBrowserToken = null
+                    lastfmError = null
+                },
+                browserPending = lastfmBrowserToken != null,
+                onBrowserSignIn = {
+                    lastfmLoading = true
+                    lastfmError = null
+                    scope.launch {
+                        try {
+                            LastFM.initialize(apiKey = lastfmApiKey(), secret = lastfmApiSecret())
+                            LastFM.getToken()
+                                .onSuccess { response ->
+                                    lastfmBrowserToken = response.token
+                                    val opened = runCatching {
+                                        context.startActivity(
+                                            Intent(Intent.ACTION_VIEW, Uri.parse(LastFM.getAuthUrl(response.token))),
+                                        )
+                                    }
+                                    if (opened.isFailure) {
+                                        lastfmBrowserToken = null
+                                        lastfmError = context.getString(R.string.lastfm_browser_unavailable)
+                                    }
+                                }
+                                .onFailure { e ->
+                                    lastfmError = e.message ?: context.getString(R.string.login_failed)
+                                }
+                        } catch (e: Exception) {
+                            lastfmError = e.message ?: context.getString(R.string.login_failed)
+                        } finally {
+                            lastfmLoading = false
+                        }
+                    }
+                },
+                onBrowserConfirm = { confirmLastfmBrowser(quiet = false) },
                 hazeState = hazeState,
                 usernameInput = usernameInput,
                 onUsernameInputChange = { usernameInput = it },
@@ -7554,20 +7642,9 @@ private fun BitChordApp(
                     lastfmError = null
                     scope.launch {
                         try {
-                            val apiKey = if (buildHasLastfmApi) AppSettings.lastfmApiKey.value else apiKeyInput.trim()
-                            val apiSecret = if (buildHasLastfmApi) AppSettings.lastfmSecret.value else apiSecretInput.trim()
-                            LastFM.initialize(apiKey = apiKey, secret = apiSecret)
+                            LastFM.initialize(apiKey = lastfmApiKey(), secret = lastfmApiSecret())
                             LastFM.getMobileSession(usernameInput.trim(), passwordInput)
-                                .onSuccess { auth ->
-                                    if (!buildHasLastfmApi) {
-                                        AppSettings.setLastfmApiKey(apiKey)
-                                        AppSettings.setLastfmSecret(apiSecret)
-                                    }
-                                    AppSettings.setLastfmSessionKey(auth.session.key)
-                                    AppSettings.setLastfmUsername(auth.session.name)
-                                    AppSettings.setLastfmEnabled(true)
-                                    showLastfmLogin = false
-                                }
+                                .onSuccess { finishLastfmSignIn(it) }
                                 .onFailure { e ->
                                     lastfmError = e.message ?: context.getString(R.string.login_failed)
                                 }

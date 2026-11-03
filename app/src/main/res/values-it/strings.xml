@@ -453,6 +453,15 @@
     <string name="lastfm_api_key">Chiave API</string>
     <string name="lastfm_shared_secret">Segreto condiviso</string>
     <string name="lastfm_own_api_description">Questa build non ha un account API Last.fm. Creane uno gratis su last.fm/api/account/create e incolla qui la chiave API e il segreto condiviso.</string>
+    <string name="lastfm_browser_description">Verrai portato su last.fm per consentire a BitChord di fare scrobbling. La tua password resta su Last.fm.</string>
+    <string name="lastfm_browser_waiting">Tocca Consenti su last.fm, poi torna qui. BitChord completerà l\'accesso da solo.</string>
+    <string name="lastfm_browser_sign_in">Continua su last.fm</string>
+    <string name="lastfm_browser_done">Ho consentito l\'accesso</string>
+    <string name="lastfm_use_password">Usa la password</string>
+    <string name="lastfm_use_browser">Accedi su last.fm</string>
+    <string name="lastfm_browser_not_approved">Non ancora consentito. Tocca prima Consenti sulla pagina di last.fm.</string>
+    <string name="lastfm_browser_expired">La richiesta di accesso è scaduta. Ricomincia.</string>
+    <string name="lastfm_browser_unavailable">Nessun browser trovato per aprire last.fm.</string>
     <string name="lastfm_now_playing_subtitle">Aggiorna Last.fm con quello che stai ascoltando</string>
     <string name="scrobble_primary_artist_only">Registra solo l\'artista principale</string>
     <string name="scrobble_primary_artist_only_subtitle">Usa il primo artista quando un brano accredita più artisti</string>

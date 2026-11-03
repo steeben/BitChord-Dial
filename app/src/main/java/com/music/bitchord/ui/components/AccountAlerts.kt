@@ -116,14 +116,21 @@ fun LastfmLoginAlert(
     onDismiss: () -> Unit,
     /**
      * Shown when the build carries no Last.fm API account of its own: Last.fm
-     * signs every request with an app's key and secret, so without one the
-     * username and password alone can never sign in.
+     * signs every request with an app's key and secret, so without one no
+     * sign-in, browser or password, can work.
      */
     showApiCredentials: Boolean = false,
     apiKeyInput: String = "",
     onApiKeyInputChange: (String) -> Unit = {},
     apiSecretInput: String = "",
     onApiSecretInputChange: (String) -> Unit = {},
+    /** Password entry instead of the default browser approval. */
+    usePassword: Boolean = false,
+    onToggleMode: () -> Unit = {},
+    /** The browser has been opened on last.fm and the app is waiting for "Allow". */
+    browserPending: Boolean = false,
+    onBrowserSignIn: () -> Unit = {},
+    onBrowserConfirm: () -> Unit = {},
 ) {
     val credentialsReady = !showApiCredentials || (apiKeyInput.isNotBlank() && apiSecretInput.isNotBlank())
     val canSignIn = !loading && usernameInput.isNotBlank() && passwordInput.isNotBlank() && credentialsReady
@@ -141,35 +148,43 @@ fun LastfmLoginAlert(
                 textAlign = TextAlign.Center,
             )
             Text(
-                text = error ?: stringResource(R.string.lastfm_login_description),
+                text = error ?: stringResource(
+                    when {
+                        usePassword -> R.string.lastfm_login_description
+                        browserPending -> R.string.lastfm_browser_waiting
+                        else -> R.string.lastfm_browser_description
+                    },
+                ),
                 modifier = Modifier.padding(top = 4.dp, bottom = 14.dp),
                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 17.sp),
                 color = if (error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center,
             )
-            PillTextField(
-                value = usernameInput,
-                onValueChange = onUsernameInputChange,
-                placeholder = stringResource(R.string.username),
-                enabled = !loading,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-            )
-            Spacer(Modifier.height(8.dp))
-            PillTextField(
-                value = passwordInput,
-                onValueChange = onPasswordInputChange,
-                placeholder = stringResource(R.string.password),
-                enabled = !loading,
-                isPassword = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(
-                    onDone = { if (canSignIn) onSignIn() },
-                ),
-            )
-            if (showApiCredentials) {
+            if (usePassword) {
+                PillTextField(
+                    value = usernameInput,
+                    onValueChange = onUsernameInputChange,
+                    placeholder = stringResource(R.string.username),
+                    enabled = !loading,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                )
+                Spacer(Modifier.height(8.dp))
+                PillTextField(
+                    value = passwordInput,
+                    onValueChange = onPasswordInputChange,
+                    placeholder = stringResource(R.string.password),
+                    enabled = !loading,
+                    isPassword = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(
+                        onDone = { if (canSignIn) onSignIn() },
+                    ),
+                )
+            }
+            if (showApiCredentials && !browserPending) {
                 Text(
                     text = stringResource(R.string.lastfm_own_api_description),
-                    modifier = Modifier.padding(top = 14.dp, bottom = 8.dp),
+                    modifier = Modifier.padding(top = if (usePassword) 14.dp else 0.dp, bottom = 8.dp),
                     style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 17.sp),
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     textAlign = TextAlign.Center,
@@ -189,16 +204,36 @@ fun LastfmLoginAlert(
                     enabled = !loading,
                     isPassword = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { if (canSignIn) onSignIn() }),
                 )
             }
         }
         AlertRule()
+        when {
+            usePassword -> AlertAction(
+                label = if (loading) stringResource(R.string.signing_in) else stringResource(R.string.sign_in),
+                emphasised = true,
+                onClick = onSignIn,
+                enabled = canSignIn,
+            )
+            browserPending -> AlertAction(
+                label = if (loading) stringResource(R.string.signing_in) else stringResource(R.string.lastfm_browser_done),
+                emphasised = true,
+                onClick = onBrowserConfirm,
+                enabled = !loading,
+            )
+            else -> AlertAction(
+                label = if (loading) stringResource(R.string.signing_in) else stringResource(R.string.lastfm_browser_sign_in),
+                emphasised = true,
+                onClick = onBrowserSignIn,
+                enabled = !loading && credentialsReady,
+            )
+        }
+        AlertRule()
         AlertAction(
-            label = if (loading) stringResource(R.string.signing_in) else stringResource(R.string.sign_in),
-            emphasised = true,
-            onClick = onSignIn,
-            enabled = canSignIn,
+            label = stringResource(if (usePassword) R.string.lastfm_use_browser else R.string.lastfm_use_password),
+            emphasised = false,
+            onClick = onToggleMode,
+            enabled = !loading,
         )
         AlertRule()
         AlertAction(

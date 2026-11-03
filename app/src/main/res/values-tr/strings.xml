@@ -435,6 +435,15 @@
     <string name="lastfm_api_key">API anahtarı</string>
     <string name="lastfm_shared_secret">Paylaşılan gizli anahtar</string>
     <string name="lastfm_own_api_description">Bu sürümde Last.fm API hesabı yok. last.fm/api/account/create adresinden ücretsiz oluşturup API anahtarını ve paylaşılan gizli anahtarı buraya yapıştırın.</string>
+    <string name="lastfm_browser_description">BitChord\'un scrobble yapmasına izin vermek için last.fm\'e yönlendirileceksiniz. Şifreniz Last.fm\'de kalır.</string>
+    <string name="lastfm_browser_waiting">last.fm\'de İzin Ver\'e dokunun, sonra buraya dönün. BitChord girişi kendisi tamamlar.</string>
+    <string name="lastfm_browser_sign_in">last.fm\'de devam et</string>
+    <string name="lastfm_browser_done">Erişime izin verdim</string>
+    <string name="lastfm_use_password">Bunun yerine şifre kullan</string>
+    <string name="lastfm_use_browser">Bunun yerine last.fm\'de giriş yap</string>
+    <string name="lastfm_browser_not_approved">Henüz izin verilmedi. Önce last.fm sayfasında İzin Ver\'e dokunun.</string>
+    <string name="lastfm_browser_expired">Bu giriş isteğinin süresi doldu. Yeniden başlayın.</string>
+    <string name="lastfm_browser_unavailable">last.fm\'i açacak tarayıcı bulunamadı.</string>
     <string name="lastfm_now_playing_subtitle">Last.fm\'i ne dinlediğinle güncelle</string>
     <string name="scrobble_primary_artist_only">Yalnızca birincil sanatçıyı scrobble et</string>
     <string name="scrobble_primary_artist_only_subtitle">Bir parçanın birden fazla sanatçısı olduğunda ilk sanatçıyı kullan</string>

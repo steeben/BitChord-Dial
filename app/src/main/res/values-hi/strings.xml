@@ -392,6 +392,15 @@
     <string name="lastfm_api_key">API कुंजी</string>
     <string name="lastfm_shared_secret">साझा सीक्रेट</string>
     <string name="lastfm_own_api_description">इस बिल्ड में Last.fm API खाता नहीं है। last.fm/api/account/create पर मुफ़्त में एक बनाएँ और उसकी API कुंजी और साझा सीक्रेट यहाँ पेस्ट करें।</string>
+    <string name="lastfm_browser_description">BitChord को स्क्रॉबल करने की अनुमति देने के लिए आपको last.fm पर भेजा जाएगा। आपका पासवर्ड Last.fm के पास ही रहता है।</string>
+    <string name="lastfm_browser_waiting">last.fm पर Allow पर टैप करें, फिर यहाँ लौटें। BitChord खुद साइन इन पूरा कर लेगा।</string>
+    <string name="lastfm_browser_sign_in">last.fm पर जारी रखें</string>
+    <string name="lastfm_browser_done">मैंने अनुमति दे दी है</string>
+    <string name="lastfm_use_password">इसके बजाय पासवर्ड का उपयोग करें</string>
+    <string name="lastfm_use_browser">इसके बजाय last.fm पर साइन इन करें</string>
+    <string name="lastfm_browser_not_approved">अभी अनुमति नहीं मिली। पहले last.fm पेज पर Allow पर टैप करें।</string>
+    <string name="lastfm_browser_expired">यह साइन-इन अनुरोध समाप्त हो गया। फिर से शुरू करें।</string>
+    <string name="lastfm_browser_unavailable">last.fm खोलने के लिए कोई ब्राउज़र नहीं मिला।</string>
     <string name="lastfm_now_playing_subtitle">आप जो सुन रहे हैं उससे Last.fm अपडेट करें</string>
     <string name="lead_with_song">गाने को आगे रखें</string>
     <string name="lead_with_song_subtitle">कलाकार की जगह शीर्षक को बोल्ड लाइन पर रखता है</string>

@@ -358,6 +358,15 @@
     <string name="lastfm_api_key">Chave de API</string>
     <string name="lastfm_shared_secret">Segredo compartilhado</string>
     <string name="lastfm_own_api_description">Esta versão não tem uma conta de API do Last.fm. Crie uma grátis em last.fm/api/account/create e cole aqui a chave de API e o segredo compartilhado.</string>
+    <string name="lastfm_browser_description">Você será levado ao last.fm para permitir que o BitChord faça scrobbling. Sua senha fica com o Last.fm.</string>
+    <string name="lastfm_browser_waiting">Toque em Permitir no last.fm e volte aqui. O BitChord conclui o login sozinho.</string>
+    <string name="lastfm_browser_sign_in">Continuar no last.fm</string>
+    <string name="lastfm_browser_done">Já permiti o acesso</string>
+    <string name="lastfm_use_password">Usar senha</string>
+    <string name="lastfm_use_browser">Entrar pelo last.fm</string>
+    <string name="lastfm_browser_not_approved">Ainda não permitido. Toque em Permitir na página do last.fm primeiro.</string>
+    <string name="lastfm_browser_expired">Esta solicitação de login expirou. Comece de novo.</string>
+    <string name="lastfm_browser_unavailable">Nenhum navegador encontrado para abrir o last.fm.</string>
     <string name="lastfm_now_playing_subtitle">Atualize o Last.fm com o que você está ouvindo</string>
     <string name="lead_with_song">Destacar a música</string>
     <string name="lead_with_song_subtitle">Coloca o título na linha em negrito em vez do artista</string>

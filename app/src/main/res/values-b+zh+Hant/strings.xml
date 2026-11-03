@@ -380,6 +380,15 @@
     <string name="lastfm_api_key">API 金鑰</string>
     <string name="lastfm_shared_secret">共用密鑰</string>
     <string name="lastfm_own_api_description">此版本沒有 Last.fm API 帳戶。請在 last.fm/api/account/create 免費建立一個，然後在此貼上其 API 金鑰和共用密鑰。</string>
+    <string name="lastfm_browser_description">你將前往 last.fm 授權 BitChord 進行 Scrobbling。你的密碼只會留在 Last.fm。</string>
+    <string name="lastfm_browser_waiting">在 last.fm 上點按「允許」，然後返回這裡。BitChord 會自動完成登入。</string>
+    <string name="lastfm_browser_sign_in">在 last.fm 上繼續</string>
+    <string name="lastfm_browser_done">我已允許存取</string>
+    <string name="lastfm_use_password">改用密碼</string>
+    <string name="lastfm_use_browser">改用 last.fm 登入</string>
+    <string name="lastfm_browser_not_approved">尚未允許。請先在 last.fm 頁面上點按「允許」。</string>
+    <string name="lastfm_browser_expired">此登入請求已過期。請重新開始。</string>
+    <string name="lastfm_browser_unavailable">找不到可開啟 last.fm 的瀏覽器。</string>
     <string name="lastfm_now_playing_subtitle">將你正在收聽的內容更新到 Last.fm</string>
     <string name="lead_with_song">優先顯示歌曲</string>
     <string name="lead_with_song_subtitle">將歌曲標題顯示在粗體行，而不是藝人名</string>
