@@ -3263,181 +3263,247 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             type = resolved,
         )
         viewModelScope.launch {
-            var sections = emptyList<HomeShelf>()
-            // Callers that open an artist from a track — the player, the
-            // long-press menu — only have that track's cover art and its full
-            // credit ("A, B & C") to hand, so the page swaps in the artist's
-            // own picture and name once they arrive.
-            var artwork: String? = null
-            var name: String? = null
-            /**
-             * The credit line, when the page had to supply its own.
-             *
-             * Only a link tapped outside the app arrives with neither — see
-             * [com.music.bitchord.playback.MusicLink]. Every other caller was
-             * looking at a card that already said this.
-             */
-            var credit: String? = null
-            /** Set when the track list carries on past its first response. */
-            var more: String? = null
-            /** Tracks YouTube offers to round the playlist out — see [DetailPage.suggestedSongs]. */
-            var suggested: List<Song> = emptyList()
-            /** Whether this release is already saved — see [DetailPage.library]. */
-            var library: LibraryState? = null
-            /** YouTube's own "About" blurb — see [DetailPage.description]. */
-            var description: String? = null
-            /** Artist header stats — see [DetailPage.subscriberCountText]. */
-            var subscriberCountText: String? = null
-            var monthlyListenerCount: String? = null
-            /** Whether this artist is subscribed to — see [DetailPage.subscription]. */
-            var subscription: SubscriptionState? = null
-            val localPlaylist = com.music.bitchord.data.spotify.LocalPlaylistStore.getPlaylist(browseId)
-            val remote = remoteLibrary(browseId)
-            // A release downloaded whole and opened by its YouTube id — the
-            // Playlists shelf, a search hit — used to wait on the network for
-            // tracks already on the device, and showed an error with no
-            // connection at all. Its downloaded copy goes up first; the
-            // online listing replaces it if and when that arrives.
-            val onDevice = if (localPlaylist == null && remote == null && !browseId.startsWith("local:")) {
-                downloadedCopyOf(browseId)
-            } else {
-                emptyList()
-            }
-            if (onDevice.isNotEmpty()) {
-                _detailStack.value = _detailStack.value.map {
-                    if (it.browseId == browseId && it.songs is UiState.Loading) it.copy(songs = UiState.Success(onDevice)) else it
-                }
-            }
-            // Named by the store rather than by whatever opened it, which
-            // may be a "Playing from" label from before a rename.
-            com.music.bitchord.data.OfflinePlaylists.get(browseId)?.let { name = it.title }
-            val offline = offlinePlaylistState(browseId)
-            val state = when {
-                offline != null -> offline
-                localPlaylist != null -> {
-                    name = localPlaylist.title
-                    credit = getApplication<Application>().getString(R.string.local_playlist_subtitle, localPlaylist.songs.size)
-                    artwork = localPlaylist.songs.firstOrNull { !it.thumbnailUrl.isNullOrBlank() }?.thumbnailUrl
-                    if (localPlaylist.songs.isEmpty()) UiState.Error(text(R.string.spotify_import_empty_playlist))
-                    else UiState.Success(localPlaylist.songs)
-                }
-                remote != null -> remoteSongsState(remote)
-                Downloads.recordIdOf(browseId) != null -> {
-                    val songs = downloadedPlaylist(browseId)
-                    if (songs.isEmpty()) UiState.Error(text(R.string.downloaded_playlist_empty))
-                    else UiState.Success(songs)
-                }
-                browseId == "local:downloads" -> {
-                    val context = getApplication<Application>()
-                    val songs = Downloads.getDownloadedSongs(context)
-                    if (songs.isEmpty()) UiState.Error("No downloaded tracks")
-                    else UiState.Success(songs)
-                }
-                browseId == CACHE_FOLDER_BROWSE_ID -> cachedSongsState()
-                browseId == YT_MUSIC_LIBRARY_BROWSE_ID -> ytLibraryState()
-                browseId == LOCAL_LIBRARY_BROWSE_ID -> combinedLibraryState(withYouTube = false)
-                browseId == ALL_LIBRARY_BROWSE_ID -> combinedLibraryState(withYouTube = true)
-                browseId == "local:all" -> {
-                    val context = getApplication<Application>()
-                    if (!LocalMediaRepository.hasStoragePermission(context)) {
-                        UiState.Error(text(R.string.storage_required_read))
-                    } else {
-                        val songs = LocalMediaRepository.getLocalMusic(context)
-                        if (songs.isEmpty()) UiState.Error(text(R.string.no_local_audio_found))
-                        else UiState.Success(songs)
-                    }
-                }
-                resolved == BrowseType.ARTIST -> {
-                    YtMusicRepository.artistPage(browseId).fold(
-                        onSuccess = { page ->
-                            sections = page.sections
-                            artwork = page.thumbnailUrl
-                            name = page.name
-                            description = page.description
-                            subscriberCountText = page.subscriberCountText
-                            monthlyListenerCount = page.monthlyListenerCount
-                            subscription = page.subscription
-                            if (page.songs.isEmpty()) {
-                                UiState.Error(text(R.string.no_tracks_here))
-                            } else {
-                                UiState.Success(page.songs.withArtwork(thumbnailUrl ?: artwork))
-                            }
-                        },
-                        onFailure = { UiState.Error(it.friendly()) },
-                    )
-                }
-                else -> {
-                    YtMusicRepository.browseSongs(browseId).fold(
-                        onSuccess = { page ->
-                            // Free here — the page that returned these rows is
-                            // the one thing that states who made the playlist,
-                            // so its own menu never has to go and ask. Recorded
-                            // even when the listing came back empty.
-                            page.owned?.let { setPlaylistOwned(browseId, it) }
-                            // Only for the caller that had nothing: a card's own
-                            // title is what the user just tapped, and must not
-                            // be swapped for the header's wording underneath them.
-                            page.header?.let { header ->
-                                if (title.isBlank()) name = header.title
-                                // Album cards often only carry the artist, while
-                                // the page header also carries the release year.
-                                // Prefer that richer line so the year appears
-                                // directly below the artist on the album page.
-                                if (resolved == BrowseType.ALBUM && header.subtitle.isNotBlank()) {
-                                    credit = header.subtitle
-                                } else if (subtitle.isBlank()) {
-                                    credit = header.subtitle
-                                }
-                                // An album always shows its own cover, not the
-                                // cover of whichever track it was opened from.
-                                if (thumbnailUrl == null || albumFromTrack) {
-                                    header.thumbnailUrl?.let { artwork = it }
-                                }
-                            }
-                            description = page.description
-                            if (page.songs.isEmpty()) {
-                                UiState.Error(text(R.string.no_tracks_here))
-                            } else {
-                                more = page.continuation
-                                val fallbackArt = if (albumFromTrack) artwork ?: thumbnailUrl else thumbnailUrl ?: artwork
-                                suggested = page.suggested.withArtwork(fallbackArt)
-                                library = page.library
-                                UiState.Success(page.songs.withArtwork(fallbackArt))
-                            }
-                        },
-                        onFailure = { UiState.Error(it.friendly()) },
-                    )
-                }
-            }
-            // Update by id — the user may have pushed another page meanwhile.
-            // A page showing its downloaded copy takes only a real listing: a
-            // failed or empty fetch leaves the downloaded tracks up.
-            _detailStack.value = _detailStack.value.map {
-                if (it.browseId == browseId &&
-                    (it.songs is UiState.Loading || (onDevice.isNotEmpty() && state is UiState.Success))
-                ) {
-                    it.copy(
-                        songs = state,
-                        sections = sections,
-                        thumbnailUrl = artwork ?: savedCover ?: it.thumbnailUrl,
-                        title = name ?: it.title,
-                        subtitle = credit ?: it.subtitle,
-                        suggestedSongs = suggested,
-                        continuation = more,
-                        library = library,
-                        description = description,
-                        subscriberCountText = subscriberCountText,
-                        monthlyListenerCount = monthlyListenerCount,
-                        subscription = subscription,
-                    )
-                } else {
-                    it
-                }
-            }
-            // Only once the first page is on screen: [fillIn] appends to it,
-            // and has nothing to append to before this.
-            more?.let { fillIn(browseId, it, thumbnailUrl ?: artwork) }
+            loadDetail(browseId, title, subtitle, thumbnailUrl, resolved, albumFromTrack, savedCover)
         }
+    }
+
+    private val _detailRefreshing = MutableStateFlow(emptySet<String>())
+    /** The open pages a pull is re-fetching, by browse id. */
+    val detailRefreshing: StateFlow<Set<String>> = _detailRefreshing.asStateFlow()
+
+    /**
+     * Re-fetches the open page [browseId] in place, for a pull on it: the
+     * tracks stay up while it asks, and are swapped for the new listing when
+     * that arrives. Device and server pages are read again from where they
+     * live; a Spotify page, matched track by track, is left as it is.
+     */
+    fun refreshDetail(browseId: String) {
+        if (browseId in _detailRefreshing.value) return
+        val page = _detailStack.value.lastOrNull { it.browseId == browseId } ?: return
+        if (browseId.startsWith(SPOTIFY_PAGE_PREFIX) || browseId.startsWith(LIBRARY_GROUP_PREFIX)) return
+        _detailRefreshing.value = _detailRefreshing.value + browseId
+        viewModelScope.launch {
+            try {
+                // The copy kept for quick reopening is stale now either way.
+                synchronized(detailPageCache) { detailPageCache.remove(browseId) }
+                detailLoadedAt.remove(browseId)
+                val local = com.music.bitchord.data.spotify.LocalPlaylistStore.getPlaylist(browseId) != null ||
+                    remoteLibrary(browseId) != null || browseId.startsWith("local:") ||
+                    browseId == CACHE_FOLDER_BROWSE_ID || browseId == YT_MUSIC_LIBRARY_BROWSE_ID ||
+                    browseId == LOCAL_LIBRARY_BROWSE_ID || browseId == ALL_LIBRARY_BROWSE_ID
+                if (local) {
+                    reloadLocalDetail(browseId).join()
+                } else {
+                    if (isCacheableDetail(browseId)) detailLoadedAt[browseId] = System.currentTimeMillis()
+                    loadDetail(
+                        browseId = browseId,
+                        title = page.title,
+                        subtitle = page.subtitle,
+                        thumbnailUrl = page.thumbnailUrl,
+                        resolved = page.type,
+                        albumFromTrack = false,
+                        savedCover = null,
+                        refresh = true,
+                    )
+                }
+            } finally {
+                _detailRefreshing.value = _detailRefreshing.value - browseId
+            }
+        }
+    }
+
+    /**
+     * Fetches [browseId]'s page into its copy on the stack. Opening a page
+     * fills in its loading placeholder; [refresh] (a pull on the page)
+     * replaces what is already showing, but only with a listing that came back.
+     */
+    private suspend fun loadDetail(
+        browseId: String,
+        title: String,
+        subtitle: String,
+        thumbnailUrl: String?,
+        resolved: BrowseType,
+        albumFromTrack: Boolean,
+        savedCover: String?,
+        refresh: Boolean = false,
+    ) {
+        var sections = emptyList<HomeShelf>()
+        // Callers that open an artist from a track — the player, the
+        // long-press menu — only have that track's cover art and its full
+        // credit ("A, B & C") to hand, so the page swaps in the artist's
+        // own picture and name once they arrive.
+        var artwork: String? = null
+        var name: String? = null
+        /**
+         * The credit line, when the page had to supply its own.
+         *
+         * Only a link tapped outside the app arrives with neither — see
+         * [com.music.bitchord.playback.MusicLink]. Every other caller was
+         * looking at a card that already said this.
+         */
+        var credit: String? = null
+        /** Set when the track list carries on past its first response. */
+        var more: String? = null
+        /** Tracks YouTube offers to round the playlist out — see [DetailPage.suggestedSongs]. */
+        var suggested: List<Song> = emptyList()
+        /** Whether this release is already saved — see [DetailPage.library]. */
+        var library: LibraryState? = null
+        /** YouTube's own "About" blurb — see [DetailPage.description]. */
+        var description: String? = null
+        /** Artist header stats — see [DetailPage.subscriberCountText]. */
+        var subscriberCountText: String? = null
+        var monthlyListenerCount: String? = null
+        /** Whether this artist is subscribed to — see [DetailPage.subscription]. */
+        var subscription: SubscriptionState? = null
+        val localPlaylist = com.music.bitchord.data.spotify.LocalPlaylistStore.getPlaylist(browseId)
+        val remote = remoteLibrary(browseId)
+        // A release downloaded whole and opened by its YouTube id — the
+        // Playlists shelf, a search hit — used to wait on the network for
+        // tracks already on the device, and showed an error with no
+        // connection at all. Its downloaded copy goes up first; the
+        // online listing replaces it if and when that arrives.
+        val onDevice = if (localPlaylist == null && remote == null && !browseId.startsWith("local:")) {
+            downloadedCopyOf(browseId)
+        } else {
+            emptyList()
+        }
+        if (onDevice.isNotEmpty() && !refresh) {
+            _detailStack.value = _detailStack.value.map {
+                if (it.browseId == browseId && it.songs is UiState.Loading) it.copy(songs = UiState.Success(onDevice)) else it
+            }
+        }
+        // Named by the store rather than by whatever opened it, which
+        // may be a "Playing from" label from before a rename.
+        com.music.bitchord.data.OfflinePlaylists.get(browseId)?.let { name = it.title }
+        val offline = offlinePlaylistState(browseId)
+        val state = when {
+            offline != null -> offline
+            localPlaylist != null -> {
+                name = localPlaylist.title
+                credit = getApplication<Application>().getString(R.string.local_playlist_subtitle, localPlaylist.songs.size)
+                artwork = localPlaylist.songs.firstOrNull { !it.thumbnailUrl.isNullOrBlank() }?.thumbnailUrl
+                if (localPlaylist.songs.isEmpty()) UiState.Error(text(R.string.spotify_import_empty_playlist))
+                else UiState.Success(localPlaylist.songs)
+            }
+            remote != null -> remoteSongsState(remote)
+            Downloads.recordIdOf(browseId) != null -> {
+                val songs = downloadedPlaylist(browseId)
+                if (songs.isEmpty()) UiState.Error(text(R.string.downloaded_playlist_empty))
+                else UiState.Success(songs)
+            }
+            browseId == "local:downloads" -> {
+                val context = getApplication<Application>()
+                val songs = Downloads.getDownloadedSongs(context)
+                if (songs.isEmpty()) UiState.Error("No downloaded tracks")
+                else UiState.Success(songs)
+            }
+            browseId == CACHE_FOLDER_BROWSE_ID -> cachedSongsState()
+            browseId == YT_MUSIC_LIBRARY_BROWSE_ID -> ytLibraryState()
+            browseId == LOCAL_LIBRARY_BROWSE_ID -> combinedLibraryState(withYouTube = false)
+            browseId == ALL_LIBRARY_BROWSE_ID -> combinedLibraryState(withYouTube = true)
+            browseId == "local:all" -> {
+                val context = getApplication<Application>()
+                if (!LocalMediaRepository.hasStoragePermission(context)) {
+                    UiState.Error(text(R.string.storage_required_read))
+                } else {
+                    val songs = LocalMediaRepository.getLocalMusic(context)
+                    if (songs.isEmpty()) UiState.Error(text(R.string.no_local_audio_found))
+                    else UiState.Success(songs)
+                }
+            }
+            resolved == BrowseType.ARTIST -> {
+                YtMusicRepository.artistPage(browseId).fold(
+                    onSuccess = { page ->
+                        sections = page.sections
+                        artwork = page.thumbnailUrl
+                        name = page.name
+                        description = page.description
+                        subscriberCountText = page.subscriberCountText
+                        monthlyListenerCount = page.monthlyListenerCount
+                        subscription = page.subscription
+                        if (page.songs.isEmpty()) {
+                            UiState.Error(text(R.string.no_tracks_here))
+                        } else {
+                            UiState.Success(page.songs.withArtwork(thumbnailUrl ?: artwork))
+                        }
+                    },
+                    onFailure = { UiState.Error(it.friendly()) },
+                )
+            }
+            else -> {
+                YtMusicRepository.browseSongs(browseId).fold(
+                    onSuccess = { page ->
+                        // Free here — the page that returned these rows is
+                        // the one thing that states who made the playlist,
+                        // so its own menu never has to go and ask. Recorded
+                        // even when the listing came back empty.
+                        page.owned?.let { setPlaylistOwned(browseId, it) }
+                        // Only for the caller that had nothing: a card's own
+                        // title is what the user just tapped, and must not
+                        // be swapped for the header's wording underneath them.
+                        page.header?.let { header ->
+                            if (title.isBlank()) name = header.title
+                            // Album cards often only carry the artist, while
+                            // the page header also carries the release year.
+                            // Prefer that richer line so the year appears
+                            // directly below the artist on the album page.
+                            if (resolved == BrowseType.ALBUM && header.subtitle.isNotBlank()) {
+                                credit = header.subtitle
+                            } else if (subtitle.isBlank()) {
+                                credit = header.subtitle
+                            }
+                            // An album always shows its own cover, not the
+                            // cover of whichever track it was opened from.
+                            if (thumbnailUrl == null || albumFromTrack) {
+                                header.thumbnailUrl?.let { artwork = it }
+                            }
+                        }
+                        description = page.description
+                        if (page.songs.isEmpty()) {
+                            UiState.Error(text(R.string.no_tracks_here))
+                        } else {
+                            more = page.continuation
+                            val fallbackArt = if (albumFromTrack) artwork ?: thumbnailUrl else thumbnailUrl ?: artwork
+                            suggested = page.suggested.withArtwork(fallbackArt)
+                            library = page.library
+                            UiState.Success(page.songs.withArtwork(fallbackArt))
+                        }
+                    },
+                    onFailure = { UiState.Error(it.friendly()) },
+                )
+            }
+        }
+        // Update by id — the user may have pushed another page meanwhile.
+        // A page showing its downloaded copy takes only a real listing: a
+        // failed or empty fetch leaves the downloaded tracks up.
+        _detailStack.value = _detailStack.value.map {
+            if (it.browseId == browseId &&
+                (it.songs is UiState.Loading || (onDevice.isNotEmpty() && state is UiState.Success) ||
+                    // A pull swaps in only a listing that came back: a
+                    // failed or empty one leaves what was showing up.
+                    (refresh && state is UiState.Success))
+            ) {
+                it.copy(
+                    songs = state,
+                    sections = sections,
+                    thumbnailUrl = artwork ?: savedCover ?: it.thumbnailUrl,
+                    title = name ?: it.title,
+                    subtitle = credit ?: it.subtitle,
+                    suggestedSongs = suggested,
+                    continuation = more,
+                    library = library,
+                    description = description,
+                    subscriberCountText = subscriberCountText,
+                    monthlyListenerCount = monthlyListenerCount,
+                    subscription = subscription,
+                )
+            } else {
+                it
+            }
+        }
+        // Only once the first page is on screen: [fillIn] appends to it,
+        // and has nothing to append to before this.
+        more?.let { fillIn(browseId, it, thumbnailUrl ?: artwork) }
     }
 
     /**
@@ -3544,8 +3610,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _detailStack.value = _detailStack.value.map { if (it.browseId == browseId) it.copy(title = title) else it }
     }
 
-    fun reloadLocalDetail(browseId: String) {
-        viewModelScope.launch {
+    fun reloadLocalDetail(browseId: String): kotlinx.coroutines.Job {
+        return viewModelScope.launch {
             val context = getApplication<Application>()
             val localPlaylist = com.music.bitchord.data.spotify.LocalPlaylistStore.getPlaylist(browseId)
             val remote = remoteLibrary(browseId)

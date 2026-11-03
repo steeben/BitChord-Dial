@@ -1476,6 +1476,10 @@ private fun BitChordApp(
     val explorePull = rememberPullToRefreshState()
     val libraryPull = rememberPullToRefreshState()
     val refreshing by viewModel.refreshing.collectAsStateWithLifecycle()
+    // An album, playlist or artist page refreshes too. Each page keeps its
+    // own drag; the one on top reports it here for the bar's puck.
+    var detailPull by remember { mutableStateOf<androidx.compose.material3.pulltorefresh.PullToRefreshState?>(null) }
+    val detailRefreshing by viewModel.detailRefreshing.collectAsStateWithLifecycle()
     val currentFeed = when {
         showSettings || showAccountScrobbling || detail != null -> null
         selectedTab == TAB_HOME -> MainViewModel.Feed.HOME
@@ -4273,6 +4277,13 @@ private fun BitChordApp(
                         // The page wears its artwork's colours, so its glass
                         // keeps the stock look, not the user's Liquid Glass options.
                         CompositionLocalProvider(LocalGlassFollowsOptions provides false) {
+                        val pagePull = rememberPullToRefreshState()
+                        if (key == detail?.browseId) androidx.compose.runtime.SideEffect { detailPull = pagePull }
+                        com.music.bitchord.ui.components.PullToRefresh(
+                            refreshing = page.browseId in detailRefreshing,
+                            onRefresh = { viewModel.refreshDetail(page.browseId) },
+                            state = pagePull,
+                        ) {
                         DetailScreen(
                             page = page.withCustomCover(customCovers).withChosenAlbumArt(albumArtChoices, albumSongArt),
                             currentSong = player.song,
@@ -4377,6 +4388,7 @@ private fun BitChordApp(
                             songSort = songSort,
                             contentPadding = listPadding,
                         )
+                        }
                         }
                     } else when (key.removePrefix(TAB_KEY).toIntOrNull() ?: selectedTab) {
                         TAB_HOME -> HomeScreen(
@@ -5170,8 +5182,18 @@ private fun BitChordApp(
                     },
                     // Home and the Library show a pull in their own marks, so
                     // the bar's puck stays put on both.
-                    refreshing = !homeRoot && !libraryRoot && currentFeed != null && currentFeed in refreshing,
-                    pullFraction = { if (homeRoot || libraryRoot) 0f else currentPull?.distanceFraction ?: 0f },
+                    refreshing = !homeRoot && !libraryRoot && (
+                        (currentFeed != null && currentFeed in refreshing) ||
+                            (currentFeed == null && detail != null && detail.browseId in detailRefreshing)
+                        ),
+                    pullFraction = {
+                        when {
+                            homeRoot || libraryRoot -> 0f
+                            currentPull != null -> currentPull.distanceFraction
+                            detail != null -> detailPull?.distanceFraction ?: 0f
+                            else -> 0f
+                        }
+                    },
                     onBack = when {
                         showStats && !showReplay && !showSettings && settingsSubScreen == null -> ({ showStats = false })
                         showSpotify && detail == null -> ({ showSpotify = false })
@@ -5448,7 +5470,9 @@ private fun BitChordApp(
                                 val titleText = when (page) {
                                     HomePage.DIAL -> ""
                                     HomePage.ARTISTS -> stringResource(R.string.dial_page_artists)
-                                    HomePage.EXPLORE -> stringResource(R.string.dial_page_explore)
+                                    // With the dials off there are no pages to tell apart,
+                                    // so the mark stands alone.
+                                    HomePage.EXPLORE -> if (speedDialsOn) stringResource(R.string.dial_page_explore) else ""
                                 }
                                 Text(
                                     text = homeTitleWithDial(
