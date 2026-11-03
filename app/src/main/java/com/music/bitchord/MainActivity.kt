@@ -3282,15 +3282,22 @@ private fun BitChordApp(
     }
     // The playing song's colour, for the chrome that wears it — see
     // [LocalNowPlayingTint]. Provided around the whole app rather than handed
-    // down, so the library's own pages can pick it up the same way. The body
-    // is left at its old indent to keep this wrap out of everyone's diffs.
+    // down, so the library's own pages can pick it up the same way.
     val nowPlayingTint = rememberNowPlayingTint(player.song?.thumbnailUrl)
-    CompositionLocalProvider(LocalNowPlayingTint provides nowPlayingTint) {
     Box(
         Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
     ) {
+    // Provided twice, around each half of the app, not once around all of it.
+    // A provider's content is a lambda, compiled to one method taking every
+    // local of BitChordApp it reads as an argument; around the whole app that
+    // came to 257 argument slots, past the JVM's 255, and MainActivityKt no
+    // longer loaded in unit tests; the same builds crashed at launch. Each half reads far
+    // fewer (MainActivityClassSizeTest keeps watch). If it comes back, split
+    // again rather than unwrap: inlined into BitChordApp, the body passes the
+    // JVM's 64KB per-method code limit. The bodies keep their old indent.
+    CompositionLocalProvider(LocalNowPlayingTint provides nowPlayingTint) {
         // A pushed album/artist/playlist page replaces the tab content but
         // leaves the tab bar and mini player in place.
         // Replay's three layers unwind in the order they were opened. Ahead of
@@ -5693,6 +5700,8 @@ private fun BitChordApp(
             }
 
         }
+    }
+    CompositionLocalProvider(LocalNowPlayingTint provides nowPlayingTint) {
 
         // ---- Album / playlist detail ----
         // ---- Long-press track actions ----
