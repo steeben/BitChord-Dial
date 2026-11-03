@@ -532,6 +532,7 @@ internal fun CurrentLyricStrip(
     loadingText: String,
     onClick: () -> Unit,
 ) {
+    val haptics = rememberHaptics()
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -548,7 +549,10 @@ internal fun CurrentLyricStrip(
                 playhead = playhead,
                 isPlaying = isPlaying,
                 durationMs = durationMs,
-                onClick = onClick,
+                onClick = {
+                    haptics.play(Haptic.Tap)
+                    onClick()
+                },
                 modifier = Modifier.fillMaxWidth(),
             )
         } else if (lyricsUnavailable) {
@@ -1265,6 +1269,7 @@ internal fun TranslationToggleButton(
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
+    val haptics = rememberHaptics()
     val active = showingTranslation || state is LyricsTranslationUiState.Loading
     val tint = when {
         !enabled || state is LyricsTranslationUiState.SameLanguage -> PlayerInk.copy(alpha = 0.42f)
@@ -1284,7 +1289,10 @@ internal fun TranslationToggleButton(
                 enabled = enabled,
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-                onClick = onClick,
+                onClick = {
+                    haptics.play(Haptic.Tap)
+                    onClick()
+                },
             ),
         contentAlignment = Alignment.Center,
     ) {
@@ -1316,6 +1324,7 @@ internal fun RomanizationToggleButton(
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
+    val haptics = rememberHaptics()
     val active = showingRomanization || state is LyricsTranslationUiState.Loading
     val tint = when {
         !enabled || state is LyricsTranslationUiState.SameLanguage -> PlayerInk.copy(alpha = 0.42f)
@@ -1335,7 +1344,10 @@ internal fun RomanizationToggleButton(
                 enabled = enabled,
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-                onClick = onClick,
+                onClick = {
+                    haptics.play(Haptic.Tap)
+                    onClick()
+                },
             ),
         contentAlignment = Alignment.Center,
     ) {

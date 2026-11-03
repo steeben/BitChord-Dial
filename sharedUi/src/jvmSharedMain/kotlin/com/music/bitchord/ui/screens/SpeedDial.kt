@@ -5,6 +5,9 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import com.music.bitchord.ui.haptics.Haptic
+import com.music.bitchord.ui.haptics.Haptics
+import com.music.bitchord.ui.haptics.rememberHaptics
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.withFrameMillis
@@ -915,7 +918,7 @@ private fun recordHold(spot: TileSpot, scope: CoroutineScope) {
  * tap presses it all the way in before its action runs, then lets it spring
  * back out. Held for a menu or a drag, it comes back up when let go.
  */
-private class TilePress(private val scope: CoroutineScope) {
+private class TilePress(private val scope: CoroutineScope, private val haptics: Haptics) {
     val interactions = MutableInteractionSource()
     val depth = Animatable(0f)
 
@@ -928,7 +931,16 @@ private class TilePress(private val scope: CoroutineScope) {
      */
     val scale: Float get() = 1f - PRESS_SHRINK * depth.value
 
+    /** The soft click in, as the tile starts to sink. */
+    fun sink() {
+        haptics.play(Haptic.PressIn)
+    }
+
     fun tap(action: suspend () -> Unit) {
+        // A quick tap can land before the finger's own press was ever shown,
+        // in which case this is the first the tile moves and the click in
+        // belongs here.
+        if (depth.targetValue < 1f) sink()
         tapping = true
         scope.launch {
             try {
@@ -938,6 +950,8 @@ private class TilePress(private val scope: CoroutineScope) {
                 ensureActive()
             }
             tapping = false
+            // The click back out, as the tile springs up and opens.
+            haptics.play(Haptic.PressOut)
             action()
             depth.animateTo(0f, spring(dampingRatio = PRESS_BOUNCE, stiffness = Spring.StiffnessMediumLow))
         }
@@ -947,12 +961,16 @@ private class TilePress(private val scope: CoroutineScope) {
 @Composable
 private fun rememberTilePress(): TilePress {
     val scope = rememberCoroutineScope()
-    val press = remember(scope) { TilePress(scope) }
+    val haptics = rememberHaptics()
+    val press = remember(scope, haptics) { TilePress(scope, haptics) }
     LaunchedEffect(press) {
         press.interactions.interactions.collect { interaction ->
             if (press.tapping) return@collect
             when (interaction) {
-                is PressInteraction.Press -> launch { press.depth.animateTo(1f, tween(PRESS_IN_MS)) }
+                is PressInteraction.Press -> {
+                    press.sink()
+                    launch { press.depth.animateTo(1f, tween(PRESS_IN_MS)) }
+                }
                 is PressInteraction.Release, is PressInteraction.Cancel -> launch {
                     press.depth.animateTo(0f, spring(dampingRatio = PRESS_BOUNCE, stiffness = Spring.StiffnessMediumLow))
                 }
@@ -1002,7 +1020,7 @@ private fun LuckyDiceTile(
 ) {
     val shape = RoundedCornerShape(10.dp)
     val scope = rememberCoroutineScope()
-    val haptics = LocalHapticFeedback.current
+    val haptics = rememberHaptics()
     var face by remember { mutableIntStateOf(3) }
     // The spinner's head, in squares round the edge, and how far the die has
     // gone from the spinner back to a face (1 = all face).
@@ -1021,15 +1039,24 @@ private fun LuckyDiceTile(
                 press.tap {}
                 if (rolling) return@clickable
                 rolling = true
-                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                 onRoll()
                 scope.launch {
                     try {
                         spin.snapTo(0f)
                         settle.animateTo(0f, tween(DICE_FADE_MS))
-                        spin.animateTo(DICE_ROLL_STEPS, tween(DICE_ROLL_MS, easing = FastOutSlowInEasing))
+                        // A light tick each time the spinner's head moves on a
+                        // square, so the bumps race and then slow with it.
+                        var square = 0
+                        spin.animateTo(DICE_ROLL_STEPS, tween(DICE_ROLL_MS, easing = FastOutSlowInEasing)) {
+                            val now = value.toInt()
+                            if (now != square) {
+                                square = now
+                                haptics.play(Haptic.Tick)
+                            }
+                        }
                         face = (1..6).random()
-                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        // And the landing on a face.
+                        haptics.play(Haptic.Select)
                         settle.animateTo(1f, spring(dampingRatio = 0.55f, stiffness = Spring.StiffnessMedium))
                     } finally {
                         rolling = false

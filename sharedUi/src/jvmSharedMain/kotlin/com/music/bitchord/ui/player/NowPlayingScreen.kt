@@ -1933,8 +1933,18 @@ fun NowPlayingScreen(
 
     // The scrubber's two halves, shared by both layouts so a drop point is held
     // the same way in each — see [PlayerScrub.pendingSeek].
-    val onScrub: (Float) -> Unit = scrub::drag
+    // Which ~2s stretch of the bar the handle is in, so a scrub bumps once for
+    // each one it crosses. Unset until the drag's first move, so touching
+    // down doesn't count as crossing anything.
+    val scrubNotch = remember { longArrayOf(NO_SCRUB_NOTCH) }
+    val onScrub: (Float) -> Unit = { fraction ->
+        val notch = (fraction * barDurationMs).toLong() / SCRUB_NOTCH_MS
+        if (scrubNotch[0] != NO_SCRUB_NOTCH && notch != scrubNotch[0]) haptics.play(Haptic.Bump)
+        scrubNotch[0] = notch
+        scrub.drag(fraction)
+    }
     val onScrubFinished: () -> Unit = {
+        scrubNotch[0] = NO_SCRUB_NOTCH
         // On release only. Ticking the whole way along the bar turns a scrub
         // into a rattle, and the beat that matters is the one that says where
         // the playhead landed.
@@ -2398,6 +2408,7 @@ fun NowPlayingScreen(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
                             ) {
+                                haptics.play(Haptic.Tap)
                                 queueOpen = false
                                 closeLyrics()
                             },
@@ -3870,6 +3881,7 @@ fun NowPlayingScreen(
                         .then(
                             if (queueOpen || lyricsOpen) {
                                 Modifier.clickable {
+                                    haptics.play(Haptic.Tap)
                                     // Over the queue, a first tap takes the list
                                     // back to where it opened; tapped there, it
                                     // puts the queue away as before.
@@ -4773,3 +4785,7 @@ private fun Modifier.panelBackSwipe(progress: () -> Float): Modifier = graphicsL
         alpha = 1f - PANEL_BACK_FADE * p
     }
 }
+
+/** How much of the song each seek-bar bump stands for, and "not scrubbing yet". */
+private const val SCRUB_NOTCH_MS = 2_000L
+private const val NO_SCRUB_NOTCH = Long.MIN_VALUE

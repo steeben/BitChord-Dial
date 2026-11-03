@@ -19,6 +19,18 @@ enum class Haptic {
      */
     Tick,
 
+    /**
+     * A notch a touch firmer than [Tick], for steps a finger is counting off
+     * slowly: every ~2s of a scrub, each square of the logo filling on a pull.
+     */
+    Bump,
+
+    /** A tile sinking under the finger: soft and low, a click going *in*. */
+    PressIn,
+
+    /** The same tile springing back out as it opens: the firmer click *out*. */
+    PressOut,
+
     /** A plain button press with no state behind it: More, Download, Menu. */
     Tap,
 

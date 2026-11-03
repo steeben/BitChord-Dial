@@ -26,6 +26,9 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import com.music.bitchord.ui.haptics.Haptic
+import com.music.bitchord.ui.haptics.rememberHaptics
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -50,6 +53,9 @@ private val LOGO_LIT = arrayOf(
 )
 
 private const val DIM_ALPHA = 0.2f
+
+/** Every square in the grid, lit or not: 3 x 4. */
+private const val LOGO_SQUARES = 12
 
 /**
  * Where each edge square sits on the loop the spinner runs round, clockwise
@@ -229,6 +235,19 @@ fun HomeStickyLogo(
     // Where the mark sits at rest, and where it ends up pinned: centred on the
     // top bar, whose content is 52dp high with TopBarContentGap (12dp) below it.
     // It rides up there with the page but never shrinks.
+    // One subtle bump for each square that fills as Home is pulled down, the
+    // same count [SquareLogo] lights them by. Only on the way down: letting
+    // go, or the pull springing back, stays quiet.
+    val haptics = rememberHaptics()
+    val latestRefreshing by rememberUpdatedState(refreshing)
+    LaunchedEffect(Unit) {
+        var filled = 0
+        snapshotFlow { (pullFraction().coerceIn(0f, 1f) * LOGO_SQUARES).toInt() }
+            .collect { now ->
+                if (now > filled && !latestRefreshing) haptics.play(Haptic.Bump)
+                filled = now
+            }
+    }
     val restTop = topPadding - 20.dp
     val pinnedTop = topPadding - 12.dp - 26.dp - HOME_LOGO_LARGE / 2
     Row(

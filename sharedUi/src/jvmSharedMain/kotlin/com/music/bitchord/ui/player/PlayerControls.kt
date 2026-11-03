@@ -111,6 +111,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.music.bitchord.ui.haptics.Haptic
+import androidx.compose.ui.composed
 import com.music.bitchord.ui.haptics.rememberHaptics
 import com.music.bitchord.ui.icons.BitChordIcons
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -168,6 +169,7 @@ internal fun PlaybackOriginCaption(
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
+    val haptics = rememberHaptics()
     Text(
         text = text,
         style = MaterialTheme.typography.labelSmall.copy(
@@ -182,7 +184,10 @@ internal fun PlaybackOriginCaption(
         overflow = TextOverflow.Ellipsis,
         textAlign = textAlign,
         modifier = modifier
-            .clickable(onClick = onClick)
+            .clickable {
+                haptics.play(Haptic.Tap)
+                onClick()
+            }
             .padding(contentPadding),
     )
 }
@@ -286,6 +291,7 @@ internal fun PlayerScrubber(
  */
 @Composable
 private fun MixingLabel(pulse: MixPulse, modifier: Modifier = Modifier) {
+    val haptics = rememberHaptics()
     Text(
         text = stringResource(Res.string.mixing),
         modifier = modifier
@@ -295,7 +301,10 @@ private fun MixingLabel(pulse: MixPulse, modifier: Modifier = Modifier) {
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() },
-            ) { MixViewRequest.open = true }
+            ) {
+                haptics.play(Haptic.Tap)
+                MixViewRequest.open = true
+            }
             .graphicsLayer { alpha = pulse.cover * pulse.alpha(1f, restShare = MIXING_LABEL_REST) },
         style = MaterialTheme.typography.labelMedium.copy(
             fontWeight = FontWeight.SemiBold,
@@ -1144,6 +1153,7 @@ internal fun OutputCaption(
     /** Who's in it, before the settings page — see [ListenTogetherMembersSheet]. */
     onOpenMembers: () -> Unit,
 ) {
+    val haptics = rememberHaptics()
     val badge = rememberPartyBadge()
     val outputName = rememberAudioOutputName(accountName)
     val outputFormat by PlayerPlatform.host.outputFormat.collectAsStateWithLifecycle()
@@ -1158,7 +1168,10 @@ internal fun OutputCaption(
         ?: stringResource(Res.string.listen_together_jam_unnamed)
     val captionModifier = Modifier
         .fillMaxWidth(0.65f)
-        .clickable { if (badge.inParty) onOpenMembers() else onOpenOutput() }
+        .clickable {
+            haptics.play(Haptic.Tap)
+            if (badge.inParty) onOpenMembers() else onOpenOutput()
+        }
     if (!badge.inParty && (outputFormat.bitPerfect || outputFormat.dacLimited)) {
         ShimmerText(
             text = outputName,
@@ -1312,7 +1325,13 @@ internal fun Modifier.opensPage(browseId: String?, onOpen: (String) -> Unit): Mo
     if (browseId == null) {
         this
     } else {
-        clip(LinkPressShape).clickable { onOpen(browseId) }
+        composed {
+            val haptics = rememberHaptics()
+            clip(LinkPressShape).clickable {
+                haptics.play(Haptic.Tap)
+                onOpen(browseId)
+            }
+        }
     }
 
 /**
@@ -1630,6 +1649,7 @@ private fun CreditLine(
     color: Color,
     onOpenArtist: (browseId: String?, name: String) -> Unit,
 ) {
+    val haptics = rememberHaptics()
     segments.forEach { segment ->
         val credit = segment.credit
         Text(
@@ -1652,7 +1672,10 @@ private fun CreditLine(
                     // is a name the reader still expects to be able to open, and
                     // the host resolves it by asking for that exact name and
                     // opening only what answers to it exactly.
-                    .clickable { onOpenArtist(credit.browseId, credit.name) }
+                    .clickable {
+                        haptics.play(Haptic.Tap)
+                        onOpenArtist(credit.browseId, credit.name)
+                    }
             },
         )
     }
