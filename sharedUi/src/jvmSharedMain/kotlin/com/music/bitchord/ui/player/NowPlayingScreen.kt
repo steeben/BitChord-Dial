@@ -417,6 +417,12 @@ private const val HERO_FADE_FRACTION = 0.42f
 private const val SUBVIEW_STATUS_SCRIM_MIN_ALPHA = 0.40f
 
 /**
+ * Top-band luminance (WCAG, 0..1) from which a full-bleed sleeve counts as near
+ * white and the player's status icons flip to dark. Paper white sits around 0.9.
+ */
+private const val STATUS_ICONS_DARK_LUMINANCE = 0.78f
+
+/**
  * How often the backdrop re-reads the colours of a playing Canvas clip.
  *
  * Every three seconds, with `MESH_FADE_MS` easing each read into the last so
@@ -957,10 +963,8 @@ fun NowPlayingScreen(
     val artTopLuminance = rememberArtworkTopBandLuminance(remoteArt, CARD_ART_PX)
     val artworkStatusScrimAlpha = topBandScrimAlpha(artTopLuminance)
 
-    // Media-player convention: the player always owns light status icons. The
-    // top treatment below, rather than a window-flag flip per cover, provides
-    // their contrast and stays visually stable through artwork transitions.
-    StatusBarIcons(dark = false)
+    // The status icons are set further down, once it is known what is under
+    // them — see statusIconsDark.
 
     // Kept local to the player: a modal player is not in the page's Haze
     // source tree, so it needs its own source for the same frosted material as
@@ -2770,6 +2774,24 @@ fun NowPlayingScreen(
             artworkStatusScrimAlpha
         }
 
+        // Light status icons over a dark top scrim is the media-player norm and
+        // stays the default. The exception is a full-bleed still sleeve whose
+        // top band is near white: there the scrim has to go so dark that it reads
+        // as a grey smear across the art, so the icons flip to dark instead and
+        // the scrim fades away under them. Canvas, video, the card layout and any
+        // subview (lyrics, queue, sheets) keep their own darker backdrop up there
+        // and so keep light icons.
+        val statusIconsDark = heroMode && !spotifyCanvasPresentation && !playerSubviewOpen &&
+            (artTopLuminance ?: 0f) >= STATUS_ICONS_DARK_LUMINANCE
+        StatusBarIcons(dark = statusIconsDark)
+        // Read in the scrim's draw pass only, so the fade redraws that strip
+        // without recomposing the player.
+        val topScrimFade = animateFloatAsState(
+            targetValue = if (statusIconsDark) 0f else 1f,
+            animationSpec = tween(durationMillis = 450, easing = FastOutSlowInEasing),
+            label = "statusScrimFade",
+        )
+
         val steps = 8
         val gradientColors = remember(topGradientAlpha) {
             List(steps) { index ->
@@ -2978,7 +3000,7 @@ fun NowPlayingScreen(
                             drawRect(
                                 brush = topScrimBrush,
                                 size = Size(size.width, size.height + above),
-                                alpha = topChromeIn.value,
+                                alpha = topChromeIn.value * topScrimFade.value,
                             )
                         }
                     },

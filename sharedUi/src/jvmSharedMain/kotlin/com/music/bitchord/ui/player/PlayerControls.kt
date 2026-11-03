@@ -32,6 +32,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -598,79 +599,42 @@ internal fun PlayerActionRow(
                 onLongClick = onChooseLyricsProvider,
                 highlighted = lyricsOpen,
             )
-            AnimatedContent(
-                targetState = queueOpen,
-                transitionSpec = {
-                    (fadeIn(tween(180, delayMillis = 140)) togetherWith fadeOut(tween(140)))
-                        // Unclipped: the capsule's own rounded ends are what
-                        // the eye follows through the width change, and the
-                        // default clip cuts them square while it happens.
-                        .using(SizeTransform(clip = false) { _, _ -> tween(220) })
-                },
-                label = "playerBottomPill",
-            ) { showQueueModes ->
-                if (showQueueModes) {
-                    // Shuffle in the middle, where the output capsule has it,
-                    // so it stays put as the queue opens and closes.
-                    // Always three-up, unlike the output/party capsule — so it
-                    // always takes the narrower spacing. See
-                    // [PILL_SEGMENT_WIDTH_TRIPLE]. Glass like the output
-                    // capsule it stands in for.
-                    Pill(glass = LocalPlayerGlass.current) {
-                        PillSegment(
-                            icon = if (repeatMode == RepeatModes.ONE) null else BitChordIcons.Repeat,
-                            label = if (repeatMode == RepeatModes.ONE) "1" else null,
-                            contentDescription = when (repeatMode) {
-                                RepeatModes.ONE -> stringResource(Res.string.repeat_one)
-                                RepeatModes.ALL -> stringResource(Res.string.repeat_all)
-                                else -> stringResource(Res.string.repeat_off)
-                            },
-                            onClick = onCycleRepeat,
-                            highlighted = repeatMode != RepeatModes.OFF,
-                            // Three states, so the buzz tracks the edges of the
-                            // cycle: leaving off rises, returning to off falls,
-                            // and the step between the two repeat modes is just
-                            // a selection.
-                            haptic = when (repeatMode) {
-                                RepeatModes.OFF -> Haptic.ToggleOn
-                                RepeatModes.ONE -> Haptic.ToggleOff
-                                else -> Haptic.Select
-                            },
-                            width = PILL_SEGMENT_WIDTH_TRIPLE,
-                        )
-                        PillDivider()
-                        PillSegment(
-                            icon = BitChordIcons.Shuffle,
-                            contentDescription = stringResource(
-                                if (shuffleEnabled) Res.string.shuffle_on else Res.string.shuffle_off,
-                            ),
-                            onClick = onToggleShuffle,
-                            highlighted = shuffleEnabled,
-                            haptic = if (shuffleEnabled) Haptic.ToggleOff else Haptic.ToggleOn,
-                            tapWindowMs = SHUFFLE_TAP_WINDOW_MS,
-                            width = PILL_SEGMENT_WIDTH_TRIPLE,
-                        )
-                        PillDivider()
-                        PillSegment(
-                            icon = BitChordIcons.Infinity,
-                            contentDescription = stringResource(
-                                if (autoplayEnabled) Res.string.autoplay_on else Res.string.autoplay_off,
-                            ),
-                            onClick = onToggleAutoplay,
-                            highlighted = autoplayEnabled,
-                            haptic = if (autoplayEnabled) Haptic.ToggleOff else Haptic.ToggleOn,
-                            tapWindowMs = AUTOPLAY_TAP_WINDOW_MS,
-                            width = PILL_SEGMENT_WIDTH_TRIPLE,
-                        )
+            // One capsule for both states, so its glass and its outline stay put
+            // as the queue opens and closes; only the glyphs inside it trade
+            // places, the old set fading out before the new one fades in.
+            Pill(glass = LocalPlayerGlass.current) {
+                AnimatedContent(
+                    targetState = queueOpen,
+                    transitionSpec = {
+                        (fadeIn(tween(160, delayMillis = 100)) togetherWith fadeOut(tween(110)))
+                            // The capsule's own animateContentSize carries any
+                            // width change (the two-up output capsule), so the
+                            // swap itself takes its new size at once rather
+                            // than animating it a second time.
+                            .using(SizeTransform(clip = false) { _, _ -> snap() })
+                    },
+                    label = "playerBottomPillGlyphs",
+                ) { showQueueModes ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (showQueueModes) {
+                            QueueModeSegments(
+                                repeatMode = repeatMode,
+                                shuffleEnabled = shuffleEnabled,
+                                autoplayEnabled = autoplayEnabled,
+                                onCycleRepeat = onCycleRepeat,
+                                onToggleShuffle = onToggleShuffle,
+                                onToggleAutoplay = onToggleAutoplay,
+                            )
+                        } else {
+                            OutputPartySegments(
+                                onOutput = onOpenOutput,
+                                shuffleEnabled = shuffleEnabled,
+                                onToggleShuffle = onToggleShuffle,
+                                onParty = onListenTogether,
+                                onOpenMembers = onOpenListenTogetherMembers,
+                            )
+                        }
                     }
-                } else {
-                    OutputPartyPill(
-                        onOutput = onOpenOutput,
-                        shuffleEnabled = shuffleEnabled,
-                        onToggleShuffle = onToggleShuffle,
-                        onParty = onListenTogether,
-                        onOpenMembers = onOpenListenTogetherMembers,
-                    )
                 }
             }
             BottomGlyph(
@@ -932,6 +896,69 @@ private fun PillDivider() {
 }
 
 /**
+ * The queue's half of the bottom capsule: Repeat, Shuffle, Autoplay.
+ *
+ * Shuffle in the middle, where the output capsule has it, so it stays put as
+ * the queue opens and closes. Always three-up, unlike the output/party set, so
+ * it always takes the narrower spacing. See [PILL_SEGMENT_WIDTH_TRIPLE].
+ */
+@Composable
+private fun QueueModeSegments(
+    repeatMode: Int,
+    shuffleEnabled: Boolean,
+    autoplayEnabled: Boolean,
+    onCycleRepeat: () -> Unit,
+    onToggleShuffle: () -> Unit,
+    onToggleAutoplay: () -> Unit,
+) {
+    PillSegment(
+        icon = if (repeatMode == RepeatModes.ONE) null else BitChordIcons.Repeat,
+        label = if (repeatMode == RepeatModes.ONE) "1" else null,
+        contentDescription = when (repeatMode) {
+            RepeatModes.ONE -> stringResource(Res.string.repeat_one)
+            RepeatModes.ALL -> stringResource(Res.string.repeat_all)
+            else -> stringResource(Res.string.repeat_off)
+        },
+        onClick = onCycleRepeat,
+        highlighted = repeatMode != RepeatModes.OFF,
+        // Three states, so the buzz tracks the edges of the
+        // cycle: leaving off rises, returning to off falls,
+        // and the step between the two repeat modes is just
+        // a selection.
+        haptic = when (repeatMode) {
+            RepeatModes.OFF -> Haptic.ToggleOn
+            RepeatModes.ONE -> Haptic.ToggleOff
+            else -> Haptic.Select
+        },
+        width = PILL_SEGMENT_WIDTH_TRIPLE,
+    )
+    PillDivider()
+    PillSegment(
+        icon = BitChordIcons.Shuffle,
+        contentDescription = stringResource(
+            if (shuffleEnabled) Res.string.shuffle_on else Res.string.shuffle_off,
+        ),
+        onClick = onToggleShuffle,
+        highlighted = shuffleEnabled,
+        haptic = if (shuffleEnabled) Haptic.ToggleOff else Haptic.ToggleOn,
+        tapWindowMs = SHUFFLE_TAP_WINDOW_MS,
+        width = PILL_SEGMENT_WIDTH_TRIPLE,
+    )
+    PillDivider()
+    PillSegment(
+        icon = BitChordIcons.Infinity,
+        contentDescription = stringResource(
+            if (autoplayEnabled) Res.string.autoplay_on else Res.string.autoplay_off,
+        ),
+        onClick = onToggleAutoplay,
+        highlighted = autoplayEnabled,
+        haptic = if (autoplayEnabled) Haptic.ToggleOff else Haptic.ToggleOn,
+        tapWindowMs = AUTOPLAY_TAP_WINDOW_MS,
+        width = PILL_SEGMENT_WIDTH_TRIPLE,
+    )
+}
+
+/**
  * The two ends of "where is this playing": the output capsule.
  *
  * Both halves answer the same question and so belong to one control rather than
@@ -942,7 +969,7 @@ private fun PillDivider() {
  * three-up spacing the queue-mode capsule uses.
  */
 @Composable
-private fun OutputPartyPill(
+private fun OutputPartySegments(
     onOutput: () -> Unit,
     shuffleEnabled: Boolean,
     onToggleShuffle: () -> Unit,
@@ -957,51 +984,49 @@ private fun OutputPartyPill(
     // capsule at the original spacing when the party half is gone.
     val showParty = shown || badge.inParty
     val segmentWidth = if (showParty) PILL_SEGMENT_WIDTH_TRIPLE else PILL_SEGMENT_WIDTH
-    Pill(glass = LocalPlayerGlass.current) {
-        PillSegment(
-            // Earbuds, headphones, a speaker or the phone: whatever the sound
-            // is actually leaving by, kept current as the route changes.
-            icon = rememberAudioOutputIcon(),
-            iconSize = PILL_HEADPHONES_SIZE,
-            contentDescription = stringResource(Res.string.audio_output),
-            onClick = onOutput,
-            width = segmentWidth,
-        )
+    PillSegment(
+        // Earbuds, headphones, a speaker or the phone: whatever the sound
+        // is actually leaving by, kept current as the route changes.
+        icon = rememberAudioOutputIcon(),
+        iconSize = PILL_HEADPHONES_SIZE,
+        contentDescription = stringResource(Res.string.audio_output),
+        onClick = onOutput,
+        width = segmentWidth,
+    )
+    PillDivider()
+    // Shuffle sits between the two "where" halves so it is a tap away
+    // without opening the queue; the queue capsule keeps its own copy.
+    PillSegment(
+        icon = BitChordIcons.Shuffle,
+        contentDescription = stringResource(
+            if (shuffleEnabled) Res.string.shuffle_on else Res.string.shuffle_off,
+        ),
+        onClick = onToggleShuffle,
+        highlighted = shuffleEnabled,
+        haptic = if (shuffleEnabled) Haptic.ToggleOff else Haptic.ToggleOn,
+        tapWindowMs = SHUFFLE_TAP_WINDOW_MS,
+        width = segmentWidth,
+    )
+    if (showParty) {
         PillDivider()
-        // Shuffle sits between the two "where" halves so it is a tap away
-        // without opening the queue; the queue capsule keeps its own copy.
         PillSegment(
-            icon = BitChordIcons.Shuffle,
-            contentDescription = stringResource(
-                if (shuffleEnabled) Res.string.shuffle_on else Res.string.shuffle_off,
-            ),
-            onClick = onToggleShuffle,
-            highlighted = shuffleEnabled,
-            haptic = if (shuffleEnabled) Haptic.ToggleOff else Haptic.ToggleOn,
-            tapWindowMs = SHUFFLE_TAP_WINDOW_MS,
+            // Person rather than Groups: the three-person glyph is drawn
+            // half the height of Headphones and wider than the segment.
+            icon = Icons.Rounded.Person,
+            iconSize = PILL_PARTY_SIZE,
+            // The count is spoken here; drawn, it trails the glyph.
+            contentDescription = if (badge.inParty) {
+                stringResource(Res.string.listen_together_open_count, badge.members)
+            } else {
+                stringResource(Res.string.listen_together_open)
+            },
+            // Already in a party, this opens who's in it rather than the
+            // settings page directly; [onParty] only ever fires beforehand.
+            onClick = if (badge.inParty) onOpenMembers else onParty,
+            highlighted = badge.inParty,
+            trailingLabel = badge.members.takeIf { badge.inParty }?.toString(),
             width = segmentWidth,
         )
-        if (showParty) {
-            PillDivider()
-            PillSegment(
-                // Person rather than Groups: the three-person glyph is drawn
-                // half the height of Headphones and wider than the segment.
-                icon = Icons.Rounded.Person,
-                iconSize = PILL_PARTY_SIZE,
-                // The count is spoken here; drawn, it trails the glyph.
-                contentDescription = if (badge.inParty) {
-                    stringResource(Res.string.listen_together_open_count, badge.members)
-                } else {
-                    stringResource(Res.string.listen_together_open)
-                },
-                // Already in a party, this opens who's in it rather than the
-                // settings page directly; [onParty] only ever fires beforehand.
-                onClick = if (badge.inParty) onOpenMembers else onParty,
-                highlighted = badge.inParty,
-                trailingLabel = badge.members.takeIf { badge.inParty }?.toString(),
-                width = segmentWidth,
-            )
-        }
     }
 }
 
@@ -1026,7 +1051,7 @@ private fun PillSegment(
     loading: Boolean = false,
     /** See [BottomGlyph], where the same window means the same thing. */
     tapWindowMs: Long = 0L,
-    /** Per-segment override — see [OutputPartyPill]'s three-up capsule. */
+    /** Per-segment override — see [OutputPartySegments]'s three-up capsule. */
     width: Dp = PILL_SEGMENT_WIDTH,
 ) {
     val haptics = rememberHaptics()
@@ -1157,7 +1182,7 @@ internal fun OutputCaption(
     }
 }
 
-/** The three fields of a party the player draws — see [OutputPartyPill]. */
+/** The three fields of a party the player draws — see [OutputPartySegments]. */
 private data class PartyBadge(
     val inParty: Boolean,
     val members: Int,

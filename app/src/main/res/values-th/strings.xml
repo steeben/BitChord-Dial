@@ -1395,7 +1395,7 @@
     <string name="ai_mix_started">AI Mix: ตัวอย่าง 50 วินาที มิกซ์แบบเซ็ต DJ</string>
     <string name="ai_mix_enabled">(เปิดอยู่)</string>
     <string name="ai_mix_stopped">ปิด AI Mix</string>
-    <string name="fix_canvas_audio_mismatch">แก้ Canvas/เสียงที่ไม่ตรงกัน</string>
+    <string name="fix_canvas_audio_mismatch">แก้การจับคู่ Canvas/เสียง</string>
     <string name="canvas_fix_wrong_audio">เสียงเป็นเพลงอื่น</string>
     <string name="canvas_fix_wrong_audio_detail">เล่นเสียงของวิดีโอเองตั้งแต่นี้ไป</string>
     <string name="canvas_fix_wrong_canvas">Canvas เป็นคลิปที่ผิด</string>

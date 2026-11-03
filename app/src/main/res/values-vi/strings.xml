@@ -1329,7 +1329,7 @@
     <string name="ai_mix_started">AI Mix: các đoạn 50 giây, phối như một set DJ</string>
     <string name="ai_mix_enabled">(đang bật)</string>
     <string name="ai_mix_stopped">Đã tắt AI Mix</string>
-    <string name="fix_canvas_audio_mismatch">Sửa Canvas/âm thanh không khớp</string>
+    <string name="fix_canvas_audio_mismatch">Sửa khớp Canvas/âm thanh</string>
     <string name="canvas_fix_wrong_audio">Âm thanh là bài hát khác</string>
     <string name="canvas_fix_wrong_audio_detail">Từ giờ phát âm thanh của chính video</string>
     <string name="canvas_fix_wrong_canvas">Canvas là đoạn clip sai</string>

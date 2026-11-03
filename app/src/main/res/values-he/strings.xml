@@ -1417,7 +1417,7 @@
     <string name="ai_mix_started">AI Mix: קטעים של 50 שניות, ממוקסים כמו סט של DJ</string>
     <string name="ai_mix_enabled">(מופעל)</string>
     <string name="ai_mix_stopped">AI Mix כבוי</string>
-    <string name="fix_canvas_audio_mismatch">תיקון Canvas/אודיו שאינם תואמים</string>
+    <string name="fix_canvas_audio_mismatch">תיקון התאמת Canvas/אודיו</string>
     <string name="canvas_fix_wrong_audio">האודיו הוא שיר אחר</string>
     <string name="canvas_fix_wrong_audio_detail">מעכשיו לנגן את האודיו של הסרטון עצמו</string>
     <string name="canvas_fix_wrong_canvas">ה-Canvas הוא הקליפ הלא נכון</string>

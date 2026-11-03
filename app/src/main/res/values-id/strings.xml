@@ -1389,7 +1389,7 @@
     <string name="ai_mix_started">AI Mix: cuplikan 50 detik, dimiks seperti set DJ</string>
     <string name="ai_mix_enabled">(aktif)</string>
     <string name="ai_mix_stopped">AI Mix nonaktif</string>
-    <string name="fix_canvas_audio_mismatch">Perbaiki Canvas/audio yang tidak cocok</string>
+    <string name="fix_canvas_audio_mismatch">Perbaiki kecocokan Canvas/audio</string>
     <string name="canvas_fix_wrong_audio">Audio adalah lagu lain</string>
     <string name="canvas_fix_wrong_audio_detail">Putar audio video itu sendiri mulai sekarang</string>
     <string name="canvas_fix_wrong_canvas">Canvas adalah klip yang salah</string>

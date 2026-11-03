@@ -86,19 +86,24 @@ internal val PlayerInk: Color
  * unknown). A bright sleeve washes the backdrop out toward the same white the text is in,
  * so the brighter it is the further the ink leans into the accent, up to
  * [PLAYER_INK_TINT_BRIGHT]: enough colour to separate the text from a pale backdrop
- * without turning it into a coloured label.
+ * without turning it into a coloured label. On top of that cast the ink also darkens with
+ * the sleeve, up to [PLAYER_INK_DARKEN_MAX] of the way to black (see [playerInkDarken]), so
+ * text over near-white art stops being white-on-white.
  */
 @Composable
 fun ProvidePlayerInk(artLuminance: Float? = null, content: @Composable () -> Unit) {
     val accent = LocalNowPlayingTint.current ?: MaterialTheme.colorScheme.primary
     val tint = playerInkTint(artLuminance)
-    val target = remember(accent, tint) {
+    val darken = playerInkDarken(artLuminance)
+    val target = remember(accent, tint, darken) {
         val base = accent.toHsl()
-        if (base.s < GREY_SATURATION) {
+        val cast = if (base.s < GREY_SATURATION) {
             Color.White
         } else {
             lerp(Color.White, Color.hsl(base.h, base.s.coerceAtLeast(0.6f), 0.6f), tint)
         }
+        // Toward black in linear proportion: 0.7 leaves 30% of each channel.
+        lerp(cast, Color.Black, darken)
     }
     val ink by animateColorAsState(
         target,
@@ -122,7 +127,23 @@ internal fun playerInkTint(artLuminance: Float?): Float {
     return (tint * 100f).roundToInt() / 100f
 }
 
+/**
+ * How far toward black the ink goes for a sleeve of [artLuminance]: nothing up to a
+ * mid-grey sleeve, then easing up to [PLAYER_INK_DARKEN_MAX] as the art approaches white.
+ * Same ramp and same rounding as [playerInkTint], so the cast and the darkening move
+ * together.
+ */
+internal fun playerInkDarken(artLuminance: Float?): Float {
+    val l = artLuminance ?: return 0f
+    val t = ((l - INK_BRIGHT_FROM) / (INK_BRIGHT_TO - INK_BRIGHT_FROM)).coerceIn(0f, 1f)
+    val eased = t * t * (3f - 2f * t)
+    return (PLAYER_INK_DARKEN_MAX * eased * 100f).roundToInt() / 100f
+}
+
 private const val PLAYER_INK_TINT = 0.28f
+
+/** The most the ink darkens, on a sleeve that is as white as it gets: 70% darker. */
+private const val PLAYER_INK_DARKEN_MAX = 0.70f
 private const val PLAYER_INK_TINT_BRIGHT = 0.40f
 
 /** Mean relative luminance where a sleeve starts reading as bright (about a mid grey). */

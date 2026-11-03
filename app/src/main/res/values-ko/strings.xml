@@ -1180,7 +1180,7 @@
     <string name="ai_mix_started">AI Mix: 50초 샘플을 DJ 세트처럼 믹스</string>
     <string name="ai_mix_enabled">(사용 중)</string>
     <string name="ai_mix_stopped">AI Mix 꺼짐</string>
-    <string name="fix_canvas_audio_mismatch">맞지 않는 Canvas/오디오 수정</string>
+    <string name="fix_canvas_audio_mismatch">Canvas/오디오 일치 수정</string>
     <string name="canvas_fix_wrong_audio">오디오가 다른 곡임</string>
     <string name="canvas_fix_wrong_audio_detail">이제부터 동영상 자체의 오디오 재생</string>
     <string name="canvas_fix_wrong_canvas">Canvas가 잘못된 클립임</string>

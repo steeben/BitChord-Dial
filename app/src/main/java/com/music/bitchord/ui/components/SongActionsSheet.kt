@@ -396,28 +396,6 @@ fun SongActionsSheet(
             GroupSeparator(palette)
         }
 
-        canvasAudioFixes?.takeIf { it.isNotEmpty() }?.let { choices ->
-            ActionRow(
-                icon = Icons.Rounded.Build,
-                label = stringResource(R.string.fix_canvas_audio_mismatch),
-                accent = palette.accent,
-                highlighted = showingCanvasAudioFixes,
-                onClick = { showingCanvasAudioFixes = !showingCanvasAudioFixes },
-            )
-            if (showingCanvasAudioFixes) {
-                choices.forEach { choice ->
-                    ActionRow(
-                        icon = choice.icon,
-                        label = choice.label,
-                        description = choice.description,
-                        accent = palette.accent,
-                        onClick = choice.onClick,
-                    )
-                }
-            }
-            GroupSeparator(palette)
-        }
-
         if (isOffline) {
             // The offline player's own pair: a heart that files the track
             // under this device's Liked playlist, and the device's playlists.
@@ -618,6 +596,28 @@ fun SongActionsSheet(
         if (!isOffline && !menu) {
             onShare?.let {
                 ActionRow(Icons.Rounded.Share, stringResource(R.string.share), accent = palette.accent, onClick = it)
+            }
+        }
+        // Near the bottom, just above the log: a repair for the track playing
+        // now, reached for rarely and only when something is visibly wrong.
+        canvasAudioFixes?.takeIf { it.isNotEmpty() }?.let { choices ->
+            ActionRow(
+                icon = Icons.Rounded.Build,
+                label = stringResource(R.string.fix_canvas_audio_mismatch),
+                accent = palette.accent,
+                highlighted = showingCanvasAudioFixes,
+                onClick = { showingCanvasAudioFixes = !showingCanvasAudioFixes },
+            )
+            if (showingCanvasAudioFixes) {
+                choices.forEach { choice ->
+                    ActionRow(
+                        icon = choice.icon,
+                        label = choice.label,
+                        description = choice.description,
+                        accent = palette.accent,
+                        onClick = choice.onClick,
+                    )
+                }
             }
         }
         // Last, and only from the player: it is about the track playing right

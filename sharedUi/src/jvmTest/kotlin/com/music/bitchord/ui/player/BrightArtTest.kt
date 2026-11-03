@@ -16,6 +16,15 @@ class BrightArtTest {
     }
 
     @Test
+    fun inkDarkensWithBrightnessUpToSeventyPercent() {
+        assertEquals(0f, playerInkDarken(null), 0.0001f)
+        assertEquals(0f, playerInkDarken(0.05f), 0.0001f)
+        assertEquals(0.70f, playerInkDarken(0.95f), 0.0001f)
+        val mid = playerInkDarken(0.48f)
+        assertTrue("mid was $mid", mid > 0f && mid < 0.70f)
+    }
+
+    @Test
     fun meshPrefersColourOverCommonWhites() {
         val swatches = listOf(
             Color(0xFFF2F2F2), // paper, most common

@@ -1391,7 +1391,7 @@
     <string name="ai_mix_started">AI Mix：50 秒片段，像 DJ 現場一樣混音</string>
     <string name="ai_mix_enabled">（已啟用）</string>
     <string name="ai_mix_stopped">AI Mix 已關閉</string>
-    <string name="fix_canvas_audio_mismatch">修正不相符的 Canvas/音訊</string>
+    <string name="fix_canvas_audio_mismatch">修正 Canvas/音訊配對</string>
     <string name="canvas_fix_wrong_audio">音訊是另一首歌</string>
     <string name="canvas_fix_wrong_audio_detail">今後播放影片本身的音訊</string>
     <string name="canvas_fix_wrong_canvas">Canvas 是錯誤的片段</string>

@@ -1412,7 +1412,7 @@
     <string name="ai_mix_started">AI Mix: 50 सेकंड के नमूने, DJ सेट की तरह मिक्स किए गए</string>
     <string name="ai_mix_enabled">(चालू)</string>
     <string name="ai_mix_stopped">AI Mix बंद</string>
-    <string name="fix_canvas_audio_mismatch">बेमेल Canvas/ऑडियो ठीक करें</string>
+    <string name="fix_canvas_audio_mismatch">Canvas/ऑडियो मिलान ठीक करें</string>
     <string name="canvas_fix_wrong_audio">ऑडियो कोई और गाना है</string>
     <string name="canvas_fix_wrong_audio_detail">अब से वीडियो का अपना ऑडियो चलाएँ</string>
     <string name="canvas_fix_wrong_canvas">Canvas गलत क्लिप है</string>
