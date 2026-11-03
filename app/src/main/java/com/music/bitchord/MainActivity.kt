@@ -117,7 +117,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -593,15 +592,6 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 val appBackdrop = rememberLayerBackdrop(onDraw = paintBackdrop)
-                // The playing song's colour, for the chrome that wears it — see
-                // [LocalNowPlayingTint]. BitChordApp reports the artwork and the
-                // tint is provided out here, around the whole app, rather than
-                // inside it: wrapping BitChordApp's body in a provider lambda made
-                // that lambda capture over 255 of its locals, a method signature
-                // ART refuses, and the app crashed on launch.
-                var nowPlayingArt by remember { mutableStateOf<String?>(null) }
-                val nowPlayingTint = rememberNowPlayingTint(nowPlayingArt)
-                val reportNowPlayingArt: (String?) -> Unit = remember { { nowPlayingArt = it } }
                 val ambientOn by CustomizationSettings.ambientBackground.collectAsStateWithLifecycle()
                 val frosted = if (!ambientOn) {
                     null
@@ -624,7 +614,6 @@ class MainActivity : AppCompatActivity() {
                     LocalOverscrollFactory provides iosOverscrollFactory,
                     LocalLiquidGlassEnabled provides liquidGlassEnabled,
                     LocalAppBackdrop provides appBackdrop,
-                    LocalNowPlayingTint provides nowPlayingTint,
                     com.music.bitchord.ui.components.LocalCropThumbnails provides cropThumbnails,
                     com.music.bitchord.ui.components.LocalDialTileStyle provides dialTileStyle,
                     com.music.bitchord.ui.components.LocalDialTileGlassEdge provides ::dialTileGlassEdge,
@@ -646,7 +635,6 @@ class MainActivity : AppCompatActivity() {
                         windowWidth = maxWidth,
                         windowHeight = maxHeight,
                         appBackdrop = appBackdrop,
-                        onNowPlayingArt = reportNowPlayingArt,
                     )
                 }
                 }
@@ -717,8 +705,6 @@ private fun BitChordApp(
      */
     windowHeight: Dp,
     appBackdrop: LayerBackdrop,
-    /** The playing song's artwork, for [LocalNowPlayingTint]; see the call site. */
-    onNowPlayingArt: (String?) -> Unit,
     viewModel: MainViewModel = viewModel(),
 ) {
     val context = LocalContext.current
@@ -3294,15 +3280,24 @@ private fun BitChordApp(
         LaunchGate.open = true
         SpeedDialIntro.canStart = true
     }
-    // The playing song's colour is provided around the whole app, out at the
-    // call site (see there for why not here); this tells it which artwork.
-    val nowPlayingArt = player.song?.thumbnailUrl
-    SideEffect { onNowPlayingArt(nowPlayingArt) }
+    // The playing song's colour, for the chrome that wears it — see
+    // [LocalNowPlayingTint]. Provided around the whole app rather than handed
+    // down, so the library's own pages can pick it up the same way.
+    val nowPlayingTint = rememberNowPlayingTint(player.song?.thumbnailUrl)
     Box(
         Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
     ) {
+    // Provided twice, around each half of the app, not once around all of it.
+    // A provider's content is a lambda, compiled to one method taking every
+    // local of BitChordApp it reads as an argument; around the whole app that
+    // came to 257 argument slots, past the JVM's 255, and MainActivityKt no
+    // longer loaded in unit tests; the same builds crashed at launch. Each half reads far
+    // fewer. Keep any new overlay in the second half, and if this ever comes
+    // back, split again rather than inline: BitChordApp's own method is
+    // already at the 64KB code limit. The bodies keep their old indent.
+    CompositionLocalProvider(LocalNowPlayingTint provides nowPlayingTint) {
         // A pushed album/artist/playlist page replaces the tab content but
         // leaves the tab bar and mini player in place.
         // Replay's three layers unwind in the order they were opened. Ahead of
@@ -5705,6 +5700,8 @@ private fun BitChordApp(
             }
 
         }
+    }
+    CompositionLocalProvider(LocalNowPlayingTint provides nowPlayingTint) {
 
         // ---- Album / playlist detail ----
         // ---- Long-press track actions ----
@@ -7973,6 +7970,7 @@ private fun BitChordApp(
             )
         }
 
+    }
     }
 }
 
