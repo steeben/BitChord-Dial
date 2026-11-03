@@ -86,6 +86,9 @@ internal val DRAWER_MAX_WIDTH = 640.dp
 internal val ROW_SHAPE = RoundedCornerShape(16.dp)
 internal val SCRIM_COLOR = Color.Black.copy(alpha = 0.5f)
 
+/** The dim [PlayerDrawer] lays behind itself unless told otherwise. */
+val PlayerDrawerScrim: Color get() = SCRIM_COLOR
+
 /**
  * How much of its own height the drawer has to be dragged before letting go
  * dismisses it rather than springing back. A quarter is enough to be a decision
@@ -141,14 +144,17 @@ fun PlayerDrawer(
     /**
      * The drawer's ground: the wash over its glass, and the fill under it
      * where there is no glass. Dark for the player's white rows by default; a
-     * page's menu drawn in the theme's own colours passes the theme's.
+     * page's menu drawn in the theme's own colours passes the theme's, and
+     * null leaves the glass its own fill, as the app's bars wear it.
      */
-    glassTint: Color = DRAWER_GLASS_TINT,
+    glassTint: Color? = DRAWER_GLASS_TINT,
     surfaceColor: Color = DRAWER_SURFACE,
     /** The title's and the grab handle's colour, to read against [surfaceColor]. */
     contentColor: Color = Color.White,
     /** Side margin for the content: rows that carry their own inset pass none. */
     horizontalPadding: Dp = 16.dp,
+    /** The dim laid over everything behind the drawer; transparent for none. */
+    scrimColor: Color = SCRIM_COLOR,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val reduceDynamicBlur by PlayerSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
@@ -249,7 +255,7 @@ fun PlayerDrawer(
         modifier = modifier
             .fillMaxSize()
             .containSheetGestures()
-            .background(SCRIM_COLOR.copy(alpha = SCRIM_COLOR.alpha * scrimAlpha))
+            .background(scrimColor.copy(alpha = scrimColor.alpha * scrimAlpha))
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() },
@@ -295,7 +301,7 @@ fun PlayerDrawer(
                         )
                         layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(0, 0) }
                     }
-                    .then(glass.surface(Modifier, DRAWER_SHAPE, tint = glassTint, underlay = SCRIM_COLOR)),
+                    .then(glass.surface(Modifier, DRAWER_SHAPE, tint = glassTint, underlay = scrimColor)),
             )
         }
         Column(

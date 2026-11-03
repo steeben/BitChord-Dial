@@ -2855,8 +2855,11 @@ private fun BitPerfectModeSheet(
 @Composable
 internal fun LiquidGlassOptions() {
     val haptics = LocalHapticFeedback.current
-    val tint by CustomizationSettings.glassTint.collectAsStateWithLifecycle()
+    val classicTint by CustomizationSettings.glassTint.collectAsStateWithLifecycle()
+    val newTint by CustomizationSettings.clearGlassTint.collectAsStateWithLifecycle()
     val clearStyle by CustomizationSettings.clearGlassStyle.collectAsStateWithLifecycle()
+    // New keeps a darkness for each theme; the slider shows the one in use.
+    val darkTheme = MaterialTheme.colorScheme.surface.luminance() <= 0.5f
     // Classic and New keep a set of options each; the sliders show the
     // picked style's, and the reset puts back that style's.
     val classicTransparency by CustomizationSettings.glassTransparency.collectAsStateWithLifecycle()
@@ -2864,9 +2867,14 @@ internal fun LiquidGlassOptions() {
     val classicBlur by CustomizationSettings.glassBlur.collectAsStateWithLifecycle()
     val classicSaturation by CustomizationSettings.glassSaturation.collectAsStateWithLifecycle()
     val newTransparency by CustomizationSettings.clearGlassTransparency.collectAsStateWithLifecycle()
-    val newDarkness by CustomizationSettings.clearGlassTintDarkness.collectAsStateWithLifecycle()
+    val newDarkDarkness by CustomizationSettings.clearGlassTintDarkness.collectAsStateWithLifecycle()
+    val newLightDarkness by CustomizationSettings.clearGlassTintDarknessLight.collectAsStateWithLifecycle()
+    val newDarkness = if (darkTheme) newDarkDarkness else newLightDarkness
     val newBlur by CustomizationSettings.clearGlassBlur.collectAsStateWithLifecycle()
     val newSaturation by CustomizationSettings.clearGlassSaturation.collectAsStateWithLifecycle()
+    val tint = if (clearStyle) newTint else classicTint
+    val setTint: (GlassTint) -> Unit =
+        if (clearStyle) CustomizationSettings::setClearGlassTint else CustomizationSettings::setGlassTint
     val transparency = if (clearStyle) newTransparency else classicTransparency
     val darkness = if (clearStyle) newDarkness else classicDarkness
     val blur = if (clearStyle) newBlur else classicBlur
@@ -2874,17 +2882,25 @@ internal fun LiquidGlassOptions() {
     val setTransparency: (Float) -> Unit =
         if (clearStyle) CustomizationSettings::setClearGlassTransparency else CustomizationSettings::setGlassTransparency
     val setDarkness: (Float) -> Unit =
-        if (clearStyle) CustomizationSettings::setClearGlassTintDarkness else CustomizationSettings::setGlassTintDarkness
+        if (clearStyle) {
+            { CustomizationSettings.setClearGlassTintDarkness(it, dark = darkTheme) }
+        } else {
+            CustomizationSettings::setGlassTintDarkness
+        }
     val setBlur: (Float) -> Unit =
         if (clearStyle) CustomizationSettings::setClearGlassBlur else CustomizationSettings::setGlassBlur
     val setSaturation: (Float) -> Unit =
         if (clearStyle) CustomizationSettings::setClearGlassSaturation else CustomizationSettings::setGlassSaturation
-    val isDefault = tint == GlassTint.DEFAULT && darkness == 0f && if (clearStyle) {
-        transparency == CustomizationSettings.DEFAULT_CLEAR_GLASS_TRANSPARENCY &&
+    val isDefault = if (clearStyle) {
+        newTint == CustomizationSettings.DEFAULT_CLEAR_GLASS_TINT &&
+            newDarkDarkness == CustomizationSettings.DEFAULT_CLEAR_GLASS_TINT_DARKNESS &&
+            newLightDarkness == CustomizationSettings.DEFAULT_CLEAR_GLASS_TINT_DARKNESS_LIGHT &&
+            transparency == CustomizationSettings.DEFAULT_CLEAR_GLASS_TRANSPARENCY &&
             saturation == CustomizationSettings.DEFAULT_CLEAR_GLASS_SATURATION &&
             blur == CustomizationSettings.DEFAULT_CLEAR_GLASS_BLUR
     } else {
-        transparency == CustomizationSettings.DEFAULT_GLASS_TRANSPARENCY &&
+        tint == GlassTint.DEFAULT && darkness == 0f &&
+            transparency == CustomizationSettings.DEFAULT_GLASS_TRANSPARENCY &&
             saturation == CustomizationSettings.DEFAULT_GLASS_SATURATION &&
             blur == CustomizationSettings.DEFAULT_GLASS_BLUR
     }
@@ -3018,7 +3034,7 @@ internal fun LiquidGlassOptions() {
                         )
                         .clickable(onClickLabel = label) {
                             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            CustomizationSettings.setGlassTint(option)
+                            setTint(option)
                         }
                         .semantics { contentDescription = label },
                     contentAlignment = Alignment.Center,
@@ -3053,7 +3069,6 @@ internal fun LiquidGlassOptions() {
                 haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 if (clearStyle) {
                     CustomizationSettings.resetClearGlassOptions()
-                    CustomizationSettings.setGlassTint(GlassTint.DEFAULT)
                 } else {
                     CustomizationSettings.resetGlassOptions()
                 }
@@ -3071,6 +3086,7 @@ private fun GlassTint.labelRes(): Int = when (this) {
     GlassTint.PINK -> R.string.glass_tint_pink
     GlassTint.ORANGE -> R.string.glass_tint_orange
     GlassTint.GREEN -> R.string.glass_tint_green
+    GlassTint.BLACK -> R.string.glass_tint_black
 }
 
 /**

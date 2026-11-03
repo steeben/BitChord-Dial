@@ -5,11 +5,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.music.bitchord.ui.components.backdrop.backdrops.LayerBackdrop
 import com.music.bitchord.ui.player.AppPlayerGlass
 import com.music.bitchord.ui.player.LocalPlayerGlass
 import com.music.bitchord.ui.player.PlayerDrawer
+import com.music.bitchord.ui.player.PlayerDrawerScrim
 import dev.chrisbanes.haze.HazeState
 
 /**
@@ -26,6 +28,12 @@ fun GlassMenuDrawer(
     backdrop: LayerBackdrop?,
     hazeState: HazeState,
     onDismiss: () -> Unit,
+    /**
+     * Drawn as the app's bars are, with no dim over the page and no wash of
+     * its own, so it shows the glass exactly as the rest of the app wears it.
+     * The Liquid Glass options drawer is one: it is the preview of what they do.
+     */
+    seeThrough: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val glass = remember(backdrop) { backdrop?.let(::AppPlayerGlass) }
@@ -36,11 +44,12 @@ fun GlassMenuDrawer(
             title = null,
             onDismiss = onDismiss,
             handlesBack = true,
-            glassTint = ground.copy(alpha = 0.6f),
+            glassTint = if (seeThrough) null else ground.copy(alpha = 0.6f),
             surfaceColor = ground,
             contentColor = MaterialTheme.colorScheme.onBackground,
             // The menu's rows carry their own inset, edge to edge.
             horizontalPadding = 0.dp,
+            scrimColor = if (seeThrough) Color.Transparent else PlayerDrawerScrim,
             content = content,
         )
     }

@@ -270,6 +270,7 @@
     <string name="glass_tint_pink">Rosa</string>
     <string name="glass_tint_orange">Arancione</string>
     <string name="glass_tint_green">Verde</string>
+    <string name="glass_tint_black">Nero</string>
     <string name="full_screen_cover_art">Copertina a tutto schermo</string>
     <string name="animated_cover_art">Copertina animata</string>
     <string name="synced_lyrics">Testi sincronizzati</string>

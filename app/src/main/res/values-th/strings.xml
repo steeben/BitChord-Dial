@@ -246,6 +246,7 @@
     <string name="glass_tint_pink">ชมพู</string>
     <string name="glass_tint_orange">ส้ม</string>
     <string name="glass_tint_green">เขียว</string>
+    <string name="glass_tint_black">ดำ</string>
     <string name="full_screen_cover_art">ปกอัลบั้มเต็มจอ</string>
     <string name="animated_cover_art">ปกอัลบั้มเคลื่อนไหว</string>
     <string name="synced_lyrics">เนื้อเพลงซิงค์</string>

@@ -240,6 +240,7 @@
     <string name="glass_tint_pink">Rosa</string>
     <string name="glass_tint_orange">Naranja</string>
     <string name="glass_tint_green">Verde</string>
+    <string name="glass_tint_black">Negro</string>
     <string name="full_screen_cover_art">Portada a pantalla completa</string>
     <string name="animated_cover_art">Portada animada</string>
     <string name="synced_lyrics">Letras sincronizadas</string>

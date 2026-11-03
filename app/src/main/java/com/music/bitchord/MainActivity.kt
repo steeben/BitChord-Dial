@@ -6439,14 +6439,22 @@ private fun BitChordApp(
                     val playerGlass = remember(playerBackdrop) {
                         com.music.bitchord.ui.player.AppPlayerGlass(playerBackdrop)
                     }
-                    CompositionLocalProvider(
-                        LocalPlayerDock provides activeDock,
-                        com.music.bitchord.ui.player.LocalPlayerGlass provides playerGlass.takeIf { glassSamplesBackdrop },
-                        // The player is coloured by the artwork, as the album
-                        // and artist pages are, so its glass keeps the stock look.
-                        LocalGlassFollowsOptions provides false,
-                    ) {
-                        nowPlaying(playerSong)
+                    // The whole player as it is drawn, controls, title and
+                    // sleeve included, for the ⋯ menu's glass below. The
+                    // buttons' own backdrop holds only what is behind them,
+                    // so without a Canvas the menu bent a blurred wash of
+                    // the background and read as solid.
+                    val playerMenuBackdrop = rememberLayerBackdrop()
+                    Box(if (glassSamplesBackdrop) Modifier.layerBackdrop(playerMenuBackdrop) else Modifier) {
+                        CompositionLocalProvider(
+                            LocalPlayerDock provides activeDock,
+                            com.music.bitchord.ui.player.LocalPlayerGlass provides playerGlass.takeIf { glassSamplesBackdrop },
+                            // The player is coloured by the artwork, as the album
+                            // and artist pages are, so its glass keeps the stock look.
+                            LocalGlassFollowsOptions provides false,
+                        ) {
+                            nowPlaying(playerSong)
+                        }
                     }
                     // The player's ⋯ menu, drawn in the player's own window so
                     // it is over the player, on the player's glass. Outside the
@@ -6458,7 +6466,7 @@ private fun BitChordApp(
                         },
                         anchor = MenuNav.songMenuAnchor,
                         onDismiss = { songActions = null },
-                        backdrop = playerBackdrop.takeIf { glassSamplesBackdrop },
+                        backdrop = playerMenuBackdrop.takeIf { glassSamplesBackdrop },
                     ) { song ->
                         songMenuBody(song, SongActionsPresentation.Menu)
                     }
@@ -6543,6 +6551,7 @@ private fun BitChordApp(
                 backdrop = appBackdrop.takeIf { glassSamplesBackdrop },
                 hazeState = hazeState,
                 onDismiss = { showGlassOptions = false },
+                seeThrough = true,
             ) {
                 LiquidGlassOptions()
             }

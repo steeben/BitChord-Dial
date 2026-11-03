@@ -866,6 +866,7 @@
     <string name="glass_tint_pink">粉紅色</string>
     <string name="glass_tint_orange">橘色</string>
     <string name="glass_tint_green">綠色</string>
+    <string name="glass_tint_black">黑色</string>
 
     <string name="listen_as">以該身份收聽</string>
 

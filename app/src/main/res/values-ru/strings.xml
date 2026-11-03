@@ -913,6 +913,7 @@
     <string name="glass_tint_pink">Розовый</string>
     <string name="glass_tint_orange">Оранжевый</string>
     <string name="glass_tint_green">Зелёный</string>
+    <string name="glass_tint_black">Чёрный</string>
 
     <string name="listen_as">Слушать как</string>
 

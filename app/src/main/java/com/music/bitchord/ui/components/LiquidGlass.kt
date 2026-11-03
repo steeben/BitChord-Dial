@@ -116,6 +116,7 @@ enum class GlassTint(val argb: Long?) {
     PINK(0xFFFF4F9A),
     ORANGE(0xFFFF8A3D),
     GREEN(0xFF34C77B),
+    BLACK(0xFF000000),
     ;
 
     /**
@@ -168,9 +169,11 @@ private fun glassFill(base: Color): Color {
 private fun clearGlassFill(veil: Color, themeTint: Color): Color {
     if (!LocalGlassFollowsOptions.current) return veil
     val transparency by CustomizationSettings.clearGlassTransparency.collectAsStateWithLifecycle()
-    val darkness by CustomizationSettings.clearGlassTintDarkness.collectAsStateWithLifecycle()
+    val darkDarkness by CustomizationSettings.clearGlassTintDarkness.collectAsStateWithLifecycle()
+    val lightDarkness by CustomizationSettings.clearGlassTintDarknessLight.collectAsStateWithLifecycle()
+    val darkness = if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) lightDarkness else darkDarkness
     val saturation by CustomizationSettings.clearGlassSaturation.collectAsStateWithLifecycle()
-    val tint = CustomizationSettings.glassTint.collectAsStateWithLifecycle().value.color()
+    val tint = CustomizationSettings.clearGlassTint.collectAsStateWithLifecycle().value.color()
     var fill = veil
     val surface = (1f - transparency).coerceIn(0f, 1f)
     if (surface > 0f) fill = fill.compositeOver(themeTint.copy(alpha = surface))

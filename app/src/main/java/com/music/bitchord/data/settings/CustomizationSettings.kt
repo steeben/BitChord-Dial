@@ -135,7 +135,7 @@ object CustomizationSettings {
      * Draws Liquid Glass in the New (clear) style, ClearLiquidGlass.kt,
      * instead of the Classic frosted one.
      */
-    val clearGlassStyle = MutableStateFlow(false)
+    val clearGlassStyle = MutableStateFlow(true)
 
     /**
      * The New style's own options, kept apart from Classic's because the two
@@ -146,7 +146,16 @@ object CustomizationSettings {
     val clearGlassTransparency = MutableStateFlow(DEFAULT_CLEAR_GLASS_TRANSPARENCY)
     val clearGlassBlur = MutableStateFlow(DEFAULT_CLEAR_GLASS_BLUR)
     val clearGlassSaturation = MutableStateFlow(DEFAULT_CLEAR_GLASS_SATURATION)
-    val clearGlassTintDarkness = MutableStateFlow(0f)
+
+    /** The New style's own tint; it ships black, where Classic ships the theme's. */
+    val clearGlassTint = MutableStateFlow(DEFAULT_CLEAR_GLASS_TINT)
+
+    /**
+     * The New style's tint darkness, one for each theme: a dark page takes
+     * more shade than a light one before the glass reads as darkened.
+     */
+    val clearGlassTintDarkness = MutableStateFlow(DEFAULT_CLEAR_GLASS_TINT_DARKNESS)
+    val clearGlassTintDarknessLight = MutableStateFlow(DEFAULT_CLEAR_GLASS_TINT_DARKNESS_LIGHT)
 
     /** The library last picked from the Library page's logo; remembered across launches. */
     val librarySource = MutableStateFlow(LibrarySource.ALL)
@@ -197,13 +206,18 @@ object CustomizationSettings {
         glassTintDarkness.value = p.getFloat(KEY_GLASS_TINT_DARKNESS, 0f).coerceIn(0f, 1f)
         glassBlur.value = p.getFloat(KEY_GLASS_BLUR, DEFAULT_GLASS_BLUR).coerceIn(0f, MAX_GLASS_BLUR)
         glassSaturation.value = p.getFloat(KEY_GLASS_SATURATION, DEFAULT_GLASS_SATURATION).coerceIn(0f, MAX_GLASS_SATURATION)
-        clearGlassStyle.value = p.getBoolean(KEY_CLEAR_GLASS_STYLE, false)
+        clearGlassStyle.value = p.getBoolean(KEY_CLEAR_GLASS_STYLE, true)
         clearGlassTransparency.value =
             p.getFloat(KEY_CLEAR_GLASS_TRANSPARENCY, DEFAULT_CLEAR_GLASS_TRANSPARENCY).coerceIn(0f, 1f)
         clearGlassBlur.value = p.getFloat(KEY_CLEAR_GLASS_BLUR, DEFAULT_CLEAR_GLASS_BLUR).coerceIn(0f, MAX_GLASS_BLUR)
         clearGlassSaturation.value =
             p.getFloat(KEY_CLEAR_GLASS_SATURATION, DEFAULT_CLEAR_GLASS_SATURATION).coerceIn(0f, MAX_GLASS_SATURATION)
-        clearGlassTintDarkness.value = p.getFloat(KEY_CLEAR_GLASS_TINT_DARKNESS, 0f).coerceIn(0f, 1f)
+        clearGlassTint.value = GlassTint.entries
+            .firstOrNull { it.name == p.getString(KEY_CLEAR_GLASS_TINT, null) } ?: DEFAULT_CLEAR_GLASS_TINT
+        clearGlassTintDarkness.value =
+            p.getFloat(KEY_CLEAR_GLASS_TINT_DARKNESS, DEFAULT_CLEAR_GLASS_TINT_DARKNESS).coerceIn(0f, 1f)
+        clearGlassTintDarknessLight.value =
+            p.getFloat(KEY_CLEAR_GLASS_TINT_DARKNESS_LIGHT, DEFAULT_CLEAR_GLASS_TINT_DARKNESS_LIGHT).coerceIn(0f, 1f)
         librarySource.value = LibrarySource.entries
             .firstOrNull { it.name == p.getString(KEY_LIBRARY_SOURCE, null) } ?: LibrarySource.ALL
         speedDialPins.value = readPins(p.getString(KEY_SPEED_DIAL_PINS, null))
@@ -558,23 +572,38 @@ object CustomizationSettings {
         prefs?.edit()?.putFloat(KEY_CLEAR_GLASS_SATURATION, clamped)?.apply()
     }
 
-    fun setClearGlassTintDarkness(value: Float) {
-        val clamped = value.coerceIn(0f, 1f)
-        clearGlassTintDarkness.value = clamped
-        prefs?.edit()?.putFloat(KEY_CLEAR_GLASS_TINT_DARKNESS, clamped)?.apply()
+    fun setClearGlassTint(value: GlassTint) {
+        clearGlassTint.value = value
+        prefs?.edit()?.putString(KEY_CLEAR_GLASS_TINT, value.name)?.apply()
     }
 
-    /** Puts the New style's transparency, darkness, saturation and blur back to how it ships. */
+    /** Sets the New style's tint darkness for the dark theme, or the light one's when [dark] is false. */
+    fun setClearGlassTintDarkness(value: Float, dark: Boolean = true) {
+        val clamped = value.coerceIn(0f, 1f)
+        if (dark) {
+            clearGlassTintDarkness.value = clamped
+            prefs?.edit()?.putFloat(KEY_CLEAR_GLASS_TINT_DARKNESS, clamped)?.apply()
+        } else {
+            clearGlassTintDarknessLight.value = clamped
+            prefs?.edit()?.putFloat(KEY_CLEAR_GLASS_TINT_DARKNESS_LIGHT, clamped)?.apply()
+        }
+    }
+
+    /** Puts the New style's transparency, tint, darkness, saturation and blur back to how it ships. */
     fun resetClearGlassOptions() {
         clearGlassTransparency.value = DEFAULT_CLEAR_GLASS_TRANSPARENCY
         clearGlassBlur.value = DEFAULT_CLEAR_GLASS_BLUR
         clearGlassSaturation.value = DEFAULT_CLEAR_GLASS_SATURATION
-        clearGlassTintDarkness.value = 0f
+        clearGlassTint.value = DEFAULT_CLEAR_GLASS_TINT
+        clearGlassTintDarkness.value = DEFAULT_CLEAR_GLASS_TINT_DARKNESS
+        clearGlassTintDarknessLight.value = DEFAULT_CLEAR_GLASS_TINT_DARKNESS_LIGHT
         prefs?.edit()
             ?.remove(KEY_CLEAR_GLASS_TRANSPARENCY)
             ?.remove(KEY_CLEAR_GLASS_BLUR)
             ?.remove(KEY_CLEAR_GLASS_SATURATION)
+            ?.remove(KEY_CLEAR_GLASS_TINT)
             ?.remove(KEY_CLEAR_GLASS_TINT_DARKNESS)
+            ?.remove(KEY_CLEAR_GLASS_TINT_DARKNESS_LIGHT)
             ?.apply()
     }
 
@@ -662,10 +691,17 @@ object CustomizationSettings {
     const val DEFAULT_GLASS_SATURATION = 1.5f
     const val MAX_GLASS_SATURATION = 2f
 
-    /** The New style as it ships: no surface fill, a 2dp frost, a slight colour lift. */
-    const val DEFAULT_CLEAR_GLASS_TRANSPARENCY = 1f
-    const val DEFAULT_CLEAR_GLASS_BLUR = 2f
+    /**
+     * The New style as it ships, and the glass the app ships with: 40% of the
+     * theme's surface under the veil, a 3dp frost, a slight colour lift, and a
+     * black tint shaded 30% on dark pages and 10% on light ones.
+     */
+    const val DEFAULT_CLEAR_GLASS_TRANSPARENCY = 0.6f
+    const val DEFAULT_CLEAR_GLASS_BLUR = 3f
     const val DEFAULT_CLEAR_GLASS_SATURATION = 1.1f
+    val DEFAULT_CLEAR_GLASS_TINT: GlassTint get() = GlassTint.BLACK
+    const val DEFAULT_CLEAR_GLASS_TINT_DARKNESS = 0.3f
+    const val DEFAULT_CLEAR_GLASS_TINT_DARKNESS_LIGHT = 0.1f
 
     private const val KEY_NAV_TABS = "custom_nav_tabs"
     private const val KEY_COMPACT_CANVAS_CONTROLS = "custom_compact_canvas_controls"
@@ -683,6 +719,8 @@ object CustomizationSettings {
     private const val KEY_CLEAR_GLASS_BLUR = "custom_clear_glass_blur"
     private const val KEY_CLEAR_GLASS_SATURATION = "custom_clear_glass_saturation"
     private const val KEY_CLEAR_GLASS_TINT_DARKNESS = "custom_clear_glass_tint_darkness"
+    private const val KEY_CLEAR_GLASS_TINT_DARKNESS_LIGHT = "custom_clear_glass_tint_darkness_light"
+    private const val KEY_CLEAR_GLASS_TINT = "custom_clear_glass_tint"
     private const val KEY_LIBRARY_SOURCE = "custom_library_source"
     private const val KEY_SPEED_DIAL_PINS = "custom_speed_dial_pins"
     private const val KEY_LAST_SPEED_DIAL = "custom_last_speed_dial"

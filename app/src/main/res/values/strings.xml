@@ -388,6 +388,7 @@
     <string name="glass_tint_pink">Pink</string>
     <string name="glass_tint_orange">Orange</string>
     <string name="glass_tint_green">Green</string>
+    <string name="glass_tint_black">Black</string>
     <string name="full_screen_cover_art">Full-screen cover art</string>
     <string name="legacy_mesh_gradient">Legacy mesh gradient</string>
     <string name="legacy_mesh_gradient_subtitle">Brings back the drifting colour blobs behind the player from v1.5</string>

@@ -256,6 +256,7 @@
     <string name="glass_tint_pink">Hồng</string>
     <string name="glass_tint_orange">Cam</string>
     <string name="glass_tint_green">Xanh lá</string>
+    <string name="glass_tint_black">Đen</string>
     <string name="full_screen_cover_art">Ảnh bìa toàn màn hình</string>
     <string name="legacy_mesh_gradient">Dải màu lưới kiểu cũ</string>
     <string name="legacy_mesh_gradient_subtitle">Mang lại các đốm màu chuyển động phía sau trình phát từ phiên bản 1.5</string>

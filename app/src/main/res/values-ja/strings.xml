@@ -980,6 +980,7 @@
     <string name="glass_tint_pink">ピンク</string>
     <string name="glass_tint_orange">オレンジ</string>
     <string name="glass_tint_green">グリーン</string>
+    <string name="glass_tint_black">ブラック</string>
 
 
     <string name="playlist_action">プレイリスト</string>

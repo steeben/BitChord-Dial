@@ -886,6 +886,7 @@
     <string name="glass_tint_pink">Rose</string>
     <string name="glass_tint_orange">Orange</string>
     <string name="glass_tint_green">Vert</string>
+    <string name="glass_tint_black">Noir</string>
 
     <string name="listen_as">Écouter en tant que</string>
 

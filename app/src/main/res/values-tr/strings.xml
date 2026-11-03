@@ -252,6 +252,7 @@
     <string name="glass_tint_pink">Pembe</string>
     <string name="glass_tint_orange">Turuncu</string>
     <string name="glass_tint_green">Yeşil</string>
+    <string name="glass_tint_black">Siyah</string>
     <string name="full_screen_cover_art">Tam ekran kapak resmi</string>
     <string name="animated_cover_art">Hareketli kapak resmi</string>
     <string name="synced_lyrics">Senkronize sözler</string>

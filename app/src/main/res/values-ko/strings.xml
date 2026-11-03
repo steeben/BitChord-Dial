@@ -1118,6 +1118,7 @@
     <string name="glass_tint_pink">분홍색</string>
     <string name="glass_tint_orange">주황색</string>
     <string name="glass_tint_green">초록색</string>
+    <string name="glass_tint_black">검은색</string>
     <string name="local_only">로컬</string>
     <string name="nothing_on_device_for_artist">이 기기에 아직 이 아티스트의 곡이 없습니다</string>
     <string name="artist_radio_title">%1$s 라디오</string>
