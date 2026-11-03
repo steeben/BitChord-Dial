@@ -864,6 +864,8 @@
 
     <string name="liquid_glass_unavailable">Nécessite Android 12 ou plus récent</string>
     <string name="glass_options_subtitle">Réglez la transparence, la teinte et le flou du verre</string>
+    <string name="glass_clear_style">Verre clair (test)</string>
+    <string name="glass_clear_style_subtitle">Essayer un verre plus clair et net aux bords éclairés au lieu du verre dépoli</string>
     <string name="glass_transparency">Transparence</string>
     <string name="glass_blur">Flou</string>
     <string name="glass_saturation">Saturation</string>

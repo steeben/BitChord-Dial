@@ -891,6 +891,8 @@
 
     <string name="liquid_glass_unavailable">Требуется Android 12 или новее</string>
     <string name="glass_options_subtitle">Настройте прозрачность, оттенок и размытие стекла</string>
+    <string name="glass_clear_style">Прозрачное стекло (тест)</string>
+    <string name="glass_clear_style_subtitle">Попробовать более прозрачное и чёткое стекло с подсвеченными краями вместо матового</string>
     <string name="glass_transparency">Прозрачность</string>
     <string name="glass_blur">Размытие</string>
     <string name="glass_saturation">Насыщенность</string>

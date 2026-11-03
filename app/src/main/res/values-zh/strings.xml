@@ -842,6 +842,8 @@
 
     <string name="liquid_glass_unavailable">需要 Android 12 或更高版本</string>
     <string name="glass_options_subtitle">调整玻璃的透明度、色调和模糊程度</string>
+    <string name="glass_clear_style">透明玻璃（测试）</string>
+    <string name="glass_clear_style_subtitle">试用边缘发光、更通透清晰的玻璃，替代磨砂玻璃</string>
     <string name="glass_transparency">透明度</string>
     <string name="glass_blur">模糊</string>
     <string name="glass_saturation">饱和度</string>

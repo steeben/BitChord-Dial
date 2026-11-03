@@ -257,6 +257,8 @@
     <string name="liquid_glass_subtitle">Vetro rifrangente reale sulla barra di navigazione flottante. Solo Android 12+; usa più GPU.</string>
     <string name="liquid_glass_unavailable">Richiede Android 12 o versioni successive</string>
     <string name="glass_options_subtitle">Regola trasparenza, tinta e sfocatura del vetro</string>
+    <string name="glass_clear_style">Vetro trasparente (test)</string>
+    <string name="glass_clear_style_subtitle">Prova un vetro più chiaro e nitido con bordi illuminati al posto di quello smerigliato</string>
     <string name="glass_transparency">Trasparenza</string>
     <string name="glass_blur">Sfocatura</string>
     <string name="glass_saturation">Saturazione</string>

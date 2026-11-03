@@ -1,6 +1,7 @@
 package com.music.bitchord.ui.screens
 
 import androidx.compose.material.icons.rounded.PlayCircleOutline
+import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material.icons.rounded.MoreHoriz
@@ -2843,6 +2844,7 @@ internal fun LiquidGlassOptions() {
     val darkness by CustomizationSettings.glassTintDarkness.collectAsStateWithLifecycle()
     val blur by CustomizationSettings.glassBlur.collectAsStateWithLifecycle()
     val saturation by CustomizationSettings.glassSaturation.collectAsStateWithLifecycle()
+    val clearStyle by CustomizationSettings.clearGlassStyle.collectAsStateWithLifecycle()
     val isDefault = transparency == CustomizationSettings.DEFAULT_GLASS_TRANSPARENCY &&
         saturation == CustomizationSettings.DEFAULT_GLASS_SATURATION &&
         tint == GlassTint.DEFAULT &&
@@ -2874,6 +2876,20 @@ internal fun LiquidGlassOptions() {
             }
         }
         HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
+        // Test: swaps the frosted glass for the clear style in ClearLiquidGlass.kt.
+        SettingsRow(
+            icon = Icons.Rounded.Science,
+            title = stringResource(R.string.glass_clear_style),
+            subtitle = stringResource(R.string.glass_clear_style_subtitle),
+            trailing = {
+                IosSwitch(
+                    checked = clearStyle,
+                    onCheckedChange = CustomizationSettings::setClearGlassStyle,
+                )
+            },
+            onClick = { CustomizationSettings.setClearGlassStyle(!clearStyle) },
+        )
+        HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
         SliderRow(
             icon = Icons.Rounded.Opacity,
             title = stringResource(R.string.glass_transparency),
@@ -2883,7 +2899,8 @@ internal fun LiquidGlassOptions() {
             valueRange = 0f..1f,
             steps = 19,
         )
-        SliderRow(
+        // The clear style keeps its own light frost, so these would do nothing there.
+        if (!clearStyle) SliderRow(
             icon = Icons.Rounded.BlurOn,
             title = stringResource(R.string.glass_blur),
             value = if (blur == 0f) stringResource(R.string.off) else "${blur.roundToInt()} dp",
@@ -2894,7 +2911,7 @@ internal fun LiquidGlassOptions() {
         )
         // 100% leaves what is behind the glass its own colour; the glass
         // ships at 150%, lifting it as Apple's does.
-        SliderRow(
+        if (!clearStyle) SliderRow(
             icon = Icons.Rounded.InvertColors,
             title = stringResource(R.string.glass_saturation),
             value = "${(saturation * 100).roundToInt()}%",

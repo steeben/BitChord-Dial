@@ -125,6 +125,12 @@ object CustomizationSettings {
     /** How far Liquid Glass blurs what is behind it, in dp. */
     val glassBlur = MutableStateFlow(DEFAULT_GLASS_BLUR)
 
+    /**
+     * Test: draws Liquid Glass in the clear style (ClearLiquidGlass.kt)
+     * instead of the frosted one, to compare the two.
+     */
+    val clearGlassStyle = MutableStateFlow(false)
+
     /** The library last picked from the Library page's logo; remembered across launches. */
     val librarySource = MutableStateFlow(LibrarySource.ALL)
 
@@ -173,6 +179,7 @@ object CustomizationSettings {
         glassTintDarkness.value = p.getFloat(KEY_GLASS_TINT_DARKNESS, 0f).coerceIn(0f, 1f)
         glassBlur.value = p.getFloat(KEY_GLASS_BLUR, DEFAULT_GLASS_BLUR).coerceIn(0f, MAX_GLASS_BLUR)
         glassSaturation.value = p.getFloat(KEY_GLASS_SATURATION, DEFAULT_GLASS_SATURATION).coerceIn(0f, MAX_GLASS_SATURATION)
+        clearGlassStyle.value = p.getBoolean(KEY_CLEAR_GLASS_STYLE, false)
         librarySource.value = LibrarySource.entries
             .firstOrNull { it.name == p.getString(KEY_LIBRARY_SOURCE, null) } ?: LibrarySource.ALL
         speedDialPins.value = readPins(p.getString(KEY_SPEED_DIAL_PINS, null))
@@ -498,6 +505,11 @@ object CustomizationSettings {
         prefs?.edit()?.putFloat(KEY_GLASS_SATURATION, clamped)?.apply()
     }
 
+    fun setClearGlassStyle(value: Boolean) {
+        clearGlassStyle.value = value
+        prefs?.edit()?.putBoolean(KEY_CLEAR_GLASS_STYLE, value)?.apply()
+    }
+
     /** Puts transparency, tint, its darkness, saturation and blur back to how the glass ships. */
     fun resetGlassOptions() {
         glassTransparency.value = DEFAULT_GLASS_TRANSPARENCY
@@ -593,6 +605,7 @@ object CustomizationSettings {
     private const val KEY_GLASS_BLUR = "custom_glass_blur"
     private const val KEY_GLASS_TINT_DARKNESS = "custom_glass_tint_darkness"
     private const val KEY_GLASS_SATURATION = "custom_glass_saturation"
+    private const val KEY_CLEAR_GLASS_STYLE = "custom_clear_glass_style"
     private const val KEY_LIBRARY_SOURCE = "custom_library_source"
     private const val KEY_SPEED_DIAL_PINS = "custom_speed_dial_pins"
     private const val KEY_LAST_SPEED_DIAL = "custom_last_speed_dial"

@@ -863,6 +863,8 @@
 
     <string name="liquid_glass_unavailable">Erfordert Android 12 oder neuer</string>
     <string name="glass_options_subtitle">Lege fest, wie durchsichtig, getönt und unscharf das Glas ist</string>
+    <string name="glass_clear_style">Klares Glas (Test)</string>
+    <string name="glass_clear_style_subtitle">Klareres, schärferes Glas mit leuchtenden Kanten statt des Milchglases ausprobieren</string>
     <string name="glass_transparency">Transparenz</string>
     <string name="glass_blur">Unschärfe</string>
     <string name="glass_saturation">Sättigung</string>

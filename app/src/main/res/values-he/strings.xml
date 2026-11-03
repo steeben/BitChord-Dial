@@ -868,6 +868,8 @@
 
     <string name="liquid_glass_unavailable">דורש Android 12 ומעלה</string>
     <string name="glass_options_subtitle">כוונון השקיפות, הגוון והטשטוש של הזכוכית</string>
+    <string name="glass_clear_style">זכוכית שקופה (ניסיון)</string>
+    <string name="glass_clear_style_subtitle">נסו זכוכית שקופה וחדה יותר עם קצוות מוארים במקום הזכוכית המעומעמת</string>
     <string name="glass_transparency">שקיפות</string>
     <string name="glass_blur">טשטוש</string>
     <string name="glass_saturation">רוויה</string>

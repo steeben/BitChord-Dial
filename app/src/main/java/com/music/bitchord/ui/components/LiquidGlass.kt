@@ -319,6 +319,16 @@ fun Modifier.liquidGlass(
         return background(MaterialTheme.colorScheme.surface, shape)
             .border(GLASS_EDGE_WIDTH, GLASS_EDGE_COLOR, shape)
     }
+    // Test style: see ClearLiquidGlass.kt.
+    val clearStyle by CustomizationSettings.clearGlassStyle.collectAsStateWithLifecycle()
+    if (clearStyle) {
+        return clearLiquidGlass(
+            shape = shape,
+            backdrop = backdrop,
+            exportedBackdrop = exportedBackdrop,
+            surfaceColor = glassFill(surfaceTint ?: clearGlassVeil()),
+        )
+    }
     val density = LocalDensity.current
     val followsOptions = LocalGlassFollowsOptions.current
     val userBlurDp by CustomizationSettings.glassBlur.collectAsStateWithLifecycle()

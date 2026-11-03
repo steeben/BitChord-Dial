@@ -233,6 +233,8 @@
     <string name="liquid_glass_subtitle">กระจกหักเหแสงจริงบนแถบนำทางแบบลอย ใช้ได้เฉพาะ Android 12 ขึ้นไป และใช้ GPU มากขึ้น</string>
     <string name="liquid_glass_unavailable">ต้องใช้ Android 12 ขึ้นไป</string>
     <string name="glass_options_subtitle">ปรับความโปร่งใส สี และความเบลอของกระจก</string>
+    <string name="glass_clear_style">กระจกใส (ทดลอง)</string>
+    <string name="glass_clear_style_subtitle">ลองกระจกที่ใสและคมชัดขึ้นพร้อมขอบที่สว่าง แทนกระจกฝ้า</string>
     <string name="glass_transparency">ความโปร่งใส</string>
     <string name="glass_blur">ความเบลอ</string>
     <string name="glass_saturation">ความอิ่มตัวของสี</string>

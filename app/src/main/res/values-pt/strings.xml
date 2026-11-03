@@ -868,6 +868,8 @@
 
     <string name="liquid_glass_unavailable">Requer Android 12 ou superior</string>
     <string name="glass_options_subtitle">Ajuste a transparência, a tonalidade e o desfoque do vidro</string>
+    <string name="glass_clear_style">Vidro transparente (teste)</string>
+    <string name="glass_clear_style_subtitle">Experimente um vidro mais claro e nítido com bordas iluminadas em vez do fosco</string>
     <string name="glass_transparency">Transparência</string>
     <string name="glass_blur">Desfoque</string>
     <string name="glass_saturation">Saturação</string>

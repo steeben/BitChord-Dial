@@ -1096,6 +1096,8 @@
     <string name="hide_user_info">사용자 정보 숨기기</string>
     <string name="hide_user_info_subtitle">스크린샷용으로 이름, 이메일, 프로필 사진 대신 자리표시자를 보여줍니다</string>
     <string name="glass_options_subtitle">유리의 투명도, 색조, 흐림 정도를 조절합니다</string>
+    <string name="glass_clear_style">투명 유리 (테스트)</string>
+    <string name="glass_clear_style_subtitle">반투명 유리 대신 가장자리가 빛나는 더 맑고 선명한 유리를 사용해 보기</string>
     <string name="glass_transparency">투명도</string>
     <string name="glass_blur">흐림</string>
     <string name="glass_saturation">채도</string>
