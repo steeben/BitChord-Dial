@@ -23,10 +23,17 @@ interface PlayerGlass {
 
     /**
      * A glass surface in [shape] on [modifier], washed with [tint] in place of
-     * the theme's own when one is given.
+     * the theme's own when one is given. [underlay] is a scrim the surface sits
+     * on that the backdrop does not record, laid over what the glass samples
+     * so the glass is no brighter than the dimmed page around it.
      */
     @Composable
-    fun surface(modifier: Modifier, shape: CornerBasedShape, tint: Color? = null): Modifier
+    fun surface(
+        modifier: Modifier,
+        shape: CornerBasedShape,
+        tint: Color? = null,
+        underlay: Color = Color.Transparent,
+    ): Modifier
 }
 
 val LocalPlayerGlass = staticCompositionLocalOf<PlayerGlass?> { null }

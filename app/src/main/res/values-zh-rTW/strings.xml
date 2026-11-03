@@ -852,8 +852,6 @@
 
     <string name="liquid_glass_unavailable">需要 Android 12 或更高版本</string>
     <string name="glass_options_subtitle">調整玻璃的透明度、色調和模糊程度</string>
-    <string name="glass_clear_style">透明玻璃（測試）</string>
-    <string name="glass_clear_style_subtitle">試用邊緣發光、更通透清晰的玻璃，取代霧面玻璃</string>
     <string name="glass_transparency">透明度</string>
     <string name="glass_blur">模糊</string>
     <string name="glass_saturation">飽和度</string>
@@ -1408,4 +1406,7 @@
     <string name="canvas_fix_reset_done">已復原這首歌的修正</string>
     <string name="speed_dials_setting">快速撥號</string>
     <string name="speed_dials_setting_subtitle">在快速撥號頁面開啟首頁。關閉後，首頁僅顯示區塊列表</string>
+    <string name="glass_style">樣式</string>
+    <string name="glass_style_classic">經典</string>
+    <string name="glass_style_new">新版</string>
 </resources>

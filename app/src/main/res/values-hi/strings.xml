@@ -872,8 +872,6 @@
 
     <string name="liquid_glass_unavailable">Android 12 या नए की आवश्यकता है</string>
     <string name="glass_options_subtitle">काँच की पारदर्शिता, रंगत और धुंधलापन बदलें</string>
-    <string name="glass_clear_style">साफ़ ग्लास (परीक्षण)</string>
-    <string name="glass_clear_style_subtitle">धुंधले ग्लास की जगह चमकते किनारों वाला ज़्यादा साफ़ और तीखा ग्लास आज़माएँ</string>
     <string name="glass_transparency">पारदर्शिता</string>
     <string name="glass_blur">धुंधलापन</string>
     <string name="glass_saturation">संतृप्ति</string>
@@ -1429,4 +1427,7 @@
     <string name="canvas_fix_reset_done">इस गाने के सुधार पूर्ववत किए गए</string>
     <string name="speed_dials_setting">स्पीड डायल</string>
     <string name="speed_dials_setting_subtitle">होम को स्पीड डायल पेजों पर खोलें। बंद होने पर होम सिर्फ़ सेक्शन की सूची है</string>
+    <string name="glass_style">शैली</string>
+    <string name="glass_style_classic">क्लासिक</string>
+    <string name="glass_style_new">नया</string>
 </resources>

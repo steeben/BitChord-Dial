@@ -16,6 +16,12 @@ class AppPlayerGlass(private val backdrop: LayerBackdrop) : PlayerGlass {
     override fun source(modifier: Modifier): Modifier = modifier.layerBackdrop(backdrop)
 
     @Composable
-    override fun surface(modifier: Modifier, shape: CornerBasedShape, tint: Color?): Modifier =
-        modifier.liquidGlass(shape, backdrop = backdrop, exportedBackdrop = null, surfaceTint = tint)
+    override fun surface(modifier: Modifier, shape: CornerBasedShape, tint: Color?, underlay: Color): Modifier =
+        modifier.liquidGlass(
+            shape,
+            backdrop = backdrop,
+            exportedBackdrop = null,
+            surfaceTint = tint,
+            underlay = underlay,
+        )
 }

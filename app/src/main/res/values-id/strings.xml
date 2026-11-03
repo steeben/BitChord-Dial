@@ -851,8 +851,6 @@
 
     <string name="liquid_glass_unavailable">Memerlukan Android 12 atau yang lebih baru</string>
     <string name="glass_options_subtitle">Atur seberapa tembus pandang, berwarna, dan buram kacanya</string>
-    <string name="glass_clear_style">Kaca bening (uji coba)</string>
-    <string name="glass_clear_style_subtitle">Coba kaca yang lebih bening dan tajam dengan tepi bercahaya, bukan kaca buram</string>
     <string name="glass_transparency">Transparansi</string>
     <string name="glass_blur">Buram</string>
     <string name="glass_saturation">Saturasi</string>
@@ -1406,4 +1404,7 @@
     <string name="canvas_fix_reset_done">Perbaikan untuk lagu ini diurungkan</string>
     <string name="speed_dials_setting">Panggilan cepat</string>
     <string name="speed_dials_setting_subtitle">Buka Beranda di halaman panggilan cepat. Nonaktif, Beranda hanya berisi daftar bagian</string>
+    <string name="glass_style">Gaya</string>
+    <string name="glass_style_classic">Klasik</string>
+    <string name="glass_style_new">Baru</string>
 </resources>

@@ -1,14 +1,12 @@
 /*
- * A test style for Liquid Glass, switched on from Settings → Liquid Glass →
- * "Clear glass (test)". It is a Compose/AGSL port of the look of
- * nordify/css-liquid-glass (MIT, Copyright (c) 2026 Nordify,
+ * The New style of Liquid Glass, picked from Settings → Liquid Glass → Style.
+ * It is a Compose/AGSL port of the look of nordify/css-liquid-glass (MIT, Copyright (c) 2026 Nordify,
  * https://github.com/nordify/css-liquid-glass): the refraction profile
  * measured from Apple's controls, the brightened fold band, the lit caps and
  * darker rim, the additive edge reflection, the caustic and the veil.
  *
- * Everything for the test lives in this file plus one branch at the top of
- * [liquidGlass] and the switch in Settings, so it can be dropped by deleting
- * this file and those two spots.
+ * It lives in this file plus one branch at the top of [liquidGlass], and
+ * keeps its own options in [com.music.bitchord.data.settings.CustomizationSettings].
  *
  * Not ported: the reflection layer (it mirrors content beside the glass into
  * the rim and needs a second backdrop capture bigger than the surface).
@@ -35,9 +33,6 @@ import com.music.bitchord.ui.components.backdrop.shadow.Shadow
 import org.intellij.lang.annotations.Language
 import kotlin.math.pow
 
-/** The frost under the clear glass: barely any, so the middle stays 1:1. */
-private const val CLEAR_BLUR_DP = 2f
-private const val CLEAR_SATURATION = 1.1f
 
 /** The reference pill the CSS is tuned for is 60px tall; widths scale from it. */
 private const val REFERENCE_HEIGHT_DP = 60f
@@ -60,7 +55,7 @@ internal fun clearGlassVeil(): Color =
     Color.White.copy(alpha = if (isDarkGlass()) 0.03f else 0.14f)
 
 /**
- * [liquidGlass] in the clear test style. Called from [liquidGlass] only, after
+ * [liquidGlass] in the New style. Called from [liquidGlass] only, after
  * its support and reduce-blur checks, so it is never reached where the stock
  * glass would not draw.
  */
@@ -71,6 +66,9 @@ internal fun Modifier.clearLiquidGlass(
     exportedBackdrop: LayerBackdrop?,
     /** The veil with the user's tint and darkness laid over it; see [clearGlassVeil]. */
     surfaceColor: Color,
+    /** The frost under the glass; it ships at barely any, so the middle stays 1:1. */
+    blurDp: Float,
+    saturation: Float,
 ): Modifier {
     val darkF = if (isDarkGlass()) 1f else 0f
     val shadowAlpha = 0.35f * (1f - darkF) * 0.6f
@@ -79,8 +77,8 @@ internal fun Modifier.clearLiquidGlass(
         backdrop = backdrop,
         shape = { shape },
         effects = {
-            colorControls(saturation = CLEAR_SATURATION)
-            blur(CLEAR_BLUR_DP.dp.toPx())
+            colorControls(saturation = saturation)
+            if (blurDp > 0f) blur(blurDp.dp.toPx())
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 val w = size.width
                 val h = size.height

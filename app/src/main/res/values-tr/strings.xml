@@ -239,8 +239,6 @@
     <string name="liquid_glass_subtitle">Yüzen gezinme çubuğunda gerçek kırılan cam. Yalnızca Android 12+; daha fazla GPU kullanır.</string>
     <string name="liquid_glass_unavailable">Android 12 veya daha yenisini gerektirir</string>
     <string name="glass_options_subtitle">Camın saydamlığını, tonunu ve bulanıklığını ayarlayın</string>
-    <string name="glass_clear_style">Şeffaf cam (test)</string>
-    <string name="glass_clear_style_subtitle">Buzlu cam yerine kenarları parlayan, daha şeffaf ve net bir cam deneyin</string>
     <string name="glass_transparency">Saydamlık</string>
     <string name="glass_blur">Bulanıklık</string>
     <string name="glass_saturation">Doygunluk</string>
@@ -1386,4 +1384,7 @@
     <string name="canvas_fix_reset_done">Bu şarkının düzeltmeleri geri alındı</string>
     <string name="speed_dials_setting">Hızlı arama</string>
     <string name="speed_dials_setting_subtitle">Ana sayfayı hızlı arama sayfalarında aç. Kapalıyken ana sayfa yalnızca bölüm listesidir</string>
+    <string name="glass_style">Stil</string>
+    <string name="glass_style_classic">Klasik</string>
+    <string name="glass_style_new">Yeni</string>
 </resources>

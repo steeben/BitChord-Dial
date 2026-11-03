@@ -3638,6 +3638,27 @@ private fun BitChordApp(
                         throw cancelled
                     }
                 }
+                // The pages and the Settings sub-screens laid over them, recorded
+                // together for the glass and the blurred bars to see through.
+                // Recorded on the pages alone, a sub-screen (Account & integrations,
+                // Sources, Replay...) was never in the layer: the bars over it
+                // showed the Settings page hidden underneath, frozen while the
+                // sub-screen scrolled, or nothing at all.
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .hazeSource(hazeState)
+                        // Not under "reduce dynamic blur": nothing samples the
+                        // layer then, and recording a whole page into one for no
+                        // reader is the cost that setting exists to remove.
+                        .then(
+                            if (glassActive && glassSamplesBackdrop) {
+                                Modifier.layerBackdrop(appBackdrop)
+                            } else {
+                                Modifier
+                            },
+                        ),
+                ) {
                 rememberTransition(pageTransitionState, label = "content").AnimatedContent(
                     // Library pages pan: one pushed from the Library slides in
                     // from the right as the page it was opened from goes off to
@@ -3704,21 +3725,9 @@ private fun BitChordApp(
                         }
                     },
                     modifier = Modifier
-                        .hazeSource(hazeState)
                         .then(
                             if (glassActive) {
                                 Modifier
-                                    // Not under "reduce dynamic blur": nothing
-                                    // samples the layer then, and recording a
-                                    // whole page into one for no reader is the
-                                    // cost that setting exists to remove.
-                                    .then(
-                                        if (glassSamplesBackdrop) {
-                                            Modifier.layerBackdrop(appBackdrop)
-                                        } else {
-                                            Modifier
-                                        },
-                                    )
                                     // Every page's scroll passes through here, so
                                     // the glass bar collapses on all of them
                                     // without each one having to know about it.
@@ -4985,6 +4994,7 @@ private fun BitChordApp(
                             }
                         }
                     }
+                }
                 }
 
                 // The top-bar footprint is transparent on every page so the

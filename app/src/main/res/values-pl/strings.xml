@@ -910,8 +910,6 @@
 
     <string name="liquid_glass_unavailable">Wymaga systemu Android 12 lub nowszego</string>
     <string name="glass_options_subtitle">Dostosuj przezroczystość, odcień i rozmycie szkła</string>
-    <string name="glass_clear_style">Przezroczyste szkło (test)</string>
-    <string name="glass_clear_style_subtitle">Wypróbuj czystsze, ostrzejsze szkło z podświetlonymi krawędziami zamiast matowego</string>
     <string name="glass_transparency">Przezroczystość</string>
     <string name="glass_blur">Rozmycie</string>
     <string name="glass_saturation">Nasycenie</string>
@@ -1469,4 +1467,7 @@
     <string name="canvas_fix_reset_done">Cofnięto poprawki dla tej piosenki</string>
     <string name="speed_dials_setting">Szybkie wybieranie</string>
     <string name="speed_dials_setting_subtitle">Otwieraj stronę główną na stronach szybkiego wybierania. Wyłączone: strona główna to tylko lista sekcji</string>
+    <string name="glass_style">Styl</string>
+    <string name="glass_style_classic">Klasyczny</string>
+    <string name="glass_style_new">Nowy</string>
 </resources>

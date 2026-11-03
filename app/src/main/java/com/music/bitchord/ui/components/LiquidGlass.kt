@@ -66,6 +66,14 @@ val LocalAppBackdrop = staticCompositionLocalOf<Backdrop> { error("No AppBackdro
 internal val LocalGlassExport = compositionLocalOf<LayerBackdrop?> { null }
 
 /**
+ * A dim laid over the page behind a glass surface that the glass's backdrop
+ * does not record: the scrim under a menu or popup. The backdrop is the page
+ * as it is under the scrim, so without this the glass came out brighter than
+ * everything around it. [liquidGlass] lays it over what it samples.
+ */
+val LocalGlassUnderlay = staticCompositionLocalOf { Color.Transparent }
+
+/**
  * The backdrop blur pipeline requires [android.graphics.RenderEffect] on a
  * [android.graphics.RenderNode], available from Android 12 (API 31).
  */
@@ -150,6 +158,30 @@ private fun glassFill(base: Color): Color {
     if (darkness > 0f) fill = Color.Black.copy(alpha = (darkness * MAX_SHADE * density).coerceIn(0f, 1f)).compositeOver(fill)
     return fill
 }
+
+/**
+ * The New style's fill: its clear [veil], over as much of the theme's own
+ * surface ([themeTint]) as its transparency leaves, with the user's tint and
+ * darkness laid on top at fixed strengths. The defaults give back [veil].
+ */
+@Composable
+private fun clearGlassFill(veil: Color, themeTint: Color): Color {
+    if (!LocalGlassFollowsOptions.current) return veil
+    val transparency by CustomizationSettings.clearGlassTransparency.collectAsStateWithLifecycle()
+    val darkness by CustomizationSettings.clearGlassTintDarkness.collectAsStateWithLifecycle()
+    val saturation by CustomizationSettings.clearGlassSaturation.collectAsStateWithLifecycle()
+    val tint = CustomizationSettings.glassTint.collectAsStateWithLifecycle().value.color()
+    var fill = veil
+    val surface = (1f - transparency).coerceIn(0f, 1f)
+    if (surface > 0f) fill = fill.compositeOver(themeTint.copy(alpha = surface))
+    val tinted = tint?.saturated(saturation / CustomizationSettings.DEFAULT_CLEAR_GLASS_SATURATION)
+    if (tinted != null) fill = tinted.copy(alpha = TINT_WASH).compositeOver(fill)
+    if (darkness > 0f) fill = Color.Black.copy(alpha = (darkness * MAX_SHADE).coerceIn(0f, 1f)).compositeOver(fill)
+    return fill
+}
+
+/** This fill laid over [under]; itself when there is nothing under it. */
+private fun Color.over(under: Color): Color = if (under.alpha <= 0f) this else compositeOver(under)
 
 /** This colour with its saturation scaled by [amount]: 0 is its grey, 1 is itself. */
 private fun Color.saturated(amount: Float): Color {
@@ -312,6 +344,8 @@ fun Modifier.liquidGlass(
     exportedBackdrop: LayerBackdrop? = LocalGlassExport.current,
     /** Drawn over the glass in place of the theme's default tint, when set. */
     surfaceTint: Color? = null,
+    /** The scrim the surface sits on, if it sits on one; see [LocalGlassUnderlay]. */
+    underlay: Color = LocalGlassUnderlay.current,
 ): Modifier {
     if (!isGlassSupported()) return this
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
@@ -320,17 +354,27 @@ fun Modifier.liquidGlass(
             .border(GLASS_EDGE_WIDTH, GLASS_EDGE_COLOR, shape)
     }
     // Test style: see ClearLiquidGlass.kt.
+    val followsOptions = LocalGlassFollowsOptions.current
+    val themeTint = if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) {
+        Color(0xFFFAFAFA)
+    } else {
+        Color(0xFF121212)
+    }
+    // The New style: see ClearLiquidGlass.kt. It has its own set of options.
     val clearStyle by CustomizationSettings.clearGlassStyle.collectAsStateWithLifecycle()
     if (clearStyle) {
+        val clearBlur by CustomizationSettings.clearGlassBlur.collectAsStateWithLifecycle()
+        val clearSaturation by CustomizationSettings.clearGlassSaturation.collectAsStateWithLifecycle()
         return clearLiquidGlass(
             shape = shape,
             backdrop = backdrop,
             exportedBackdrop = exportedBackdrop,
-            surfaceColor = glassFill(surfaceTint ?: clearGlassVeil()),
+            surfaceColor = clearGlassFill(surfaceTint ?: clearGlassVeil(), themeTint).over(underlay),
+            blurDp = if (followsOptions) clearBlur else CustomizationSettings.DEFAULT_CLEAR_GLASS_BLUR,
+            saturation = if (followsOptions) clearSaturation else CustomizationSettings.DEFAULT_CLEAR_GLASS_SATURATION,
         )
     }
     val density = LocalDensity.current
-    val followsOptions = LocalGlassFollowsOptions.current
     val userBlurDp by CustomizationSettings.glassBlur.collectAsStateWithLifecycle()
     val blurDp = if (followsOptions) userBlurDp else CustomizationSettings.DEFAULT_GLASS_BLUR
     val userSaturation by CustomizationSettings.glassSaturation.collectAsStateWithLifecycle()
@@ -338,12 +382,7 @@ fun Modifier.liquidGlass(
     val blurPx = with(density) { blurDp.dp.toPx() } * GLASS_RESOLUTION_SCALE
     val lensHeightPx = with(density) { (LENS_HEIGHT * LENS_MAX_DP).dp.toPx() } * GLASS_RESOLUTION_SCALE
     val lensAmountPx = with(density) { (LENS_AMOUNT * LENS_MAX_DP).dp.toPx() } * GLASS_RESOLUTION_SCALE
-    val themeTint = if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) {
-        Color(0xFFFAFAFA)
-    } else {
-        Color(0xFF121212)
-    }
-    val surfaceTintColor = glassFill(surfaceTint ?: themeTint.copy(alpha = SURFACE_OPACITY))
+    val surfaceTintColor = glassFill(surfaceTint ?: themeTint.copy(alpha = SURFACE_OPACITY)).over(underlay)
 
     return drawBackdrop(
         backdrop = backdrop,

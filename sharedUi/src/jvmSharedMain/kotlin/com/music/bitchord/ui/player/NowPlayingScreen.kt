@@ -2758,53 +2758,11 @@ fun NowPlayingScreen(
                 )
             } }
         }
-        }
 
-        // This transparent top gradient is always present while the modal
-        // player owns the system bar. Its opacity follows the actual top-band
-        // artwork, rather than changing the status-bar glyph colour per cover.
-        // A subview replaces that hero with an artwork-derived mesh, so it gets
-        // only a modest floor rather than an opaque status-bar surface.
-        val playerSubviewOpen = lyricsOpen || queueOpen || lyricsOffsetOpen ||
-            showAudioPipeline || showCast || showAudioOutput || showLyricsProviders ||
-            lyricsShare != null
-        val topGradientAlpha = if (playerSubviewOpen) {
-            maxOf(artworkStatusScrimAlpha, SUBVIEW_STATUS_SCRIM_MIN_ALPHA)
-        } else {
-            artworkStatusScrimAlpha
-        }
-
-        // Light status icons over a dark top scrim is the media-player norm and
-        // stays the default. The exception is a full-bleed still sleeve whose
-        // top band is near white: there the scrim has to go so dark that it reads
-        // as a grey smear across the art, so the icons flip to dark instead and
-        // the scrim fades away under them. Canvas, video, the card layout and any
-        // subview (lyrics, queue, sheets) keep their own darker backdrop up there
-        // and so keep light icons.
-        val statusIconsDark = heroMode && !spotifyCanvasPresentation && !playerSubviewOpen &&
-            (artTopLuminance ?: 0f) >= STATUS_ICONS_DARK_LUMINANCE
-        StatusBarIcons(dark = statusIconsDark)
-        // Read in the scrim's draw pass only, so the fade redraws that strip
-        // without recomposing the player.
-        val topScrimFade = animateFloatAsState(
-            targetValue = if (statusIconsDark) 0f else 1f,
-            animationSpec = tween(durationMillis = 450, easing = FastOutSlowInEasing),
-            label = "statusScrimFade",
-        )
-
-        val steps = 8
-        val gradientColors = remember(topGradientAlpha) {
-            List(steps) { index ->
-                val progress = index / (steps - 1).toFloat()
-                val factor = (1f - progress).toDouble().pow(1.5).toFloat()
-                Color.Black.copy(alpha = topGradientAlpha * factor)
-            }
-        }
-        val topScrimBrush = remember(gradientColors) {
-            Brush.verticalGradient(gradientColors)
-        }
-        // Painted by the handle strip rather than laid out here — see there.
-
+        // The dims and blurs laid over the clip are recorded with it, so the
+        // glass over the player (the ⋯ menu, the pills) sees the video as dim
+        // as the screen shows it. Drawn after the source closed, they never
+        // reached the glass: over a clip it went bright and almost clear.
         if (heroMode && !spotifyCanvasPresentation && heroHeight > 0.dp) {
             // The banner — still cover, square clip or portrait clip — is
             // blurred progressively from under the credits down, so the
@@ -2962,6 +2920,52 @@ fun NowPlayingScreen(
                     .background(Color.Black),
             )
         }
+        }
+
+        // This transparent top gradient is always present while the modal
+        // player owns the system bar. Its opacity follows the actual top-band
+        // artwork, rather than changing the status-bar glyph colour per cover.
+        // A subview replaces that hero with an artwork-derived mesh, so it gets
+        // only a modest floor rather than an opaque status-bar surface.
+        val playerSubviewOpen = lyricsOpen || queueOpen || lyricsOffsetOpen ||
+            showAudioPipeline || showCast || showAudioOutput || showLyricsProviders ||
+            lyricsShare != null
+        val topGradientAlpha = if (playerSubviewOpen) {
+            maxOf(artworkStatusScrimAlpha, SUBVIEW_STATUS_SCRIM_MIN_ALPHA)
+        } else {
+            artworkStatusScrimAlpha
+        }
+
+        // Light status icons over a dark top scrim is the media-player norm and
+        // stays the default. The exception is a full-bleed still sleeve whose
+        // top band is near white: there the scrim has to go so dark that it reads
+        // as a grey smear across the art, so the icons flip to dark instead and
+        // the scrim fades away under them. Canvas, video, the card layout and any
+        // subview (lyrics, queue, sheets) keep their own darker backdrop up there
+        // and so keep light icons.
+        val statusIconsDark = heroMode && !spotifyCanvasPresentation && !playerSubviewOpen &&
+            (artTopLuminance ?: 0f) >= STATUS_ICONS_DARK_LUMINANCE
+        StatusBarIcons(dark = statusIconsDark)
+        // Read in the scrim's draw pass only, so the fade redraws that strip
+        // without recomposing the player.
+        val topScrimFade = animateFloatAsState(
+            targetValue = if (statusIconsDark) 0f else 1f,
+            animationSpec = tween(durationMillis = 450, easing = FastOutSlowInEasing),
+            label = "statusScrimFade",
+        )
+
+        val steps = 8
+        val gradientColors = remember(topGradientAlpha) {
+            List(steps) { index ->
+                val progress = index / (steps - 1).toFloat()
+                val factor = (1f - progress).toDouble().pow(1.5).toFloat()
+                Color.Black.copy(alpha = topGradientAlpha * factor)
+            }
+        }
+        val topScrimBrush = remember(gradientColors) {
+            Brush.verticalGradient(gradientColors)
+        }
+        // Painted by the handle strip rather than laid out here — see there.
 
         Column(
             modifier = Modifier

@@ -967,8 +967,6 @@
 
     <string name="liquid_glass_unavailable">Android 12 以降が必要です</string>
     <string name="glass_options_subtitle">ガラスの透明度、色味、ぼかしを調整します</string>
-    <string name="glass_clear_style">クリアガラス（テスト）</string>
-    <string name="glass_clear_style_subtitle">すりガラスの代わりに、縁が光るよりクリアでシャープなガラスを試す</string>
     <string name="glass_transparency">透明度</string>
     <string name="glass_blur">ぼかし</string>
     <string name="glass_saturation">彩度</string>
@@ -1407,4 +1405,7 @@
     <string name="canvas_fix_reset_done">この曲の修正を取り消しました</string>
     <string name="speed_dials_setting">スピードダイヤル</string>
     <string name="speed_dials_setting_subtitle">ホームをスピードダイヤルのページで開きます。オフにすると、ホームはセクションの一覧だけになります</string>
+    <string name="glass_style">スタイル</string>
+    <string name="glass_style_classic">クラシック</string>
+    <string name="glass_style_new">新しい</string>
 </resources>

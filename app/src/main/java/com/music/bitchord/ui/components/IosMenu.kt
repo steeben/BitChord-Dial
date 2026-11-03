@@ -142,12 +142,14 @@ fun Modifier.iosMenuPanel(
     colors: IosMenuColors = iosMenuColors(),
     /** False where the caller casts [iosMenuShadow] itself, apart from the panel. */
     castsShadow: Boolean = true,
+    /** The scrim the panel is drawn on, for its glass; see [LocalGlassUnderlay]. */
+    underlay: Color = LocalGlassUnderlay.current,
 ): Modifier {
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     val glass = LocalLiquidGlassEnabled.current && isGlassSupported() && !reduceDynamicBlur && backdrop != null
     val shadowed = if (castsShadow && !glass) iosMenuShadow() else this
     return when {
-        glass -> shadowed.clip(IosMenuShape).liquidGlass(IosMenuShape, backdrop = backdrop!!)
+        glass -> shadowed.clip(IosMenuShape).liquidGlass(IosMenuShape, backdrop = backdrop!!, underlay = underlay)
         !reduceDynamicBlur && hazeState != null -> shadowed
             .clip(IosMenuShape)
             .optimizedHazeEffect(
@@ -451,7 +453,7 @@ fun <T : Any> IosMenuPopover(
                 Modifier
                     // Taps between rows land on the panel, not the scrim under it.
                     .pointerInput(Unit) {}
-                    .iosMenuPanel(backdrop = backdrop, hazeState = hazeState),
+                    .iosMenuPanel(backdrop = backdrop, hazeState = hazeState, underlay = scrim),
                 propagateMinConstraints = true,
             ) {
                 Column(Modifier.padding(vertical = 8.dp)) {

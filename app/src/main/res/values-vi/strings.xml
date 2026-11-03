@@ -243,8 +243,6 @@
     <string name="liquid_glass_subtitle">Hiệu ứng kính khúc xạ trên thanh điều hướng nổi. Chỉ dành cho Android 12+; sử dụng nhiều GPU hơn.</string>
     <string name="liquid_glass_unavailable">Yêu cầu Android 12 trở lên</string>
     <string name="glass_options_subtitle">Điều chỉnh độ trong suốt, màu phủ và độ mờ của kính</string>
-    <string name="glass_clear_style">Kính trong (thử nghiệm)</string>
-    <string name="glass_clear_style_subtitle">Thử kính trong và sắc nét hơn với viền phát sáng thay cho kính mờ</string>
     <string name="glass_transparency">Độ trong suốt</string>
     <string name="glass_blur">Độ mờ</string>
     <string name="glass_saturation">Độ bão hòa</string>
@@ -1346,4 +1344,7 @@
     <string name="canvas_fix_reset_done">Đã hoàn tác sửa đổi cho bài hát này</string>
     <string name="speed_dials_setting">Quay số nhanh</string>
     <string name="speed_dials_setting_subtitle">Mở Trang chủ ở các trang quay số nhanh. Khi tắt, Trang chủ chỉ là danh sách các mục</string>
+    <string name="glass_style">Kiểu</string>
+    <string name="glass_style_classic">Cổ điển</string>
+    <string name="glass_style_new">Mới</string>
 </resources>

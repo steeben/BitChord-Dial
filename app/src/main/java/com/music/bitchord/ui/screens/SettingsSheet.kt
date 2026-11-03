@@ -1,7 +1,6 @@
 package com.music.bitchord.ui.screens
 
 import androidx.compose.material.icons.rounded.PlayCircleOutline
-import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material.icons.rounded.MoreHoriz
@@ -2856,17 +2855,39 @@ private fun BitPerfectModeSheet(
 @Composable
 internal fun LiquidGlassOptions() {
     val haptics = LocalHapticFeedback.current
-    val transparency by CustomizationSettings.glassTransparency.collectAsStateWithLifecycle()
     val tint by CustomizationSettings.glassTint.collectAsStateWithLifecycle()
-    val darkness by CustomizationSettings.glassTintDarkness.collectAsStateWithLifecycle()
-    val blur by CustomizationSettings.glassBlur.collectAsStateWithLifecycle()
-    val saturation by CustomizationSettings.glassSaturation.collectAsStateWithLifecycle()
     val clearStyle by CustomizationSettings.clearGlassStyle.collectAsStateWithLifecycle()
-    val isDefault = transparency == CustomizationSettings.DEFAULT_GLASS_TRANSPARENCY &&
-        saturation == CustomizationSettings.DEFAULT_GLASS_SATURATION &&
-        tint == GlassTint.DEFAULT &&
-        darkness == 0f &&
-        blur == CustomizationSettings.DEFAULT_GLASS_BLUR
+    // Classic and New keep a set of options each; the sliders show the
+    // picked style's, and the reset puts back that style's.
+    val classicTransparency by CustomizationSettings.glassTransparency.collectAsStateWithLifecycle()
+    val classicDarkness by CustomizationSettings.glassTintDarkness.collectAsStateWithLifecycle()
+    val classicBlur by CustomizationSettings.glassBlur.collectAsStateWithLifecycle()
+    val classicSaturation by CustomizationSettings.glassSaturation.collectAsStateWithLifecycle()
+    val newTransparency by CustomizationSettings.clearGlassTransparency.collectAsStateWithLifecycle()
+    val newDarkness by CustomizationSettings.clearGlassTintDarkness.collectAsStateWithLifecycle()
+    val newBlur by CustomizationSettings.clearGlassBlur.collectAsStateWithLifecycle()
+    val newSaturation by CustomizationSettings.clearGlassSaturation.collectAsStateWithLifecycle()
+    val transparency = if (clearStyle) newTransparency else classicTransparency
+    val darkness = if (clearStyle) newDarkness else classicDarkness
+    val blur = if (clearStyle) newBlur else classicBlur
+    val saturation = if (clearStyle) newSaturation else classicSaturation
+    val setTransparency: (Float) -> Unit =
+        if (clearStyle) CustomizationSettings::setClearGlassTransparency else CustomizationSettings::setGlassTransparency
+    val setDarkness: (Float) -> Unit =
+        if (clearStyle) CustomizationSettings::setClearGlassTintDarkness else CustomizationSettings::setGlassTintDarkness
+    val setBlur: (Float) -> Unit =
+        if (clearStyle) CustomizationSettings::setClearGlassBlur else CustomizationSettings::setGlassBlur
+    val setSaturation: (Float) -> Unit =
+        if (clearStyle) CustomizationSettings::setClearGlassSaturation else CustomizationSettings::setGlassSaturation
+    val isDefault = tint == GlassTint.DEFAULT && darkness == 0f && if (clearStyle) {
+        transparency == CustomizationSettings.DEFAULT_CLEAR_GLASS_TRANSPARENCY &&
+            saturation == CustomizationSettings.DEFAULT_CLEAR_GLASS_SATURATION &&
+            blur == CustomizationSettings.DEFAULT_CLEAR_GLASS_BLUR
+    } else {
+        transparency == CustomizationSettings.DEFAULT_GLASS_TRANSPARENCY &&
+            saturation == CustomizationSettings.DEFAULT_GLASS_SATURATION &&
+            blur == CustomizationSettings.DEFAULT_GLASS_BLUR
+    }
     Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
         Row(
             modifier = Modifier.padding(start = 22.dp, end = 22.dp, bottom = 14.dp),
@@ -2893,18 +2914,38 @@ internal fun LiquidGlassOptions() {
             }
         }
         HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
-        // Test: swaps the frosted glass for the clear style in ClearLiquidGlass.kt.
-        SettingsRow(
-            icon = Icons.Rounded.Science,
-            title = stringResource(R.string.glass_clear_style),
-            subtitle = stringResource(R.string.glass_clear_style_subtitle),
-            trailing = {
-                IosSwitch(
-                    checked = clearStyle,
-                    onCheckedChange = CustomizationSettings::setClearGlassStyle,
-                )
-            },
-            onClick = { CustomizationSettings.setClearGlassStyle(!clearStyle) },
+        // Classic is the frosted glass; New is the clear style in ClearLiquidGlass.kt.
+        Row(
+            modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, top = 16.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.AutoAwesome,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.size(ICON_SIZE),
+            )
+            Spacer(Modifier.width(ICON_GAP))
+            Text(
+                text = stringResource(R.string.glass_style),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        SegmentedControl(
+            options = listOf(
+                stringResource(R.string.glass_style_classic),
+                stringResource(R.string.glass_style_new),
+            ),
+            selectedIndex = if (clearStyle) 1 else 0,
+            onSelect = { CustomizationSettings.setClearGlassStyle(it == 1) },
+            glass = true,
+            modifier = Modifier.padding(
+                start = ROW_INSET + ICON_SIZE + ICON_GAP,
+                end = ROW_INSET,
+                bottom = 12.dp,
+            ),
         )
         HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
         SliderRow(
@@ -2912,28 +2953,27 @@ internal fun LiquidGlassOptions() {
             title = stringResource(R.string.glass_transparency),
             value = "${(transparency * 100).roundToInt()}%",
             sliderValue = transparency,
-            onSliderValue = { CustomizationSettings.setGlassTransparency((it * 20).roundToInt() / 20f) },
+            onSliderValue = { setTransparency((it * 20).roundToInt() / 20f) },
             valueRange = 0f..1f,
             steps = 19,
         )
-        // The clear style keeps its own light frost, so these would do nothing there.
-        if (!clearStyle) SliderRow(
+        SliderRow(
             icon = Icons.Rounded.BlurOn,
             title = stringResource(R.string.glass_blur),
             value = if (blur == 0f) stringResource(R.string.off) else "${blur.roundToInt()} dp",
             sliderValue = blur,
-            onSliderValue = { CustomizationSettings.setGlassBlur(it.roundToInt().toFloat()) },
+            onSliderValue = { setBlur(it.roundToInt().toFloat()) },
             valueRange = 0f..CustomizationSettings.MAX_GLASS_BLUR,
             steps = CustomizationSettings.MAX_GLASS_BLUR.toInt() - 1,
         )
-        // 100% leaves what is behind the glass its own colour; the glass
-        // ships at 150%, lifting it as Apple's does.
-        if (!clearStyle) SliderRow(
+        // 100% leaves what is behind the glass its own colour; Classic
+        // ships at 150%, lifting it as Apple's does, New at 110%.
+        SliderRow(
             icon = Icons.Rounded.InvertColors,
             title = stringResource(R.string.glass_saturation),
             value = "${(saturation * 100).roundToInt()}%",
             sliderValue = saturation,
-            onSliderValue = { CustomizationSettings.setGlassSaturation((it * 10).roundToInt() / 10f) },
+            onSliderValue = { setSaturation((it * 10).roundToInt() / 10f) },
             valueRange = 0f..CustomizationSettings.MAX_GLASS_SATURATION,
             steps = (CustomizationSettings.MAX_GLASS_SATURATION * 10).toInt() - 1,
         )
@@ -3001,7 +3041,7 @@ internal fun LiquidGlassOptions() {
             title = stringResource(R.string.glass_tint_darkness),
             value = "${(darkness * 100).roundToInt()}%",
             sliderValue = darkness,
-            onSliderValue = { CustomizationSettings.setGlassTintDarkness((it * 20).roundToInt() / 20f) },
+            onSliderValue = { setDarkness((it * 20).roundToInt() / 20f) },
             valueRange = 0f..1f,
             steps = 19,
         )
@@ -3011,7 +3051,12 @@ internal fun LiquidGlassOptions() {
             enabled = !isDefault,
             onClick = {
                 haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                CustomizationSettings.resetGlassOptions()
+                if (clearStyle) {
+                    CustomizationSettings.resetClearGlassOptions()
+                    CustomizationSettings.setGlassTint(GlassTint.DEFAULT)
+                } else {
+                    CustomizationSettings.resetGlassOptions()
+                }
             },
         )
     }

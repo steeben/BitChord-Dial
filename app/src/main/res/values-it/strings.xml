@@ -257,8 +257,6 @@
     <string name="liquid_glass_subtitle">Vetro rifrangente reale sulla barra di navigazione flottante. Solo Android 12+; usa più GPU.</string>
     <string name="liquid_glass_unavailable">Richiede Android 12 o versioni successive</string>
     <string name="glass_options_subtitle">Regola trasparenza, tinta e sfocatura del vetro</string>
-    <string name="glass_clear_style">Vetro trasparente (test)</string>
-    <string name="glass_clear_style_subtitle">Prova un vetro più chiaro e nitido con bordi illuminati al posto di quello smerigliato</string>
     <string name="glass_transparency">Trasparenza</string>
     <string name="glass_blur">Sfocatura</string>
     <string name="glass_saturation">Saturazione</string>
@@ -1368,4 +1366,7 @@
     <string name="canvas_fix_reset_done">Correzioni per questo brano annullate</string>
     <string name="speed_dials_setting">Composizione rapida</string>
     <string name="speed_dials_setting_subtitle">Apri la Home sulle pagine di composizione rapida. Se disattivato, la Home è solo l\'elenco delle sezioni</string>
+    <string name="glass_style">Stile</string>
+    <string name="glass_style_classic">Classico</string>
+    <string name="glass_style_new">Nuovo</string>
 </resources>

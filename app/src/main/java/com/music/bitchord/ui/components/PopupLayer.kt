@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -79,7 +80,8 @@ fun PopupLayer(
                     animationSpec = tween(POPUP_OUT_MS),
                 ),
             ) {
-                card()
+                // The scrim is not in the backdrop the card's glass samples.
+                CompositionLocalProvider(LocalGlassUnderlay provides scrim) { card() }
             }
         }
     }

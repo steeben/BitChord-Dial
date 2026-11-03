@@ -900,8 +900,6 @@
 
     <string name="liquid_glass_unavailable">Требуется Android 12 или новее</string>
     <string name="glass_options_subtitle">Настройте прозрачность, оттенок и размытие стекла</string>
-    <string name="glass_clear_style">Прозрачное стекло (тест)</string>
-    <string name="glass_clear_style_subtitle">Попробовать более прозрачное и чёткое стекло с подсвеченными краями вместо матового</string>
     <string name="glass_transparency">Прозрачность</string>
     <string name="glass_blur">Размытие</string>
     <string name="glass_saturation">Насыщенность</string>
@@ -1461,4 +1459,7 @@
     <string name="canvas_fix_reset_done">Исправления для этой песни отменены</string>
     <string name="speed_dials_setting">Быстрый набор</string>
     <string name="speed_dials_setting_subtitle">Открывать главную на страницах быстрого набора. Если выключено, главная — это просто список разделов</string>
+    <string name="glass_style">Стиль</string>
+    <string name="glass_style_classic">Классический</string>
+    <string name="glass_style_new">Новый</string>
 </resources>

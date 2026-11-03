@@ -227,8 +227,6 @@
     <string name="liquid_glass_subtitle">Cristal refractante real en la barra de navegación flotante. Solo Android 12+; usa más GPU.</string>
     <string name="liquid_glass_unavailable">Requiere Android 12 o posterior</string>
     <string name="glass_options_subtitle">Ajusta la transparencia, el tono y el desenfoque del cristal</string>
-    <string name="glass_clear_style">Cristal transparente (prueba)</string>
-    <string name="glass_clear_style_subtitle">Prueba un cristal más claro y nítido con bordes iluminados en lugar del esmerilado</string>
     <string name="glass_transparency">Transparencia</string>
     <string name="glass_blur">Desenfoque</string>
     <string name="glass_saturation">Saturación</string>
@@ -1401,4 +1399,7 @@
     <string name="canvas_fix_reset_done">Correcciones de esta canción deshechas</string>
     <string name="speed_dials_setting">Marcación rápida</string>
     <string name="speed_dials_setting_subtitle">Abre Inicio en las páginas de marcación rápida. Desactivado, Inicio es solo la lista de secciones</string>
+    <string name="glass_style">Estilo</string>
+    <string name="glass_style_classic">Clásico</string>
+    <string name="glass_style_new">Nuevo</string>
 </resources>

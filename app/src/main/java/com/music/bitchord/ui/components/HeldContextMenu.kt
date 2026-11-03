@@ -34,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
@@ -169,6 +170,9 @@ fun <T : Any> HeldContextMenu(
         dark -> Color.Black.copy(alpha = 0.30f)
         else -> Color.Black.copy(alpha = 0.10f)
     }
+    // What the glass is laid on: the page frosted with the background and
+    // dimmed, which its backdrop (the page as it is) does not record.
+    val glassUnderlay = scrimColor.compositeOver(MaterialTheme.colorScheme.background.copy(alpha = 0.35f))
     val cardShape = RoundedCornerShape(20.dp)
     // The menu is the iOS panel the ⋮ opens too — see [IosMenuPopover].
     val menuShape = IosMenuShape
@@ -223,7 +227,7 @@ fun <T : Any> HeldContextMenu(
                     .then(if (reduceMotion) Modifier else Modifier.shadow(20.dp, cardShape, clip = false))
                     .pointerInput(Unit) {}
                     .clip(cardShape)
-                    .menuGround(glass, cardShape, plate, hairline)
+                    .menuGround(glass, cardShape, plate, hairline, glassUnderlay)
                     .then(
                         if (onPreviewClick != null) {
                             Modifier.clickable(enabled = open) { onPreviewClick(menuItem) }
@@ -247,7 +251,7 @@ fun <T : Any> HeldContextMenu(
                     // Taps between rows land on the menu, not the scrim under it.
                     .pointerInput(Unit) {}
                     .clip(menuShape)
-                    .menuGround(glass, menuShape, menuFill, menuColors.rim)
+                    .menuGround(glass, menuShape, menuFill, menuColors.rim, glassUnderlay)
                     .padding(vertical = 8.dp),
             ) {
                 actions(menuItem)
@@ -381,8 +385,17 @@ private const val BACK_SWIPE_TRAVEL = 0.35f
 
 /** The plate's and the menu's ground: liquid glass when it is on, frost otherwise. */
 @Composable
-private fun Modifier.menuGround(glass: Boolean, shape: RoundedCornerShape, plate: Color, hairline: Color): Modifier =
-    if (glass) liquidGlass(shape) else background(plate).border(0.5.dp, hairline, shape)
+private fun Modifier.menuGround(
+    glass: Boolean,
+    shape: RoundedCornerShape,
+    plate: Color,
+    hairline: Color,
+    underlay: Color,
+): Modifier = if (glass) {
+    liquidGlass(shape, underlay = underlay)
+} else {
+    background(plate).border(0.5.dp, hairline, shape)
+}
 
 private suspend fun PointerInputScope.swallowAll() {
     awaitPointerEventScope {

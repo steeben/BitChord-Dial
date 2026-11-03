@@ -132,10 +132,21 @@ object CustomizationSettings {
     val glassBlur = MutableStateFlow(DEFAULT_GLASS_BLUR)
 
     /**
-     * Test: draws Liquid Glass in the clear style (ClearLiquidGlass.kt)
-     * instead of the frosted one, to compare the two.
+     * Draws Liquid Glass in the New (clear) style, ClearLiquidGlass.kt,
+     * instead of the Classic frosted one.
      */
     val clearGlassStyle = MutableStateFlow(false)
+
+    /**
+     * The New style's own options, kept apart from Classic's because the two
+     * ship at very different settings (a trace of frost against a full blur).
+     * Transparency here is how little of the theme's surface is laid in under
+     * the clear veil: 1 is none, as the style ships, 0 is opaque.
+     */
+    val clearGlassTransparency = MutableStateFlow(DEFAULT_CLEAR_GLASS_TRANSPARENCY)
+    val clearGlassBlur = MutableStateFlow(DEFAULT_CLEAR_GLASS_BLUR)
+    val clearGlassSaturation = MutableStateFlow(DEFAULT_CLEAR_GLASS_SATURATION)
+    val clearGlassTintDarkness = MutableStateFlow(0f)
 
     /** The library last picked from the Library page's logo; remembered across launches. */
     val librarySource = MutableStateFlow(LibrarySource.ALL)
@@ -187,6 +198,12 @@ object CustomizationSettings {
         glassBlur.value = p.getFloat(KEY_GLASS_BLUR, DEFAULT_GLASS_BLUR).coerceIn(0f, MAX_GLASS_BLUR)
         glassSaturation.value = p.getFloat(KEY_GLASS_SATURATION, DEFAULT_GLASS_SATURATION).coerceIn(0f, MAX_GLASS_SATURATION)
         clearGlassStyle.value = p.getBoolean(KEY_CLEAR_GLASS_STYLE, false)
+        clearGlassTransparency.value =
+            p.getFloat(KEY_CLEAR_GLASS_TRANSPARENCY, DEFAULT_CLEAR_GLASS_TRANSPARENCY).coerceIn(0f, 1f)
+        clearGlassBlur.value = p.getFloat(KEY_CLEAR_GLASS_BLUR, DEFAULT_CLEAR_GLASS_BLUR).coerceIn(0f, MAX_GLASS_BLUR)
+        clearGlassSaturation.value =
+            p.getFloat(KEY_CLEAR_GLASS_SATURATION, DEFAULT_CLEAR_GLASS_SATURATION).coerceIn(0f, MAX_GLASS_SATURATION)
+        clearGlassTintDarkness.value = p.getFloat(KEY_CLEAR_GLASS_TINT_DARKNESS, 0f).coerceIn(0f, 1f)
         librarySource.value = LibrarySource.entries
             .firstOrNull { it.name == p.getString(KEY_LIBRARY_SOURCE, null) } ?: LibrarySource.ALL
         speedDialPins.value = readPins(p.getString(KEY_SPEED_DIAL_PINS, null))
@@ -523,6 +540,44 @@ object CustomizationSettings {
         prefs?.edit()?.putBoolean(KEY_CLEAR_GLASS_STYLE, value)?.apply()
     }
 
+    fun setClearGlassTransparency(value: Float) {
+        val clamped = value.coerceIn(0f, 1f)
+        clearGlassTransparency.value = clamped
+        prefs?.edit()?.putFloat(KEY_CLEAR_GLASS_TRANSPARENCY, clamped)?.apply()
+    }
+
+    fun setClearGlassBlur(value: Float) {
+        val clamped = value.coerceIn(0f, MAX_GLASS_BLUR)
+        clearGlassBlur.value = clamped
+        prefs?.edit()?.putFloat(KEY_CLEAR_GLASS_BLUR, clamped)?.apply()
+    }
+
+    fun setClearGlassSaturation(value: Float) {
+        val clamped = value.coerceIn(0f, MAX_GLASS_SATURATION)
+        clearGlassSaturation.value = clamped
+        prefs?.edit()?.putFloat(KEY_CLEAR_GLASS_SATURATION, clamped)?.apply()
+    }
+
+    fun setClearGlassTintDarkness(value: Float) {
+        val clamped = value.coerceIn(0f, 1f)
+        clearGlassTintDarkness.value = clamped
+        prefs?.edit()?.putFloat(KEY_CLEAR_GLASS_TINT_DARKNESS, clamped)?.apply()
+    }
+
+    /** Puts the New style's transparency, darkness, saturation and blur back to how it ships. */
+    fun resetClearGlassOptions() {
+        clearGlassTransparency.value = DEFAULT_CLEAR_GLASS_TRANSPARENCY
+        clearGlassBlur.value = DEFAULT_CLEAR_GLASS_BLUR
+        clearGlassSaturation.value = DEFAULT_CLEAR_GLASS_SATURATION
+        clearGlassTintDarkness.value = 0f
+        prefs?.edit()
+            ?.remove(KEY_CLEAR_GLASS_TRANSPARENCY)
+            ?.remove(KEY_CLEAR_GLASS_BLUR)
+            ?.remove(KEY_CLEAR_GLASS_SATURATION)
+            ?.remove(KEY_CLEAR_GLASS_TINT_DARKNESS)
+            ?.apply()
+    }
+
     /** Puts transparency, tint, its darkness, saturation and blur back to how the glass ships. */
     fun resetGlassOptions() {
         glassTransparency.value = DEFAULT_GLASS_TRANSPARENCY
@@ -606,6 +661,11 @@ object CustomizationSettings {
     /** Glass lifts the colour of what it shows by half again, as Apple's does. */
     const val DEFAULT_GLASS_SATURATION = 1.5f
     const val MAX_GLASS_SATURATION = 2f
+
+    /** The New style as it ships: no surface fill, a 2dp frost, a slight colour lift. */
+    const val DEFAULT_CLEAR_GLASS_TRANSPARENCY = 1f
+    const val DEFAULT_CLEAR_GLASS_BLUR = 2f
+    const val DEFAULT_CLEAR_GLASS_SATURATION = 1.1f
 
     private const val KEY_NAV_TABS = "custom_nav_tabs"
     private const val KEY_COMPACT_CANVAS_CONTROLS = "custom_compact_canvas_controls"

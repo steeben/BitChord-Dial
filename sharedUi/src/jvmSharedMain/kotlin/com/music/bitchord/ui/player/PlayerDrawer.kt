@@ -295,7 +295,7 @@ fun PlayerDrawer(
                         )
                         layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(0, 0) }
                     }
-                    .then(glass.surface(Modifier, DRAWER_SHAPE, tint = glassTint)),
+                    .then(glass.surface(Modifier, DRAWER_SHAPE, tint = glassTint, underlay = SCRIM_COLOR)),
             )
         }
         Column(
