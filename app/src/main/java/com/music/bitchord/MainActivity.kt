@@ -507,12 +507,6 @@ private const val TAB_FADE_OUT_MS = 90
 private const val TAB_FADE_IN_MS = 220
 private const val TAB_FADE_IN_SCALE = 0.96f
 
-internal fun shouldSkipAfterDislike(
-    previousStatus: LikeStatus,
-    targetVideoId: String,
-    currentVideoId: String?,
-): Boolean = previousStatus != LikeStatus.DISLIKE && targetVideoId == currentVideoId
-
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
