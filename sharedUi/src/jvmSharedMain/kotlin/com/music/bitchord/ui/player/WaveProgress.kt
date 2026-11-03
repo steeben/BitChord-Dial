@@ -29,6 +29,7 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /** The three waves' colours: a light tint of the accent, the accent, a darker shade of it. */
@@ -80,16 +81,23 @@ internal val PlayerInk: Color
  * Hands the player's [content] its ink, off the same accent [rememberWaveAccents] follows
  * (or the theme's own, with nothing playing). Only [PLAYER_INK_TINT] of the way there, so
  * it reads as white with a cast, not as a colour. A grey accent leaves it plain white.
+ *
+ * [artLuminance] is how white the sleeve is overall (mean relative luminance, null while
+ * unknown). A bright sleeve washes the backdrop out toward the same white the text is in,
+ * so the brighter it is the further the ink leans into the accent, up to
+ * [PLAYER_INK_TINT_BRIGHT]: enough colour to separate the text from a pale backdrop
+ * without turning it into a coloured label.
  */
 @Composable
-fun ProvidePlayerInk(content: @Composable () -> Unit) {
+fun ProvidePlayerInk(artLuminance: Float? = null, content: @Composable () -> Unit) {
     val accent = LocalNowPlayingTint.current ?: MaterialTheme.colorScheme.primary
-    val target = remember(accent) {
+    val tint = playerInkTint(artLuminance)
+    val target = remember(accent, tint) {
         val base = accent.toHsl()
         if (base.s < GREY_SATURATION) {
             Color.White
         } else {
-            lerp(Color.White, Color.hsl(base.h, base.s.coerceAtLeast(0.6f), 0.6f), PLAYER_INK_TINT)
+            lerp(Color.White, Color.hsl(base.h, base.s.coerceAtLeast(0.6f), 0.6f), tint)
         }
     }
     val ink by animateColorAsState(
@@ -100,7 +108,28 @@ fun ProvidePlayerInk(content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalPlayerInk provides ink, content = content)
 }
 
+/**
+ * How far the ink leans toward the accent for a sleeve of [artLuminance]: the base cast up
+ * to a mid-grey sleeve, then easing up to the bright cap as the art approaches white.
+ * Rounded to a few steps so a luminance that wobbles in its last digits doesn't re-key
+ * the ink's animation.
+ */
+internal fun playerInkTint(artLuminance: Float?): Float {
+    val l = artLuminance ?: return PLAYER_INK_TINT
+    val t = ((l - INK_BRIGHT_FROM) / (INK_BRIGHT_TO - INK_BRIGHT_FROM)).coerceIn(0f, 1f)
+    val eased = t * t * (3f - 2f * t)
+    val tint = PLAYER_INK_TINT + (PLAYER_INK_TINT_BRIGHT - PLAYER_INK_TINT) * eased
+    return (tint * 100f).roundToInt() / 100f
+}
+
 private const val PLAYER_INK_TINT = 0.28f
+private const val PLAYER_INK_TINT_BRIGHT = 0.40f
+
+/** Mean relative luminance where a sleeve starts reading as bright (about a mid grey). */
+private const val INK_BRIGHT_FROM = 0.22f
+
+/** ...and where it is as white as the ink is going to get about it. */
+private const val INK_BRIGHT_TO = 0.75f
 
 /**
  * The waves' clock and swell. [time] runs only while the music does, so a paused bar costs no

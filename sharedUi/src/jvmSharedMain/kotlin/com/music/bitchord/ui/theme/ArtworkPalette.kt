@@ -189,6 +189,17 @@ fun rememberArtworkTopBandLuminance(
     artPx: Int = CARD_ART_PX,
 ): Float? = rememberArtworkSeed(imageUrl, artPx)?.topBandLuminance
 
+/**
+ * The mean relative luminance of the whole sleeve, off the same cached decode
+ * as [rememberArtworkTopBandLuminance]: how white the artwork is overall,
+ * which the player leans its text toward the accent by.
+ */
+@Composable
+fun rememberArtworkLuminance(
+    imageUrl: String?,
+    artPx: Int = CARD_ART_PX,
+): Float? = rememberArtworkSeed(imageUrl, artPx)?.luminance
+
 @Composable
 private fun rememberArtworkSeed(imageUrl: String?, artPx: Int): Seed? {
     val context = LocalPlatformContext.current
@@ -239,6 +250,7 @@ private data class Seed(
     val vibrant: Color,
     val edge: Color,
     val topBandLuminance: Float,
+    val luminance: Float,
 )
 
 private fun seedOf(bitmap: ImageBitmap): Seed? {
@@ -269,6 +281,7 @@ private fun seedOf(bitmap: ImageBitmap): Seed? {
         vibrant = Color(vibrant.rgb),
         edge = bitmap.bottomEdgeColor(),
         topBandLuminance = bitmap.topBandRelativeLuminance(),
+        luminance = bitmap.relativeLuminance(),
     )
 }
 
@@ -281,6 +294,7 @@ private fun ArtworkKeyColors.toSeed() = Seed(
     vibrant = accent,
     edge = background,
     topBandLuminance = relativeLuminance(background.toArgb()),
+    luminance = relativeLuminance(background.toArgb()),
 )
 
 private const val SWATCH_COUNT = 24
@@ -328,6 +342,12 @@ private fun ImageBitmap.topBandRelativeLuminance(): Float {
     val band = (height * TOP_BAND).toInt().coerceIn(1, height)
     val pixels = IntArray(width * band)
     readPixels(pixels, startX = 0, startY = 0, width = width, height = band)
+    return averageRelativeLuminance(pixels)
+}
+
+private fun ImageBitmap.relativeLuminance(): Float {
+    val pixels = IntArray(width * height)
+    readPixels(pixels, startX = 0, startY = 0, width = width, height = height)
     return averageRelativeLuminance(pixels)
 }
 

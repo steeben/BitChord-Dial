@@ -301,13 +301,58 @@ private fun paletteOf(bitmap: ImageBitmap): List<Color> {
         swatchesOf(clearFilters = true)
     }
 
-    val distinct = found.distinctEnough()
-    return when {
-        distinct.isEmpty() -> FallbackColors
-        distinct.size >= 4 -> distinct.take(4)
-        else -> distinct.expandedToFour()
-    }
+    return found.meshColors()
 }
+
+/**
+ * Picks the four blobs out of [this] (the art's swatches, most common first),
+ * colour before white.
+ *
+ * Ranking on population alone handed a pale sleeve four shades of paper: the
+ * white field outnumbers the lilac hair or the blue sky a hundred to one, and
+ * once [tuned] clamps those greys into the mesh's lightness band the backdrop
+ * reads as flat grey. So the art's chromatic swatches go first, ranked by how
+ * colourful they are against the square root of how much of the art they
+ * cover (the same trade the accent makes). At most one neutral is kept, so a
+ * sleeve that really is mostly white still has a cool wash in the mix, and any
+ * slots left are fanned out from the chromatic colours rather than from greys.
+ * A sleeve with no colour at all falls back to the old population order.
+ */
+internal fun List<Color>.meshColors(): List<Color> {
+    if (isEmpty()) return FallbackColors
+    val (chromatic, neutral) = partition { it.chroma() >= MESH_MIN_CHROMA }
+    if (chromatic.isEmpty()) {
+        val distinct = distinctEnough()
+        return if (distinct.size >= 4) distinct.take(4) else distinct.expandedToFour()
+    }
+    val populationRank = withIndex().associate { (i, c) -> c to i }
+    val colourful = chromatic
+        .sortedByDescending { color ->
+            // Earlier in the list means more common; turn rank into a weight.
+            val weight = 1f / (1 + (populationRank[color] ?: 0))
+            color.chroma() * kotlin.math.sqrt(weight)
+        }
+        .distinctEnough()
+    if (colourful.size >= 4) return colourful.take(4)
+    val picked = (colourful + neutral.take(1)).distinctEnough()
+    if (picked.size >= 4) return picked.take(4)
+    val out = picked.toMutableList()
+    var step = 1
+    while (out.size < 4) {
+        out += colourful[(step - 1) % colourful.size].shifted(24f * step, 0.12f * step)
+        step++
+    }
+    return out
+}
+
+/** Colourfulness as max minus min channel, 0..1: unlike HSL saturation, near-white tints score low. */
+private fun Color.chroma(): Float = maxOf(red, green, blue) - minOf(red, green, blue)
+
+/**
+ * The chroma a swatch needs to count as a colour rather than a grey. Low on
+ * purpose: a washed lavender like the sleeve this was tuned on sits around 0.2.
+ */
+private const val MESH_MIN_CHROMA = 0.10f
 
 /** Drop near-duplicates, so the four blobs don't collapse into one wash. */
 private fun List<Color>.distinctEnough(): List<Color> {

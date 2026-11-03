@@ -152,6 +152,7 @@ import coil3.compose.LocalPlatformContext
 import coil3.SingletonImageLoader
 import com.music.bitchord.ui.theme.rememberScreenOrientation
 import com.music.bitchord.ui.theme.StatusBarIcons
+import com.music.bitchord.ui.theme.rememberArtworkLuminance
 import com.music.bitchord.ui.theme.rememberArtworkTopBandLuminance
 import com.music.bitchord.ui.theme.topBandScrimAlpha
 import com.music.bitchord.ui.LyricsProviderState
@@ -904,13 +905,6 @@ fun NowPlayingScreen(
     windowHeight: Dp,
     modifier: Modifier = Modifier,
 ) {
-    // The player's text and glyphs take a faint cast of the accent — see
-    // [ProvidePlayerInk]. The body is left at its old indent to keep this wrap
-    // out of everyone's diffs.
-    ProvidePlayerInk {
-    val density = LocalDensity.current
-    val haptics = rememberHaptics()
-
     // Remote tracks whose art lives inside the file resolve it here, once —
     // every surface below reads the same value rather than each triggering
     // its own extraction.
@@ -921,6 +915,15 @@ fun NowPlayingScreen(
     val remoteArt = rememberRemoteArtworkUrl(song)?.let {
         if (song.isVideo && song.videoId in audioOnlyVideos) "$it#audio-only" else it
     }
+    // The player's text and glyphs take a faint cast of the accent — see
+    // [ProvidePlayerInk]. The body is left at its old indent to keep this wrap
+    // out of everyone's diffs. The brighter the sleeve, the further the ink
+    // leans into the accent, so text doesn't vanish into a washed-out backdrop.
+    val inkArtLuminance = rememberArtworkLuminance(remoteArt, CARD_ART_PX)
+    ProvidePlayerInk(artLuminance = inkArtLuminance) {
+    val density = LocalDensity.current
+    val haptics = rememberHaptics()
+
     // Fetch the covers of the next two tracks ahead of time, small copy first, so
     // a skip lands on art that is already on the device. On a slow connection
     // the full-size cover is what made the player sit on a grey tile.
