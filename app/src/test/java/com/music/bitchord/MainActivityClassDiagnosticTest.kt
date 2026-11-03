@@ -41,6 +41,7 @@ class MainActivityClassDiagnosticTest {
         }
         input.readUnsignedShort(); input.readUnsignedShort(); input.readUnsignedShort()
         repeat(input.readUnsignedShort()) { input.readUnsignedShort() }
+        val codeSize = HashMap<String, Int>()
         fun skipMembers(): List<Pair<String, String>> {
             val out = mutableListOf<Pair<String, String>>()
             repeat(input.readUnsignedShort()) {
@@ -48,8 +49,16 @@ class MainActivityClassDiagnosticTest {
                 val name = utf[input.readUnsignedShort()]!!
                 val desc = utf[input.readUnsignedShort()]!!
                 repeat(input.readUnsignedShort()) {
-                    input.readUnsignedShort()
-                    input.skipBytes(input.readInt())
+                    val attr = utf[input.readUnsignedShort()]
+                    val len = input.readInt()
+                    if (attr == "Code") {
+                        input.readUnsignedShort(); input.readUnsignedShort()
+                        val code = input.readInt()
+                        codeSize[name] = code
+                        input.skipBytes(len - 8)
+                    } else {
+                        input.skipBytes(len)
+                    }
                 }
                 out += name to desc
             }
@@ -61,7 +70,9 @@ class MainActivityClassDiagnosticTest {
         methods.map { (n, d) -> Triple(n, d, slots(d)) }
             .sortedByDescending { it.third }
             .take(8)
-            .forEach { (n, d, s) -> sb.append("  slots=$s $n ${d.length} chars\n") }
+            .forEach { (n, d, s) -> sb.append("  slots=$s $n ${d.length} chars code=${codeSize[n]}\n") }
+        codeSize.entries.sortedByDescending { it.value }.take(5)
+            .forEach { sb.append("  code=${it.value} ${it.key}\n") }
         val names = methods.groupBy { it }.filter { it.value.size > 1 }.keys
         if (names.isNotEmpty()) sb.append("  DUPLICATES: $names\n")
         return sb.toString()

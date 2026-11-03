@@ -117,6 +117,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -592,6 +593,15 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 val appBackdrop = rememberLayerBackdrop(onDraw = paintBackdrop)
+                // The playing song's colour, for the chrome that wears it — see
+                // [LocalNowPlayingTint]. BitChordApp reports the artwork and the
+                // tint is provided out here, around the whole app, rather than
+                // inside it: wrapping BitChordApp's body in a provider lambda made
+                // that lambda capture over 255 of its locals, a method signature
+                // ART refuses, and the app crashed on launch.
+                var nowPlayingArt by remember { mutableStateOf<String?>(null) }
+                val nowPlayingTint = rememberNowPlayingTint(nowPlayingArt)
+                val reportNowPlayingArt: (String?) -> Unit = remember { { nowPlayingArt = it } }
                 val ambientOn by CustomizationSettings.ambientBackground.collectAsStateWithLifecycle()
                 val frosted = if (!ambientOn) {
                     null
@@ -614,6 +624,7 @@ class MainActivity : AppCompatActivity() {
                     LocalOverscrollFactory provides iosOverscrollFactory,
                     LocalLiquidGlassEnabled provides liquidGlassEnabled,
                     LocalAppBackdrop provides appBackdrop,
+                    LocalNowPlayingTint provides nowPlayingTint,
                     com.music.bitchord.ui.components.LocalCropThumbnails provides cropThumbnails,
                     com.music.bitchord.ui.components.LocalDialTileStyle provides dialTileStyle,
                     com.music.bitchord.ui.components.LocalDialTileGlassEdge provides ::dialTileGlassEdge,
@@ -635,6 +646,7 @@ class MainActivity : AppCompatActivity() {
                         windowWidth = maxWidth,
                         windowHeight = maxHeight,
                         appBackdrop = appBackdrop,
+                        onNowPlayingArt = reportNowPlayingArt,
                     )
                 }
                 }
@@ -705,6 +717,8 @@ private fun BitChordApp(
      */
     windowHeight: Dp,
     appBackdrop: LayerBackdrop,
+    /** The playing song's artwork, for [LocalNowPlayingTint]; see the call site. */
+    onNowPlayingArt: (String?) -> Unit,
     viewModel: MainViewModel = viewModel(),
 ) {
     val context = LocalContext.current
@@ -3280,12 +3294,10 @@ private fun BitChordApp(
         LaunchGate.open = true
         SpeedDialIntro.canStart = true
     }
-    // The playing song's colour, for the chrome that wears it — see
-    // [LocalNowPlayingTint]. Provided around the whole app rather than handed
-    // down, so the library's own pages can pick it up the same way. The body
-    // is left at its old indent to keep this wrap out of everyone's diffs.
-    val nowPlayingTint = rememberNowPlayingTint(player.song?.thumbnailUrl)
-    CompositionLocalProvider(LocalNowPlayingTint provides nowPlayingTint) {
+    // The playing song's colour is provided around the whole app, out at the
+    // call site (see there for why not here); this tells it which artwork.
+    val nowPlayingArt = player.song?.thumbnailUrl
+    SideEffect { onNowPlayingArt(nowPlayingArt) }
     Box(
         Modifier
             .fillMaxSize()
@@ -7961,7 +7973,6 @@ private fun BitChordApp(
             )
         }
 
-    }
     }
 }
 
