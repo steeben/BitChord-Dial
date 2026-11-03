@@ -5,10 +5,13 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.RectF
+import android.graphics.Typeface
+import androidx.core.content.res.ResourcesCompat
+import com.music.bitchord.R
 import com.music.bitchord.ui.replay.Fonts
 import com.music.bitchord.ui.replay.drawArtwork
 import com.music.bitchord.ui.replay.drawBackdrop
-import com.music.bitchord.ui.replay.drawLogo
 import com.music.bitchord.ui.replay.ellipsised
 import com.music.bitchord.ui.replay.loadBitmap
 import kotlin.math.roundToInt
@@ -84,18 +87,20 @@ internal suspend fun renderLyricsShareCard(
     drawBackdrop(canvas, cover, 0f, cardH)
 
     // ── Header ──────────────────────────────────────────────────────────────
-    // The mark alone, at the top right — the same one the Replay carries, so
-    // two of these cards still read as one family. Nothing else goes above
-    // the passage: the picture is the verse, not a caption for it.
-    val brand = type.heading(46f, 0xE6FFFFFF.toInt()).apply {
+    // The mark alone, at the top right: the 3×4 Dial squares and "dial." in
+    // the pixel face, white on whatever the backdrop is. Nothing else goes
+    // above the passage: the picture is the verse, not a caption for it.
+    val word = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = pixelFont(context)
+        textSize = BRAND_SIZE
+        color = BRAND_INK
         textAlign = Paint.Align.RIGHT
     }
-    canvas.drawText(BRAND, CARD_W - CARD_MARGIN, HEADER_BASELINE, brand)
-    drawLogo(
+    canvas.drawText(BRAND, CARD_W - CARD_MARGIN, HEADER_BASELINE, word)
+    drawDialMark(
         canvas,
-        context,
-        CARD_W - CARD_MARGIN - brand.measureText(BRAND) - LOGO_GAP,
-        HEADER_BASELINE,
+        right = CARD_W - CARD_MARGIN - word.measureText(BRAND) - LOGO_GAP,
+        bottom = HEADER_BASELINE,
     )
 
     // ── The passage ─────────────────────────────────────────────────────────
@@ -266,8 +271,49 @@ private const val MAX_CARD_H = 1920f
 private const val CARD_MARGIN = 72f
 private const val CARD_CONTENT_W = CARD_W - CARD_MARGIN * 2
 
-private const val LOGO_GAP = 20f
-private const val BRAND = "BitChord"
+private const val LOGO_GAP = 22f
+private const val BRAND = "dial."
+private const val BRAND_SIZE = 64f
+private const val BRAND_INK = 0xE6FFFFFF.toInt()
+
+/** Height of the 3×4 squares in the header; they stand on the word's baseline. */
+private const val MARK_H = 56f
+
+/**
+ * The Dial mark: three columns by four rows of rounded squares, the lit ones
+ * tracing the logo's path (A3, A4, B4, B3, B2, B1, C1) and the rest dim.
+ * Same geometry as the splash: 40-unit squares on a 60-unit pitch, 8-unit
+ * corners, scaled so the grid is [MARK_H] tall with its right edge at [right].
+ */
+private val MARK_LIT = arrayOf(
+    booleanArrayOf(false, true, true),
+    booleanArrayOf(false, true, false),
+    booleanArrayOf(true, true, false),
+    booleanArrayOf(true, true, false),
+)
+
+private fun drawDialMark(canvas: Canvas, right: Float, bottom: Float) {
+    val scale = MARK_H / 220f
+    val left = right - 160f * scale
+    val top = bottom - MARK_H
+    val lit = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = BRAND_INK }
+    val dim = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x33FFFFFF }
+    val box = RectF()
+    val corner = 8f * scale
+    for ((row, cells) in MARK_LIT.withIndex()) {
+        for ((col, on) in cells.withIndex()) {
+            val x = left + col * 60f * scale
+            val y = top + row * 60f * scale
+            box.set(x, y, x + 40f * scale, y + 40f * scale)
+            canvas.drawRoundRect(box, corner, corner, if (on) lit else dim)
+        }
+    }
+}
+
+/** Tiny5 LCD, the face the Home title sets "Dial" in; the bold sans if it won't load. */
+private fun pixelFont(context: Context): Typeface =
+    runCatching { ResourcesCompat.getFont(context, R.font.tiny5_lcd_regular) }.getOrNull()
+        ?: Typeface.DEFAULT_BOLD
 
 /** Baseline of the mark at the top right, and just under it where the gap starts. */
 private const val HEADER_BASELINE = 132f
