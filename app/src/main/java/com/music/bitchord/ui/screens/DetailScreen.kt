@@ -2243,18 +2243,30 @@ private fun CircleIconButton(
 }
 
 /**
- * The artist page's buttons and cards: liquid glass when that is on, else the
- * light veil Apple uses there.
+ * The artist page's buttons and cards: real liquid glass (the page under them,
+ * blurred and bent at the rim, as on the round buttons above) where the page
+ * records a backdrop for it, keeping the light veil's white wash so the card
+ * still reads slightly lighter than the page; the lightweight look-alike when
+ * glass is on but there is nothing to sample; else the light veil Apple uses there.
  */
 @Composable
-private fun Modifier.artistVeil(shape: androidx.compose.foundation.shape.CornerBasedShape): Modifier =
-    if (LocalLiquidGlassEnabled.current && isGlassSupported()) {
+private fun Modifier.artistVeil(shape: androidx.compose.foundation.shape.CornerBasedShape): Modifier {
+    val glass = LocalDetailGlass.current
+    return if (glass != null) {
+        liquidGlass(
+            shape,
+            backdrop = glass,
+            exportedBackdrop = null,
+            surfaceTint = Color.White.copy(alpha = LIGHT_FILL_ALPHA),
+        )
+    } else if (LocalLiquidGlassEnabled.current && isGlassSupported()) {
         lightweightLiquidGlass(shape = shape, fallbackColor = Color.White.copy(alpha = LIGHT_FILL_ALPHA))
     } else {
         clip(shape)
             .background(Color.White.copy(alpha = LIGHT_FILL_ALPHA), shape)
             .border(1.dp, Color.White.copy(alpha = TOP_RELEASE_EDGE_ALPHA), shape)
     }
+}
 
 /** "1.2M subscribers" and "3.4M monthly listeners", off the artist header. */
 @Composable
