@@ -1416,7 +1416,7 @@
     <string name="ai_mix_enabled">(מופעל)</string>
     <string name="ai_mix_stopped">AI Mix כבוי</string>
     <string name="fix_canvas_audio_mismatch">תיקוני שיר</string>
-    <string name="lyrics_text_heading">טקסט המילים</string>
+    <string name="lyrics_text_heading">בהירות הפקדים</string>
     <string name="lyrics_text_over_art">מעל עטיפת האלבום</string>
     <string name="lyrics_text_over_canvas">מעל ה-Canvas</string>
     <string name="lyrics_text_auto">אוטומטי</string>

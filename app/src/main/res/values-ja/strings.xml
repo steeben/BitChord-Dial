@@ -1389,7 +1389,7 @@
     <string name="ai_mix_enabled">（有効）</string>
     <string name="ai_mix_stopped">AI Mix オフ</string>
     <string name="fix_canvas_audio_mismatch">曲の修正</string>
-    <string name="lyrics_text_heading">歌詞の文字</string>
+    <string name="lyrics_text_heading">コントロールの明るさ</string>
     <string name="lyrics_text_over_art">アルバムアート上</string>
     <string name="lyrics_text_over_canvas">Canvas上</string>
     <string name="lyrics_text_auto">自動</string>

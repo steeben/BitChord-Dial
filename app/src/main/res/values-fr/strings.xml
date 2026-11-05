@@ -1412,7 +1412,7 @@
     <string name="ai_mix_enabled">(activé)</string>
     <string name="ai_mix_stopped">AI Mix désactivé</string>
     <string name="fix_canvas_audio_mismatch">Corrections du titre</string>
-    <string name="lyrics_text_heading">Texte des paroles</string>
+    <string name="lyrics_text_heading">Luminosité des commandes</string>
     <string name="lyrics_text_over_art">Sur la pochette</string>
     <string name="lyrics_text_over_canvas">Sur le Canvas</string>
     <string name="lyrics_text_auto">Auto</string>

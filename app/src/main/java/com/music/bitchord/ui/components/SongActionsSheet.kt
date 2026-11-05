@@ -740,7 +740,9 @@ private fun SongFixPage(
     palette: ArtworkPalette,
     onBack: () -> Unit,
 ) {
-    Column(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+    // No padding of its own at the foot: the menu around it already has its
+    // inset there, and an extra one left the page sitting high in the menu.
+    Column(Modifier.fillMaxWidth()) {
         SleepTimerHeader(
             title = stringResource(R.string.fix_canvas_audio_mismatch),
             subtitle = listOf(song.title, song.artist).filter { it.isNotBlank() }.joinToString(" · "),
@@ -756,7 +758,7 @@ private fun SongFixPage(
                 onClick = choice.onClick,
             )
         }
-        // Light or dark lyrics for this song, over its art and over its Canvas.
+        // Light or dark player text for this song, over its art and over its Canvas.
         HorizontalDivider(thickness = 0.5.dp, color = palette.divider)
         SheetHeading(stringResource(R.string.lyrics_text_heading))
         lyricsText.forEach { choice ->

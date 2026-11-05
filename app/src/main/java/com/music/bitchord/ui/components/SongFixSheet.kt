@@ -86,7 +86,7 @@ object SongFixRequests {
 }
 
 /**
- * The Lyrics text rows on the Song fixes page: light or dark lyrics (and the
+ * The Controls brightness rows on the Song fixes page: light or dark lyrics (and the
  * player's text with them) for the playing [song], one pick for while its
  * album art is behind them and one for while a Canvas plays. Each tap steps
  * Auto, Light, Dark and round again; Auto leaves it to the sleeve.

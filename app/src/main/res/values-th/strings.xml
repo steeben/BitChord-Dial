@@ -1394,7 +1394,7 @@
     <string name="ai_mix_enabled">(เปิดอยู่)</string>
     <string name="ai_mix_stopped">ปิด AI Mix</string>
     <string name="fix_canvas_audio_mismatch">แก้ไขเพลง</string>
-    <string name="lyrics_text_heading">ข้อความเนื้อเพลง</string>
+    <string name="lyrics_text_heading">ความสว่างของปุ่มควบคุม</string>
     <string name="lyrics_text_over_art">บนปกอัลบั้ม</string>
     <string name="lyrics_text_over_canvas">บน Canvas</string>
     <string name="lyrics_text_auto">อัตโนมัติ</string>

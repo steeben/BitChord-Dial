@@ -151,11 +151,20 @@ fun ProvidePlayerInk(
         tween(durationMillis = 900, easing = FastOutSlowInEasing),
         label = "playerInk",
     )
-    val lift by animateFloatAsState(
-        targetValue = if (dark) 0f else (conditions?.dim ?: 0f).coerceIn(0f, 1f),
+    val dimLift by animateFloatAsState(
+        targetValue = (conditions?.dim ?: 0f).coerceIn(0f, 1f),
         animationSpec = tween(durationMillis = 420, easing = FastOutSlowInEasing),
         label = "playerInkLift",
     )
+    // The dark ink takes none of the lift, from the moment it is picked: a
+    // dimmed backdrop never brightens it. Going back to the light ink, the
+    // lift eases in on the same clock as the ink's colour.
+    val lightness by animateFloatAsState(
+        targetValue = if (dark) 0f else 1f,
+        animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+        label = "playerInkLightness",
+    )
+    val lift = if (dark) 0f else dimLift * lightness
     CompositionLocalProvider(
         LocalPlayerInk provides lerp(ink, Color.White.copy(alpha = ink.alpha), lift),
         LocalPlayerInkLift provides lift,

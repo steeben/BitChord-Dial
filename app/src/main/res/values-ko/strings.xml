@@ -1179,7 +1179,7 @@
     <string name="ai_mix_enabled">(사용 중)</string>
     <string name="ai_mix_stopped">AI Mix 꺼짐</string>
     <string name="fix_canvas_audio_mismatch">곡 수정</string>
-    <string name="lyrics_text_heading">가사 글자</string>
+    <string name="lyrics_text_heading">컨트롤 밝기</string>
     <string name="lyrics_text_over_art">앨범 아트 위</string>
     <string name="lyrics_text_over_canvas">Canvas 위</string>
     <string name="lyrics_text_auto">자동</string>

@@ -1390,7 +1390,7 @@
     <string name="ai_mix_enabled">（已啟用）</string>
     <string name="ai_mix_stopped">AI Mix 已關閉</string>
     <string name="fix_canvas_audio_mismatch">歌曲修正</string>
-    <string name="lyrics_text_heading">歌詞文字</string>
+    <string name="lyrics_text_heading">控制項亮度</string>
     <string name="lyrics_text_over_art">專輯封面上</string>
     <string name="lyrics_text_over_canvas">Canvas 上</string>
     <string name="lyrics_text_auto">自動</string>

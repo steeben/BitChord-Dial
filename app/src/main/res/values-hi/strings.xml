@@ -1411,7 +1411,7 @@
     <string name="ai_mix_enabled">(चालू)</string>
     <string name="ai_mix_stopped">AI Mix बंद</string>
     <string name="fix_canvas_audio_mismatch">गाने के सुधार</string>
-    <string name="lyrics_text_heading">बोल का टेक्स्ट</string>
+    <string name="lyrics_text_heading">कंट्रोल की चमक</string>
     <string name="lyrics_text_over_art">एल्बम आर्ट पर</string>
     <string name="lyrics_text_over_canvas">Canvas पर</string>
     <string name="lyrics_text_auto">ऑटो</string>

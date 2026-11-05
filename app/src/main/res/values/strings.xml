@@ -195,7 +195,7 @@
     <string name="download_wifi_only">Download over Wi-Fi only</string>
     <string name="convert_to_audio">Convert to audio</string>
     <string name="fix_canvas_audio_mismatch">Song fixes</string>
-    <string name="lyrics_text_heading">Lyrics text</string>
+    <string name="lyrics_text_heading">Controls brightness</string>
     <string name="lyrics_text_over_art">Over album art</string>
     <string name="lyrics_text_over_canvas">Over Canvas</string>
     <string name="lyrics_text_auto">Auto</string>

@@ -1368,7 +1368,7 @@
     <string name="ai_mix_enabled">(etkin)</string>
     <string name="ai_mix_stopped">AI Mix kapalı</string>
     <string name="fix_canvas_audio_mismatch">Şarkı düzeltmeleri</string>
-    <string name="lyrics_text_heading">Şarkı sözü metni</string>
+    <string name="lyrics_text_heading">Kontrol parlaklığı</string>
     <string name="lyrics_text_over_art">Albüm kapağında</string>
     <string name="lyrics_text_over_canvas">Canvas üzerinde</string>
     <string name="lyrics_text_auto">Otomatik</string>

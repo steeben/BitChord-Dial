@@ -1411,7 +1411,7 @@
     <string name="ai_mix_enabled">(aktiviert)</string>
     <string name="ai_mix_stopped">AI Mix aus</string>
     <string name="fix_canvas_audio_mismatch">Song-Korrekturen</string>
-    <string name="lyrics_text_heading">Liedtext-Farbe</string>
+    <string name="lyrics_text_heading">Helligkeit der Steuerelemente</string>
     <string name="lyrics_text_over_art">Über dem Albumcover</string>
     <string name="lyrics_text_over_canvas">Über dem Canvas</string>
     <string name="lyrics_text_auto">Auto</string>

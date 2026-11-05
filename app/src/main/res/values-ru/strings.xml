@@ -1443,7 +1443,7 @@
     <string name="ai_mix_enabled">(включён)</string>
     <string name="ai_mix_stopped">AI Mix выключен</string>
     <string name="fix_canvas_audio_mismatch">Исправления трека</string>
-    <string name="lyrics_text_heading">Текст песни</string>
+    <string name="lyrics_text_heading">Яркость элементов управления</string>
     <string name="lyrics_text_over_art">Поверх обложки</string>
     <string name="lyrics_text_over_canvas">Поверх Canvas</string>
     <string name="lyrics_text_auto">Авто</string>

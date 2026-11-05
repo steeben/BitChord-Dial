@@ -1350,7 +1350,7 @@
     <string name="ai_mix_enabled">(attivo)</string>
     <string name="ai_mix_stopped">AI Mix disattivato</string>
     <string name="fix_canvas_audio_mismatch">Correzioni del brano</string>
-    <string name="lyrics_text_heading">Testo del brano</string>
+    <string name="lyrics_text_heading">Luminosità dei controlli</string>
     <string name="lyrics_text_over_art">Sulla copertina</string>
     <string name="lyrics_text_over_canvas">Sul Canvas</string>
     <string name="lyrics_text_auto">Auto</string>

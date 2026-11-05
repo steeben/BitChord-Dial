@@ -1388,7 +1388,7 @@
     <string name="ai_mix_enabled">（已启用）</string>
     <string name="ai_mix_stopped">AI Mix 已关闭</string>
     <string name="fix_canvas_audio_mismatch">歌曲修正</string>
-    <string name="lyrics_text_heading">歌词文字</string>
+    <string name="lyrics_text_heading">控件亮度</string>
     <string name="lyrics_text_over_art">专辑封面上</string>
     <string name="lyrics_text_over_canvas">Canvas 上</string>
     <string name="lyrics_text_auto">自动</string>

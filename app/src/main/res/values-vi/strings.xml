@@ -1328,7 +1328,7 @@
     <string name="ai_mix_enabled">(đang bật)</string>
     <string name="ai_mix_stopped">Đã tắt AI Mix</string>
     <string name="fix_canvas_audio_mismatch">Sửa bài hát</string>
-    <string name="lyrics_text_heading">Chữ lời bài hát</string>
+    <string name="lyrics_text_heading">Độ sáng điều khiển</string>
     <string name="lyrics_text_over_art">Trên ảnh bìa</string>
     <string name="lyrics_text_over_canvas">Trên Canvas</string>
     <string name="lyrics_text_auto">Tự động</string>
