@@ -20,6 +20,7 @@ import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -153,6 +154,7 @@ fun rememberSongFixChoices(song: Song, onClose: () -> Unit): List<SongMenuChoice
  * Shows whichever fix search was asked for, and plays a song the listener
  * picked earlier wherever its original turns up again.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SongFixHost(
     controller: MediaController?,

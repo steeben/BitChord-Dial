@@ -2485,8 +2485,6 @@ class PlaybackService : MediaLibraryService() {
     private fun measureVersionAlignmentAsync(sourceSong: Song, targetSong: Song): Deferred<Long?> {
         val sourceId = sourceSong.videoId
         val targetId = targetSong.videoId
-        // The same upload, shown as its video or played as a song: one clock.
-        if (sourceId == targetId) return 0L
         val key = sourceId to targetId
         VersionAudioAligner.getCachedOffsetMs(sourceId, targetId)?.let { return CompletableDeferred(it) }
         versionAlignmentMeasurements[key]?.let { return it }
@@ -2545,6 +2543,8 @@ class PlaybackService : MediaLibraryService() {
     ): Long {
         val sourceId = sourceSong.videoId
         val targetId = targetSong.videoId
+        // The same upload, shown as its video or played as a song: one clock.
+        if (sourceId == targetId) return 0L
 
         VersionAudioAligner.getCachedOffsetMs(sourceId, targetId)?.let { cached ->
             val cachedToken = VersionAudioAligner.beginAttempt(sourceId, targetId)
