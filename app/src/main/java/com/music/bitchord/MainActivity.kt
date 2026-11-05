@@ -227,6 +227,7 @@ import com.music.bitchord.data.settings.DevicePlays
 import com.music.bitchord.data.settings.OrderedToggle
 import com.music.bitchord.data.settings.LibrarySource
 import com.music.bitchord.data.settings.speedDialId
+import com.music.bitchord.data.settings.SpeedDialSource
 import com.music.bitchord.ui.screens.ReorderDialog
 import com.music.bitchord.data.settings.LibrarySort
 import com.music.bitchord.data.settings.ThemeMode
@@ -4421,6 +4422,8 @@ private fun BitChordApp(
                             },
                             speedDialLucky = speedDialLucky,
                             dialHistoryLabel = stringResource(R.string.dial_history),
+                            speedDialNewReleases = homeFeed.newReleaseIds,
+                            newReleaseLabel = stringResource(R.string.dial_new_release),
                             onSpeedDialHistory = {
                                 viewModel.loadDialHistory()
                                 historyMode = HistoryMode.DIAL_SONGS
@@ -8331,6 +8334,8 @@ private class HomeFeed(
     val artistDialPinnedIds: Set<String>,
     /** Whether Home has its dials at all — see [CustomizationSettings.speedDials]. */
     val speedDials: Boolean,
+    /** The speed dial's tiles tagged as new releases. */
+    val newReleaseIds: Set<String>,
 )
 
 /**
@@ -8353,7 +8358,27 @@ private fun rememberHomeFeed(
     val homeFresh by viewModel.homeFresh.collectAsStateWithLifecycle()
     // With the dials off Home is only the sections, so there's no dial to hold.
     val speedDialsOn by CustomizationSettings.speedDials.collectAsStateWithLifecycle()
-    val holdSavedDial = speedDialsOn && !homeFresh && lastSpeedDial.isNotEmpty()
+    // Recommends and Mix are dealt once a round (app load, pull to refresh)
+    // and kept, so a song starting doesn't reshuffle the tiles.
+    val dialSource by CustomizationSettings.speedDialSource.collectAsStateWithLifecycle()
+    val dialRound by viewModel.dialRound.collectAsStateWithLifecycle()
+    val dialNewReleases by viewModel.dialNewReleases.collectAsStateWithLifecycle()
+    val lastDialNewReleases by CustomizationSettings.lastDialNewReleases.collectAsStateWithLifecycle()
+    val dealReady = homeFresh && dialNewReleases != null && homeState is UiState.Success
+    val dealtPicks = remember(dialRound, dialSource, dealReady) {
+        if (dialSource == SpeedDialSource.HISTORY || !dealReady) {
+            null
+        } else {
+            CustomizationSettings.pickSpeedDial(
+                dialSource,
+                (homeState as? UiState.Success)?.data.orEmpty(),
+                dialNewReleases.orEmpty(),
+                kotlin.random.Random(System.nanoTime()),
+            )
+        }
+    }
+    val dealt = dialSource == SpeedDialSource.HISTORY || dealtPicks != null
+    val holdSavedDial = speedDialsOn && (!homeFresh || !dealt) && lastSpeedDial.isNotEmpty()
     // A track from the library has started: YouTube's history won't move for
     // it, so the dial is built again here instead.
     val devicePlays by DevicePlays.version.collectAsStateWithLifecycle()
@@ -8378,7 +8403,9 @@ private fun rememberHomeFeed(
     }
     // The feed as Home draws it: the speed dial, then YouTube Music's shelves
     // in the order it gives them.
-    val baseHomeState = remember(homeState, speedDialPins, holdSavedDial, lastSpeedDial, hiddenFromDial, devicePlays, speedDialsOn) {
+    val baseHomeState = remember(
+        homeState, speedDialPins, holdSavedDial, lastSpeedDial, hiddenFromDial, devicePlays, speedDialsOn, dealtPicks,
+    ) {
         val savedDial = if (holdSavedDial) {
             CustomizationSettings.buildSpeedDial(
                 speedDialPins,
@@ -8396,7 +8423,8 @@ private fun rememberHomeFeed(
             }
             is UiState.Success -> {
                 val dial = if (speedDialsOn) {
-                    savedDial ?: CustomizationSettings.buildSpeedDial(speedDialPins, state.data)
+                    savedDial ?: dealtPicks?.let { CustomizationSettings.assembleDial(speedDialPins, it.items) }
+                        ?: CustomizationSettings.buildSpeedDial(speedDialPins, state.data)
                 } else {
                     emptyList()
                 }
@@ -8465,15 +8493,17 @@ private fun rememberHomeFeed(
             ?: return@LaunchedEffect
         viewModel.prefetchArtistCards(artists)
     }
+    // The new-release tags: this round's, or the saved dial's while it stands in.
+    val newReleaseIds = if (holdSavedDial) lastDialNewReleases else dealtPicks?.newReleaseIds.orEmpty()
     // Saved once the fresh dial is what's showing, for the next launch.
-    LaunchedEffect(arrangedHomeState, homeFresh) {
-        if (!homeFresh) return@LaunchedEffect
+    LaunchedEffect(arrangedHomeState, homeFresh, holdSavedDial) {
+        if (!homeFresh || holdSavedDial) return@LaunchedEffect
         val dial = (arrangedHomeState as? UiState.Success)?.data
             ?.firstOrNull { it.title == CustomizationSettings.SPEED_DIAL_TITLE }?.items
             ?: return@LaunchedEffect
-        CustomizationSettings.setLastSpeedDial(dial)
+        CustomizationSettings.setLastSpeedDial(dial, newReleaseIds)
     }
-    return HomeFeed(arrangedHomeState, holdSavedDial, artistDialPinnedIds, speedDialsOn)
+    return HomeFeed(arrangedHomeState, holdSavedDial, artistDialPinnedIds, speedDialsOn, newReleaseIds)
 }
 
 /**

@@ -255,6 +255,9 @@ internal fun SpeedDialShelf(
     /** The history tile, last on the last page: opens what was played lately. Null for none. */
     onHistory: (() -> Unit)? = null,
     historyLabel: String = "",
+    /** Tiles (by video or browse id) tagged as new releases, and the tag's words. */
+    newReleaseIds: Set<String> = emptySet(),
+    newReleaseLabel: String = "",
 ) {
     if (shelf.items.isEmpty()) return
     val perPage = SPEED_DIAL_COLUMNS * rows
@@ -559,6 +562,7 @@ internal fun SpeedDialShelf(
                                         item = item,
                                         spot = tileSpots.getOrPut(id) { TileSpot() },
                                         pinned = pinnedTile && showPinIcon,
+                                        newRelease = if (id in newReleaseIds) newReleaseLabel else null,
                                         showLabel = showLabels != (id in labelOverrides),
                                         current = currentSong != null && item.videoId == currentSong.videoId,
                                         isPlaying = isPlaying,
@@ -600,6 +604,7 @@ internal fun SpeedDialShelf(
                         SpeedDialTile(
                             item = item,
                             pinned = showPinIcon,
+                            newRelease = if (liftedId in newReleaseIds) newReleaseLabel else null,
                             showLabel = showLabels != (liftedId in labelOverrides),
                             current = false,
                             isPlaying = false,
@@ -767,6 +772,8 @@ internal fun SpeedDialMoreHint() {
 private fun SpeedDialTile(
     item: ShelfItem,
     pinned: Boolean,
+    /** The "new release" tag's words, for a tile that carries it; null for none. */
+    newRelease: String? = null,
     showLabel: Boolean = true,
     current: Boolean,
     isPlaying: Boolean,
@@ -831,6 +838,7 @@ private fun SpeedDialTile(
                     .padding(horizontal = 8.dp, vertical = 6.dp),
             )
         }
+        if (newRelease != null) NewReleaseTag(newRelease, Modifier.align(Alignment.TopStart))
         if (pinned) {
             Icon(
                 imageVector = BitChordIcons.Pin,
@@ -844,6 +852,37 @@ private fun SpeedDialTile(
         }
         if (current && isPlaying) SearchPlayingBars(Modifier.align(Alignment.Center))
         DimOverlay(dim)
+    }
+}
+
+/**
+ * A new release's tag, at the tile's top left: a four-point star and the
+ * words, white on a dark pill so it reads over any art.
+ */
+@Composable
+private fun NewReleaseTag(label: String, modifier: Modifier = Modifier) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .padding(5.dp)
+            .clip(RoundedCornerShape(50))
+            .background(Color.Black.copy(alpha = 0.55f))
+            .padding(start = 4.dp, end = 6.dp, top = 2.dp, bottom = 2.dp),
+    ) {
+        Icon(
+            imageVector = BitChordIcons.Sparkle,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(10.dp),
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall.let { it.copy(fontSize = 9.sp, lineHeight = 10.sp) },
+            color = Color.White,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = 3.dp),
+        )
     }
 }
 

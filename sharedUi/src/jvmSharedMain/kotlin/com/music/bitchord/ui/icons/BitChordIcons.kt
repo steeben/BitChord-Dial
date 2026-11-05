@@ -594,6 +594,25 @@ object BitChordIcons {
      * A teardrop reads as "location" the moment it's this small — the two
      * disjoint strokes here are what keep it read as "pinned" instead.
      */
+    /** A filled four-point star, for what is new: the speed dial's new-release tag. */
+    val Sparkle: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "bc_sparkle",
+            defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f,
+        ).apply {
+            path(fill = stroke) {
+                // Four points, each side curving in towards the middle.
+                moveTo(12f, 1.5f)
+                quadTo(13.2f, 10.8f, 22.5f, 12f)
+                quadTo(13.2f, 13.2f, 12f, 22.5f)
+                quadTo(10.8f, 13.2f, 1.5f, 12f)
+                quadTo(10.8f, 10.8f, 12f, 1.5f)
+                close()
+            }
+        }.build()
+    }
+
     val Pin: ImageVector by lazy {
         ImageVector.Builder(
             name = "bc_pin",

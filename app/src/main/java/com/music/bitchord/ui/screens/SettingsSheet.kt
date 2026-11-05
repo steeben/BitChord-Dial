@@ -197,6 +197,7 @@ import com.music.bitchord.data.scrobbling.LastFM
 import com.music.bitchord.data.listentogether.ListenTogether
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.CustomizationSettings
+import com.music.bitchord.data.settings.SpeedDialSource
 import com.music.bitchord.ui.components.frostedSurfaceColor
 import com.music.bitchord.data.settings.MiniPlayerShape
 import com.music.bitchord.data.settings.OutputPcmMode
@@ -342,6 +343,7 @@ fun SettingsScreen(
     val hideVolumeBar by AppSettings.hideVolumeBar.collectAsStateWithLifecycle()
     val miniPlayerShape by CustomizationSettings.miniPlayerShape.collectAsStateWithLifecycle()
     val speedDialRows by CustomizationSettings.speedDialRows.collectAsStateWithLifecycle()
+    val speedDialSource by CustomizationSettings.speedDialSource.collectAsStateWithLifecycle()
     val startPage by CustomizationSettings.startPage.collectAsStateWithLifecycle()
     val navTabs by CustomizationSettings.navTabs.collectAsStateWithLifecycle()
     val keepNavBarExpanded by CustomizationSettings.keepNavBarExpanded.collectAsStateWithLifecycle()
@@ -1468,6 +1470,16 @@ fun SettingsScreen(
                     ),
                     selectedIndex = MiniPlayerShape.entries.indexOf(miniPlayerShape),
                     onSelect = { CustomizationSettings.setMiniPlayerShape(MiniPlayerShape.entries[it]) },
+                    modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, bottom = 14.dp),
+                )
+            }
+            val speedDialSourceTitle = stringResource(R.string.speed_dial_source)
+            row(speedDialSourceTitle, "speed dial", "history", "recommends", "mix", "new releases") {
+                SettingsRow(icon = Icons.Rounded.CropSquare, title = speedDialSourceTitle)
+                SegmentedControl(
+                    options = com.music.bitchord.ui.components.speedDialSourceLabels(),
+                    selectedIndex = speedDialSource.ordinal,
+                    onSelect = { CustomizationSettings.setSpeedDialSource(SpeedDialSource.entries[it]) },
                     modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, bottom = 14.dp),
                 )
             }

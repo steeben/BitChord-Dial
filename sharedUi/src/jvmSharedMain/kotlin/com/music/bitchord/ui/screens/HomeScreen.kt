@@ -184,6 +184,9 @@ fun HomeScreen(
     onSpeedDialHistory: (() -> Unit)? = null,
     onArtistDialHistory: (() -> Unit)? = null,
     dialHistoryLabel: String = "",
+    /** Speed dial tiles (by video or browse id) tagged as new releases, and the tag's words. */
+    speedDialNewReleases: Set<String> = emptySet(),
+    newReleaseLabel: String = "",
     /**
      * The saved section layout, for the loading placeholders: whether the speed
      * dial leads Home, and whether Recents is shown at all.
@@ -398,6 +401,8 @@ fun HomeScreen(
                         onSpeedDialHistory = onSpeedDialHistory,
                         onArtistDialHistory = onArtistDialHistory,
                         dialHistoryLabel = dialHistoryLabel,
+                        speedDialNewReleases = speedDialNewReleases,
+                        newReleaseLabel = newReleaseLabel,
                         afterLead = {
                             if (dialLeads && !holdSpeedDial) bannerItem()
                             topPicksItem()
@@ -511,6 +516,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexedShelves(
     onSpeedDialHistory: (() -> Unit)? = null,
     onArtistDialHistory: (() -> Unit)? = null,
     dialHistoryLabel: String = "",
+    speedDialNewReleases: Set<String> = emptySet(),
+    newReleaseLabel: String = "",
     /** Items to put straight after the lead page (or pages: the dials). */
     afterLead: (androidx.compose.foundation.lazy.LazyListScope.() -> Unit)? = null,
     /**
@@ -587,6 +594,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexedShelves(
                         showPinIcon = dialPinIcon,
                         onHistory = onSpeedDialHistory,
                         historyLabel = dialHistoryLabel,
+                        newReleaseIds = speedDialNewReleases,
+                        newReleaseLabel = newReleaseLabel,
                     )
                 } else if (shelf.title.equals(RECENTS_TITLE, ignoreCase = true)) {
                     RecentShelf(

@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.R
 import com.music.bitchord.data.settings.CustomizationSettings
+import com.music.bitchord.data.settings.SpeedDialSource
 import com.music.bitchord.ui.screens.GlassMenuPanel
 import com.music.bitchord.ui.screens.MenuHeading
 import com.music.bitchord.ui.screens.SegmentedControl
@@ -45,6 +46,7 @@ fun HomeDialMenu(
 ) {
     val speedDials by CustomizationSettings.speedDials.collectAsStateWithLifecycle()
     val rows by CustomizationSettings.speedDialRows.collectAsStateWithLifecycle()
+    val source by CustomizationSettings.speedDialSource.collectAsStateWithLifecycle()
     val artistDial by CustomizationSettings.artistDial.collectAsStateWithLifecycle()
     val feelingLucky by CustomizationSettings.feelingLucky.collectAsStateWithLifecycle()
     val pinIcon by CustomizationSettings.dialPinIcon.collectAsStateWithLifecycle()
@@ -60,6 +62,14 @@ fun HomeDialMenu(
                 exit = fadeOut() + shrinkVertically(),
             ) {
                 Column {
+                    MenuHeading(stringResource(R.string.speed_dial_source))
+                    SegmentedControl(
+                        options = speedDialSourceLabels(),
+                        selectedIndex = source.ordinal,
+                        onSelect = { CustomizationSettings.setSpeedDialSource(SpeedDialSource.entries[it]) },
+                        glass = true,
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp),
+                    )
                     MenuHeading(stringResource(R.string.speed_dial_grid))
                     // On glass of its own, so the track reads as frosted over the panel.
                     SegmentedControl(
@@ -90,6 +100,14 @@ fun HomeDialMenu(
         }
     }
 }
+
+/** The speed dial source picker's options, in [SpeedDialSource]'s order. */
+@Composable
+fun speedDialSourceLabels(): List<String> = listOf(
+    stringResource(R.string.speed_dial_source_history),
+    stringResource(R.string.speed_dial_source_recommends),
+    stringResource(R.string.speed_dial_source_mix),
+)
 
 @Composable
 private fun DialSwitch(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {

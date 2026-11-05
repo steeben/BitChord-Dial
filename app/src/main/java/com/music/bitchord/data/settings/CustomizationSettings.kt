@@ -93,6 +93,9 @@ object CustomizationSettings {
     val dialTileStyle = MutableStateFlow(DialTileStyle.NONE)
     val miniPlayerShape = MutableStateFlow(MiniPlayerShape.CIRCULAR)
 
+    /** Where the speed dial's unpinned tiles come from; see [SpeedDialSource]. */
+    val speedDialSource = MutableStateFlow(SpeedDialSource.RECOMMENDS)
+
     /** How many rows of three tiles the speed dial shows per page: 3 or 4. */
     val speedDialRows = MutableStateFlow(DEFAULT_SPEED_DIAL_ROWS)
 
@@ -170,6 +173,9 @@ object CustomizationSettings {
      */
     val lastSpeedDial = MutableStateFlow<List<ShelfItem>>(emptyList())
 
+    /** Which of [lastSpeedDial]'s tiles were tagged as new releases. */
+    val lastDialNewReleases = MutableStateFlow<Set<String>>(emptySet())
+
     fun init(prefs: SharedPreferences) {
         this.prefs = prefs
         readAll()
@@ -187,6 +193,8 @@ object CustomizationSettings {
         speedDials.value = p.getBoolean(KEY_SPEED_DIALS, true)
         artistDial.value = p.getBoolean(KEY_ARTIST_DIAL, true)
         feelingLucky.value = p.getBoolean(KEY_FEELING_LUCKY, true)
+        speedDialSource.value = SpeedDialSource.entries
+            .firstOrNull { it.name == p.getString(KEY_SPEED_DIAL_SOURCE, null) } ?: SpeedDialSource.RECOMMENDS
         speedDialRows.value = p.getInt(KEY_SPEED_DIAL_ROWS, DEFAULT_SPEED_DIAL_ROWS).takeIf { it in 3..4 }
             ?: DEFAULT_SPEED_DIAL_ROWS
         miniPlayerShape.value = MiniPlayerShape.entries
@@ -222,6 +230,7 @@ object CustomizationSettings {
             .firstOrNull { it.name == p.getString(KEY_LIBRARY_SOURCE, null) } ?: LibrarySource.ALL
         speedDialPins.value = readPins(p.getString(KEY_SPEED_DIAL_PINS, null))
         lastSpeedDial.value = readPins(p.getString(KEY_LAST_SPEED_DIAL, null))
+        lastDialNewReleases.value = p.getStringSet(KEY_LAST_DIAL_NEW_RELEASES, emptySet())?.toSet().orEmpty()
         artistDialPins.value = readPins(p.getString(KEY_ARTIST_DIAL_PINS, null))
         hiddenFromDial.value = p.getStringSet(KEY_HIDDEN_FROM_DIAL, emptySet())?.toSet().orEmpty()
         dialHiddenLabels.value = p.getStringSet(KEY_DIAL_HIDDEN_LABELS, emptySet())?.toSet().orEmpty()
@@ -399,10 +408,14 @@ object CustomizationSettings {
     }
 
     /** Saves the dial Home is showing, for the next launch to open on. */
-    fun setLastSpeedDial(value: List<ShelfItem>) {
-        if (value == lastSpeedDial.value) return
+    fun setLastSpeedDial(value: List<ShelfItem>, newReleases: Set<String> = emptySet()) {
+        if (value == lastSpeedDial.value && newReleases == lastDialNewReleases.value) return
         lastSpeedDial.value = value
-        prefs?.edit()?.putString(KEY_LAST_SPEED_DIAL, writeItems(value))?.apply()
+        lastDialNewReleases.value = newReleases
+        prefs?.edit()
+            ?.putString(KEY_LAST_SPEED_DIAL, writeItems(value))
+            ?.putStringSet(KEY_LAST_DIAL_NEW_RELEASES, newReleases)
+            ?.apply()
     }
 
     private fun writeItems(items: List<ShelfItem>): String {
@@ -431,21 +444,59 @@ object CustomizationSettings {
      * from week to week and, coming first, filled the tiles after the pins
      * with the same things however the listening changed.
      */
-    fun buildSpeedDial(pins: List<ShelfItem>, shelves: List<HomeShelf>): List<ShelfItem> {
-        fun shelf(title: String) = shelves.firstOrNull { it.title.equals(title, ignoreCase = true) }?.items.orEmpty()
-        fun asPlayed(items: List<ShelfItem>) = items.map { PlayedCollections.collectionFor(it.videoId) ?: it }
-        val official = asPlayed(shelf(SPEED_DIAL_TITLE))
+    fun buildSpeedDial(pins: List<ShelfItem>, shelves: List<HomeShelf>): List<ShelfItem> =
+        assembleDial(pins, historyPicks(shelves))
+
+    /** [buildSpeedDial] without the pins: recently played, YouTube's speed dial, then the rest of the feed. */
+    fun historyPicks(shelves: List<HomeShelf>): List<ShelfItem> {
+        val official = asPlayed(shelfItems(shelves, SPEED_DIAL_TITLE))
         // Tracks from the library and other files never reach YouTube's history.
-        val recents = asPlayed(DevicePlays.withDevicePlays(shelf(RECENTS_TITLE)))
+        val recents = asPlayed(DevicePlays.withDevicePlays(shelfItems(shelves, RECENTS_TITLE)))
         val rest = shelves
             .filterNot { it.title.equals(SPEED_DIAL_TITLE, true) || it.title.equals(RECENTS_TITLE, true) }
             .flatMap { it.items }
+        return recents + official + rest
+    }
+
+    /**
+     * The tiles past the pins for [source], drawn once per round (app load or
+     * pull to refresh) by the caller, which holds on to them until the next.
+     */
+    fun pickSpeedDial(
+        source: SpeedDialSource,
+        shelves: List<HomeShelf>,
+        newReleases: List<ShelfItem>,
+        random: kotlin.random.Random,
+    ): DialPicks {
+        val history = historyPicks(shelves)
+        val recommends = shelves.filter { SpeedDialPicker.isRecommendShelf(it.title) }.flatMap {
+            if (it.title.equals(RECENTS_TITLE, true)) DevicePlays.withDevicePlays(it.items) else it.items
+        }.let(::asPlayed)
+        return SpeedDialPicker.pick(
+            source = source,
+            history = history,
+            recommends = recommends,
+            newReleases = SpeedDialPicker.newReleasesOf(shelves, newReleases),
+            fill = history,
+            firstPage = SPEED_DIAL_COLUMNS * speedDialRows.value,
+            size = SPEED_DIAL_SIZE,
+            random = random,
+        )
+    }
+
+    /** Pins first, then [picks], minus what was taken off the dial, up to [SPEED_DIAL_SIZE]. */
+    fun assembleDial(pins: List<ShelfItem>, picks: List<ShelfItem>): List<ShelfItem> {
         val hidden = hiddenFromDial.value
-        return (pins + recents + official + rest)
+        return (pins + picks)
             .filter { it.speedDialId != null && it.speedDialId !in hidden }
             .distinctBy { it.speedDialId }
             .take(SPEED_DIAL_SIZE)
     }
+
+    private fun shelfItems(shelves: List<HomeShelf>, title: String) =
+        shelves.firstOrNull { it.title.equals(title, ignoreCase = true) }?.items.orEmpty()
+
+    private fun asPlayed(items: List<ShelfItem>) = items.map { PlayedCollections.collectionFor(it.videoId) ?: it }
 
     private fun readPins(stored: String?): List<ShelfItem> {
         if (stored.isNullOrBlank()) return emptyList()
@@ -638,6 +689,11 @@ object CustomizationSettings {
         prefs?.edit()?.putString(KEY_MINI_PLAYER_SHAPE, value.name)?.apply()
     }
 
+    fun setSpeedDialSource(value: SpeedDialSource) {
+        speedDialSource.value = value
+        prefs?.edit()?.putString(KEY_SPEED_DIAL_SOURCE, value.name)?.apply()
+    }
+
     fun setSpeedDialRows(value: Int) {
         val rows = value.coerceIn(3, 4)
         speedDialRows.value = rows
@@ -679,6 +735,7 @@ object CustomizationSettings {
     const val SPEED_DIAL_TITLE = "Speed dial"
     private const val RECENTS_TITLE = "Recents"
     const val SPEED_DIAL_SIZE = 36
+    private const val SPEED_DIAL_COLUMNS = 3
     const val DEFAULT_SPEED_DIAL_ROWS = 4
     const val DEFAULT_HOME_TITLE = "BitChord Dial"
 
@@ -740,6 +797,8 @@ object CustomizationSettings {
     private const val KEY_KEEP_NAV_EXPANDED = "custom_keep_nav_expanded"
     private const val KEY_MINI_PLAYER_SHAPE = "custom_mini_player_shape"
     private const val KEY_SPEED_DIAL_ROWS = "custom_speed_dial_rows"
+    private const val KEY_SPEED_DIAL_SOURCE = "custom_speed_dial_source"
+    private const val KEY_LAST_DIAL_NEW_RELEASES = "custom_last_dial_new_releases"
 }
 
 /** What identifies an item on the speed dial: its track, or the page it opens. */

@@ -191,6 +191,30 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val homeFresh: StateFlow<Boolean> = _homeFresh.asStateFlow()
 
     /**
+     * New releases for the speed dial's tagged tiles, fetched with each load
+     * and pull to refresh rather than waiting for Home to be scrolled to its
+     * supplements. Null while this load's are on their way.
+     */
+    private val _dialNewReleases = MutableStateFlow<List<ShelfItem>?>(null)
+    val dialNewReleases: StateFlow<List<ShelfItem>?> = _dialNewReleases.asStateFlow()
+
+    /**
+     * Counts the times the speed dial may be dealt again: each app load and
+     * each pull to refresh on Home. Recommends and Mix keep their tiles
+     * between two of these, however the feed under them moves.
+     */
+    private val _dialRound = MutableStateFlow(0)
+    val dialRound: StateFlow<Int> = _dialRound.asStateFlow()
+
+    private suspend fun fetchDialNewReleases(): List<ShelfItem> =
+        withTimeoutOrNull(DIAL_NEW_RELEASES_TIMEOUT_MS) {
+            YtMusicRepository.homeSupplement(DIAL_NEW_RELEASES_BROWSE_ID).getOrNull()
+                ?.flatMap { it.items }
+                ?.filter { it.browseId != null || it.videoId != null }
+                ?.take(DIAL_NEW_RELEASES_POOL)
+        }.orEmpty()
+
+    /**
      * Whether the listener has scrolled Home past the speed dial this session.
      * Until they do, the extra shelves under it (the supplements and further
      * pages) aren't asked for at all.
@@ -1935,7 +1959,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _refreshing.value = _refreshing.value + feed
         viewModelScope.launch {
             when (feed) {
-                Feed.HOME -> refreshHome(identity)
+                Feed.HOME -> {
+                    coroutineScope {
+                        val releases = async { fetchDialNewReleases() }
+                        refreshHome(identity)
+                        val fresh = releases.await()
+                        if (identity == listenerKey()) {
+                            _dialNewReleases.value = fresh
+                            // The pull deals the dial again, once its feed is in.
+                            _dialRound.value += 1
+                        }
+                    }
+                }
                 Feed.EXPLORE -> fetchExplore()
                 Feed.LIBRARY -> {
                     // A pull on the Library deals its rows again, Recently
@@ -2033,6 +2068,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _homeLoadingMore.value = false
         _homeRecentlyPlayedLoading.value = _signedIn.value
         _homeFresh.value = false
+        _dialNewReleases.value = null
+        _dialRound.value += 1
+        viewModelScope.launch {
+            val releases = fetchDialNewReleases()
+            if (isCurrentHomeLoad(identity, generation)) _dialNewReleases.value = releases
+        }
         // The core feed now; the supplements once Home is scrolled to them.
         // Recently played is left out of the count: it has its own skeleton at
         // the head of the page rather than the one at the tail.
@@ -4533,3 +4574,10 @@ private const val LUCKY_ROTATION_REACH = 15
 private const val DIAL_HISTORY_SONGS = 50
 private const val DIAL_HISTORY_ARTISTS = 20
 private const val DIAL_HISTORY_SCAN = 400
+
+/** Where the speed dial's new releases come from, and how many of them it chooses among. */
+private const val DIAL_NEW_RELEASES_BROWSE_ID = "FEmusic_new_releases"
+private const val DIAL_NEW_RELEASES_POOL = 20
+
+/** Past this the dial is dealt without new releases rather than held for them. */
+private const val DIAL_NEW_RELEASES_TIMEOUT_MS = 8_000L
