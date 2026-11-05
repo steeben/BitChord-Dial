@@ -108,4 +108,13 @@ class CanvasAudioFixesTest {
         assertEquals(CanvasAudioFixes.LyricInk.LIGHT, CanvasAudioFixes.lyricInk("song", overCanvas = true))
         assertEquals(CanvasAudioFixes.state.value, saved.last())
     }
+
+    @Test
+    fun `video doesn't match drops a searched-for video too`() {
+        CanvasAudioFixes.pairVideo("song", "picked")
+        CanvasAudioFixes.hideVideoCanvas("song")
+
+        assertNull(CanvasAudioFixes.pairedVideo("song"))
+        assertTrue("song" in CanvasAudioFixes.state.value.hiddenVideoCanvas)
+    }
 }
