@@ -35,7 +35,7 @@ import dev.chrisbanes.haze.HazeState
  * What Home's "…" button opens, on the same glass as the Library's menu,
  * grown out of the top bar's right end: whether Home has dials at all, then
  * the dial's own settings — its grid,
- * the artists' dial, the die, the tile names, the pin badges, how the tiles
+ * the artists' dial, the die, the tile names, the pin badges, the tilt parallax, how the tiles
  * are edged — applied as they are touched.
  */
 @Composable
@@ -52,6 +52,7 @@ fun HomeDialMenu(
     val pinIcon by CustomizationSettings.dialPinIcon.collectAsStateWithLifecycle()
     val labels by CustomizationSettings.dialLabels.collectAsStateWithLifecycle()
     val tileStyle by CustomizationSettings.dialTileStyle.collectAsStateWithLifecycle()
+    val parallax by CustomizationSettings.dialParallax.collectAsStateWithLifecycle()
     GlassMenuPanel(visible = visible, hazeState = hazeState, onDismiss = onDismiss) {
         Column(Modifier.widthIn(min = 280.dp, max = 340.dp)) {
             DialSwitch(stringResource(R.string.speed_dials_setting), speedDials, CustomizationSettings::setSpeedDials)
@@ -83,6 +84,7 @@ fun HomeDialMenu(
                     DialSwitch(stringResource(R.string.feeling_lucky_setting), feelingLucky, CustomizationSettings::setFeelingLucky)
                     DialSwitch(stringResource(R.string.dial_labels_default), labels, CustomizationSettings::setDialLabels)
                     DialSwitch(stringResource(R.string.dial_pin_icon), pinIcon, CustomizationSettings::setDialPinIcon)
+                    DialSwitch(stringResource(R.string.dial_parallax), parallax, CustomizationSettings::setDialParallax)
                     MenuHeading(stringResource(R.string.dial_tile_style))
                     SegmentedControl(
                         options = listOf(

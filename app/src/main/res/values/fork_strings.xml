@@ -67,6 +67,7 @@
     <string name="hide_dial_title">Hide title on dial</string>
     <string name="show_dial_title">Show title on dial</string>
     <string name="dial_pin_icon">Pin icon on pinned tiles</string>
+    <string name="dial_parallax">Tilt parallax</string>
     <string name="dial_settings">Dial</string>
     <string name="dial_labels_default">Show tile names</string>
     <string name="dial_tile_style">Tile style</string>

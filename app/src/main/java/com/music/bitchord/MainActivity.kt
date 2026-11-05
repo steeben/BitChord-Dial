@@ -626,6 +626,10 @@ class MainActivity : AppCompatActivity() {
                     com.music.bitchord.ui.components.LocalDialTileStyle provides dialTileStyle,
                     com.music.bitchord.ui.components.LocalDialTileGlassEdge provides ::dialTileGlassEdge,
                     com.music.bitchord.ui.components.LocalDialTileBackdrop provides dialTileBackdrop,
+                    com.music.bitchord.ui.components.LocalDialTileOutset provides
+                        com.music.bitchord.ui.components.dialTileGlassOutset(dialTileStyle),
+                    com.music.bitchord.ui.components.LocalDialTilt provides
+                        com.music.bitchord.ui.components.rememberDialTilt(),
                 ) {
                 // The window's width, measured rather than asked for.
                 //
