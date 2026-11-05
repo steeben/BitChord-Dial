@@ -160,4 +160,27 @@
     <string name="speed_dial_source_recommends">Recommends</string>
     <string name="speed_dial_source_mix">Mix</string>
     <string name="dial_new_release">New release</string>
+    <string name="song_fix_find_video">Find the music video</string>
+    <string name="song_fix_find_video_detail">Search for a video to use as the Canvas</string>
+    <string name="song_fix_find_video_about">Pick the music video to show as this song\'s Canvas. It\'s kept for this song from now on.</string>
+    <string name="song_fix_video_paired">Music video set as this song\'s Canvas</string>
+    <string name="song_fix_find_song">Find the right song</string>
+    <string name="song_fix_find_song_detail">The audio is the wrong song</string>
+    <string name="song_fix_find_song_about">Pick the song that should play here. It plays in its place from now on.</string>
+    <string name="song_fix_song_picked">Playing the song you picked</string>
+    <string name="song_fix_pick_source">Play from another addon</string>
+    <string name="song_fix_pick_source_detail">This addon\'s audio is wrong</string>
+    <string name="song_fix_pick_source_about">Pick where this song plays from. It stays there from now on.</string>
+    <string name="song_fix_source_searching">Checking which addons have this song…</string>
+    <string name="song_fix_source_match">Has this song · %1$s</string>
+    <string name="song_fix_source_match_plain">Has this song</string>
+    <string name="song_fix_source_none">No match</string>
+    <string name="song_fix_source_youtube">YouTube</string>
+    <string name="song_fix_source_youtube_detail">The original upload</string>
+    <string name="song_fix_source_picked">Switching to the source you picked</string>
+    <string name="song_fix_album_art">Use the animated album art</string>
+    <string name="song_fix_album_art_detail">Show the album\'s moving cover as the Canvas</string>
+    <string name="song_fix_search_hint">Search</string>
+    <string name="song_fix_search_failed">Couldn\'t search right now</string>
+    <string name="song_fix_search_none">Nothing found</string>
 </resources>

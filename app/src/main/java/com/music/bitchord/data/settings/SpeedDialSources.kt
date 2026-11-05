@@ -94,10 +94,12 @@ object SpeedDialPicker {
         // The new releases: one to three, each somewhere on the first page.
         val count = random.nextInt(MIN_NEW_RELEASES, MAX_NEW_RELEASES + 1)
         val releases = newReleases.distinctBy { it.speedDialId }.shuffled(random).take(count)
-        releases.forEach { item ->
-            val at = random.nextInt(0, minOf(dial.size, maxOf(firstPage - 1, 0)) + 1)
-            dial.add(at, item)
-        }
-        return DialPicks(dial, releases.mapNotNullTo(HashSet()) { it.speedDialId })
+        // Their final places, distinct and filled lowest first, so a later one
+        // can't push an earlier one off the first page.
+        val last = minOf(maxOf(firstPage, 1), dial.size + releases.size) - 1
+        val spots = (0..last).shuffled(random).take(releases.size).sorted()
+        val placed = releases.zip(spots)
+        placed.forEach { (item, at) -> dial.add(at, item) }
+        return DialPicks(dial, placed.mapNotNullTo(HashSet()) { it.first.speedDialId })
     }
 }
