@@ -15,6 +15,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.SwapHoriz
@@ -66,7 +68,7 @@ import com.music.bitchord.ui.theme.LocalNowPlayingTint
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
- * The searches behind the player's "Fix Canvas/Audio match" rows: pick the
+ * The searches behind the player's "Song fixes" rows: pick the
  * right music video for the Canvas, the right song for the audio, or which
  * addon plays the track. Kept out of MainActivity, which is at the JVM's
  * limits — it only places [SongFixHost] and adds [rememberSongFixChoices].
@@ -81,6 +83,40 @@ object SongFixRequests {
     fun open(kind: Kind, song: Song) {
         request.value = Request(kind, song)
     }
+}
+
+/**
+ * The Lyrics text rows on the Song fixes page: light or dark lyrics (and the
+ * player's text with them) for the playing [song], one pick for while its
+ * album art is behind them and one for while a Canvas plays. Each tap steps
+ * Auto, Light, Dark and round again; Auto leaves it to the sleeve.
+ */
+@Composable
+fun rememberLyricsTextChoices(song: Song): List<SongMenuChoice> {
+    val context = LocalContext.current
+    val fixes by CanvasAudioFixes.state.collectAsStateWithLifecycle()
+    fun row(overCanvas: Boolean): SongMenuChoice {
+        val ink = CanvasAudioFixes.lyricInkOf(fixes, song.videoId, overCanvas)
+        return SongMenuChoice(
+            icon = if (overCanvas) Icons.Rounded.Movie else Icons.Rounded.Image,
+            label = context.getString(if (overCanvas) R.string.lyrics_text_over_canvas else R.string.lyrics_text_over_art),
+            value = context.getString(
+                when (ink) {
+                    null -> R.string.lyrics_text_auto
+                    CanvasAudioFixes.LyricInk.LIGHT -> R.string.lyrics_text_light
+                    CanvasAudioFixes.LyricInk.DARK -> R.string.lyrics_text_dark
+                },
+            ),
+        ) {
+            val next = when (ink) {
+                null -> CanvasAudioFixes.LyricInk.LIGHT
+                CanvasAudioFixes.LyricInk.LIGHT -> CanvasAudioFixes.LyricInk.DARK
+                CanvasAudioFixes.LyricInk.DARK -> null
+            }
+            CanvasAudioFixes.setLyricInk(song.videoId, overCanvas, next)
+        }
+    }
+    return listOf(row(overCanvas = false), row(overCanvas = true))
 }
 
 /**

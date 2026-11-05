@@ -194,7 +194,13 @@
     <string name="download_quality">Download quality</string>
     <string name="download_wifi_only">Download over Wi-Fi only</string>
     <string name="convert_to_audio">Convert to audio</string>
-    <string name="fix_canvas_audio_mismatch">Fix Canvas/Audio match</string>
+    <string name="fix_canvas_audio_mismatch">Song fixes</string>
+    <string name="lyrics_text_heading">Lyrics text</string>
+    <string name="lyrics_text_over_art">Over album art</string>
+    <string name="lyrics_text_over_canvas">Over Canvas</string>
+    <string name="lyrics_text_auto">Auto</string>
+    <string name="lyrics_text_light">Light</string>
+    <string name="lyrics_text_dark">Dark</string>
     <string name="canvas_fix_wrong_audio">Audio is a different song</string>
     <string name="canvas_fix_wrong_audio_detail">Play the video\'s own audio from now on</string>
     <string name="canvas_fix_wrong_canvas">Canvas is the wrong clip</string>

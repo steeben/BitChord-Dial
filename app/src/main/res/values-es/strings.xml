@@ -1382,7 +1382,13 @@
     <string name="ai_mix_started">AI Mix: fragmentos de 50 segundos mezclados como una sesión de DJ</string>
     <string name="ai_mix_enabled">(activado)</string>
     <string name="ai_mix_stopped">AI Mix desactivado</string>
-    <string name="fix_canvas_audio_mismatch">Corregir coincidencia de Canvas/audio</string>
+    <string name="fix_canvas_audio_mismatch">Arreglos de la canción</string>
+    <string name="lyrics_text_heading">Texto de la letra</string>
+    <string name="lyrics_text_over_art">Sobre la portada</string>
+    <string name="lyrics_text_over_canvas">Sobre el Canvas</string>
+    <string name="lyrics_text_auto">Auto</string>
+    <string name="lyrics_text_light">Claro</string>
+    <string name="lyrics_text_dark">Oscuro</string>
     <string name="canvas_fix_wrong_audio">El audio es otra canción</string>
     <string name="canvas_fix_wrong_audio_detail">Reproducir el audio del propio vídeo a partir de ahora</string>
     <string name="canvas_fix_wrong_canvas">El Canvas es el clip equivocado</string>

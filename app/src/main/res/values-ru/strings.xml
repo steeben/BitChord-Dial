@@ -1442,7 +1442,13 @@
     <string name="ai_mix_started">AI Mix: 50-секундные фрагменты, сведённые как DJ-сет</string>
     <string name="ai_mix_enabled">(включён)</string>
     <string name="ai_mix_stopped">AI Mix выключен</string>
-    <string name="fix_canvas_audio_mismatch">Исправить соответствие Canvas и звука</string>
+    <string name="fix_canvas_audio_mismatch">Исправления трека</string>
+    <string name="lyrics_text_heading">Текст песни</string>
+    <string name="lyrics_text_over_art">Поверх обложки</string>
+    <string name="lyrics_text_over_canvas">Поверх Canvas</string>
+    <string name="lyrics_text_auto">Авто</string>
+    <string name="lyrics_text_light">Светлый</string>
+    <string name="lyrics_text_dark">Тёмный</string>
     <string name="canvas_fix_wrong_audio">Звук — другая песня</string>
     <string name="canvas_fix_wrong_audio_detail">Отныне воспроизводить звук самого видео</string>
     <string name="canvas_fix_wrong_canvas">Canvas — не тот клип</string>

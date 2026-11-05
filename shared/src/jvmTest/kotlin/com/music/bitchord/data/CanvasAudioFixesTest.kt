@@ -93,4 +93,19 @@ class CanvasAudioFixesTest {
         assertFalse("song" in state.hiddenCanvas)
         assertNull(CanvasAudioFixes.pairedVideo("song"))
     }
+
+    @Test
+    fun `lyrics text is picked apart for album art and Canvas, and goes back to auto`() {
+        CanvasAudioFixes.setLyricInk("song", overCanvas = false, CanvasAudioFixes.LyricInk.DARK)
+        CanvasAudioFixes.setLyricInk("song", overCanvas = true, CanvasAudioFixes.LyricInk.LIGHT)
+
+        assertEquals(CanvasAudioFixes.LyricInk.DARK, CanvasAudioFixes.lyricInk("song", overCanvas = false))
+        assertEquals(CanvasAudioFixes.LyricInk.LIGHT, CanvasAudioFixes.lyricInk("song", overCanvas = true))
+        assertNull(CanvasAudioFixes.lyricInk("other", overCanvas = false))
+
+        CanvasAudioFixes.setLyricInk("song", overCanvas = false, null)
+        assertNull(CanvasAudioFixes.lyricInk("song", overCanvas = false))
+        assertEquals(CanvasAudioFixes.LyricInk.LIGHT, CanvasAudioFixes.lyricInk("song", overCanvas = true))
+        assertEquals(CanvasAudioFixes.state.value, saved.last())
+    }
 }

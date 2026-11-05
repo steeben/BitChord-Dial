@@ -1388,7 +1388,13 @@
     <string name="ai_mix_started">AI Mix：50秒のサンプルを DJ セットのようにミックス</string>
     <string name="ai_mix_enabled">（有効）</string>
     <string name="ai_mix_stopped">AI Mix オフ</string>
-    <string name="fix_canvas_audio_mismatch">Canvasと音声の一致を修正</string>
+    <string name="fix_canvas_audio_mismatch">曲の修正</string>
+    <string name="lyrics_text_heading">歌詞の文字</string>
+    <string name="lyrics_text_over_art">アルバムアート上</string>
+    <string name="lyrics_text_over_canvas">Canvas上</string>
+    <string name="lyrics_text_auto">自動</string>
+    <string name="lyrics_text_light">明るい</string>
+    <string name="lyrics_text_dark">暗い</string>
     <string name="canvas_fix_wrong_audio">音声が別の曲</string>
     <string name="canvas_fix_wrong_audio_detail">今後は動画自体の音声を再生</string>
     <string name="canvas_fix_wrong_canvas">Canvasが間違ったクリップ</string>

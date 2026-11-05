@@ -1387,7 +1387,13 @@
     <string name="ai_mix_started">AI Mix：50 秒片段，像 DJ 现场一样混音</string>
     <string name="ai_mix_enabled">（已启用）</string>
     <string name="ai_mix_stopped">AI Mix 已关闭</string>
-    <string name="fix_canvas_audio_mismatch">修复 Canvas/音频匹配</string>
+    <string name="fix_canvas_audio_mismatch">歌曲修正</string>
+    <string name="lyrics_text_heading">歌词文字</string>
+    <string name="lyrics_text_over_art">专辑封面上</string>
+    <string name="lyrics_text_over_canvas">Canvas 上</string>
+    <string name="lyrics_text_auto">自动</string>
+    <string name="lyrics_text_light">浅色</string>
+    <string name="lyrics_text_dark">深色</string>
     <string name="canvas_fix_wrong_audio">音频是另一首歌</string>
     <string name="canvas_fix_wrong_audio_detail">今后播放视频本身的音频</string>
     <string name="canvas_fix_wrong_canvas">Canvas 是错误的片段</string>

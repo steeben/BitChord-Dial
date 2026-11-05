@@ -649,7 +649,13 @@ fun SongActionsSheet(
     val fixing = showingCanvasAudioFixes && fixChoices.isNotEmpty()
     BackHandler(enabled = fixing) { showingCanvasAudioFixes = false }
     val fixPage: @Composable () -> Unit = {
-        SongFixPage(song = song, choices = fixChoices, palette = palette, onBack = { showingCanvasAudioFixes = false })
+        SongFixPage(
+            song = song,
+            choices = fixChoices,
+            lyricsText = rememberLyricsTextChoices(song),
+            palette = palette,
+            onBack = { showingCanvasAudioFixes = false },
+        )
     }
 
     if (menu) {
@@ -722,11 +728,18 @@ private fun SlideUpPage(showing: Boolean, page: @Composable () -> Unit, content:
 }
 
 /**
- * The repairs for the playing track's Canvas and audio, on a page of their
- * own under a back arrow, reached from the menu's fix row.
+ * The repairs for the playing track's Canvas and audio, and its lyrics text,
+ * on a page of their own under a back arrow, reached from the menu's
+ * Song fixes row.
  */
 @Composable
-private fun SongFixPage(song: Song, choices: List<SongMenuChoice>, palette: ArtworkPalette, onBack: () -> Unit) {
+private fun SongFixPage(
+    song: Song,
+    choices: List<SongMenuChoice>,
+    lyricsText: List<SongMenuChoice>,
+    palette: ArtworkPalette,
+    onBack: () -> Unit,
+) {
     Column(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
         SleepTimerHeader(
             title = stringResource(R.string.fix_canvas_audio_mismatch),
@@ -739,6 +752,18 @@ private fun SongFixPage(song: Song, choices: List<SongMenuChoice>, palette: Artw
                 icon = choice.icon,
                 label = choice.label,
                 description = choice.description,
+                accent = palette.accent,
+                onClick = choice.onClick,
+            )
+        }
+        // Light or dark lyrics for this song, over its art and over its Canvas.
+        HorizontalDivider(thickness = 0.5.dp, color = palette.divider)
+        SheetHeading(stringResource(R.string.lyrics_text_heading))
+        lyricsText.forEach { choice ->
+            ActionRow(
+                icon = choice.icon,
+                label = choice.label,
+                value = choice.value,
                 accent = palette.accent,
                 onClick = choice.onClick,
             )
@@ -1543,5 +1568,7 @@ class SongMenuChoice(
     val icon: ImageVector,
     val label: String,
     val description: String? = null,
+    /** Shown at the row's end: the setting the row steps through. */
+    val value: String? = null,
     val onClick: () -> Unit,
 )
