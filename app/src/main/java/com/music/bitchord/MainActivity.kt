@@ -276,6 +276,7 @@ import com.music.bitchord.ui.screens.LibraryFolderTabPill
 import com.music.bitchord.ui.screens.LibraryFolderScroll
 import com.music.bitchord.ui.screens.browseId
 import com.music.bitchord.ui.screens.LOCAL_LIBRARY_BROWSE_ID
+import com.music.bitchord.ui.screens.LOCAL_TAB_ALBUMS
 import com.music.bitchord.ui.screens.ALL_LIBRARY_BROWSE_ID
 import com.music.bitchord.ui.screens.CACHE_FOLDER_BROWSE_ID
 import com.music.bitchord.ui.screens.ListenTogetherScreen
@@ -358,7 +359,6 @@ import com.music.bitchord.ui.components.BottomTab
 import com.music.bitchord.ui.components.FLOATING_BAR_MAX_WIDTH
 import com.music.bitchord.ui.components.FloatingBottomBar
 import com.music.bitchord.ui.components.LibraryShuffleButton
-import com.music.bitchord.ui.components.LibrarySortButton
 import com.music.bitchord.ui.components.GlassNavBar
 import com.music.bitchord.ui.components.floatingtabbar.FloatingTabBarInlineBehavior
 import com.music.bitchord.ui.components.floatingtabbar.rememberFloatingTabBarScrollConnection
@@ -747,6 +747,8 @@ private fun BitChordApp(
             FloatingTabBarInlineBehavior.OnScrollDown
         },
     )
+    // Tucks the library's shuffle button away while a page scrolls down.
+    val shuffleScroll = remember { com.music.bitchord.ui.components.HideOnScrollConnection() }
     // The pages the bar shows, by page id, Search last.
     val barPages = remember(navTabConfig) { CustomizationSettings.visibleNavPages(navTabConfig).map { it.id } }
     val startTab = remember(barPages) {
@@ -3780,6 +3782,7 @@ private fun BitChordApp(
                                 Modifier
                             },
                         )
+                        .nestedScroll(shuffleScroll)
                         // Innermost, so it softens the pages and leaves the
                         // colour blobs behind them alone.
                         .graphicsLayer {
@@ -5091,13 +5094,11 @@ private fun BitChordApp(
                             (header * TOP_FADE_RAMP)).coerceIn(0f, 1f)
                     }
                 }
-                // The Library, its folders and artist pages take the long,
-                // gradual fade from just below the bar's controls; everywhere
-                // else keeps the short one.
-                if (pageKey == "$TAB_KEY$TAB_LIBRARY" || (
-                        detail != null && pageKey == detail.browseId &&
-                            (isLocalDetail || detail.type == BrowseType.ARTIST)
-                        )
+                // Library folders and artist pages take the long, gradual fade
+                // from just below the bar's controls; everywhere else, the
+                // Library's own page included, keeps Home's short one.
+                if (detail != null && pageKey == detail.browseId &&
+                    (isLocalDetail || detail.type == BrowseType.ARTIST)
                 ) {
                     TopFadeScrim(
                         pageColor = chromePageColor,
@@ -5127,7 +5128,7 @@ private fun BitChordApp(
                 // A library folder's Songs / Artists / Albums tabs sit up in the
                 // bar between the back button and the account photo, as one
                 // glass pill, so the list scrolls all the way up under them.
-                // Sort is the round button over Shuffle, below.
+                // Tapping the picked tab opens its view and sort options.
                 val folderSearchId = detail?.browseId?.takeIf {
                     isLocalDetail && detailActiveShelf == null && !showDiscord && !showHistory &&
                         settingsSubScreen == null && !showAccountScrobbling && !showSources &&
@@ -5138,6 +5139,7 @@ private fun BitChordApp(
                         LibraryFolderTabPill(
                             selectedTab = folderTabs[folderId] ?: 0,
                             onSelectTab = { folderTabs[folderId] = it },
+                            onReopenTab = { folderSortMenuFor = folderId },
                             deviceTabs = folderId == "local:all",
                             hazeState = hazeState,
                         )
@@ -5610,8 +5612,11 @@ private fun BitChordApp(
                 } else {
                     onLibraryPage && (librarySource != LibrarySource.YOUTUBE_MUSIC || libraryShuffleSongs.isNotEmpty())
                 }
-                // Pops in as one of those pages comes up, and away as it goes.
-                // A library folder's sort sits in a smaller circle above it.
+                // Pops in as one of those pages comes up, and away as it goes;
+                // tucks away while the page scrolls down and is back on the
+                // way up. A folder's sort is in its tab options now (tap the
+                // picked tab), not a button here.
+                LaunchedEffect(pageKey) { shuffleScroll.reset() }
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -5621,23 +5626,7 @@ private fun BitChordApp(
                         .padding(end = 16.dp, bottom = 16.dp),
                 ) {
                 androidx.compose.animation.AnimatedVisibility(
-                    visible = folderPage != null,
-                    enter = scaleIn(
-                        androidx.compose.animation.core.spring(
-                            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
-                            stiffness = androidx.compose.animation.core.Spring.StiffnessMedium,
-                        ),
-                        initialScale = 0.4f,
-                    ) + fadeIn(tween(140)),
-                    exit = androidx.compose.animation.scaleOut(tween(160), targetScale = 0.6f) + fadeOut(tween(160)),
-                ) {
-                    LibrarySortButton(
-                        onClick = { folderPage?.let { folderSortMenuFor = it.browseId } },
-                        hazeState = hazeState,
-                    )
-                }
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = showLibraryShuffle,
+                    visible = showLibraryShuffle && !shuffleScroll.hidden,
                     enter = scaleIn(
                         androidx.compose.animation.core.spring(
                             dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
@@ -5681,6 +5670,15 @@ private fun BitChordApp(
 
                 // One tab handler, whichever bar is drawing it.
                 val onTabSelected: (Int) -> Unit = { index ->
+                    // Search opened from the Library looks through the library
+                    // first; opened from anywhere else it goes back to YouTube
+                    // if the Library was what it was last left on.
+                    if (index == TAB_SEARCH && selectedTab != TAB_SEARCH) {
+                        when {
+                            selectedTab == TAB_LIBRARY -> onSearchSourceChange(SearchSource.LIBRARY)
+                            searchSource == SearchSource.LIBRARY -> onSearchSourceChange(SearchSource.YOUTUBE)
+                        }
+                    }
                     viewModel.clearDetail()
                     viewModel.closeMoodGenre()
                     showSettings = false
@@ -7465,6 +7463,7 @@ private fun BitChordApp(
             LibraryFolderSortMenu(
                 visible = folderSortMenuFor != null,
                 isDownloads = sortingFolder.value == "local:downloads",
+                viewTab = sortingFolder.value?.let { folderTabs[it] ?: 0 }?.takeIf { it <= LOCAL_TAB_ALBUMS },
                 hazeState = hazeState,
                 onDismiss = { folderSortMenuFor = null },
             )

@@ -5,9 +5,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Shuffle
-import androidx.compose.material.icons.rounded.Sort
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -24,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.R
 import com.music.bitchord.data.settings.AppSettings
+import com.music.bitchord.ui.icons.BitChordIcons
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.materials.HazeMaterials
@@ -44,31 +42,11 @@ fun LibraryShuffleButton(
     modifier: Modifier = Modifier,
 ) {
     LibraryFloatingButton(
-        icon = Icons.Rounded.Shuffle,
+        // The same arrows as the player's shuffle toggle.
+        icon = BitChordIcons.Shuffle,
         contentDescription = stringResource(R.string.shuffle),
         onClick = onClick,
         hazeState = hazeState,
-        modifier = modifier,
-    )
-}
-
-/**
- * A library folder's sort control: the same round glass as [LibraryShuffleButton],
- * a size smaller, stacked above it. It used to sit in the folder's search
- * field, which the top bar's tab pill has replaced.
- */
-@Composable
-fun LibrarySortButton(
-    onClick: () -> Unit,
-    hazeState: HazeState?,
-    modifier: Modifier = Modifier,
-) {
-    LibraryFloatingButton(
-        icon = Icons.Rounded.Sort,
-        contentDescription = stringResource(R.string.sort_music),
-        onClick = onClick,
-        hazeState = hazeState,
-        size = 48.dp,
         modifier = modifier,
     )
 }

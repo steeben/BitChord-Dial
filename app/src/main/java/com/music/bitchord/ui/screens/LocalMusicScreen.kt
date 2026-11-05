@@ -24,6 +24,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -1977,14 +1980,17 @@ private fun LocalSearchField(
 }
 
 /**
- * How a library folder's songs are ordered, on the same liquid glass the
- * Library's "…" menu opens on. Composed by the app over the page rather than
- * inside the top bar's field, so the glass has the page under it to bend.
+ * A library folder tab's options, opened by tapping the tab that is already
+ * picked: whether it lays out as a list or a grid, then how its songs are
+ * ordered. On the same liquid glass the Library's "…" menu opens on, composed
+ * by the app over the page so the glass has the page under it to bend.
  */
 @Composable
 fun LibraryFolderSortMenu(
     visible: Boolean,
     isDownloads: Boolean,
+    /** The tab whose list/grid view the menu sets; null for tabs that only list. */
+    viewTab: Int?,
     hazeState: HazeState,
     onDismiss: () -> Unit,
 ) {
@@ -1993,20 +1999,85 @@ fun LibraryFolderSortMenu(
     } else {
         AppSettings.localMusicSort.collectAsStateWithLifecycle()
     }
+    val tabViews by com.music.bitchord.data.settings.CustomizationSettings.libraryTabViews
+        .collectAsStateWithLifecycle()
+    val accent = pageAccent()
     val options = LocalMusicSort.entries
-    LibraryChoiceMenu(
-        visible = visible,
-        title = stringResource(R.string.sort_music),
-        options = options.map { it.localizedLabel() },
-        selected = options.indexOf(sortOrder),
-        hazeState = hazeState,
-        onSelect = { index ->
-            val picked = options[index]
-            if (isDownloads) AppSettings.setDownloadedMusicSort(picked) else AppSettings.setLocalMusicSort(picked)
-            onDismiss()
-        },
-        onDismiss = onDismiss,
-    )
+    GlassMenuPanel(visible = visible, hazeState = hazeState, onDismiss = onDismiss) {
+        if (viewTab != null) {
+            val current = tabViews.getOrElse(viewTab) { LibraryViewType.LIST }
+            MenuHeading(stringResource(R.string.library_view_heading))
+            listOf(
+                Triple(LibraryViewType.LIST, BitChordIcons.ListView, stringResource(R.string.list_view)),
+                Triple(LibraryViewType.GRID, BitChordIcons.GridView, stringResource(R.string.grid_view)),
+            ).forEach { (type, icon, label) ->
+                FolderMenuRow(
+                    label = label,
+                    icon = icon,
+                    picked = current == type,
+                    accent = accent,
+                    onClick = {
+                        com.music.bitchord.data.settings.CustomizationSettings.setLibraryTabView(viewTab, type)
+                        onDismiss()
+                    },
+                )
+            }
+            HorizontalDivider(
+                thickness = 0.5.dp,
+                color = LocalContentColor.current.copy(alpha = .2f),
+                modifier = Modifier.padding(vertical = 6.dp),
+            )
+        }
+        MenuHeading(stringResource(R.string.sort_music))
+        options.forEach { option ->
+            FolderMenuRow(
+                label = option.localizedLabel(),
+                icon = null,
+                picked = option == sortOrder,
+                accent = accent,
+                onClick = {
+                    if (isDownloads) AppSettings.setDownloadedMusicSort(option) else AppSettings.setLocalMusicSort(option)
+                    onDismiss()
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun FolderMenuRow(
+    label: String,
+    icon: ImageVector?,
+    picked: Boolean,
+    accent: Color,
+    onClick: () -> Unit,
+) {
+    val color = if (picked) accent else LocalContentColor.current
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 46.dp)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(start = 20.dp, end = 18.dp, top = 8.dp, bottom = 8.dp),
+    ) {
+        if (icon != null) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(14.dp))
+        }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = color,
+            modifier = Modifier.weight(1f, fill = false).padding(end = 20.dp),
+        )
+        Spacer(Modifier.weight(1f))
+        Box(Modifier.size(22.dp)) {
+            if (picked) {
+                Icon(Icons.Rounded.Check, contentDescription = stringResource(R.string.selected), tint = accent)
+            }
+        }
+    }
 }
 
 @Composable

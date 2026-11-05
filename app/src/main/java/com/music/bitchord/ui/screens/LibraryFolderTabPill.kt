@@ -1,7 +1,6 @@
 package com.music.bitchord.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -31,6 +30,7 @@ import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -42,12 +42,11 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.R
 import com.music.bitchord.data.settings.AppSettings
-import com.music.bitchord.data.settings.CustomizationSettings
-import com.music.bitchord.data.settings.LibraryViewType
 import com.music.bitchord.ui.components.LocalLiquidGlassEnabled
 import com.music.bitchord.ui.components.artworkPageSurface
 import com.music.bitchord.ui.components.glassContentColor
@@ -55,7 +54,6 @@ import com.music.bitchord.ui.components.isGlassSupported
 import com.music.bitchord.ui.components.pageAccent
 import com.music.bitchord.ui.haptics.Haptic
 import com.music.bitchord.ui.haptics.rememberHaptics
-import com.music.bitchord.ui.icons.BitChordIcons
 import dev.chrisbanes.haze.HazeState
 
 /** How much wider the picked segment grows than the others. */
@@ -69,11 +67,11 @@ private class PillTab(val index: Int, val icon: ImageVector, val label: String)
  * field used to sit.
  *
  * The picked tab's segment swells and the others give it the room, on a
- * spring, so a tap reads as the selection sliding over. Tapping the tab that
- * is already picked flips its list/grid view instead; the small glyph beside
- * its icon says which one it is showing. Playlists and Folders (the
- * whole-device page's extra two) only ever list, so they have no glyph and a
- * second tap does nothing.
+ * spring, so a tap reads as the selection sliding over, and the picked tab
+ * spells out its name beside its icon. Tapping the tab that is already picked
+ * opens its options ([onReopenTab]): list or grid, and the sort order.
+ * Playlists and Folders (the whole-device page's extra two) only ever list,
+ * so a second tap on them does nothing.
  *
  * Drawn in the top bar, which sits outside the page's recorded backdrop, so
  * the glass bends the list scrolling under it rather than itself.
@@ -82,13 +80,14 @@ private class PillTab(val index: Int, val icon: ImageVector, val label: String)
 fun LibraryFolderTabPill(
     selectedTab: Int,
     onSelectTab: (Int) -> Unit,
+    /** A tap on the tab that is already picked: open its view and sort options. */
+    onReopenTab: (Int) -> Unit,
     /** The whole-device page's Playlists and Folders tabs as well. */
     deviceTabs: Boolean,
     hazeState: HazeState?,
     modifier: Modifier = Modifier,
 ) {
     val haptics = rememberHaptics()
-    val tabViews by CustomizationSettings.libraryTabViews.collectAsStateWithLifecycle()
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     val useLiquidGlass = LocalLiquidGlassEnabled.current && isGlassSupported()
     val idleColor = if (useLiquidGlass && !reduceDynamicBlur) {
@@ -126,8 +125,7 @@ fun LibraryFolderTabPill(
     ) {
         tabs.forEach { tab ->
             val selected = tab.index == shown
-            val togglesView = tab.index <= LOCAL_TAB_ALBUMS
-            val viewType = tabViews.getOrElse(tab.index) { LibraryViewType.LIST }
+            val hasOptions = tab.index <= LOCAL_TAB_ALBUMS
             // A little give at the end, so the segment settles into its width
             // rather than stopping dead at it.
             val weight by animateFloatAsState(
@@ -171,10 +169,9 @@ fun LibraryFolderTabPill(
                                 haptics.play(Haptic.Select)
                                 onSelectTab(tab.index)
                             }
-                            togglesView -> {
+                            hasOptions -> {
                                 haptics.play(Haptic.Select)
-                                val next = if (viewType == LibraryViewType.GRID) LibraryViewType.LIST else LibraryViewType.GRID
-                                CustomizationSettings.setLibraryTabView(tab.index, next)
+                                onReopenTab(tab.index)
                             }
                         }
                     },
@@ -183,27 +180,25 @@ fun LibraryFolderTabPill(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = tab.icon,
-                        contentDescription = tab.label,
+                        contentDescription = if (selected) null else tab.label,
                         tint = tint,
                         modifier = Modifier.size(20.dp),
                     )
                     AnimatedVisibility(
-                        visible = selected && togglesView,
+                        visible = selected,
                         enter = expandHorizontally(expandFrom = Alignment.Start) + fadeIn(tween(180, delayMillis = 60)),
                         exit = shrinkHorizontally(shrinkTowards = Alignment.Start) + fadeOut(tween(120)),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Spacer(Modifier.width(6.dp))
-                            Crossfade(targetState = viewType, label = "libraryPillView") { view ->
-                                Icon(
-                                    imageVector = if (view == LibraryViewType.GRID) BitChordIcons.GridView else BitChordIcons.ListView,
-                                    contentDescription = stringResource(
-                                        if (view == LibraryViewType.GRID) R.string.switch_to_list_view else R.string.switch_to_grid_view,
-                                    ),
-                                    tint = tint.copy(alpha = 0.75f),
-                                    modifier = Modifier.size(16.dp),
-                                )
-                            }
+                            Text(
+                                text = tab.label,
+                                color = tint,
+                                style = MaterialTheme.typography.labelLarge,
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis,
+                            )
                         }
                     }
                 }

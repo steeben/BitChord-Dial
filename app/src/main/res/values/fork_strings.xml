@@ -20,6 +20,7 @@
     <string name="keep_nav_bar_expanded">Keep navigation bar expanded</string>
     <string name="keep_nav_bar_expanded_subtitle">Stops the bar from shrinking while you scroll</string>
     <string name="layout_settings">Layout</string>
+    <string name="library_view_heading">View</string>
     <string name="loading_your_library">Loading your library…</string>
     <string name="make_default_library">Make my default library</string>
     <string name="make_default_library_subtitle">The Library tab opens straight into it. The back arrow returns to the Library page.</string>
