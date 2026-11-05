@@ -45,12 +45,12 @@ object SongMetadataFixStore {
     private fun JSONObject.toDetails() = SongMetadataFixes.Details(
         title = getString("title"),
         artist = getString("artist"),
-        albumName = opt("album"),
-        albumId = opt("albumId"),
-        artistId = opt("artistId"),
-        thumbnailUrl = opt("thumb"),
-        matchedVideoId = opt("match"),
+        albumName = optText("album"),
+        albumId = optText("albumId"),
+        artistId = optText("artistId"),
+        thumbnailUrl = optText("thumb"),
+        matchedVideoId = optText("match"),
     )
 
-    private fun JSONObject.opt(name: String): String? = if (has(name) && !isNull(name)) getString(name) else null
+    private fun JSONObject.optText(name: String): String? = if (has(name) && !isNull(name)) getString(name) else null
 }
