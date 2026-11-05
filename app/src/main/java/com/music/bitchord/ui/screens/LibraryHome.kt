@@ -95,6 +95,7 @@ import com.music.bitchord.ui.components.PAGE_GUTTER
 import com.music.bitchord.ui.components.PopupLayer
 import com.music.bitchord.ui.components.PullToRefresh
 import com.music.bitchord.ui.components.SQUARE_LOGO_ASPECT
+import com.music.bitchord.ui.components.LogoPullHaptics
 import com.music.bitchord.ui.components.SquareLogo
 import com.music.bitchord.ui.components.TopBarContentHeight
 import com.music.bitchord.ui.components.glassContentColor
@@ -239,6 +240,7 @@ private fun LibraryHeading(
             // Clear of the "…" button and account photo at the other end.
             .padding(start = PAGE_GUTTER, end = 120.dp),
     ) {
+        LogoPullHaptics(refreshing = refreshing, pullFraction = pullFraction)
         val pulling = refreshing || pullFraction() > 0.02f
         Box(contentAlignment = Alignment.Center, modifier = Modifier.size(34.dp)) {
             AnimatedContent(

@@ -63,7 +63,7 @@ private class Beat(val kind: Kind, val scale: Float, val gapMs: Long) {
 
 private fun rhythmOf(haptic: Haptic): List<Beat> = when (haptic) {
     Haptic.Tick -> listOf(Beat(Beat.Kind.Tick, 0.35f, 0))
-    Haptic.Bump -> listOf(Beat(Beat.Kind.Tick, 0.55f, 0))
+    Haptic.Bump -> listOf(Beat(Beat.Kind.Click, 0.65f, 0))
     Haptic.PressIn -> listOf(Beat(Beat.Kind.LowTick, 0.5f, 0))
     Haptic.PressOut -> listOf(Beat(Beat.Kind.Click, 0.7f, 0))
     Haptic.Tap -> listOf(Beat(Beat.Kind.Click, 0.5f, 0))

@@ -20,8 +20,8 @@ enum class Haptic {
     Tick,
 
     /**
-     * A notch a touch firmer than [Tick], for steps a finger is counting off
-     * slowly: every ~2s of a scrub, each square of the logo filling on a pull.
+     * A firm notch, well above [Tick], for steps a finger is counting off
+     * slowly: every 2% of a scrub, each square of the logo filling on a pull.
      */
     Bump,
 

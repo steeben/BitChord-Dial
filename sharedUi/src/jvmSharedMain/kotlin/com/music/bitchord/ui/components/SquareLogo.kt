@@ -222,6 +222,27 @@ val HOME_LOGO_RESERVE = 72.dp
  * [topPadding] is the list's own top content padding, from which the mark's
  * two resting places are measured.
  */
+/**
+ * One bump for each square that fills as the page is pulled down, the same
+ * count [SquareLogo] lights them by. Only on the way down: letting go, or the
+ * pull springing back, stays quiet. Shared by Home's mark and Library's, so a
+ * pull feels the same on both tabs.
+ */
+@Composable
+fun LogoPullHaptics(refreshing: Boolean, pullFraction: () -> Float) {
+    val haptics = rememberHaptics()
+    val latestRefreshing by rememberUpdatedState(refreshing)
+    val latestPullFraction by rememberUpdatedState(pullFraction)
+    LaunchedEffect(Unit) {
+        var filled = 0
+        snapshotFlow { (latestPullFraction().coerceIn(0f, 1f) * LOGO_SQUARES).toInt() }
+            .collect { now ->
+                if (now > filled && !latestRefreshing) haptics.play(Haptic.Bump)
+                filled = now
+            }
+    }
+}
+
 @Composable
 fun HomeStickyLogo(
     listState: LazyListState,
@@ -235,19 +256,7 @@ fun HomeStickyLogo(
     // Where the mark sits at rest, and where it ends up pinned: centred on the
     // top bar, whose content is 52dp high with TopBarContentGap (12dp) below it.
     // It rides up there with the page but never shrinks.
-    // One subtle bump for each square that fills as Home is pulled down, the
-    // same count [SquareLogo] lights them by. Only on the way down: letting
-    // go, or the pull springing back, stays quiet.
-    val haptics = rememberHaptics()
-    val latestRefreshing by rememberUpdatedState(refreshing)
-    LaunchedEffect(Unit) {
-        var filled = 0
-        snapshotFlow { (pullFraction().coerceIn(0f, 1f) * LOGO_SQUARES).toInt() }
-            .collect { now ->
-                if (now > filled && !latestRefreshing) haptics.play(Haptic.Bump)
-                filled = now
-            }
-    }
+    LogoPullHaptics(refreshing = refreshing, pullFraction = pullFraction)
     val restTop = topPadding - 20.dp
     val pinnedTop = topPadding - 12.dp - 26.dp - HOME_LOGO_LARGE / 2
     Row(
