@@ -172,6 +172,8 @@ import com.music.bitchord.ui.components.topBarContentPadding
 import com.music.bitchord.ui.components.trackColumnWidth
 import com.music.bitchord.ui.haptics.Haptic
 import com.music.bitchord.ui.haptics.rememberHaptics
+import com.music.bitchord.ui.components.ListSelection
+import com.music.bitchord.ui.components.PublishListSelection
 import com.music.bitchord.ui.icons.BitChordIcons
 import com.music.bitchord.ui.player.CanvasArtworkPlayer
 import com.music.bitchord.ui.theme.ArtworkPalette
@@ -548,6 +550,31 @@ fun DetailScreen(
         page.suggestedSongs.matching(query).map { it.value }
     }
 
+    // Holding a track starts a multi-selection rather than opening its menu:
+    // each tap after that ticks a row, and the header's ⋯ (and the top bar's,
+    // in place of the account photo) opens what can be done to all of them.
+    // Back, or unticking the last row, ends it.
+    var selectedIds by remember(page.browseId) { mutableStateOf<Set<String>>(emptySet()) }
+    val selecting = selectedIds.isNotEmpty()
+    BackHandler(enabled = selecting) { selectedIds = emptySet() }
+    val selectionHaptics = rememberHaptics()
+    val toggleSelected: (Song) -> Unit = { song ->
+        selectedIds = if (song.videoId in selectedIds) selectedIds - song.videoId else selectedIds + song.videoId
+    }
+    val selectedSongs = remember(songs, selectedIds, page.thumbnailUrl) {
+        songs.filter { it.videoId in selectedIds }
+            .distinctBy { it.videoId }
+            .map { it.copy(thumbnailUrl = it.thumbnailUrl ?: page.thumbnailUrl) }
+    }
+    PublishListSelection(
+        selected = selectedSongs,
+        onClear = { selectedIds = emptySet() },
+        onSelectAll = { selectedIds = selectedIds + queue.map { it.videoId } },
+    )
+    val headerMore: ((List<Song>) -> Unit)? = onMore?.let { more ->
+        { list: List<Song> -> if (selecting) ListSelection.openMenu() else more(list) }
+    }
+
     // What marks a row as already downloaded, tinted from the sleeve like the
     // rest of the page. Null on any page that is itself a reading of this
     // device — the Downloads folder, one downloaded playlist — where every row
@@ -869,7 +896,7 @@ fun DetailScreen(
                         onShuffle = { onShuffle(songs) },
                         searching = searching,
                         onSearch = toggleSearch,
-                        onMore = onMore,
+                        onMore = headerMore,
                         onArtistClick = onArtistClick,
                         onToggleLibrary = onToggleLibrary,
                         onControlsPlaced = { top, height, lead ->
@@ -1066,9 +1093,16 @@ fun DetailScreen(
                                 song.copy(thumbnailUrl = song.thumbnailUrl ?: page.thumbnailUrl)
                             },
                             onClick = {
-                                onSongClick(queue, position)
+                                if (selecting) toggleSelected(song) else onSongClick(queue, position)
                             },
-                            onLongPress = { onSongLongPress(song) },
+                            onLongPress = {
+                                selectionHaptics.play(Haptic.Select)
+                                toggleSelected(song)
+                            },
+                            // The ⋮ keeps the track's own menu now that a hold selects.
+                            onMore = { onSongLongPress(song) },
+                            selected = song.videoId in selectedIds,
+                            selectionMode = selecting,
                             onSwipeToQueue = { onSongSwipe(song, it) },
                             rowBackground = Color.Transparent,
                             // The track's place on the release, not its place in
@@ -1197,7 +1231,7 @@ fun DetailScreen(
                                 onShuffle = { onShuffle(songs) },
                                 searching = searching,
                                 onSearch = toggleSearch,
-                                onMore = onMore,
+                                onMore = headerMore,
                                 onArtistClick = onArtistClick,
                                 onToggleLibrary = onToggleLibrary,
                             )

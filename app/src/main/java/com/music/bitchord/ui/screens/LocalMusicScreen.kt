@@ -135,6 +135,8 @@ import com.music.bitchord.ui.components.SearchPlayingBars
 import com.music.bitchord.ui.components.rememberRemoteArtworkUrl
 import com.music.bitchord.ui.components.thumbnailBorder
 import com.music.bitchord.ui.components.TopBarContentGap
+import com.music.bitchord.ui.components.PublishListSelection
+import com.music.bitchord.ui.components.SelectionAction
 import com.music.bitchord.ui.components.topBarHeight
 import com.music.bitchord.ui.haptics.Haptic
 import com.music.bitchord.ui.haptics.rememberHaptics
@@ -260,9 +262,11 @@ fun LocalMusicScreen(
     // can share tracks, so inferring an album's selection from those track ids
     // made one held playlist appear to select unrelated albums.
     var selectedAlbumKeys by remember { mutableStateOf<Set<String>>(emptySet()) }
-    // Downloads and Cached songs both redefine the hold as "select".
+    // Holding a track selects it, on every folder. Downloads and Cached songs
+    // also let an album be held into the selection; elsewhere that hold still
+    // opens the album's menu, until something is already selected.
     val selectable = isDownloads || onDownload != null || onRemoveFromCache != null
-    val selectingDownloads = selectable && selectedDownloadIds.isNotEmpty()
+    val selectingDownloads = selectedDownloadIds.isNotEmpty()
 
     fun toggleDownloadSelection(song: Song) {
         selectedDownloadIds = selectedDownloadIds.let { selected ->
@@ -305,17 +309,12 @@ fun LocalMusicScreen(
 
     // Nothing is pinned above the list any more — the tabs are up in the top
     // bar (see [LibraryFolderTabPill]) — so the rows start clear of the bar
-    // and scroll all the way up under it. While rows are selected the action
-    // bar floats just below the top bar, and the list makes room for it.
-    val selectionBarRoom by androidx.compose.animation.core.animateDpAsState(
-        targetValue = if (selectingDownloads) 44.dp + 8.dp else 0.dp,
-        label = "selectionBarRoom",
-    )
+    // and scroll all the way up under it. A selection's actions are behind
+    // the top bar's ⋯, so nothing needs room above the list either.
     val bodyContentPadding = PaddingValues(
-        top = contentPadding.calculateTopPadding() + selectionBarRoom,
+        top = contentPadding.calculateTopPadding(),
         bottom = contentPadding.calculateBottomPadding(),
     )
-    val barHeight = topBarHeight()
     val deviceTabs = devicePlaylists != null
     val shownTab = if (deviceTabs) selectedTab.coerceIn(0, LOCAL_TAB_FOLDERS) else selectedTab.coerceIn(0, LOCAL_TAB_ALBUMS)
     // Picking a tab from the bar leaves an artist or album drilled into.
@@ -415,13 +414,10 @@ fun LocalMusicScreen(
                             val song = tracks[index]
                             if (selectingDownloads) toggleDownloadSelection(song) else onSongClick(tracks, index)
                         },
-                        onSongLongPress = { song ->
-                            if (selectable) selectedDownloadIds = selectedDownloadIds + song.videoId
-                            else onSongLongPress(song)
-                        },
-                        // Downloads redefines the hold as "select", so the ⋮ has to
-                        // carry the actions sheet itself or the page loses it.
+                        onSongLongPress = { song -> toggleDownloadSelection(song) },
+                        // The hold selects, so the ⋮ carries the actions sheet.
                         onSongMore = onSongLongPress,
+                        selectionMode = selectingDownloads,
                         onSongSwipe = onSongSwipe,
                         onShuffle = onShuffle,
                         onMore = onCollectionLongPress?.let { more ->
@@ -449,18 +445,10 @@ fun LocalMusicScreen(
                             val song = tracks[index]
                             if (selectingDownloads) toggleDownloadSelection(song) else onSongClick(tracks, index)
                         },
-                        onSongLongPress = { song ->
-                            if (selectable) {
-                                selectedDownloadIds = selectedDownloadIds + song.videoId
-                                onSelectedTabChange(LOCAL_TAB_SONGS)
-                                leaveDrillDown()
-                            } else onSongLongPress(song)
-                        },
-                        // Downloads redefines the hold as "select", so the ⋮ has to
-                        // carry the actions sheet itself or the page loses it.
-                        // Everywhere else it is left off, for the A–Z index's
-                        // room: holding the row opens the same sheet.
-                        onSongMore = onSongLongPress.takeIf { selectable },
+                        onSongLongPress = { song -> toggleDownloadSelection(song) },
+                        // The hold selects, so the ⋮ carries the actions sheet.
+                        onSongMore = onSongLongPress,
+                        selectionMode = selectingDownloads,
                         onSongSwipe = onSongSwipe,
                         onDownload = onDownload,
                         contentPadding = bodyContentPadding,
@@ -562,7 +550,7 @@ fun LocalMusicScreen(
                             }
                         },
                         onAlbumLongPress = { entry ->
-                            if (selectable) {
+                            if (selectable || selectingDownloads) {
                                 selectedDownloadIds = selectedDownloadIds + entry.songs.map { it.videoId }
                                 selectedAlbumKeys = selectedAlbumKeys + entry.key
                             } else onCollectionLongPress?.invoke(entry.title, entry.songs)
@@ -574,52 +562,39 @@ fun LocalMusicScreen(
         }
 
         // ── Selection ────────────────────────────────────────────────────────
-        // Holding a Downloads row floats this bar of actions under the top
-        // bar while something is selected, over the list.
-        if (selectingDownloads) {
-            DownloadSelectionBar(
-                count = selectedDownloadIds.size,
-                allSelected = sortedSongs.isNotEmpty() && selectedDownloadIds.containsAll(sortedSongs.map { it.videoId }),
-                onSelectAll = { selectedDownloadIds = sortedSongs.mapTo(linkedSetOf()) { it.videoId } },
-                onDelete = {
-                    val chosen = songs.filter { it.videoId in selectedDownloadIds }
-                    selectedDownloadIds = emptySet()
-                    selectedAlbumKeys = emptySet()
-                    // The cache's selection comes out of the cache; nothing
-                    // in it is a file in Downloads to delete.
-                    (onRemoveFromCache ?: onDeleteDownloads)?.invoke(chosen)
+        // While rows are ticked the top bar's ⋯ stands in for the account
+        // photo and opens the bulk actions — the shared ones, plus this
+        // folder's own below.
+        val removeLabel = stringResource(
+            if (onRemoveFromCache != null) R.string.cached_song_remove else R.string.delete,
+        )
+        val uploadLabel = stringResource(R.string.upload_to_webdav)
+        val downloadLabel = stringResource(R.string.download)
+        val pageActions = remember(onRemoveFromCache, onDeleteDownloads, onUploadToWebDav, onDownload, isDownloads) {
+            listOfNotNull(
+                onDownload?.let { SelectionAction(Icons.Rounded.Download, downloadLabel, run = it) },
+                onUploadToWebDav?.let { SelectionAction(Icons.Rounded.FileUpload, uploadLabel, run = it) },
+                // The cache's selection comes out of the cache; nothing in it
+                // is a file in Downloads to delete.
+                (onRemoveFromCache ?: onDeleteDownloads)?.let {
+                    SelectionAction(Icons.Rounded.Delete, removeLabel, destructive = true, run = it)
                 },
-                deleteLabel = stringResource(
-                    if (onRemoveFromCache != null) R.string.cached_song_remove else R.string.delete,
-                ),
-                onDownload = onDownload?.let { download ->
-                    {
-                        val chosen = songs.filter { it.videoId in selectedDownloadIds }
-                        selectedDownloadIds = emptySet()
-                        selectedAlbumKeys = emptySet()
-                        download(chosen)
-                    }
-                },
-                onUpload = onUploadToWebDav?.let { upload ->
-                    {
-                        val chosen = songs.filter { it.videoId in selectedDownloadIds }
-                        selectedDownloadIds = emptySet()
-                        selectedAlbumKeys = emptySet()
-                        upload(chosen)
-                    }
-                },
-                onCancel = {
-                    selectedDownloadIds = emptySet()
-                    selectedAlbumKeys = emptySet()
-                },
-                modifier = Modifier.padding(
-                    top = barHeight + TopBarContentGap,
-                    start = PAGE_GUTTER,
-                    end = PAGE_GUTTER,
-                    bottom = 0.dp,
-                ),
             )
         }
+        val selectedSongs = remember(sortedSongs, selectedDownloadIds) {
+            sortedSongs.filter { it.videoId in selectedDownloadIds }.distinctBy { it.videoId }
+        }
+        PublishListSelection(
+            selected = selectedSongs,
+            onClear = {
+                selectedDownloadIds = emptySet()
+                selectedAlbumKeys = emptySet()
+            },
+            onSelectAll = { selectedDownloadIds = sortedSongs.mapTo(linkedSetOf()) { it.videoId } },
+            extras = pageActions,
+            // Downloads are already downloads; the cache has its own Download.
+            offersDownload = !isDownloads && onDownload == null,
+        )
     }
 }
 
@@ -759,6 +734,8 @@ private fun SongsTab(
     onSongLongPress: (Song) -> Unit,
     /** The row's ⋮, where holding it does something else — see [SongRow]. */
     onSongMore: ((Song) -> Unit)? = null,
+    /** Rows are being ticked: each shows its tick box, see [SongRow]. */
+    selectionMode: Boolean = false,
     onSongSwipe: (Song, Boolean) -> Unit,
     contentPadding: PaddingValues,
     listState: LazyListState = rememberLazyListState(),
@@ -836,6 +813,7 @@ private fun SongsTab(
                         modifier = Modifier.playingGlow(song.isSameTrackAs(currentSong)),
                         song = song,
                         selected = song.videoId in selectedIds,
+                        selectionMode = selectionMode,
                         isCurrent = song.isSameTrackAs(currentSong),
                         isPlaying = song.isSameTrackAs(currentSong) && isPlaying,
                         searchPlayingStyle = true,
@@ -1688,6 +1666,8 @@ private fun DrillDownSongList(
     onSongLongPress: (Song) -> Unit,
     /** The row's ⋮, where holding it does something else — see [SongRow]. */
     onSongMore: ((Song) -> Unit)? = null,
+    /** Rows are being ticked: each shows its tick box, see [SongRow]. */
+    selectionMode: Boolean = false,
     onSongSwipe: (Song, Boolean) -> Unit,
     onShuffle: (List<Song>) -> Unit,
     /** The ⋮ in the header, acting on the whole artist or album. */
@@ -1772,6 +1752,7 @@ private fun DrillDownSongList(
                     modifier = Modifier.playingGlow(song.isSameTrackAs(currentSong)),
                     song = song,
                     selected = song.videoId in selectedIds,
+                    selectionMode = selectionMode,
                     isCurrent = song.isSameTrackAs(currentSong),
                     isPlaying = song.isSameTrackAs(currentSong) && isPlaying,
                     searchPlayingStyle = true,
@@ -2090,87 +2071,6 @@ private fun LocalMusicSort.localizedLabel(): String = when (this) {
 }
 
 /** The Downloads-only replacement for the usual search and sort controls. */
-@Composable
-private fun DownloadSelectionBar(
-    count: Int,
-    allSelected: Boolean,
-    onSelectAll: () -> Unit,
-    onDelete: () -> Unit,
-    onCancel: () -> Unit,
-    modifier: Modifier = Modifier,
-    /** Copies the selection to WebDAV; null (no server configured) hides the action. */
-    onUpload: (() -> Unit)? = null,
-    /** What [onDelete] is called: Delete in Downloads, Remove in Cached songs. */
-    deleteLabel: String = stringResource(R.string.delete),
-    /** Cached songs only: saves the selection to Downloads. Null hides it. */
-    onDownload: (() -> Unit)? = null,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(44.dp)
-            .background(com.music.bitchord.ui.components.fieldFill(frostedSurfaceColor(MaterialTheme.colorScheme.surfaceVariant)), RoundedCornerShape(11.dp))
-            .padding(horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconButton(onClick = onSelectAll, enabled = !allSelected) {
-            Icon(
-                Icons.Rounded.Check,
-                contentDescription = stringResource(R.string.select_all),
-                tint = if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp),
-            )
-        }
-        Text(
-            text = "$count ${stringResource(R.string.selected)}",
-            style = MaterialTheme.typography.titleSmall,
-            color = if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f),
-        )
-        onUpload?.let { upload ->
-            TextButton(onClick = upload, enabled = count > 0) {
-                Icon(
-                    Icons.Rounded.FileUpload,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    stringResource(R.string.upload_to_webdav),
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-        }
-        onDownload?.let { download ->
-            TextButton(onClick = download, enabled = count > 0) {
-                Icon(
-                    Icons.Rounded.Download,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    stringResource(R.string.download),
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-        }
-        TextButton(onClick = onDelete, enabled = count > 0) {
-            Icon(
-                Icons.Rounded.Delete,
-                contentDescription = null,
-                tint = Color(0xFFFF453A),
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(Modifier.width(4.dp))
-            Text(deleteLabel, color = Color(0xFFFF453A))
-        }
-        TextButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
-    }
-}
-
 @Composable
 private fun SectionHeader(
     icon: ImageVector,

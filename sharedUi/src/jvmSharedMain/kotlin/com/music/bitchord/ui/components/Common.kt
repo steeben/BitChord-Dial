@@ -42,6 +42,11 @@ import androidx.compose.ui.layout.onSizeChanged
 import com.music.bitchord.ui.haptics.Haptic
 import com.music.bitchord.ui.haptics.rememberHaptics
 import kotlin.math.abs
+import kotlin.math.roundToInt
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -345,8 +350,14 @@ fun SongRow(
     activeTint: Color = MaterialTheme.colorScheme.primary,
     /** Search results use artwork bars instead of the usual current-song icon. */
     searchPlayingStyle: Boolean = false,
-    /** True while a Downloads row belongs to the current multi-selection. */
+    /** True while the row belongs to the current multi-selection. */
     selected: Boolean = false,
+    /**
+     * True while the list it is in is selecting rows: a tick box fades in at
+     * the left edge and the artwork and titles slide over to make room. The ⋮
+     * and the queue swipe step aside, since a tap now ticks the row.
+     */
+    selectionMode: Boolean = false,
     /**
      * A control of the page's own, drawn just ahead of the ⋮ — the Cached
      * songs folder's per-track download button. Null on every other list.
@@ -362,6 +373,7 @@ fun SongRow(
     SwipeToQueueBox(
         onSwipeToQueue = onSwipeToQueue,
         modifier = modifier,
+        enabled = !selectionMode,
     ) {
         SongRowContent(
             song = song,
@@ -378,6 +390,7 @@ fun SongRow(
             activeTint = activeTint,
             searchPlayingStyle = searchPlayingStyle,
             selected = selected,
+            selectionMode = selectionMode,
             trailing = trailing,
             showSourceQuality = showSourceQuality,
         )
@@ -397,6 +410,8 @@ fun SongRow(
 fun SwipeToQueueBox(
     onSwipeToQueue: ((playNext: Boolean) -> Unit)?,
     modifier: Modifier = Modifier,
+    /** False holds the row still — while its list is selecting rows. */
+    enabled: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     if (onSwipeToQueue == null) {
@@ -456,6 +471,8 @@ fun SwipeToQueueBox(
         state = swipeState,
         modifier = modifier.onSizeChanged { boxWidth = it.width.toFloat() },
         backgroundContent = { QueueSwipeBackground(swipeState) },
+        enableDismissFromStartToEnd = enabled,
+        enableDismissFromEndToStart = enabled,
     ) {
         content()
     }
@@ -526,6 +543,7 @@ private fun SongRowContent(
     activeTint: Color = MaterialTheme.colorScheme.primary,
     searchPlayingStyle: Boolean = false,
     selected: Boolean = false,
+    selectionMode: Boolean = false,
     trailing: (@Composable () -> Unit)? = null,
     /**
      * Shows what an addon row says it can be streamed at ahead of its artist —
@@ -556,6 +574,7 @@ private fun SongRowContent(
             .padding(horizontal = PAGE_GUTTER, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        SelectionTick(visible = selectionMode, selected = selected, tint = activeTint, idleTint = subtitleColor)
         if (trackNumber != null) {
             // Centred between the screen edge and the title (see
             // [TRACK_NUMBER_WIDTH]). Same height as the artwork, so rows stay
@@ -635,7 +654,7 @@ private fun SongRowContent(
         if (downloadedTint != null) {
             DownloadedBadge(song.videoId, downloadedTint)
         }
-        if (selected) {
+        if (selected && !selectionMode) {
             Spacer(Modifier.width(8.dp))
             Icon(
                 Icons.Rounded.CheckCircle,
@@ -670,16 +689,57 @@ private fun SongRowContent(
                 )
             }
         }
-        if (trailing != null && !matching && !unavailable) {
+        if (trailing != null && !matching && !unavailable && !selectionMode) {
             Spacer(Modifier.width(4.dp))
             trailing()
         }
         // Same sheet the long-press opens, for anyone who doesn't think to hold.
-        if (onMore != null && !matching && !unavailable) {
+        if (onMore != null && !matching && !unavailable && !selectionMode) {
             RowMoreButton(onClick = onMore)
         }
     }
 }
+
+/**
+ * The tick box at the left of a row in a list that is selecting. It opens
+ * from nothing, so the artwork and titles beside it slide right as it grows,
+ * and fades in as it does; leaving selection runs the same thing backwards.
+ */
+@Composable
+fun SelectionTick(visible: Boolean, selected: Boolean, tint: Color, idleTint: Color) {
+    val progress by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(SELECTION_SLIDE_MS),
+        label = "selection tick",
+    )
+    if (progress == 0f) return
+    Box(
+        modifier = Modifier
+            // Outside the layout below, so the clip is the narrowed width.
+            .graphicsLayer {
+                alpha = progress
+                clip = true
+            }
+            .layout { measurable, constraints ->
+                val full = SELECTION_TICK_WIDTH.roundToPx()
+                val placeable = measurable.measure(constraints.copy(minWidth = full, maxWidth = full))
+                layout((full * progress).roundToInt(), placeable.height) { placeable.place(0, 0) }
+            },
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Icon(
+            imageVector = if (selected) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+            contentDescription = if (selected) stringResource(Res.string.selected) else null,
+            tint = if (selected) tint else idleTint,
+            modifier = Modifier.size(24.dp),
+        )
+    }
+}
+
+private const val SELECTION_SLIDE_MS = 220
+
+/** The tick box and the gap after it, which is what the row slides over by. */
+private val SELECTION_TICK_WIDTH = 38.dp
 
 /**
  * The ⋮ at the end of a row. Its circle is a touch target nobody sees, so it

@@ -43,6 +43,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -518,7 +519,6 @@ internal fun artworkPageSurface(
  * The hairline ring is what keeps a photo with light edges from dissolving into
  * the bar's glass; it is the same one thumbnails elsewhere carry.
  */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TopBarAccountButton(
     account: Account?,
@@ -526,6 +526,36 @@ fun TopBarAccountButton(
     onSwipeProfile: ((forward: Boolean) -> Boolean)? = null,
     /** A long press: opens Settings, whatever a tap does. */
     onLongClick: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
+) {
+    // While a list has rows ticked, the photo gives its place to the ⋯ that
+    // opens what can be done to all of them — see [ListSelection].
+    androidx.compose.animation.Crossfade(
+        targetState = ListSelection.active,
+        modifier = modifier,
+        label = "account or selection",
+    ) { selecting ->
+        if (selecting) {
+            IconButton(onClick = { ListSelection.openMenu() }) {
+                Icon(
+                    Icons.Rounded.MoreHoriz,
+                    contentDescription = stringResource(R.string.more),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        } else {
+            AccountPhotoButton(account, onClick, onSwipeProfile, onLongClick)
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun AccountPhotoButton(
+    account: Account?,
+    onClick: () -> Unit,
+    onSwipeProfile: ((forward: Boolean) -> Boolean)?,
+    onLongClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val translation = remember { Animatable(0f) }

@@ -331,6 +331,7 @@ import com.music.bitchord.download.MediaTagger
 import com.music.bitchord.download.DownloadTarget
 import com.music.bitchord.download.Downloads
 import com.music.bitchord.ui.components.BrowseActionsSheet
+import com.music.bitchord.ui.components.ListSelectionSheetHost
 import com.music.bitchord.ui.components.BrowseTarget
 import com.music.bitchord.ui.components.ConfirmationAlert
 import com.music.bitchord.ui.components.DownloadManagerSheet
@@ -6833,6 +6834,16 @@ private fun BitChordApp(
                 onDismiss = { showSpotifyImportDialog = false },
             )
         }
+
+        // ---- Bulk actions on a multi-selection ----
+        // What the ⋯ opens while rows are ticked on a release page or a
+        // library folder — see [ListSelection].
+        ListSelectionSheetHost(
+            onPlay = { songs -> play(songs, 0) },
+            onPlayNext = playSongsNext,
+            onAddToQueue = addSongsToQueue,
+            onDownload = { songs -> startDownload(songs, null) },
+        )
 
         // ---- Album / playlist actions ----
         // Opened by holding a card on any tab, or from the release page's own
