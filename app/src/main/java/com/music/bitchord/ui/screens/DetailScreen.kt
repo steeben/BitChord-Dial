@@ -250,6 +250,17 @@ private const val HEADER_ART_PARALLAX = 0.3f
 private const val HEADER_ART_HELD_ALPHA = 0.45f
 
 /**
+ * Where, down the header picture, rows that scroll up into it are gone
+ * ([ROW_CUT_TOP]) and where they start to go ([ROW_CUT_BOTTOM]): over the
+ * picture's soft foot, so they read as passing under it.
+ */
+private const val ROW_CUT_TOP = 0.62f
+private const val ROW_CUT_BOTTOM = 0.88f
+
+/** The list items that make up the header block: never cut by the rows' fade. */
+private val HEADER_BLOCK_KEYS = setOf("header", "actions", "search")
+
+/**
  * What the header's glass buttons bend: the page under them. Null where real
  * glass is off (or blur is reduced), and the buttons keep the lightweight look.
  */
@@ -582,10 +593,12 @@ fun DetailScreen(
     }
     val metered by AppSettings.meteredConnection.collectAsStateWithLifecycle()
     // An artist's clip comes with the same Apple lookup as its photograph.
-    // Video is heavy, so only on an unmetered connection.
+    // Video is heavy, so on a metered connection only where the player's own
+    // canvases are allowed over cellular too: the same rule as the player.
     // Worked out here rather than in an effect, so the banner knows in the same
     // frame as the photo whether a clip is coming and holds the photo for it.
-    val artistVideo = appleArt?.videoUrl?.takeIf { isArtist && canvasEnabled && metered == false }
+    val canvasOverCellular by AppSettings.canvasOverCellular.collectAsStateWithLifecycle()
+    val artistVideo = appleArt?.videoUrl?.takeIf { isArtist && canvasEnabled && (metered != true || canvasOverCellular) }
     val artistCanvas = remember(artistVideo) { artistVideo?.let { CanvasArtwork(url = it) } }
     val bannerCanvas = if (isArtist) artistCanvas else canvas
 
@@ -761,21 +774,52 @@ fun DetailScreen(
                     state = listState,
                     modifier = Modifier
                         .fillMaxSize()
-                        // Once the header is held, the list scrolls on under it:
-                        // rows pass whole under the held buttons, where their
-                        // glass bends them, and fade out in the band just above,
-                        // so they go under the header rather than over its title
-                        // or the top bar. Offscreen only then, so the cut is out
-                        // of the list alone and not the artwork painted behind it.
-                        .graphicsLayer {
-                            compositingStrategy = if (controlsPinned) {
-                                CompositingStrategy.Offscreen
-                            } else {
-                                CompositingStrategy.Auto
-                            }
-                        }
+                        // Rows go under the header picture rather than over
+                        // it: everything after the header block dissolves
+                        // into the picture's foot on its way up, while the
+                        // title and controls stay over it. Once the header is
+                        // held, the list's own copy of it is cut away above
+                        // the held one too, so only one is ever seen.
+                        // Offscreen so the cut is out of the list alone and
+                        // not the artwork painted behind it.
+                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                         .drawWithContent {
                             drawContent()
+                            val artPx = artHeight.toPx()
+                            val artTop = listState.artTop(artPx, headerStopScroll())
+                            // The bottom of the header block (title, controls,
+                            // and the search field while it is open), which
+                            // is never cut by the rows' fade.
+                            val headerItems = listState.layoutInfo.visibleItemsInfo
+                                .filter { it.key in HEADER_BLOCK_KEYS }
+                            val blockBottom = headerItems.maxOfOrNull { (it.offset + it.size).toFloat() }
+                                ?: if (listState.firstVisibleItemIndex == 0) size.height else 0f
+                            val searchShown = headerItems.any { it.key == "search" }
+                            val fadeTop = if (searchShown) blockBottom else artTop + artPx * ROW_CUT_TOP
+                            val fadeBottom = if (searchShown) blockBottom + pinBandPx else artTop + artPx * ROW_CUT_BOTTOM
+                            val clearTo = minOf(fadeTop, size.height)
+                            if (clearTo > blockBottom) {
+                                drawRect(
+                                    color = Color.Transparent,
+                                    topLeft = Offset(0f, blockBottom),
+                                    size = Size(size.width, clearTo - blockBottom),
+                                    blendMode = BlendMode.DstIn,
+                                )
+                            }
+                            val bandFrom = maxOf(fadeTop, blockBottom)
+                            if (fadeBottom > bandFrom) {
+                                drawRect(
+                                    brush = Brush.verticalGradient(
+                                        0f to Color.Transparent,
+                                        1f to Color.Black,
+                                        startY = fadeTop,
+                                        endY = fadeBottom,
+                                    ),
+                                    topLeft = Offset(0f, bandFrom),
+                                    size = Size(size.width, fadeBottom - bandFrom),
+                                    blendMode = BlendMode.DstIn,
+                                )
+                            }
                             if (!controlsPinned) return@drawWithContent
                             val cut = (pinTop - pinBandPx).coerceAtLeast(0f)
                             drawRect(
@@ -1811,7 +1855,10 @@ private fun PageBackground(
         label = "heroIn",
     )
 
-    Box(modifier.clipToBounds()) {
+    // The page colour is part of what is recorded for the glass, not only
+    // painted under it: below the picture the recording was otherwise empty,
+    // and glass over nothing drew flat.
+    Box(modifier.clipToBounds().background(palette.wash)) {
         Box(
             Modifier
                 .fillMaxWidth()

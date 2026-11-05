@@ -5083,8 +5083,13 @@ private fun BitChordApp(
                 val artistListState = detail
                     ?.takeIf { isDetailVisible && it.type == BrowseType.ARTIST }
                     ?.let { detailListStates.getOrPut(it.browseId) { LazyListState() } }
-                val topFadeAlpha by remember(artistListState) {
+                // Album, playlist and artist pages take no fade at all: their
+                // picture runs up under the bar and the rows go under the
+                // picture, so nothing passes under the bar that needs covering.
+                val detailHeaderUp = isDetailVisible && detailActiveShelf == null
+                val topFadeAlpha by remember(artistListState, detailHeaderUp) {
                     derivedStateOf {
+                        if (detailHeaderUp) return@derivedStateOf 0f
                         val list = artistListState ?: return@derivedStateOf 1f
                         if (list.firstVisibleItemIndex > 0) return@derivedStateOf 1f
                         val header = list.layoutInfo.visibleItemsInfo
