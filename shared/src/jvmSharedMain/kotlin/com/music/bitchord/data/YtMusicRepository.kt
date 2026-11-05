@@ -738,6 +738,69 @@ object YtMusicRepository {
      * being read — see [moreSongs].
      */
     suspend fun browseSongs(browseId: String): Result<SongPage> = call("browse:$browseId") {
+        if (browseId == LIKED_MUSIC || browseId == "LM") likedMusicFirstPage() else firstPage(browseId)
+    }
+
+    /**
+     * Liked Music's first page, made to actually hold rows.
+     *
+     * Right after launch YouTube often answers `VLLM` with an empty shelf:
+     * the session's account context is still settling (the shell read by
+     * [Innertube.ensureSessionScope] can fail open and land late), and the
+     * page that comes back is the signed-out shape of the playlist, or a
+     * shelf whose rows only arrive behind its continuation. Shown as is, that
+     * read "No tracks here" for a list with hundreds of songs in it, and it
+     * stayed that way until the page was pulled. An account with nothing
+     * liked is rare enough that one more round trip to be sure is cheap.
+     */
+    private suspend fun likedMusicFirstPage(): SongPage {
+        val first = firstPage(LIKED_MUSIC)
+        if (first.songs.isNotEmpty() || Innertube.cookie == null) return first
+        Log.w(TAG, "liked music came back empty; re-reading the session and asking again")
+        Innertube.refreshSessionScope()
+        val again = runCatching { firstPage(LIKED_MUSIC) }
+            .onFailure { if (it is CancellationException) throw it }
+            .getOrNull()
+        if (again != null && again.songs.isNotEmpty()) return again
+        // The bare auto-playlist id is answered by a different path on
+        // YouTube's side and has been seen to list when `VLLM` does not.
+        val bare = runCatching { firstPage("LM") }
+            .onFailure { if (it is CancellationException) throw it }
+            .getOrNull()
+        if (bare != null && bare.songs.isNotEmpty()) return bare.copy(header = bare.header ?: first.header)
+        return again ?: first
+    }
+
+    /**
+     * [browseId]'s first response as a page — following the continuation
+     * when that response has no rows of its own yet, which a long playlist
+     * sometimes is: an empty shelf and a token for "the rest", which is all
+     * of it. Stopping there showed an empty page with a full one behind it.
+     */
+    private suspend fun firstPage(browseId: String): SongPage {
+        val page = browseFirstResponse(browseId)
+        if (page.songs.isNotEmpty() || page.continuation == null) return page
+        var token = page.continuation
+        var hops = 0
+        while (hops < EMPTY_FIRST_PAGE_HOPS) {
+            val current = token ?: break
+            hops++
+            val next = runCatching { pageOf(Innertube.browseContinuation(current), showByToken[current]) }
+                .onFailure { if (it is CancellationException) throw it }
+                .getOrNull() ?: break
+            if (next.songs.isNotEmpty()) {
+                return page.copy(
+                    songs = next.songs,
+                    continuation = next.continuation,
+                    suggested = page.suggested.ifEmpty { next.suggested },
+                )
+            }
+            token = next.continuation?.takeIf { it != current }
+        }
+        return page
+    }
+
+    private suspend fun browseFirstResponse(browseId: String): SongPage {
         val response = Innertube.browse(browseId)
         val page = if (browseId.startsWith("MPREb")) {
             albumPageOf(response)
@@ -956,6 +1019,9 @@ object YtMusicRepository {
     private suspend fun libraryItemsPaged(browseId: String): List<ShelfItem> = itemsPaged(browseId, null)
 
     const val MAX_PAGES = 10
+
+    /** How many continuations [firstPage] follows looking for a first row. */
+    private const val EMPTY_FIRST_PAGE_HOPS = 3
 
     /**
      * Liked Music: the `LM` auto-playlist, addressed as a playlist browse id.
