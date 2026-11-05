@@ -32,7 +32,9 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -56,6 +58,9 @@ fun SearchField(
     /** The field's fill; the theme's grey unless the page asks for something else. */
     containerColor: Color = fieldFill(MaterialTheme.colorScheme.surfaceVariant),
     modifier: Modifier = Modifier,
+    /** The field's outline: a rounded rectangle unless it sits among round glass controls. */
+    shape: Shape = RoundedCornerShape(11.dp),
+    height: Dp = 46.dp,
 ) {
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -69,8 +74,8 @@ fun SearchField(
         modifier = modifier
             .fillMaxWidth()
             // Fixed height prevents the row from growing when text is entered
-            .height(46.dp)
-            .background(containerColor, RoundedCornerShape(11.dp))
+            .height(height)
+            .background(containerColor, shape)
             // Asymmetric: the magnifier is a button now and wants a real touch
             // target, so it's given the room by pulling the field's own start
             // padding in rather than by pushing the glyph and the text along.

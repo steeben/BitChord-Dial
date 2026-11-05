@@ -157,7 +157,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.util.lerp
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -498,7 +497,6 @@ fun SettingsScreen(
     // top bar. Past it, the bar carries its own copy so search is always in reach.
     val density = LocalDensity.current
     val barLinePx = with(density) { contentPadding.calculateTopPadding().toPx() }
-    val dockTravelPx = with(density) { SEARCH_DOCK_TRAVEL.toPx() }
     var fieldScrolledOffAt by remember { mutableStateOf(Float.MAX_VALUE) }
     // The field at rest: its top at scroll 0, its height, and its left edge.
     var fieldRestTop by remember { mutableStateOf(Float.NaN) }
@@ -563,14 +561,23 @@ fun SettingsScreen(
             modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 14.dp),
         )
         if (section == null) {
+            val fieldFallback = frostedSurfaceColor(MaterialTheme.colorScheme.surfaceVariant)
             SearchField(
                 query = searchQuery,
                 onQueryChange = onSearchQueryChange,
                 onSubmit = {},
                 placeholder = stringResource(R.string.settings_search_hint),
-                containerColor = frostedSurfaceColor(MaterialTheme.colorScheme.surfaceVariant),
+                // Round glass at the back button's height, like the bar's copy
+                // it hands over to. The page is what the bar's glass samples,
+                // so this copy wears the lightweight glass that draws no
+                // backdrop of its own.
+                containerColor = Color.Transparent,
+                shape = CircleShape,
+                height = 44.dp,
                 modifier = Modifier
-                    .padding(start = 20.dp, end = 20.dp, bottom = 4.dp)
+                    // The groups' inset, so its right edge is the bar's: only
+                    // the left edge has anywhere to go as it docks.
+                    .padding(start = GROUP_INSET, end = GROUP_INSET, bottom = 4.dp)
                     .onGloballyPositioned { coordinates ->
                         // Measured unclipped, so it still holds once the field is off screen.
                         val position = coordinates.positionInRoot()
@@ -580,33 +587,35 @@ fun SettingsScreen(
                         fieldHeight = coordinates.size.height.toFloat()
                         fieldRestLeft = position.x
                     }
-                    // As it nears the bar it narrows into the gap the bar keeps
-                    // for it, beside the back button, and holds there for the
-                    // frame it takes the bar's own copy to appear in its place.
-                    // Laid out rather than scaled, so the text stays sharp, and
-                    // only the width changes, so nothing below it moves.
+                    // As it scrolls up, its left side draws in, in step with
+                    // the scroll, until it fits the gap beside the back button
+                    // just as it reaches the bar's row. There it is pinned, and
+                    // the bar's own copy takes over in the same place. Laid out
+                    // rather than scaled, so the text stays sharp, and only the
+                    // width changes, so nothing below it moves.
                     .layout { measurable, constraints ->
                         val slot = currentSlot()
+                        val fullWidth = constraints.maxWidth
                         val docking = slot != null && !fieldRestTop.isNaN()
                         val progress = if (docking) {
-                            settingsSearchDockProgress(scrollState.value.toFloat(), dockScroll, dockTravelPx)
+                            settingsSearchDockProgress(scrollState.value.toFloat(), dockScroll)
                         } else {
                             0f
                         }
-                        val widthProgress = settingsSearchWidthProgress(progress)
-                        val fullWidth = constraints.maxWidth
-                        val width = if (docking && slot != null) {
-                            lerp(fullWidth.toFloat(), slot.width, widthProgress).roundToInt()
-                                .coerceIn(0, fullWidth)
+                        val restRight = fieldRestLeft + fullWidth
+                        val left = if (docking && slot != null) {
+                            settingsSearchDockEdge(fieldRestLeft, slot.left, progress)
                         } else {
-                            fullWidth
+                            fieldRestLeft
                         }
+                        val right = if (docking && slot != null) {
+                            settingsSearchDockEdge(restRight, slot.right, progress)
+                        } else {
+                            restRight
+                        }
+                        val width = (right - left).roundToInt().coerceIn(0, fullWidth)
                         val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
-                        val x = if (docking && slot != null) {
-                            ((slot.left - fieldRestLeft) * widthProgress).roundToInt()
-                        } else {
-                            0
-                        }
+                        val x = (left - fieldRestLeft).roundToInt()
                         // Pinned at the bar's row once it reaches it.
                         val pin = if (docking) {
                             (scrollState.value - dockScroll).coerceAtLeast(0f).roundToInt()
@@ -621,7 +630,9 @@ fun SettingsScreen(
                     .graphicsLayer {
                         val handingBack = reportedScrolledOff && !fieldScrolledOff
                         alpha = if (searchInBar && !handingBack) 0f else 1f
-                    },
+                    }
+                    // Inside the shrink, so the glass follows the field's width.
+                    .lightweightLiquidGlass(shape = CircleShape, fallbackColor = fieldFallback),
             )
 
             SearchableSettingsGroup(search) {
@@ -3328,8 +3339,6 @@ internal val ICON_GAP = 14.dp
 /** Where a row's text starts — dividers are inset to match, as on iOS. */
 internal val TEXT_INSET = ROW_INSET + ICON_SIZE + ICON_GAP
 
-/** How much scrolling it takes the search field to shrink into the top bar. */
-private val SEARCH_DOCK_TRAVEL = 64.dp
 
 /**
  * What is typed into the field under the Settings title, and whether anything

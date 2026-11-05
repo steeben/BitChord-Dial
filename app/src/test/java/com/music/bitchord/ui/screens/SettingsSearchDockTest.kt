@@ -5,22 +5,22 @@ import org.junit.Test
 
 class SettingsSearchDockTest {
     @Test
-    fun fullWidthUntilTheShrinkBegins() {
-        assertEquals(0f, settingsSearchDockProgress(scroll = 0f, dockScroll = 300f, travelPx = 150f), 0f)
-        assertEquals(0f, settingsSearchDockProgress(scroll = 150f, dockScroll = 300f, travelPx = 150f), 0f)
+    fun shrinksInStepWithTheScroll() {
+        assertEquals(0f, settingsSearchDockProgress(scroll = 0f, dockScroll = 300f), 0f)
+        assertEquals(0.5f, settingsSearchDockProgress(scroll = 150f, dockScroll = 300f), 0.0001f)
+        assertEquals(1f, settingsSearchDockProgress(scroll = 300f, dockScroll = 300f), 0f)
     }
 
     @Test
-    fun shrinksAlongTheTravelAndHoldsOnceDocked() {
-        assertEquals(0.5f, settingsSearchDockProgress(scroll = 225f, dockScroll = 300f, travelPx = 150f), 0.0001f)
-        assertEquals(1f, settingsSearchDockProgress(scroll = 300f, dockScroll = 300f, travelPx = 150f), 0f)
-        assertEquals(1f, settingsSearchDockProgress(scroll = 900f, dockScroll = 300f, travelPx = 150f), 0f)
+    fun holdsOnceDocked() {
+        assertEquals(1f, settingsSearchDockProgress(scroll = 900f, dockScroll = 300f), 0f)
+        assertEquals(1f, settingsSearchDockProgress(scroll = 0f, dockScroll = 0f), 0f)
     }
 
     @Test
-    fun widthIsDoneBeforeTheFieldDocks() {
-        assertEquals(0f, settingsSearchWidthProgress(0f), 0f)
-        assertEquals(1f, settingsSearchWidthProgress(0.8f), 0.0001f)
-        assertEquals(1f, settingsSearchWidthProgress(1f), 0f)
+    fun onlyTheLeftEdgeTravels() {
+        assertEquals(48f, settingsSearchDockEdge(rest = 48f, slot = 204f, progress = 0f), 0f)
+        assertEquals(126f, settingsSearchDockEdge(rest = 48f, slot = 204f, progress = 0.5f), 0.0001f)
+        assertEquals(204f, settingsSearchDockEdge(rest = 48f, slot = 204f, progress = 1f), 0f)
     }
 }
