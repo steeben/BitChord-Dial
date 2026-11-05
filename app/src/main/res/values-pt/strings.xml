@@ -1435,4 +1435,27 @@
     <string name="glass_style">Estilo</string>
     <string name="glass_style_classic">Clássico</string>
     <string name="glass_style_new">Novo</string>
+    <string name="song_fix_find_video">Encontrar o videoclipe</string>
+    <string name="song_fix_find_video_detail">Pesquisar um vídeo para usar como Canvas</string>
+    <string name="song_fix_find_video_about">Escolha o videoclipe a mostrar como Canvas desta música. Ele fica guardado para esta música.</string>
+    <string name="song_fix_video_paired">Videoclipe definido como Canvas desta música</string>
+    <string name="song_fix_find_song">Encontrar a música certa</string>
+    <string name="song_fix_find_song_detail">O áudio é outra música</string>
+    <string name="song_fix_find_song_about">Escolha a música que deve tocar aqui. Ela toca no lugar a partir de agora.</string>
+    <string name="song_fix_song_picked">Tocando a música escolhida</string>
+    <string name="song_fix_pick_source">Tocar de outro complemento</string>
+    <string name="song_fix_pick_source_detail">O áudio deste complemento está errado</string>
+    <string name="song_fix_pick_source_about">Escolha de onde esta música toca. Fica assim a partir de agora.</string>
+    <string name="song_fix_source_searching">Verificando quais complementos têm esta música…</string>
+    <string name="song_fix_source_match">Tem esta música · %1$s</string>
+    <string name="song_fix_source_match_plain">Tem esta música</string>
+    <string name="song_fix_source_none">Sem correspondência</string>
+    <string name="song_fix_source_youtube">YouTube</string>
+    <string name="song_fix_source_youtube_detail">O envio original</string>
+    <string name="song_fix_source_picked">Mudando para a fonte escolhida</string>
+    <string name="song_fix_album_art">Usar a capa animada do álbum</string>
+    <string name="song_fix_album_art_detail">Mostrar a capa animada do álbum como Canvas</string>
+    <string name="song_fix_search_hint">Pesquisar</string>
+    <string name="song_fix_search_failed">Não foi possível pesquisar agora</string>
+    <string name="song_fix_search_none">Nada encontrado</string>
 </resources>

@@ -1347,4 +1347,27 @@
     <string name="glass_style">Kiểu</string>
     <string name="glass_style_classic">Cổ điển</string>
     <string name="glass_style_new">Mới</string>
+    <string name="song_fix_find_video">Tìm video âm nhạc</string>
+    <string name="song_fix_find_video_detail">Tìm video để dùng làm Canvas</string>
+    <string name="song_fix_find_video_about">Chọn video âm nhạc hiển thị làm Canvas của bài này. Sẽ được lưu cho bài này.</string>
+    <string name="song_fix_video_paired">Đã đặt video âm nhạc làm Canvas của bài này</string>
+    <string name="song_fix_find_song">Tìm đúng bài hát</string>
+    <string name="song_fix_find_song_detail">Âm thanh là bài khác</string>
+    <string name="song_fix_find_song_about">Chọn bài sẽ phát ở đây. Từ giờ bài đó sẽ phát thay thế.</string>
+    <string name="song_fix_song_picked">Đang phát bài bạn chọn</string>
+    <string name="song_fix_pick_source">Phát từ tiện ích khác</string>
+    <string name="song_fix_pick_source_detail">Âm thanh của tiện ích này bị sai</string>
+    <string name="song_fix_pick_source_about">Chọn nơi phát bài này. Từ giờ sẽ giữ như vậy.</string>
+    <string name="song_fix_source_searching">Đang kiểm tra tiện ích nào có bài này…</string>
+    <string name="song_fix_source_match">Có bài này · %1$s</string>
+    <string name="song_fix_source_match_plain">Có bài này</string>
+    <string name="song_fix_source_none">Không khớp</string>
+    <string name="song_fix_source_youtube">YouTube</string>
+    <string name="song_fix_source_youtube_detail">Bản tải lên gốc</string>
+    <string name="song_fix_source_picked">Đang chuyển sang nguồn bạn chọn</string>
+    <string name="song_fix_album_art">Dùng ảnh bìa album động</string>
+    <string name="song_fix_album_art_detail">Hiển thị ảnh bìa album chuyển động làm Canvas</string>
+    <string name="song_fix_search_hint">Tìm kiếm</string>
+    <string name="song_fix_search_failed">Không thể tìm kiếm lúc này</string>
+    <string name="song_fix_search_none">Không tìm thấy gì</string>
 </resources>

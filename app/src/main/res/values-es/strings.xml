@@ -1402,4 +1402,27 @@
     <string name="glass_style">Estilo</string>
     <string name="glass_style_classic">Clásico</string>
     <string name="glass_style_new">Nuevo</string>
+    <string name="song_fix_find_video">Buscar el videoclip</string>
+    <string name="song_fix_find_video_detail">Busca un video para usarlo como Canvas</string>
+    <string name="song_fix_find_video_about">Elige el videoclip que se mostrará como Canvas de esta canción. Se guardará para esta canción.</string>
+    <string name="song_fix_video_paired">Videoclip establecido como Canvas de esta canción</string>
+    <string name="song_fix_find_song">Buscar la canción correcta</string>
+    <string name="song_fix_find_song_detail">El audio es otra canción</string>
+    <string name="song_fix_find_song_about">Elige la canción que debe sonar aquí. Sonará en su lugar a partir de ahora.</string>
+    <string name="song_fix_song_picked">Reproduciendo la canción que elegiste</string>
+    <string name="song_fix_pick_source">Reproducir desde otro complemento</string>
+    <string name="song_fix_pick_source_detail">El audio de este complemento es incorrecto</string>
+    <string name="song_fix_pick_source_about">Elige desde dónde se reproduce esta canción. Se mantendrá así a partir de ahora.</string>
+    <string name="song_fix_source_searching">Comprobando qué complementos tienen esta canción…</string>
+    <string name="song_fix_source_match">Tiene esta canción · %1$s</string>
+    <string name="song_fix_source_match_plain">Tiene esta canción</string>
+    <string name="song_fix_source_none">Sin coincidencia</string>
+    <string name="song_fix_source_youtube">YouTube</string>
+    <string name="song_fix_source_youtube_detail">La subida original</string>
+    <string name="song_fix_source_picked">Cambiando a la fuente que elegiste</string>
+    <string name="song_fix_album_art">Usar la portada animada del álbum</string>
+    <string name="song_fix_album_art_detail">Muestra la portada animada del álbum como Canvas</string>
+    <string name="song_fix_search_hint">Buscar</string>
+    <string name="song_fix_search_failed">No se pudo buscar ahora</string>
+    <string name="song_fix_search_none">No se encontró nada</string>
 </resources>

@@ -1387,4 +1387,27 @@
     <string name="glass_style">Stil</string>
     <string name="glass_style_classic">Klasik</string>
     <string name="glass_style_new">Yeni</string>
+    <string name="song_fix_find_video">Müzik videosunu bul</string>
+    <string name="song_fix_find_video_detail">Canvas olarak kullanılacak bir video ara</string>
+    <string name="song_fix_find_video_about">Bu şarkının Canvas\'ı olarak gösterilecek müzik videosunu seç. Bu şarkı için saklanır.</string>
+    <string name="song_fix_video_paired">Müzik videosu bu şarkının Canvas\'ı yapıldı</string>
+    <string name="song_fix_find_song">Doğru şarkıyı bul</string>
+    <string name="song_fix_find_song_detail">Ses başka bir şarkı</string>
+    <string name="song_fix_find_song_about">Burada çalması gereken şarkıyı seç. Bundan sonra onun yerine çalar.</string>
+    <string name="song_fix_song_picked">Seçtiğin şarkı çalıyor</string>
+    <string name="song_fix_pick_source">Başka bir eklentiden çal</string>
+    <string name="song_fix_pick_source_detail">Bu eklentinin sesi yanlış</string>
+    <string name="song_fix_pick_source_about">Bu şarkının nereden çalacağını seç. Bundan sonra öyle kalır.</string>
+    <string name="song_fix_source_searching">Bu şarkının hangi eklentilerde olduğu kontrol ediliyor…</string>
+    <string name="song_fix_source_match">Bu şarkı var · %1$s</string>
+    <string name="song_fix_source_match_plain">Bu şarkı var</string>
+    <string name="song_fix_source_none">Eşleşme yok</string>
+    <string name="song_fix_source_youtube">YouTube</string>
+    <string name="song_fix_source_youtube_detail">Orijinal yükleme</string>
+    <string name="song_fix_source_picked">Seçtiğin kaynağa geçiliyor</string>
+    <string name="song_fix_album_art">Hareketli albüm kapağını kullan</string>
+    <string name="song_fix_album_art_detail">Albümün hareketli kapağını Canvas olarak göster</string>
+    <string name="song_fix_search_hint">Ara</string>
+    <string name="song_fix_search_failed">Şu anda aranamıyor</string>
+    <string name="song_fix_search_none">Hiçbir şey bulunamadı</string>
 </resources>

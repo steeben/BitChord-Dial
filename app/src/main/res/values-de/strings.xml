@@ -1430,4 +1430,27 @@
     <string name="glass_style">Stil</string>
     <string name="glass_style_classic">Klassisch</string>
     <string name="glass_style_new">Neu</string>
+    <string name="song_fix_find_video">Musikvideo suchen</string>
+    <string name="song_fix_find_video_detail">Ein Video als Canvas suchen</string>
+    <string name="song_fix_find_video_about">Wähle das Musikvideo, das als Canvas dieses Songs angezeigt wird. Es bleibt für diesen Song gespeichert.</string>
+    <string name="song_fix_video_paired">Musikvideo als Canvas dieses Songs festgelegt</string>
+    <string name="song_fix_find_song">Richtigen Song suchen</string>
+    <string name="song_fix_find_song_detail">Der Ton ist ein anderer Song</string>
+    <string name="song_fix_find_song_about">Wähle den Song, der hier laufen soll. Er läuft ab jetzt an seiner Stelle.</string>
+    <string name="song_fix_song_picked">Der gewählte Song wird abgespielt</string>
+    <string name="song_fix_pick_source">Von einem anderen Add-on abspielen</string>
+    <string name="song_fix_pick_source_detail">Der Ton dieses Add-ons ist falsch</string>
+    <string name="song_fix_pick_source_about">Wähle, woher dieser Song kommt. Das bleibt ab jetzt so.</string>
+    <string name="song_fix_source_searching">Prüfe, welche Add-ons diesen Song haben…</string>
+    <string name="song_fix_source_match">Hat diesen Song · %1$s</string>
+    <string name="song_fix_source_match_plain">Hat diesen Song</string>
+    <string name="song_fix_source_none">Kein Treffer</string>
+    <string name="song_fix_source_youtube">YouTube</string>
+    <string name="song_fix_source_youtube_detail">Der Original-Upload</string>
+    <string name="song_fix_source_picked">Wechsle zur gewählten Quelle</string>
+    <string name="song_fix_album_art">Animiertes Albumcover verwenden</string>
+    <string name="song_fix_album_art_detail">Das bewegte Albumcover als Canvas zeigen</string>
+    <string name="song_fix_search_hint">Suchen</string>
+    <string name="song_fix_search_failed">Suche gerade nicht möglich</string>
+    <string name="song_fix_search_none">Nichts gefunden</string>
 </resources>

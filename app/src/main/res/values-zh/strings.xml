@@ -1407,4 +1407,27 @@
     <string name="glass_style">样式</string>
     <string name="glass_style_classic">经典</string>
     <string name="glass_style_new">新版</string>
+    <string name="song_fix_find_video">查找音乐视频</string>
+    <string name="song_fix_find_video_detail">搜索一个视频用作 Canvas</string>
+    <string name="song_fix_find_video_about">选择要作为这首歌 Canvas 显示的音乐视频。会为这首歌保存。</string>
+    <string name="song_fix_video_paired">已将音乐视频设为这首歌的 Canvas</string>
+    <string name="song_fix_find_song">查找正确的歌曲</string>
+    <string name="song_fix_find_song_detail">音频是另一首歌</string>
+    <string name="song_fix_find_song_about">选择这里应播放的歌曲。今后会用它代替播放。</string>
+    <string name="song_fix_song_picked">正在播放你选择的歌曲</string>
+    <string name="song_fix_pick_source">从其他插件播放</string>
+    <string name="song_fix_pick_source_detail">此插件的音频不对</string>
+    <string name="song_fix_pick_source_about">选择这首歌的播放来源。今后会保持不变。</string>
+    <string name="song_fix_source_searching">正在检查哪些插件有这首歌…</string>
+    <string name="song_fix_source_match">有这首歌 · %1$s</string>
+    <string name="song_fix_source_match_plain">有这首歌</string>
+    <string name="song_fix_source_none">无匹配</string>
+    <string name="song_fix_source_youtube">YouTube</string>
+    <string name="song_fix_source_youtube_detail">原始上传</string>
+    <string name="song_fix_source_picked">正在切换到你选择的来源</string>
+    <string name="song_fix_album_art">使用动态专辑封面</string>
+    <string name="song_fix_album_art_detail">将专辑的动态封面显示为 Canvas</string>
+    <string name="song_fix_search_hint">搜索</string>
+    <string name="song_fix_search_failed">现在无法搜索</string>
+    <string name="song_fix_search_none">未找到任何内容</string>
 </resources>

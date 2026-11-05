@@ -1413,4 +1413,27 @@
     <string name="glass_style">สไตล์</string>
     <string name="glass_style_classic">คลาสสิก</string>
     <string name="glass_style_new">ใหม่</string>
+    <string name="song_fix_find_video">ค้นหามิวสิกวิดีโอ</string>
+    <string name="song_fix_find_video_detail">ค้นหาวิดีโอเพื่อใช้เป็น Canvas</string>
+    <string name="song_fix_find_video_about">เลือกมิวสิกวิดีโอที่จะแสดงเป็น Canvas ของเพลงนี้ จะบันทึกไว้สำหรับเพลงนี้</string>
+    <string name="song_fix_video_paired">ตั้งมิวสิกวิดีโอเป็น Canvas ของเพลงนี้แล้ว</string>
+    <string name="song_fix_find_song">ค้นหาเพลงที่ถูกต้อง</string>
+    <string name="song_fix_find_song_detail">เสียงเป็นเพลงอื่น</string>
+    <string name="song_fix_find_song_about">เลือกเพลงที่ควรเล่นตรงนี้ จากนี้ไปจะเล่นแทน</string>
+    <string name="song_fix_song_picked">กำลังเล่นเพลงที่คุณเลือก</string>
+    <string name="song_fix_pick_source">เล่นจากส่วนเสริมอื่น</string>
+    <string name="song_fix_pick_source_detail">เสียงจากส่วนเสริมนี้ไม่ถูกต้อง</string>
+    <string name="song_fix_pick_source_about">เลือกแหล่งที่เพลงนี้จะเล่น จากนี้ไปจะเป็นแบบนี้</string>
+    <string name="song_fix_source_searching">กำลังตรวจสอบว่าส่วนเสริมใดมีเพลงนี้…</string>
+    <string name="song_fix_source_match">มีเพลงนี้ · %1$s</string>
+    <string name="song_fix_source_match_plain">มีเพลงนี้</string>
+    <string name="song_fix_source_none">ไม่ตรงกัน</string>
+    <string name="song_fix_source_youtube">YouTube</string>
+    <string name="song_fix_source_youtube_detail">การอัปโหลดต้นฉบับ</string>
+    <string name="song_fix_source_picked">กำลังเปลี่ยนไปยังแหล่งที่คุณเลือก</string>
+    <string name="song_fix_album_art">ใช้ปกอัลบั้มแบบเคลื่อนไหว</string>
+    <string name="song_fix_album_art_detail">แสดงปกอัลบั้มที่เคลื่อนไหวเป็น Canvas</string>
+    <string name="song_fix_search_hint">ค้นหา</string>
+    <string name="song_fix_search_failed">ค้นหาไม่ได้ในขณะนี้</string>
+    <string name="song_fix_search_none">ไม่พบอะไรเลย</string>
 </resources>

@@ -1430,4 +1430,27 @@
     <string name="glass_style">शैली</string>
     <string name="glass_style_classic">क्लासिक</string>
     <string name="glass_style_new">नया</string>
+    <string name="song_fix_find_video">म्यूज़िक वीडियो खोजें</string>
+    <string name="song_fix_find_video_detail">Canvas के रूप में इस्तेमाल के लिए वीडियो खोजें</string>
+    <string name="song_fix_find_video_about">इस गाने के Canvas के रूप में दिखाने के लिए म्यूज़िक वीडियो चुनें। यह इस गाने के लिए सहेजा रहेगा।</string>
+    <string name="song_fix_video_paired">म्यूज़िक वीडियो इस गाने का Canvas बना दिया गया</string>
+    <string name="song_fix_find_song">सही गाना खोजें</string>
+    <string name="song_fix_find_song_detail">ऑडियो कोई दूसरा गाना है</string>
+    <string name="song_fix_find_song_about">वह गाना चुनें जो यहाँ बजना चाहिए। अब से यह उसकी जगह बजेगा।</string>
+    <string name="song_fix_song_picked">आपका चुना गाना बज रहा है</string>
+    <string name="song_fix_pick_source">दूसरे ऐड-ऑन से चलाएँ</string>
+    <string name="song_fix_pick_source_detail">इस ऐड-ऑन का ऑडियो गलत है</string>
+    <string name="song_fix_pick_source_about">चुनें कि यह गाना कहाँ से बजे। अब से ऐसा ही रहेगा।</string>
+    <string name="song_fix_source_searching">देख रहे हैं कि किन ऐड-ऑन में यह गाना है…</string>
+    <string name="song_fix_source_match">यह गाना है · %1$s</string>
+    <string name="song_fix_source_match_plain">यह गाना है</string>
+    <string name="song_fix_source_none">कोई मेल नहीं</string>
+    <string name="song_fix_source_youtube">YouTube</string>
+    <string name="song_fix_source_youtube_detail">मूल अपलोड</string>
+    <string name="song_fix_source_picked">आपके चुने स्रोत पर जा रहे हैं</string>
+    <string name="song_fix_album_art">एनिमेटेड एल्बम आर्ट इस्तेमाल करें</string>
+    <string name="song_fix_album_art_detail">एल्बम का चलता कवर Canvas के रूप में दिखाएँ</string>
+    <string name="song_fix_search_hint">खोजें</string>
+    <string name="song_fix_search_failed">अभी खोज नहीं सके</string>
+    <string name="song_fix_search_none">कुछ नहीं मिला</string>
 </resources>

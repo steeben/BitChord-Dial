@@ -1431,4 +1431,27 @@
     <string name="glass_style">Style</string>
     <string name="glass_style_classic">Classique</string>
     <string name="glass_style_new">Nouveau</string>
+    <string name="song_fix_find_video">Trouver le clip</string>
+    <string name="song_fix_find_video_detail">Chercher une vidéo à utiliser comme Canvas</string>
+    <string name="song_fix_find_video_about">Choisissez le clip à afficher comme Canvas de ce titre. Il sera conservé pour ce titre.</string>
+    <string name="song_fix_video_paired">Clip défini comme Canvas de ce titre</string>
+    <string name="song_fix_find_song">Trouver le bon titre</string>
+    <string name="song_fix_find_song_detail">L\'audio est un autre titre</string>
+    <string name="song_fix_find_song_about">Choisissez le titre qui doit être lu ici. Il sera lu à sa place désormais.</string>
+    <string name="song_fix_song_picked">Lecture du titre choisi</string>
+    <string name="song_fix_pick_source">Lire depuis un autre module</string>
+    <string name="song_fix_pick_source_detail">L\'audio de ce module est incorrect</string>
+    <string name="song_fix_pick_source_about">Choisissez la source de ce titre. Elle sera conservée désormais.</string>
+    <string name="song_fix_source_searching">Recherche des modules qui ont ce titre…</string>
+    <string name="song_fix_source_match">A ce titre · %1$s</string>
+    <string name="song_fix_source_match_plain">A ce titre</string>
+    <string name="song_fix_source_none">Aucune correspondance</string>
+    <string name="song_fix_source_youtube">YouTube</string>
+    <string name="song_fix_source_youtube_detail">La mise en ligne d\'origine</string>
+    <string name="song_fix_source_picked">Passage à la source choisie</string>
+    <string name="song_fix_album_art">Utiliser la pochette animée</string>
+    <string name="song_fix_album_art_detail">Afficher la pochette animée de l\'album comme Canvas</string>
+    <string name="song_fix_search_hint">Rechercher</string>
+    <string name="song_fix_search_failed">Recherche impossible pour le moment</string>
+    <string name="song_fix_search_none">Aucun résultat</string>
 </resources>

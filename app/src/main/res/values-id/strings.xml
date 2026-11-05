@@ -1407,4 +1407,27 @@
     <string name="glass_style">Gaya</string>
     <string name="glass_style_classic">Klasik</string>
     <string name="glass_style_new">Baru</string>
+    <string name="song_fix_find_video">Cari video musik</string>
+    <string name="song_fix_find_video_detail">Cari video untuk dipakai sebagai Canvas</string>
+    <string name="song_fix_find_video_about">Pilih video musik yang ditampilkan sebagai Canvas lagu ini. Disimpan untuk lagu ini.</string>
+    <string name="song_fix_video_paired">Video musik dijadikan Canvas lagu ini</string>
+    <string name="song_fix_find_song">Cari lagu yang benar</string>
+    <string name="song_fix_find_song_detail">Audionya lagu lain</string>
+    <string name="song_fix_find_song_about">Pilih lagu yang seharusnya diputar di sini. Lagu itu diputar sebagai gantinya mulai sekarang.</string>
+    <string name="song_fix_song_picked">Memutar lagu yang kamu pilih</string>
+    <string name="song_fix_pick_source">Putar dari add-on lain</string>
+    <string name="song_fix_pick_source_detail">Audio add-on ini salah</string>
+    <string name="song_fix_pick_source_about">Pilih sumber pemutaran lagu ini. Tetap begitu mulai sekarang.</string>
+    <string name="song_fix_source_searching">Memeriksa add-on mana yang punya lagu ini…</string>
+    <string name="song_fix_source_match">Punya lagu ini · %1$s</string>
+    <string name="song_fix_source_match_plain">Punya lagu ini</string>
+    <string name="song_fix_source_none">Tidak cocok</string>
+    <string name="song_fix_source_youtube">YouTube</string>
+    <string name="song_fix_source_youtube_detail">Unggahan asli</string>
+    <string name="song_fix_source_picked">Beralih ke sumber yang kamu pilih</string>
+    <string name="song_fix_album_art">Pakai sampul album animasi</string>
+    <string name="song_fix_album_art_detail">Tampilkan sampul album bergerak sebagai Canvas</string>
+    <string name="song_fix_search_hint">Cari</string>
+    <string name="song_fix_search_failed">Tidak bisa mencari sekarang</string>
+    <string name="song_fix_search_none">Tidak ditemukan apa pun</string>
 </resources>

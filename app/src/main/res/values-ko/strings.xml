@@ -1198,4 +1198,27 @@
     <string name="glass_style">스타일</string>
     <string name="glass_style_classic">클래식</string>
     <string name="glass_style_new">새로운</string>
+    <string name="song_fix_find_video">뮤직비디오 찾기</string>
+    <string name="song_fix_find_video_detail">Canvas로 쓸 동영상 검색</string>
+    <string name="song_fix_find_video_about">이 곡의 Canvas로 보여줄 뮤직비디오를 고르세요. 이 곡에 저장됩니다.</string>
+    <string name="song_fix_video_paired">뮤직비디오를 이 곡의 Canvas로 설정했습니다</string>
+    <string name="song_fix_find_song">올바른 곡 찾기</string>
+    <string name="song_fix_find_song_detail">오디오가 다른 곡입니다</string>
+    <string name="song_fix_find_song_about">여기서 재생할 곡을 고르세요. 이제부터 그 곡이 대신 재생됩니다.</string>
+    <string name="song_fix_song_picked">선택한 곡을 재생 중</string>
+    <string name="song_fix_pick_source">다른 애드온에서 재생</string>
+    <string name="song_fix_pick_source_detail">이 애드온의 오디오가 잘못되었습니다</string>
+    <string name="song_fix_pick_source_about">이 곡을 재생할 곳을 고르세요. 이제부터 그대로 유지됩니다.</string>
+    <string name="song_fix_source_searching">이 곡이 있는 애드온 확인 중…</string>
+    <string name="song_fix_source_match">이 곡 있음 · %1$s</string>
+    <string name="song_fix_source_match_plain">이 곡 있음</string>
+    <string name="song_fix_source_none">일치 없음</string>
+    <string name="song_fix_source_youtube">YouTube</string>
+    <string name="song_fix_source_youtube_detail">원본 업로드</string>
+    <string name="song_fix_source_picked">선택한 소스로 전환 중</string>
+    <string name="song_fix_album_art">움직이는 앨범 아트 사용</string>
+    <string name="song_fix_album_art_detail">앨범의 움직이는 커버를 Canvas로 표시</string>
+    <string name="song_fix_search_hint">검색</string>
+    <string name="song_fix_search_failed">지금은 검색할 수 없습니다</string>
+    <string name="song_fix_search_none">찾은 항목 없음</string>
 </resources>

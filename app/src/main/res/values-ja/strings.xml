@@ -1408,4 +1408,27 @@
     <string name="glass_style">スタイル</string>
     <string name="glass_style_classic">クラシック</string>
     <string name="glass_style_new">新しい</string>
+    <string name="song_fix_find_video">ミュージックビデオを探す</string>
+    <string name="song_fix_find_video_detail">Canvasに使う動画を検索</string>
+    <string name="song_fix_find_video_about">この曲のCanvasとして表示するミュージックビデオを選んでください。この曲に保存されます。</string>
+    <string name="song_fix_video_paired">ミュージックビデオをこの曲のCanvasに設定しました</string>
+    <string name="song_fix_find_song">正しい曲を探す</string>
+    <string name="song_fix_find_song_detail">音声が別の曲です</string>
+    <string name="song_fix_find_song_about">ここで再生する曲を選んでください。今後はその曲が代わりに再生されます。</string>
+    <string name="song_fix_song_picked">選んだ曲を再生中</string>
+    <string name="song_fix_pick_source">別のアドオンから再生</string>
+    <string name="song_fix_pick_source_detail">このアドオンの音声が間違っています</string>
+    <string name="song_fix_pick_source_about">この曲の再生元を選んでください。今後もそのままになります。</string>
+    <string name="song_fix_source_searching">この曲があるアドオンを確認中…</string>
+    <string name="song_fix_source_match">この曲あり · %1$s</string>
+    <string name="song_fix_source_match_plain">この曲あり</string>
+    <string name="song_fix_source_none">一致なし</string>
+    <string name="song_fix_source_youtube">YouTube</string>
+    <string name="song_fix_source_youtube_detail">元のアップロード</string>
+    <string name="song_fix_source_picked">選んだソースに切り替え中</string>
+    <string name="song_fix_album_art">アニメーションのアルバムアートを使う</string>
+    <string name="song_fix_album_art_detail">アルバムの動くカバーをCanvasに表示</string>
+    <string name="song_fix_search_hint">検索</string>
+    <string name="song_fix_search_failed">今は検索できません</string>
+    <string name="song_fix_search_none">見つかりませんでした</string>
 </resources>

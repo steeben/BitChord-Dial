@@ -1462,4 +1462,27 @@
     <string name="glass_style">Стиль</string>
     <string name="glass_style_classic">Классический</string>
     <string name="glass_style_new">Новый</string>
+    <string name="song_fix_find_video">Найти клип</string>
+    <string name="song_fix_find_video_detail">Найти видео для Canvas</string>
+    <string name="song_fix_find_video_about">Выберите клип, который будет Canvas этой песни. Он сохранится для неё.</string>
+    <string name="song_fix_video_paired">Клип установлен как Canvas этой песни</string>
+    <string name="song_fix_find_song">Найти правильную песню</string>
+    <string name="song_fix_find_song_detail">Звучит другая песня</string>
+    <string name="song_fix_find_song_about">Выберите песню, которая должна играть здесь. Теперь она будет играть вместо этой.</string>
+    <string name="song_fix_song_picked">Играет выбранная песня</string>
+    <string name="song_fix_pick_source">Играть из другого дополнения</string>
+    <string name="song_fix_pick_source_detail">Звук этого дополнения неверный</string>
+    <string name="song_fix_pick_source_about">Выберите, откуда играет эта песня. Так и останется.</string>
+    <string name="song_fix_source_searching">Проверяем, в каких дополнениях есть эта песня…</string>
+    <string name="song_fix_source_match">Есть эта песня · %1$s</string>
+    <string name="song_fix_source_match_plain">Есть эта песня</string>
+    <string name="song_fix_source_none">Нет совпадения</string>
+    <string name="song_fix_source_youtube">YouTube</string>
+    <string name="song_fix_source_youtube_detail">Оригинальная загрузка</string>
+    <string name="song_fix_source_picked">Переключаемся на выбранный источник</string>
+    <string name="song_fix_album_art">Использовать анимированную обложку</string>
+    <string name="song_fix_album_art_detail">Показывать движущуюся обложку альбома как Canvas</string>
+    <string name="song_fix_search_hint">Поиск</string>
+    <string name="song_fix_search_failed">Сейчас не удалось выполнить поиск</string>
+    <string name="song_fix_search_none">Ничего не найдено</string>
 </resources>

@@ -1435,4 +1435,27 @@
     <string name="glass_style">סגנון</string>
     <string name="glass_style_classic">קלאסי</string>
     <string name="glass_style_new">חדש</string>
+    <string name="song_fix_find_video">חיפוש קליפ</string>
+    <string name="song_fix_find_video_detail">חיפוש סרטון לשימוש כ-Canvas</string>
+    <string name="song_fix_find_video_about">בחרו את הקליפ שיוצג כ-Canvas של השיר הזה. הוא יישמר לשיר הזה.</string>
+    <string name="song_fix_video_paired">הקליפ הוגדר כ-Canvas של השיר</string>
+    <string name="song_fix_find_song">חיפוש השיר הנכון</string>
+    <string name="song_fix_find_song_detail">האודיו הוא שיר אחר</string>
+    <string name="song_fix_find_song_about">בחרו את השיר שצריך להתנגן כאן. מעכשיו הוא יתנגן במקומו.</string>
+    <string name="song_fix_song_picked">מתנגן השיר שבחרתם</string>
+    <string name="song_fix_pick_source">ניגון מתוסף אחר</string>
+    <string name="song_fix_pick_source_detail">האודיו של התוסף הזה שגוי</string>
+    <string name="song_fix_pick_source_about">בחרו מאיפה השיר הזה מתנגן. כך זה יישאר מעכשיו.</string>
+    <string name="song_fix_source_searching">בודקים לאילו תוספים יש את השיר…</string>
+    <string name="song_fix_source_match">יש את השיר · %1$s</string>
+    <string name="song_fix_source_match_plain">יש את השיר</string>
+    <string name="song_fix_source_none">אין התאמה</string>
+    <string name="song_fix_source_youtube">YouTube</string>
+    <string name="song_fix_source_youtube_detail">ההעלאה המקורית</string>
+    <string name="song_fix_source_picked">עוברים למקור שבחרתם</string>
+    <string name="song_fix_album_art">שימוש בעטיפת אלבום מונפשת</string>
+    <string name="song_fix_album_art_detail">הצגת העטיפה הנעה של האלבום כ-Canvas</string>
+    <string name="song_fix_search_hint">חיפוש</string>
+    <string name="song_fix_search_failed">לא ניתן לחפש כרגע</string>
+    <string name="song_fix_search_none">לא נמצא דבר</string>
 </resources>

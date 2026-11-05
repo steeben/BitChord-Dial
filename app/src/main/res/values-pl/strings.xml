@@ -1470,4 +1470,27 @@
     <string name="glass_style">Styl</string>
     <string name="glass_style_classic">Klasyczny</string>
     <string name="glass_style_new">Nowy</string>
+    <string name="song_fix_find_video">Znajdź teledysk</string>
+    <string name="song_fix_find_video_detail">Wyszukaj wideo do użycia jako Canvas</string>
+    <string name="song_fix_find_video_about">Wybierz teledysk wyświetlany jako Canvas tego utworu. Zostanie zapamiętany dla tego utworu.</string>
+    <string name="song_fix_video_paired">Teledysk ustawiony jako Canvas tego utworu</string>
+    <string name="song_fix_find_song">Znajdź właściwy utwór</string>
+    <string name="song_fix_find_song_detail">Dźwięk to inny utwór</string>
+    <string name="song_fix_find_song_about">Wybierz utwór, który ma tu grać. Od teraz będzie grał zamiast niego.</string>
+    <string name="song_fix_song_picked">Odtwarzanie wybranego utworu</string>
+    <string name="song_fix_pick_source">Odtwórz z innego dodatku</string>
+    <string name="song_fix_pick_source_detail">Dźwięk z tego dodatku jest nieprawidłowy</string>
+    <string name="song_fix_pick_source_about">Wybierz, skąd ten utwór jest odtwarzany. Tak zostanie od teraz.</string>
+    <string name="song_fix_source_searching">Sprawdzanie, które dodatki mają ten utwór…</string>
+    <string name="song_fix_source_match">Ma ten utwór · %1$s</string>
+    <string name="song_fix_source_match_plain">Ma ten utwór</string>
+    <string name="song_fix_source_none">Brak dopasowania</string>
+    <string name="song_fix_source_youtube">YouTube</string>
+    <string name="song_fix_source_youtube_detail">Oryginalne przesłanie</string>
+    <string name="song_fix_source_picked">Przełączanie na wybrane źródło</string>
+    <string name="song_fix_album_art">Użyj animowanej okładki albumu</string>
+    <string name="song_fix_album_art_detail">Pokaż ruchomą okładkę albumu jako Canvas</string>
+    <string name="song_fix_search_hint">Szukaj</string>
+    <string name="song_fix_search_failed">Nie można teraz wyszukać</string>
+    <string name="song_fix_search_none">Nic nie znaleziono</string>
 </resources>
