@@ -49,6 +49,14 @@ import com.music.bitchord.ui.components.backdrop.internal.RoundedRectRefractionS
 import com.music.bitchord.ui.components.backdrop.internal.RuntimeShaderEffect
 import com.music.bitchord.ui.components.backdrop.shadow.Shadow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 
 /** Whether the liquid glass nav bar is turned on — see [AppSettings.liquidGlass]. */
 val LocalLiquidGlassEnabled = staticCompositionLocalOf { false }
@@ -428,13 +436,62 @@ private val DIAL_TILE_WARP_BAND = 12.dp
 private val DIAL_TILE_WARP_AMOUNT = 9.dp
 
 /**
- * Liquid glass's edge, for the dial's tiles in their Glass style: the tile's
- * own artwork bent a little along its rim, as a panel's lens bends what is
+ * The dial's tiles in their Glass style: each tile a pane of liquid glass,
+ * drawn as [liquidGlass] draws the bar, sampling the colour behind the dial
+ * (see [DialTileBackdropLayer]), with the artwork set in it a little smaller
+ * and rounded to match, so a rim of glass shows all the way round and bends
+ * and lights up with whatever is behind it.
+ *
+ * Where the glass can't sample anything — before Android 12, or under
+ * "reduce dynamic blur" — the tile keeps its art full size and wears the rim
+ * [dialTileWarpEdge] draws instead.
+ */
+fun dialTileGlassEdge(shape: Shape): Modifier = Modifier.composed {
+    val backdrop = LocalDialTileBackdrop.current
+    val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
+    if (backdrop == null || shape !is CornerBasedShape || !isGlassSupported() || reduceDynamicBlur) {
+        return@composed dialTileWarpEdge(shape)
+    }
+    Modifier
+        .liquidGlass(shape, backdrop = backdrop, exportedBackdrop = null)
+        .padding(DIAL_TILE_GLASS_RIM)
+        .clip(ConcentricShape(shape, DIAL_TILE_GLASS_RIM))
+}
+
+/** How much of a glass tile is glass, all the way round its artwork. */
+private val DIAL_TILE_GLASS_RIM = 4.dp
+
+/**
+ * [outer]'s corners, brought in by [inset] so they run parallel to it: the
+ * shape of what sits [inset] inside a tile of [outer]'s shape.
+ */
+private class ConcentricShape(private val outer: CornerBasedShape, private val inset: Dp) : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+        val pad = with(density) { inset.toPx() }
+        val outerSize = Size(size.width + 2f * pad, size.height + 2f * pad)
+        fun corner(c: CornerSize) = CornerSize((c.toPx(outerSize, density) - pad).coerceAtLeast(0f))
+        return RoundedCornerShape(
+            topStart = corner(outer.topStart),
+            topEnd = corner(outer.topEnd),
+            bottomEnd = corner(outer.bottomEnd),
+            bottomStart = corner(outer.bottomStart),
+        ).createOutline(size, layoutDirection, density)
+    }
+
+    override fun equals(other: Any?): Boolean =
+        other is ConcentricShape && other.outer == outer && other.inset == inset
+
+    override fun hashCode(): Int = 31 * outer.hashCode() + inset.hashCode()
+}
+
+/**
+ * Liquid glass's edge with nothing behind it to sample: the tile's own
+ * artwork bent a little along its rim, as a panel's lens bends what is
  * under it, with the same angled light and hairline as [liquidGlass] on top.
  * Nothing is blurred; the middle of the tile is left as it is. The bend needs
  * Android 13; before that the tile keeps just the light and the hairline.
  */
-fun dialTileGlassEdge(shape: Shape): Modifier = Modifier.composed {
+private fun dialTileWarpEdge(shape: Shape): Modifier = Modifier.composed {
     val warp = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && shape is CornerBasedShape) {
         val shader = remember { RuntimeShader(RoundedRectRefractionShaderString) }
         Modifier.graphicsLayer {

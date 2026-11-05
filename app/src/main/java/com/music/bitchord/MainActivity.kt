@@ -250,7 +250,6 @@ import com.music.bitchord.ui.screens.YT_MUSIC_LIBRARY_BROWSE_ID
 import com.music.bitchord.ui.components.AmbientAppColor
 import com.music.bitchord.ui.components.AmbientSpotifyColor
 import com.music.bitchord.ui.components.AmbientYouTubeColor
-import com.music.bitchord.ui.components.ambientBlobs
 import com.music.bitchord.ui.components.rememberAmbientBlobs
 import com.music.bitchord.ui.components.rememberAmbientAccent
 import com.music.bitchord.ui.components.LocalAmbientAccent
@@ -598,6 +597,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 val appBackdrop = rememberLayerBackdrop(onDraw = paintBackdrop)
+                val dialTileBackdrop = rememberLayerBackdrop(onDraw = paintBackdrop)
                 val ambientOn by CustomizationSettings.ambientBackground.collectAsStateWithLifecycle()
                 val frosted = if (!ambientOn) {
                     null
@@ -623,6 +623,7 @@ class MainActivity : AppCompatActivity() {
                     com.music.bitchord.ui.components.LocalCropThumbnails provides cropThumbnails,
                     com.music.bitchord.ui.components.LocalDialTileStyle provides dialTileStyle,
                     com.music.bitchord.ui.components.LocalDialTileGlassEdge provides ::dialTileGlassEdge,
+                    com.music.bitchord.ui.components.LocalDialTileBackdrop provides dialTileBackdrop,
                 ) {
                 // The window's width, measured rather than asked for.
                 //
@@ -3679,6 +3680,8 @@ private fun BitChordApp(
                             },
                         ),
                 ) {
+                // The colour behind the pages, and what the dial's glass tiles see.
+                com.music.bitchord.ui.components.DialTileBackdropLayer(ambientBlobs)
                 rememberTransition(pageTransitionState, label = "content").AnimatedContent(
                     // Library pages pan: one pushed from the Library slides in
                     // from the right as the page it was opened from goes off to
@@ -3756,9 +3759,6 @@ private fun BitChordApp(
                                 Modifier
                             },
                         )
-                        // Inside the recorded layers above, so the glass and the
-                        // blurred bars pick the colour up as well.
-                        .ambientBlobs(ambientBlobs)
                         // Innermost, so it softens the pages and leaves the
                         // colour blobs behind them alone.
                         .graphicsLayer {

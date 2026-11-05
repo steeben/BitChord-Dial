@@ -38,6 +38,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.pager.PagerState
+import androidx.compose.animation.core.AnimationVector1D
+import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -285,6 +288,7 @@ internal fun SpeedDialShelf(
     // Back from a page a tile here opened, on the page that tile is on, for
     // the page to close back into it.
     val pagerState = rememberPagerState(initialPage = DialLaunch.pageOf(shelf.title)) { latestPageCount }
+    val swipeTilt = rememberSwipeTilt(pagerState)
     val latestPinned by rememberUpdatedState(pinnedCount)
     val latestOrder by rememberUpdatedState(order)
     val latestReorder by rememberUpdatedState(onReorder)
@@ -540,6 +544,9 @@ internal fun SpeedDialShelf(
                                         }
                                         scaleX = scale
                                         scaleY = scale
+                                        // Leaning with the swipe: see [rememberSwipeTilt].
+                                        rotationY = swipeTilt.value
+                                        cameraDistance = TILT_CAMERA_DISTANCE * density
                                     }
                                 val dim = { if (pinnedTile) 0f else WIGGLE_DIM * wiggleLevel }
                                 if (item === LUCKY_TILE && lucky != null) {
@@ -1025,6 +1032,45 @@ private fun Modifier.tilePress(press: TilePress): Modifier = graphicsLayer {
     scaleX = scale
     scaleY = scale
 }
+
+/**
+ * How far the dial's tiles lean as its pages are swiped, in degrees round
+ * their upright axis: with the pages' speed, so a slow drag barely tips them
+ * and a fling swings them further, the side leading the way falling back a
+ * little as a card does pushed through the air. Each frame's lean is chased
+ * by a spring rather than taken as it is, so it eases in and, once the pages
+ * stop, rocks back past upright and settles.
+ */
+@Composable
+private fun rememberSwipeTilt(pagerState: PagerState): Animatable<Float, AnimationVector1D> {
+    val tilt = remember { Animatable(0f) }
+    LaunchedEffect(pagerState) {
+        var lastPos = Float.NaN
+        var lastNanos = 0L
+        snapshotFlow { pagerState.currentPage + pagerState.currentPageOffsetFraction }
+            .collectLatest { pos ->
+                val now = System.nanoTime()
+                val dt = (now - lastNanos) / 1_000_000_000f
+                val velocity = if (lastPos.isNaN() || dt <= 0f || dt > 0.1f) 0f else (pos - lastPos) / dt
+                lastPos = pos
+                lastNanos = now
+                // Pages a second: moving on to later pages slides the tiles left.
+                val target = (-velocity * TILT_PER_PAGE_SPEED).coerceIn(-TILT_MAX_DEGREES, TILT_MAX_DEGREES)
+                tilt.animateTo(target, spring(stiffness = Spring.StiffnessMedium))
+                // Nothing has moved since: back upright, with a rock past it.
+                tilt.animateTo(0f, spring(dampingRatio = TILT_SETTLE_BOUNCE, stiffness = Spring.StiffnessLow))
+            }
+    }
+    return tilt
+}
+
+/** Degrees of lean for each page a second the pages move, and the most they lean. */
+private const val TILT_PER_PAGE_SPEED = 5f
+private const val TILT_MAX_DEGREES = 12f
+private const val TILT_SETTLE_BOUNCE = 0.45f
+
+/** The tiles' camera, far enough back that a lean reads as a tip rather than a swing. */
+private const val TILT_CAMERA_DISTANCE = 16f
 
 /** How far a pressed tile sinks, how quickly, and how much it bounces back out. */
 private const val PRESS_SHRINK = 0.08f
