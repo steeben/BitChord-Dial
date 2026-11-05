@@ -546,7 +546,7 @@ internal fun SpeedDialShelf(
                                         scaleY = scale
                                         // Leaning with the swipe: see [rememberSwipeTilt].
                                         rotationY = swipeTilt.value
-                                        cameraDistance = TILT_CAMERA_DISTANCE * density
+                                        cameraDistance = TILT_CAMERA_DISTANCE * this.density
                                     }
                                 val dim = { if (pinnedTile) 0f else WIGGLE_DIM * wiggleLevel }
                                 if (item === LUCKY_TILE && lucky != null) {
