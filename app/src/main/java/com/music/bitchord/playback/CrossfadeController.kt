@@ -1266,6 +1266,14 @@ class CrossfadeController(
             AppSettings.smartMixInProgress.value = false
             return
         }
+        // "Mix within the same album" off: two songs off one record hand over
+        // as the record does, with no mix and no marker. (An AI Mix plans in
+        // [planAiMix] and never reaches here, so it still blends them.)
+        if (!AppSettings.automixSameAlbum.value && sameAlbum(currentItem, nextItem)) {
+            AppSettings.smartTransitionWindow.value = null
+            AppSettings.smartMixInProgress.value = false
+            return
+        }
         val nextDuration = nextItemDurationMs(nextIndex, nextItem)
 
         // Even for the marker alone: a stored analysis is only loaded off disk
@@ -1570,6 +1578,12 @@ class CrossfadeController(
         val uri = item.localConfiguration?.uri ?: return 0L
         val seconds = runCatching { uri.getQueryParameter("d") }.getOrNull()?.toLongOrNull() ?: return 0L
         return if (seconds > 0) seconds * 1000L else 0L
+    }
+
+    private fun sameAlbum(current: MediaItem, next: MediaItem): Boolean {
+        val a = current.toSong()
+        val b = next.toSong()
+        return sameAlbumForAutomix(a.albumId, a.albumName, a.artist, b.albumId, b.albumName, b.artist)
     }
 
     /** BitChord doesn't carry album metadata on [MediaMetadata] yet, so [TransitionTrackInfo.album] stays blank. */

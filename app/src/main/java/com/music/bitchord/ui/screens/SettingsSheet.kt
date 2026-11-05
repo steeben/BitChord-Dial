@@ -278,6 +278,7 @@ fun SettingsScreen(
     val metered by AppSettings.meteredConnection.collectAsStateWithLifecycle()
     val crossfade by AppSettings.crossfadeSeconds.collectAsStateWithLifecycle()
     val smartFade by AppSettings.smartFadeEnabled.collectAsStateWithLifecycle()
+    val automixSameAlbum by AppSettings.automixSameAlbum.collectAsStateWithLifecycle()
     val automixPerformance by AppSettings.automixPerformanceMode.collectAsStateWithLifecycle()
     val skipSilence by AppSettings.skipSilence.collectAsStateWithLifecycle()
     val pauseAtZeroVolume by AppSettings.pauseAtZeroVolume.collectAsStateWithLifecycle()
@@ -900,6 +901,19 @@ fun SettingsScreen(
                         },
                         onClick = { AppSettings.setSmartFadeEnabled(!smartFade) },
                     )
+                }
+            }
+            if (smartFade) {
+                val sameAlbumTitle = stringResource(R.string.automix_same_album)
+                row(sameAlbumTitle, "album", "automix", "mix") {
+                    BypassedByBitPerfect(bitPerfectReady) {
+                        SettingsSubRow(
+                            title = sameAlbumTitle,
+                            subtitle = stringResource(R.string.automix_same_album_subtitle),
+                            checked = automixSameAlbum,
+                            onCheckedChange = AppSettings::setAutomixSameAlbum,
+                        )
+                    }
                 }
             }
             val automixPerformanceTitle = stringResource(R.string.automix_performance)

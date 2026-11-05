@@ -10,6 +10,8 @@
     <string name="ambient_background_subtitle">Slow-moving colour behind the app\'s pages</string>
     <string name="ambient_follows_artwork">Match the playing song</string>
     <string name="ambient_follows_artwork_subtitle">Colour the background from the current album art</string>
+    <string name="automix_same_album">Mix within the same album</string>
+    <string name="automix_same_album_subtitle">Off (default) - disables automix when playing songs from the same album.</string>
     <string name="default_library">Default library</string>
     <string name="default_library_none">Library page</string>
     <string name="default_library_page">Default page</string>
