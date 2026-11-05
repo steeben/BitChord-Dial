@@ -1966,7 +1966,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                         val fresh = releases.await()
                         if (identity == listenerKey()) {
                             _dialNewReleases.value = fresh
-                            // The pull deals the dial again, once its feed is in.
+                            // The pull deals the dial again, once its feed is in,
+                            // and the dial's unpinned tiles pop in afresh.
+                            com.music.bitchord.ui.screens.SpeedDialIntro.deal += 1
                             _dialRound.value += 1
                         }
                     }

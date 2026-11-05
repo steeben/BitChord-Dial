@@ -334,6 +334,11 @@ internal fun SpeedDialShelf(
     // The first dial of a launch comes in tile by tile; see [SpeedDialIntro].
     val intro = remember { !SpeedDialIntro.played }
     SideEffect { SpeedDialIntro.played = true }
+    // The deal these tiles came from: it moves on when a pull to refresh
+    // deals the dial again and the new tiles arrive, and every unpinned tile
+    // then leaves and pops in afresh, rather than the kept ones sliding over.
+    val firstDeal = remember { SpeedDialIntro.deal }
+    val deal = remember(shelf.items) { SpeedDialIntro.deal }
 
     // Turn the page while the finger rests at a side.
     LaunchedEffect(edge, dragId) {
@@ -487,7 +492,8 @@ internal fun SpeedDialShelf(
                     Box(Modifier.fillMaxWidth().height(gridHeight)) {
                         display.drop(page * perPage).take(perPage).forEachIndexed { cell, slotItem ->
                             val item = slotItem ?: return@forEachIndexed
-                            key(item.dialId()) {
+                            val dealt = if (item.dialId() in pinnedIds) firstDeal else deal
+                            key(item.dialId(), dealt) {
                                 val target = cellOrigin(cell).let { IntOffset(it.x.roundToInt(), it.y.roundToInt()) }
                                 val offset by animateIntOffsetAsState(
                                     targetValue = target,
@@ -500,7 +506,9 @@ internal fun SpeedDialShelf(
                                 // later (a pull to refresh dealing the dial again,
                                 // or a fresh dial replacing the saved one).
                                 val entering = remember(id) {
-                                    (intro && page == 0) || (shownIds.isNotEmpty() && id !in shownIds)
+                                    (intro && page == 0) ||
+                                        (shownIds.isNotEmpty() && id !in shownIds) ||
+                                        dealt != firstDeal
                                 }
                                 val appear = remember(id) { Animatable(if (entering) 0f else 1f) }
                                 LaunchedEffect(appear) {
@@ -761,6 +769,9 @@ private const val INTRO_BOUNCE = 0.5f
 object SpeedDialIntro {
     var played: Boolean = false
     var canStart: Boolean by mutableStateOf(true)
+
+    /** Moved on by the app each time a pull to refresh deals the dial again. */
+    var deal: Int by mutableIntStateOf(0)
 }
 
 /** The faint chevron under the dial's page dots: there is more below. */
