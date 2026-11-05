@@ -462,6 +462,19 @@ fun dialTileGlassEdge(shape: Shape): Modifier = Modifier.composed {
 private val DIAL_TILE_GLASS_RIM = 4.dp
 
 /**
+ * How far glass tiles reach past their cells on each side (see
+ * [dialTileOutset]): 70% of the rim the art was brought in by, so the art
+ * comes back close to the size the other styles show and the tile itself is
+ * what grows. Zero whenever [dialTileGlassEdge] would draw no rim.
+ */
+@Composable
+fun dialTileGlassOutset(style: DialTileStyle): Dp {
+    val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
+    val rimmed = style == DialTileStyle.GLASS && isGlassSupported() && !reduceDynamicBlur
+    return if (rimmed) DIAL_TILE_GLASS_RIM * 0.7f else 0.dp
+}
+
+/**
  * [outer]'s corners, brought in by [inset] so they run parallel to it: the
  * shape of what sits [inset] inside a tile of [outer]'s shape.
  */

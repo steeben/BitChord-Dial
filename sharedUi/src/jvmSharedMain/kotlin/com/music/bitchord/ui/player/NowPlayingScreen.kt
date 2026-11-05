@@ -4149,13 +4149,16 @@ fun NowPlayingScreen(
                         // ("… (Live)") dissolves into the new one instead of
                         // snapping while the rest of the switch moves around
                         // it.
+                        // In difference ink, like the rest of the controls:
+                        // dark over a bright backdrop, light over a dark one.
+                        ProvideDifferenceInk {
                         Crossfade(
                             targetState = song.title to song.artist,
                             animationSpec = tween(durationMillis = 300),
                             label = "playerCredits",
                         ) {
                             val scrolling = scrolls()
-                            Column {
+                            Column(Modifier.differenceInk()) {
                                 MarqueeText(
                                     text = song.title,
                                     style = MaterialTheme.typography.titleLarge.copy(
@@ -4191,6 +4194,7 @@ fun NowPlayingScreen(
                                     onOpenArtist = onOpenArtist,
                                 )
                             }
+                        }
                         }
                     }
                     // Out of the way under the compact Canvas controls, back

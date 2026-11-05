@@ -2,24 +2,23 @@ package com.music.bitchord.ui.screens
 
 /**
  * How far Settings' search field has shrunk toward its place in the top bar:
- * 0 while it still sits full width in the page, 1 once it has reached the
- * bar's row and fits the gap between the back button and the actions.
+ * 0 at rest under the title, 1 once it has risen to the bar's row.
  *
- * [dockScroll] is the scroll offset at which the field's centre meets the
- * bar's row, and [travelPx] is how much scrolling before that the shrink
- * takes. The width finishes over the first [WIDTH_SHARE] of that travel so
- * the field is already narrow by the time it rises past the back button.
+ * The shrink runs the whole climb, so the field narrows in step with the
+ * scroll rather than shrinking first and rising after. [dockScroll] is the
+ * scroll offset at which the field's centre meets the bar's row.
  */
-internal fun settingsSearchDockProgress(scroll: Float, dockScroll: Float, travelPx: Float): Float {
-    if (travelPx <= 0f) return if (scroll >= dockScroll) 1f else 0f
-    return (1f - (dockScroll - scroll) / travelPx).coerceIn(0f, 1f)
+internal fun settingsSearchDockProgress(scroll: Float, dockScroll: Float): Float {
+    if (dockScroll <= 0f) return if (scroll >= dockScroll) 1f else 0f
+    return (scroll / dockScroll).coerceIn(0f, 1f)
 }
 
-/** The width's share of the shrink, eased so it is done before the field docks. */
-internal fun settingsSearchWidthProgress(dockProgress: Float): Float {
-    val t = (dockProgress / WIDTH_SHARE).coerceIn(0f, 1f)
-    // Ease out: most of the narrowing happens early, then it settles in.
-    return 1f - (1f - t) * (1f - t)
-}
-
-private const val WIDTH_SHARE = 0.8f
+/**
+ * Where one of the field's edges sits at [progress], between where it rests
+ * in the page and where the bar's slot has it. The page's field and the slot
+ * share their right edge, so in practice only the left edge travels: it draws
+ * in to clear the back button. The right is still interpolated, so a slot
+ * that ends short of the page's edge is met rather than jumped to.
+ */
+internal fun settingsSearchDockEdge(rest: Float, slot: Float, progress: Float): Float =
+    rest + (slot - rest) * progress.coerceIn(0f, 1f)

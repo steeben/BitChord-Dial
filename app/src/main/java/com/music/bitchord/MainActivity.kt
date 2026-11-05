@@ -364,6 +364,7 @@ import com.music.bitchord.ui.components.GlassNavBar
 import com.music.bitchord.ui.components.floatingtabbar.FloatingTabBarInlineBehavior
 import com.music.bitchord.ui.components.floatingtabbar.rememberFloatingTabBarScrollConnection
 import com.music.bitchord.ui.components.FrostedTopBar
+import com.music.bitchord.ui.components.artworkPageSurface
 import com.music.bitchord.ui.components.HomeStickyLogo
 import com.music.bitchord.ui.components.LastfmLoginAlert
 import com.music.bitchord.ui.components.LocalAppBackdrop
@@ -628,6 +629,10 @@ class MainActivity : AppCompatActivity() {
                     com.music.bitchord.ui.components.LocalDialTileStyle provides dialTileStyle,
                     com.music.bitchord.ui.components.LocalDialTileGlassEdge provides ::dialTileGlassEdge,
                     com.music.bitchord.ui.components.LocalDialTileBackdrop provides dialTileBackdrop,
+                    com.music.bitchord.ui.components.LocalDialTileOutset provides
+                        com.music.bitchord.ui.components.dialTileGlassOutset(dialTileStyle),
+                    com.music.bitchord.ui.components.LocalDialTilt provides
+                        com.music.bitchord.ui.components.rememberDialTilt(),
                 ) {
                 // The window's width, measured rather than asked for.
                 //
@@ -5170,11 +5175,17 @@ private fun BitChordApp(
                                         onQueryChange = { settingsQuery = it },
                                         onSubmit = {},
                                         placeholder = stringResource(R.string.settings_search_hint),
-                                        containerColor = frostedSurfaceColor(MaterialTheme.colorScheme.surfaceVariant),
+                                        // The back button's glass, in the back button's
+                                        // height, so the two read as one row of controls.
+                                        containerColor = Color.Transparent,
+                                        shape = CircleShape,
+                                        height = 44.dp,
                                         // Kept up while it is being typed into, even when
                                         // the results are short enough to bring the
                                         // page's own field back into view.
-                                        modifier = Modifier.onFocusChanged { settingsBarFieldFocused = it.hasFocus },
+                                        modifier = Modifier
+                                            .onFocusChanged { settingsBarFieldFocused = it.hasFocus }
+                                            .then(artworkPageSurface(shape = CircleShape, hazeState = hazeState)),
                                     )
                                 }
                             }
@@ -5220,6 +5231,8 @@ private fun BitChordApp(
                     transparentBackdrop = true,
                     artworkPageChrome = true,
                     backButtonHazeState = hazeState,
+                    // Settings' search runs to the bar's edge: nothing sits after it.
+                    actionsShown = !settingsRoot,
                     trailingTitle = if (detail != null && detailActiveShelf != null) detail.title else null,
                     // A library folder (Downloads, YouTube Music, a server…) and
                     // the Spotify library say which one they are up here.

@@ -47,7 +47,7 @@ internal fun Modifier.pressBounce(
                             pressing?.join()
                             scale.animateTo(
                                 1f,
-                                spring(dampingRatio = BOUNCE_DAMPING, stiffness = Spring.StiffnessMedium),
+                                spring(dampingRatio = BOUNCE_DAMPING, stiffness = BOUNCE_STIFFNESS),
                             )
                         }
                     }
@@ -62,6 +62,9 @@ internal fun Modifier.pressBounce(
     }
 }
 
-private const val PRESSED_SCALE = 0.8f
-private const val PUSH_IN_MS = 90
-private const val BOUNCE_DAMPING = 0.38f
+// Deep and unhurried: the glyph sinks to two thirds of its size, then springs
+// back slowly enough that the overshoot past full size is plainly visible.
+private const val PRESSED_SCALE = 0.66f
+private const val PUSH_IN_MS = 170
+private const val BOUNCE_DAMPING = 0.3f
+private const val BOUNCE_STIFFNESS = Spring.StiffnessMediumLow

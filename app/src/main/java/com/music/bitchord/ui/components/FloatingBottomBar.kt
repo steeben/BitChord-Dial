@@ -11,6 +11,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import com.music.bitchord.ui.components.floatingtabbar.pressBounce
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -355,12 +356,14 @@ private fun BottomBarItem(
         label = "tabTint",
     )
 
+    // The glass bar's press bounce, so a tap reads the same in either bar.
+    val press = remember { MutableInteractionSource() }
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
             .clip(RoundedCornerShape(percent = 50))
             .clickable(
-                interactionSource = remember { MutableInteractionSource() },
+                interactionSource = press,
                 indication = null,
             ) {
                 if (!selected) haptics.play(Haptic.Select)
@@ -374,6 +377,7 @@ private fun BottomBarItem(
             tint = tint,
             modifier = Modifier
                 .size(25.dp)
+                .pressBounce(press)
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale

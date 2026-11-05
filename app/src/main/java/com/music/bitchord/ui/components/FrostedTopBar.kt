@@ -11,6 +11,8 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
@@ -51,6 +53,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -115,6 +119,9 @@ private val ActionsInset = 56.dp
 
 /** Between a filling accessory and the actions pill. */
 private val ACCESSORY_GAP = 8.dp
+
+/** Low enough that the back button visibly overshoots before settling. */
+private const val BACK_BOUNCE_DAMPING = 0.42f
 
 /** What the leading end of the bar needs: a back button, or the wordmark. */
 private fun leadingInset(hasBack: Boolean): Dp = if (hasBack) BackInset else WordmarkInset
@@ -181,6 +188,11 @@ fun FrostedTopBar(
      * on a page whose own content has no heading that says where you are.
      */
     inlineTitle: String? = null,
+    /**
+     * False on a page with nothing at the trailing end: the accessory then runs
+     * to the bar's edge, with no gap kept for an empty actions pill.
+     */
+    actionsShown: Boolean = true,
     actions: @Composable () -> Unit = {},
 ) {
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
@@ -289,23 +301,32 @@ fun FrostedTopBar(
              */
             // On a pushed page the back affordance is always visible, since
             // there is no large in-list header to fall back on.
-            if (onBack != null) {
+            // It springs in from nothing, overshooting its size before settling,
+            // and shrinks away when the page it belongs to is left. The last
+            // handler is kept so the button still works while it shrinks.
+            var lastOnBack by remember { mutableStateOf(onBack) }
+            if (onBack != null) lastOnBack = onBack
+            AnimatedVisibility(
+                visible = onBack != null,
+                enter = scaleIn(
+                    animationSpec = spring(dampingRatio = BACK_BOUNCE_DAMPING, stiffness = Spring.StiffnessMediumLow),
+                ) + fadeIn(tween(120)),
+                exit = scaleOut(animationSpec = tween(180), targetScale = 0f) + fadeOut(tween(160)),
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = if (useFloatingChrome) BAR_GUTTER else 4.dp),
+            ) {
+                val handler = lastOnBack ?: {}
                 if (useFloatingChrome) {
+                    // The surface edge aligns with the floating navbar. The
+                    // padding belongs outside the circle; its icon remains
+                    // centred in the same 44dp control in every material.
                     ArtworkPageBackButton(
-                        onClick = onBack,
+                        onClick = handler,
                         hazeState = backButtonHazeState,
-                        // The surface edge aligns with the floating navbar. The
-                        // padding belongs outside the circle; its icon remains
-                        // centred in the same 44dp control in every material.
-                        modifier = Modifier
-                            .align(Alignment.CenterStart)
-                            .padding(start = BAR_GUTTER),
                     )
                 } else {
-                    IconButton(
-                        onClick = onBack,
-                        modifier = Modifier.align(Alignment.CenterStart).padding(start = 4.dp),
-                    ) {
+                    IconButton(onClick = handler) {
                         Icon(
                             BitChordIcons.ChevronBack,
                             contentDescription = stringResource(R.string.back),
@@ -353,12 +374,14 @@ fun FrostedTopBar(
             ) {
                 if (accessory != null) {
                     Box(Modifier.weight(1f)) { accessory() }
-                    Spacer(Modifier.width(ACCESSORY_GAP))
+                    if (actionsShown) Spacer(Modifier.width(ACCESSORY_GAP))
                 }
-                if (useFloatingChrome) {
-                    ArtworkPageActions(hazeState = backButtonHazeState, content = actions)
-                } else {
-                    actions()
+                if (actionsShown) {
+                    if (useFloatingChrome) {
+                        ArtworkPageActions(hazeState = backButtonHazeState, content = actions)
+                    } else {
+                        actions()
+                    }
                 }
             }
         }

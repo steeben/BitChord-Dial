@@ -175,7 +175,7 @@
     <string name="cancel_all">Tümünü iptal et</string>
     <string name="language">Dil</string>
     <string name="app_language">Uygulama dili</string>
-    <string name="app_language_description">BitChord tarafından kullanılan dili seçin.</string>
+    <string name="app_language_description">Dial tarafından kullanılan dili seçin.</string>
     <string name="english">İngilizce</string>
     <string name="spanish">İspanyolca</string>
     <string name="french">Fransızca</string>
@@ -293,10 +293,10 @@
     <string name="beta">Beta</string>
     <string name="refresh_rate">Yenileme hızı</string>
     <string name="high_performance_before_enabling">Etkinleştirmeden önce</string>
-    <string name="high_performance_battery_warning">Önce BitChord\'un pil kullanımını Sınırsız olarak ayarlayın. Daha yüksek yenileme hızları daha fazla pil, CPU ve GPU kullanır ve cihazınızı ısıtabilir.</string>
+    <string name="high_performance_battery_warning">Önce Dial\'ın pil kullanımını Sınırsız olarak ayarlayın. Daha yüksek yenileme hızları daha fazla pil, CPU ve GPU kullanır ve cihazınızı ısıtabilir.</string>
     <string name="open_battery_settings">Pil ayarlarını aç</string>
     <string name="enable_high_performance_title">Yüksek performans modu etkinleştirilsin mi?</string>
-    <string name="enable_high_performance_confirmation">Yalnızca BitChord\'un pil kullanımı Sınırsız olarak ayarlıysa etkinleştirin. Cihaz ısındığında veya pil azaldığında Android yine de yenileme hızını sınırlayabilir.</string>
+    <string name="enable_high_performance_confirmation">Yalnızca Dial\'ın pil kullanımı Sınırsız olarak ayarlıysa etkinleştirin. Cihaz ısındığında veya pil azaldığında Android yine de yenileme hızını sınırlayabilir.</string>
     <string name="enable">Etkinleştir</string>
     <string name="not_yet">Henüz değil</string>
     <string name="activity">Etkinlik</string>
@@ -331,7 +331,7 @@
     <string name="discord_presence_footer">Parça, konum veya çalma durumu değiştiğinde kart güncellenir. Çalma durduğunda temizlenir.</string>
     <string name="discord_show_audio_quality">Ses kalitesini göster</string>
     <string name="discord_show_audio_quality_subtitle">Durum kartında Hi-Res, kayıpsız ve Dolby bilgileri</string>
-    <string name="discord_sign_in_footer">Giriş yapmak Discord\'un giriş sayfasını açar. BitChord\'a hiçbir şey yazılmaz.</string>
+    <string name="discord_sign_in_footer">Giriş yapmak Discord\'un giriş sayfasını açar. Dial\'a hiçbir şey yazılmaz.</string>
     <string name="discord_token">Discord belirteci</string>
     <string name="discord_token_description">Discord hesap belirtecinizi yapıştırın. Bu cihazda şifreli kalır ve yalnızca Discord\'a gönderilir.</string>
     <string name="discord_token_rejected">Discord bu belirteci reddetti.</string>
@@ -434,8 +434,8 @@
     <string name="lastfm_api_key">API anahtarı</string>
     <string name="lastfm_shared_secret">Paylaşılan gizli anahtar</string>
     <string name="lastfm_own_api_description">Bu sürümde Last.fm API hesabı yok. last.fm/api/account/create adresinden ücretsiz oluşturup API anahtarını ve paylaşılan gizli anahtarı buraya yapıştırın.</string>
-    <string name="lastfm_browser_description">BitChord\'un scrobble yapmasına izin vermek için last.fm\'e yönlendirileceksiniz. Şifreniz Last.fm\'de kalır.</string>
-    <string name="lastfm_browser_waiting">last.fm\'de İzin Ver\'e dokunun, sonra buraya dönün. BitChord girişi kendisi tamamlar.</string>
+    <string name="lastfm_browser_description">Dial\'ın scrobble yapmasına izin vermek için last.fm\'e yönlendirileceksiniz. Şifreniz Last.fm\'de kalır.</string>
+    <string name="lastfm_browser_waiting">last.fm\'de İzin Ver\'e dokunun, sonra buraya dönün. Dial girişi kendisi tamamlar.</string>
     <string name="lastfm_browser_sign_in">last.fm\'de devam et</string>
     <string name="lastfm_browser_done">Erişime izin verdim</string>
     <string name="lastfm_use_password">Bunun yerine şifre kullan</string>
@@ -510,7 +510,7 @@
     <string name="sleep_timer_custom">Özel</string>
     <string name="start_sleep_timer">Zamanlayıcıyı başlat</string>
     <string name="sources_no_lossless">Etkin hiçbir kaynak kayıpsız ses sağlayamıyor. Yeniden kodlama yapmadan mevcut kayıpsız dosyaları çalmak için özel bir modül ekleyin.</string>
-    <string name="sources_order_footer">Bir kaynakta parça yoksa veya ulaşılamıyorsa BitChord bir sonrakini dener. YouTube üzerindeki kaynaklar daha iyi bir sürüm döndürdüklerinde onun kaydının yerini alabilir.</string>
+    <string name="sources_order_footer">Bir kaynakta parça yoksa veya ulaşılamıyorsa Dial bir sonrakini dener. YouTube üzerindeki kaynaklar daha iyi bir sürüm döndürdüklerinde onun kaydının yerini alabilir.</string>
     <string name="sources_order_header">Kaynaklar, bu sırayla denenir</string>
     <string name="sources_quality_capped">Bu bağlantı Yüksek kalitenin altına ayarlandığından, akışlar bu sınıra uyacak şekilde yeniden kodlanır. İndirmeler etkilenmez.</string>
     <string name="jiosaavn_mismatch_warning">Bir şarkının yanlış sürümünü eşleştirebilir. Riski sana ait olmak üzere etkinleştir.</string>
@@ -651,7 +651,7 @@
     <string name="webdav_subtitle">Sunucundaki müzikler</string>
     <string name="webdav_not_configured">Kaynaklar bölümünden bir sunucu bağla</string>
     <string name="webdav_empty">WebDAV sunucusunda ses dosyası bulunamadı. Ayarlar\'daki URL\'yi kontrol et.</string>
-    <string name="webdav_description">BitChord\'u bir WebDAV müzik klasörüne yönlendir — Nextcloud müzik dizinin ya da WebDAV destekleyen herhangi bir sunucu.</string>
+    <string name="webdav_description">Dial\'ı bir WebDAV müzik klasörüne yönlendir — Nextcloud müzik dizinin ya da WebDAV destekleyen herhangi bir sunucu.</string>
     <string name="webdav_server_url">Sunucu URL\'si</string>
     <string name="webdav_server_url_hint">https://cloud.example.com/remote.php/dav/files/user/Music</string>
     <string name="webdav_disconnect">Bağlantıyı kes</string>
@@ -668,7 +668,7 @@
     <string name="smb_subtitle">Paylaşılan klasördeki müzikler</string>
     <string name="smb_not_configured">Kaynaklar bölümünden bir paylaşım bağla</string>
     <string name="smb_empty">SMB paylaşımında ses dosyası bulunamadı. Kaynaklar\'daki sunucuyu kontrol et.</string>
-    <string name="smb_description">BitChord\'u paylaşılan bir müzik klasörüne yönlendir — SMB kullanan bir NAS ya da Windows paylaşımı.</string>
+    <string name="smb_description">Dial\'ı paylaşılan bir müzik klasörüne yönlendir — SMB kullanan bir NAS ya da Windows paylaşımı.</string>
     <string name="smb_server_hint">nas.local veya 192.168.1.10:4445</string>
     <string name="smb_share_hint">Paylaşım adı, ör. Music</string>
     <string name="smb_folder_hint">Klasör (isteğe bağlı)</string>
@@ -849,9 +849,9 @@
 
     <string name="add_addon">Eklenti ekle</string>
 
-    <string name="add_addon_detail">BitChord\'u barındırdığınız veya bağlantısını aldığınız bir eklenti sunucusuna yönlendirin</string>
+    <string name="add_addon_detail">Dial\'ı barındırdığınız veya bağlantısını aldığınız bir eklenti sunucusuna yönlendirin</string>
 
-    <string name="addon_url_description">Eklentinin URL\'sini yapıştırın — kök dizin veya manifest.json. BitChord arama ve oynatma yeteneklerini okur.</string>
+    <string name="addon_url_description">Eklentinin URL\'sini yapıştırın — kök dizin veya manifest.json. Dial arama ve oynatma yeteneklerini okur.</string>
 
     <string name="advanced_options">Gelişmiş seçenekler</string>
 
@@ -978,7 +978,7 @@
 
     <string name="sort_library">Sırala</string>
 
-    <string name="source_unrecognised">BitChord bu bağlantıyı tanıyamadı</string>
+    <string name="source_unrecognised">Dial bu bağlantıyı tanıyamadı</string>
 
     <string name="source_skipped_by_quality">%1$s üzerinde kullanılmıyor · kalite %2$s olarak ayarlandı</string>
 
@@ -1045,7 +1045,7 @@
     <string name="smart_version_alignment">Akıllı ses hizalama</string>
     <string name="smart_version_alignment_subtitle">Tam karşılık gelen çalma anını bulmak için ses dalga biçimlerini analiz eder</string>
 
-    <string name="equalizer_footer">BitChord içindeki sesi, sisteme ulaşmadan önce şekillendirir.</string>
+    <string name="equalizer_footer">Dial içindeki sesi, sisteme ulaşmadan önce şekillendirir.</string>
 
     <string name="equalizer_dynamic">Dinamik</string>
 
@@ -1088,7 +1088,7 @@
 
     <string name="system_equalizer_subtitle">Cihazınızın kendi paneli</string>
 
-    <string name="system_equalizer_footer">BitChord\'unkinden sonra, tüm ses oturumunda çalışır. İkisini birden kullanmak ikisini de uygular.</string>
+    <string name="system_equalizer_footer">Dial\'ınkinden sonra, tüm ses oturumunda çalışır. İkisini birden kullanmak ikisini de uygular.</string>
 
     <string name="eq_preset_flat">Düz</string>
 
@@ -1330,8 +1330,8 @@
     <string name="version_switch_in_party">Everyone in Listen Together hears the same version</string>
     <string name="bit_perfect_output">Bit-perfect çıkış</string>
     <string name="bit_perfect_bypassed_footer">Bit-perfect çıkış hazır, bu nedenle soluk ayarlar atlanır ve Dolby Atmos sürümleri istenmez. DAC çıkarıldığında veya mod kapatıldığında yeniden çalışırlar.</string>
-    <string name="bit_perfect_sheet_warning">Parçayı DAC\'a değiştirmeden gönderir. Ekolayzır, ses yüksekliği normalleştirme, çapraz geçiş, Automix, çalma hızı ve BitChord\'un ses düzeyi atlanır.</string>
-    <string name="bit_perfect_mode_off_subtitle">Ses, Android\'in mikseri ve BitChord\'un efektlerinden geçer.</string>
+    <string name="bit_perfect_sheet_warning">Parçayı DAC\'a değiştirmeden gönderir. Ekolayzır, ses yüksekliği normalleştirme, çapraz geçiş, Automix, çalma hızı ve Dial\'ın ses düzeyi atlanır.</string>
+    <string name="bit_perfect_mode_off_subtitle">Ses, Android\'in mikseri ve Dial\'ın efektlerinden geçer.</string>
     <string name="bit_perfect_mode_usb_android">USB DAC</string>
     <string name="bit_perfect_mode_usb_android_subtitle">Android 14, DAC\'ı her parçanın kendi hızında ve bit derinliğinde, miksleme veya yeniden örnekleme olmadan açar.</string>
     <string name="bit_perfect_requires_android_14">Android 14 veya üstü gerekir</string>
@@ -1339,13 +1339,13 @@
     <string name="bit_perfect_mode_dap_exclusive_subtitle">Kendi DAC\'ı olan müzik çalarlar için. Kulaklık veya hat çıkışını her parçanın kendi hızında özel olarak açar. Her cihaz özel moda izin vermez.</string>
     <string name="bit_perfect_requires_android_8_1">Android 8.1 veya üstü gerekir</string>
     <string name="bit_perfect_mode_usb_direct">USB DAC (doğrudan sürücü)</string>
-    <string name="bit_perfect_mode_usb_direct_subtitle">BitChord, DAC\'ı her Android sürümünde kendisi yönetir ve ses düzeyini DAC üzerinde ayarlar. USB izni ister. Normal çıkıştan çok daha yüksek ses verebilir.</string>
+    <string name="bit_perfect_mode_usb_direct_subtitle">Dial, DAC\'ı her Android sürümünde kendisi yönetir ve ses düzeyini DAC üzerinde ayarlar. USB izni ister. Normal çıkıştan çok daha yüksek ses verebilir.</string>
     <string name="dac_volume">DAC ses düzeyi</string>
     <string name="dac_volume_subtitle">DAC\'ın kendisinde ayarlanır; müzik ölçeklenmez</string>
     <string name="usb_allow_fixed_volume">Ses kontrolü olmayan DAC\'lara izin ver</string>
     <string name="usb_allow_fixed_volume_subtitle">Aksi takdirde böyle bir DAC normal çıkıştan çalar</string>
     <string name="usb_allow_fixed_volume_confirm_title">Tam ölçekte çalınsın mı?</string>
-    <string name="usb_allow_fixed_volume_confirm_message">BitChord bu tür bir DAC\'ın ses düzeyini ayarlayamaz, bu yüzden tam ölçekte çalar ve yalnızca varsa DAC\'ın kendi düğmesi ses düzeyini denetler. Hassas kulaklıklarla tehlikeli derecede yüksek olabilir.</string>
+    <string name="usb_allow_fixed_volume_confirm_message">Dial bu tür bir DAC\'ın ses düzeyini ayarlayamaz, bu yüzden tam ölçekte çalar ve yalnızca varsa DAC\'ın kendi düğmesi ses düzeyini denetler. Hassas kulaklıklarla tehlikeli derecede yüksek olabilir.</string>
     <string name="convert_for_limited_dac">Düşük özellikli DAC\'lar için dönüştür</string>
     <string name="convert_for_limited_dac_subtitle">DAC\'ınızın sınırını aşan parçaları en yüksek biçimine dönüştürür. Parçaların başlaması daha uzun sürebilir ve özgün kayda göre bit-perfect olmaz.</string>
     <string name="bit_perfect_confirm_title">Bit-perfect çıkış açılsın mı?</string>
