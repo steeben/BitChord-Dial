@@ -323,12 +323,16 @@
             </intent-filter>
         </activity-alias>
 
+        <!--
+          BitChord's own icons, retired the same way: drawn with the Dark icon until
+          AppIcon.migrateRetired moves an install that had picked one onto LauncherDark.
+        -->
         <activity-alias
             android:name=".LauncherBitChord"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_bitchord"
-            android:roundIcon="@mipmap/ic_bitchord"
+            android:icon="@mipmap/ic_launcher_dark"
+            android:roundIcon="@mipmap/ic_launcher_dark"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -340,8 +344,8 @@
             android:name=".LauncherBitChordMonochrome"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_monochrome"
-            android:roundIcon="@mipmap/ic_monochrome"
+            android:icon="@mipmap/ic_launcher_dark"
+            android:roundIcon="@mipmap/ic_launcher_dark"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -353,8 +357,8 @@
             android:name=".LauncherBitChordGlass"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_liquid_glass"
-            android:roundIcon="@mipmap/ic_liquid_glass"
+            android:icon="@mipmap/ic_launcher_dark"
+            android:roundIcon="@mipmap/ic_launcher_dark"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -366,8 +370,8 @@
             android:name=".LauncherBitChordGlassDark"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_liquid_glass_dark"
-            android:roundIcon="@mipmap/ic_liquid_glass_dark"
+            android:icon="@mipmap/ic_launcher_dark"
+            android:roundIcon="@mipmap/ic_launcher_dark"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -379,8 +383,8 @@
             android:name=".LauncherBitChordGlassClear"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_liquid_glass_clear"
-            android:roundIcon="@mipmap/ic_liquid_glass_clear"
+            android:icon="@mipmap/ic_launcher_dark"
+            android:roundIcon="@mipmap/ic_launcher_dark"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -392,8 +396,8 @@
             android:name=".LauncherBitChordGlassClearDark"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_liquid_glass_clear_dark"
-            android:roundIcon="@mipmap/ic_liquid_glass_clear_dark"
+            android:icon="@mipmap/ic_launcher_dark"
+            android:roundIcon="@mipmap/ic_launcher_dark"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -405,8 +409,8 @@
             android:name=".LauncherBitChordSamsungGlass"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_samsung_glass"
-            android:roundIcon="@mipmap/ic_samsung_glass"
+            android:icon="@mipmap/ic_launcher_dark"
+            android:roundIcon="@mipmap/ic_launcher_dark"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -418,8 +422,8 @@
             android:name=".LauncherBitChordSamsungGlassDark"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_samsung_glass_dark"
-            android:roundIcon="@mipmap/ic_samsung_glass_dark"
+            android:icon="@mipmap/ic_launcher_dark"
+            android:roundIcon="@mipmap/ic_launcher_dark"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -431,8 +435,8 @@
             android:name=".LauncherBitChordSamsungGlassClear"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_samsung_glass_clear"
-            android:roundIcon="@mipmap/ic_samsung_glass_clear"
+            android:icon="@mipmap/ic_launcher_dark"
+            android:roundIcon="@mipmap/ic_launcher_dark"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -444,8 +448,8 @@
             android:name=".LauncherBitChordSamsungGlassClearDark"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_samsung_glass_clear_dark"
-            android:roundIcon="@mipmap/ic_samsung_glass_clear_dark"
+            android:icon="@mipmap/ic_launcher_dark"
+            android:roundIcon="@mipmap/ic_launcher_dark"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -457,8 +461,8 @@
             android:name=".LauncherBitChordPixelGlass"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_pixel_glass"
-            android:roundIcon="@mipmap/ic_pixel_glass"
+            android:icon="@mipmap/ic_launcher_dark"
+            android:roundIcon="@mipmap/ic_launcher_dark"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -470,8 +474,8 @@
             android:name=".LauncherBitChordPixelGlassDark"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_pixel_glass_dark"
-            android:roundIcon="@mipmap/ic_pixel_glass_dark"
+            android:icon="@mipmap/ic_launcher_dark"
+            android:roundIcon="@mipmap/ic_launcher_dark"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -483,8 +487,8 @@
             android:name=".LauncherBitChordPixelGlassClear"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_pixel_glass_clear"
-            android:roundIcon="@mipmap/ic_pixel_glass_clear"
+            android:icon="@mipmap/ic_launcher_dark"
+            android:roundIcon="@mipmap/ic_launcher_dark"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -496,8 +500,8 @@
             android:name=".LauncherBitChordPixelGlassClearDark"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_pixel_glass_clear_dark"
-            android:roundIcon="@mipmap/ic_pixel_glass_clear_dark"
+            android:icon="@mipmap/ic_launcher_dark"
+            android:roundIcon="@mipmap/ic_launcher_dark"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -509,8 +513,8 @@
             android:name=".LauncherBitChordNeonSilver"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_neon_silver"
-            android:roundIcon="@mipmap/ic_neon_silver"
+            android:icon="@mipmap/ic_launcher_dark"
+            android:roundIcon="@mipmap/ic_launcher_dark"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -522,8 +526,8 @@
             android:name=".LauncherBitChordNeonCyan"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_neon_cyan"
-            android:roundIcon="@mipmap/ic_neon_cyan"
+            android:icon="@mipmap/ic_launcher_dark"
+            android:roundIcon="@mipmap/ic_launcher_dark"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -535,8 +539,8 @@
             android:name=".LauncherBitChordNeonViolet"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_neon_violet"
-            android:roundIcon="@mipmap/ic_neon_violet"
+            android:icon="@mipmap/ic_launcher_dark"
+            android:roundIcon="@mipmap/ic_launcher_dark"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -548,8 +552,8 @@
             android:name=".LauncherBitChordSamsungNeonSilver"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_samsung_neon_silver"
-            android:roundIcon="@mipmap/ic_samsung_neon_silver"
+            android:icon="@mipmap/ic_launcher_dark"
+            android:roundIcon="@mipmap/ic_launcher_dark"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -561,8 +565,8 @@
             android:name=".LauncherBitChordSamsungNeonCyan"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_samsung_neon_cyan"
-            android:roundIcon="@mipmap/ic_samsung_neon_cyan"
+            android:icon="@mipmap/ic_launcher_dark"
+            android:roundIcon="@mipmap/ic_launcher_dark"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -574,8 +578,8 @@
             android:name=".LauncherBitChordSamsungNeonViolet"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_samsung_neon_violet"
-            android:roundIcon="@mipmap/ic_samsung_neon_violet"
+            android:icon="@mipmap/ic_launcher_dark"
+            android:roundIcon="@mipmap/ic_launcher_dark"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -587,8 +591,8 @@
             android:name=".LauncherBitChordPixelNeonSilver"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_pixel_neon_silver"
-            android:roundIcon="@mipmap/ic_pixel_neon_silver"
+            android:icon="@mipmap/ic_launcher_dark"
+            android:roundIcon="@mipmap/ic_launcher_dark"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -600,8 +604,8 @@
             android:name=".LauncherBitChordPixelNeonCyan"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_pixel_neon_cyan"
-            android:roundIcon="@mipmap/ic_pixel_neon_cyan"
+            android:icon="@mipmap/ic_launcher_dark"
+            android:roundIcon="@mipmap/ic_launcher_dark"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -613,8 +617,8 @@
             android:name=".LauncherBitChordPixelNeonViolet"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_pixel_neon_violet"
-            android:roundIcon="@mipmap/ic_pixel_neon_violet"
+            android:icon="@mipmap/ic_launcher_dark"
+            android:roundIcon="@mipmap/ic_launcher_dark"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

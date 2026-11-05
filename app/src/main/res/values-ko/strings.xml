@@ -163,7 +163,7 @@
     <string name="personalized_recommendations">개인화된 추천 제공</string>
     <string name="play_next">다음에 재생</string>
     <string name="queue">대기열</string>
-    <string name="source_unrecognised">BitChord가 이 링크를 확인할 수 없습니다</string>
+    <string name="source_unrecognised">Dial이 이 링크를 확인할 수 없습니다</string>
     <string name="source_already_added">%1$s 소스로 이미 추가되었습니다</string>
     <string name="source_setup_required">눌러서 설정을 마치세요</string>
     <string name="source_skipped_by_quality">%1$s 이용 안 함 · %2$s 품질 설정됨</string>
@@ -215,7 +215,7 @@
     <string name="cancel_all">모두 취소</string>
     <string name="language">언어</string>
     <string name="app_language">앱 언어</string>
-    <string name="app_language_description">BitChord에서 사용할 언어를 선택하세요.</string>
+    <string name="app_language_description">Dial에서 사용할 언어를 선택하세요.</string>
     <string name="english">영어</string>
     <string name="spanish">스페인어</string>
     <string name="french">프랑스어</string>
@@ -269,7 +269,7 @@
     <string name="smart_version_alignment_subtitle">오디오 파형을 분석해 정확히 일치하는 재생 시점을 맞춥니다</string>
     <string name="equalizer">이퀄라이저</string>
     <string name="equalizer_subtitle">음색, 음역대 7개, 좌우 균형</string>
-    <string name="equalizer_footer">음원이 시스템에 도달하기 전에 BitChord에서 다듬습니다.</string>
+    <string name="equalizer_footer">음원이 시스템에 도달하기 전에 Dial에서 다듬습니다.</string>
     <string name="equalizer_dynamic">동적</string>
     <string name="equalizer_manual">수동</string>
     <string name="equalizer_tone">음색</string>
@@ -292,7 +292,7 @@
     <string name="equalizer_bitstream_footer">이퀄라이저는 디코딩된 음원에만 적용됩니다. 이 곡은 비트스트림 형태로 기기에 곧바로 전달된 뒤에 디코딩되므로, 필터링할 수 있는 샘플이 없습니다.</string>
     <string name="system_equalizer">시스템 이퀄라이저</string>
     <string name="system_equalizer_subtitle">기기 자체 설정</string>
-    <string name="system_equalizer_footer">BitChord 설정 이후, 전체 오디오 세션에 적용됩니다. 두 설정 모두 쓰면 동시에 적용됩니다.</string>
+    <string name="system_equalizer_footer">Dial 설정 이후, 전체 오디오 세션에 적용됩니다. 두 설정 모두 쓰면 동시에 적용됩니다.</string>
     <string name="eq_preset_flat">플랫</string>
     <string name="eq_preset_acoustic">어쿠스틱</string>
     <string name="eq_preset_bass_boost">베이스 강화</string>
@@ -370,10 +370,10 @@
     <string name="beta">베타</string>
     <string name="refresh_rate">주사율</string>
     <string name="high_performance_before_enabling">켜기 전에</string>
-    <string name="high_performance_battery_warning">먼저 BitChord의 배터리 사용을 제한 없음으로 설정하세요. 주사율이 높을수록 배터리, CPU, GPU를 더 사용하며, 기기가 뜨거워질 수 있습니다.</string>
+    <string name="high_performance_battery_warning">먼저 Dial의 배터리 사용을 제한 없음으로 설정하세요. 주사율이 높을수록 배터리, CPU, GPU를 더 사용하며, 기기가 뜨거워질 수 있습니다.</string>
     <string name="open_battery_settings">배터리 설정 열기</string>
     <string name="enable_high_performance_title">고성능 모드를 켜시겠습니까?</string>
-    <string name="enable_high_performance_confirmation">BitChord의 배터리 사용을 제한 없음으로 설정한 경우에만 켜세요. 기기가 뜨겁거나 배터리 잔량이 적다면 Android에서 여전히 주사율을 제한할 수 있습니다.</string>
+    <string name="enable_high_performance_confirmation">Dial의 배터리 사용을 제한 없음으로 설정한 경우에만 켜세요. 기기가 뜨겁거나 배터리 잔량이 적다면 Android에서 여전히 주사율을 제한할 수 있습니다.</string>
     <string name="enable">켜기</string>
     <string name="not_yet">나중에</string>
     <string name="activity">활동</string>
@@ -384,7 +384,7 @@
     <string name="activity_playing">재생 중</string>
     <string name="activity_watching">감상 중</string>
     <string name="add_addon">애드온 추가</string>
-    <string name="add_addon_detail">직접 호스팅하는 애드온 서버나 링크를 받은 서버를 BitChord에 지정하세요</string>
+    <string name="add_addon_detail">직접 호스팅하는 애드온 서버나 링크를 받은 서버를 Dial에 지정하세요</string>
     <string name="add_to_queue">대기열에 추가</string>
     <string name="after_this_song">이 곡 다음에</string>
     <string name="always_on">항상 켬</string>
@@ -416,7 +416,7 @@
     <string name="discord_presence_footer">카드는 음악, 위치, 재생 상태가 바뀔 때 업데이트됩니다. 재생이 중지되면 카드를 지웁니다.</string>
     <string name="discord_show_audio_quality">오디오 품질 표시</string>
     <string name="discord_show_audio_quality_subtitle">활동 카드에 고품질, 무손실, Dolby 사양 표시</string>
-    <string name="discord_sign_in_footer">로그인 시 Discord의 로그인 페이지를 엽니다. 입력 정보가 BitChord로 넘어가지 않습니다.</string>
+    <string name="discord_sign_in_footer">로그인 시 Discord의 로그인 페이지를 엽니다. 입력 정보가 Dial로 넘어가지 않습니다.</string>
     <string name="discord_token">Discord 토큰</string>
     <string name="discord_token_description">Discord 계정의 토큰을 붙여넣으세요. 기기 내에서 암호화된 채로 유지되며 Discord로만 전송됩니다.</string>
     <string name="discord_token_rejected">Discord에서 이 토큰을 거부했습니다.</string>
@@ -569,8 +569,8 @@
     <string name="lastfm_api_key">API 키</string>
     <string name="lastfm_shared_secret">공유 시크릿</string>
     <string name="lastfm_own_api_description">이 빌드에는 Last.fm API 계정이 없습니다. last.fm/api/account/create에서 무료로 만든 뒤 API 키와 공유 시크릿을 여기에 붙여넣으세요.</string>
-    <string name="lastfm_browser_description">BitChord의 스크로블을 허용하려면 last.fm으로 이동합니다. 비밀번호는 Last.fm에만 남습니다.</string>
-    <string name="lastfm_browser_waiting">last.fm에서 허용을 탭한 뒤 여기로 돌아오세요. BitChord가 알아서 로그인을 마칩니다.</string>
+    <string name="lastfm_browser_description">Dial의 스크로블을 허용하려면 last.fm으로 이동합니다. 비밀번호는 Last.fm에만 남습니다.</string>
+    <string name="lastfm_browser_waiting">last.fm에서 허용을 탭한 뒤 여기로 돌아오세요. Dial이 알아서 로그인을 마칩니다.</string>
     <string name="lastfm_browser_sign_in">last.fm에서 계속</string>
     <string name="lastfm_browser_done">접근을 허용했습니다</string>
     <string name="lastfm_use_password">비밀번호로 로그인</string>
@@ -595,7 +595,7 @@
     <string name="max_delay_subtitle">초 단위로 최대 스크로블 지연을 설정합니다</string>
     <string name="min_song_duration">최소 곡 길이</string>
     <string name="min_song_duration_subtitle">이보다 짧은 곡은 스크로블하지 않습니다</string>
-    <string name="addon_url_description">애드온의 루트 경로나 manifest.json으로 가는 URL을 붙여넣으세요. BitChord에서 애드온이 검색하고 스트리밍할 수 있는 항목을 읽은 뒤, 평문으로 음악을 요청합니다.</string>
+    <string name="addon_url_description">애드온의 루트 경로나 manifest.json으로 가는 URL을 붙여넣으세요. Dial에서 애드온이 검색하고 스트리밍할 수 있는 항목을 읽은 뒤, 평문으로 음악을 요청합니다.</string>
     <string name="monthly_listeners">월간 청취자 %1$s</string>
     <string name="name">이름</string>
     <string name="no_playlists_yet">아직 재생목록이 없습니다. 상단의 행을 이용해 새로 만드세요.</string>
@@ -647,7 +647,7 @@
     <string name="signing_in">로그인하는 중…</string>
     <string name="sleep_timer">수면 타이머</string>
     <string name="sources_no_lossless">켜진 소스 중 무손실 오디오를 지원하는 소스가 없습니다. 트랜스코딩 없이 무손실 파일을 재생하려면 애드온을 추가하세요.</string>
-    <string name="sources_order_footer">해당 소스에 음악이 없거나 연결할 수 없으면, BitChord에서 다음 소스 연결을 시도합니다. YouTube보다 상위에 있는 소스에서 더 나은 버전을 제공하는 경우 기존 음원을 교체할 수 있습니다.</string>
+    <string name="sources_order_footer">해당 소스에 음악이 없거나 연결할 수 없으면, Dial에서 다음 소스 연결을 시도합니다. YouTube보다 상위에 있는 소스에서 더 나은 버전을 제공하는 경우 기존 음원을 교체할 수 있습니다.</string>
     <string name="sources_order_header">소스, 이 순서로 연결 시도</string>
     <string name="sources_quality_capped">이 연결 환경에서는 고품질 이하로 설정되었기 때문에, 스트림을 제한에 맞추어 트랜스코딩합니다. 다운로드에는 영향을 주지 않습니다.</string>
     <string name="jiosaavn_mismatch_warning">틀린 버전의 음악을 찾을 수도 있습니다. 위험을 감수할 수 있는 경우에만 켜세요.</string>
@@ -793,7 +793,7 @@
     <string name="webdav_subtitle">내 서버의 음악</string>
     <string name="webdav_not_configured">소스에서 서버에 연결하세요</string>
     <string name="webdav_empty">WebDAV 서버에서 오디오 파일을 찾을 수 없습니다. 설정에서 URL을 확인하세요.</string>
-    <string name="webdav_description">WebDAV 음악 폴더를 BitChord에 지정하세요 — Nextcloud 음악 경로나 WebDAV를 응답하는 아무 서버나 연결할 수 있습니다.</string>
+    <string name="webdav_description">WebDAV 음악 폴더를 Dial에 지정하세요 — Nextcloud 음악 경로나 WebDAV를 응답하는 아무 서버나 연결할 수 있습니다.</string>
     <string name="webdav_server_url">서버 URL</string>
     <string name="webdav_server_url_hint">https://cloud.example.com/remote.php/dav/files/user/Music</string>
     <string name="webdav_disconnect">연결 해제</string>
@@ -810,7 +810,7 @@
     <string name="smb_subtitle">파일 공유로 음악 듣기</string>
     <string name="smb_not_configured">소스에서 공유 서버를 연결하세요</string>
     <string name="smb_empty">SMB 공유 서버에서 오디오 파일을 찾을 수 없습니다. 소스에서 서버를 확인하세요.</string>
-    <string name="smb_description">공유 음악 폴더를 BitChord에 지정하세요 — NAS 또는 SMB를 응답하는 Windows 공유 폴더나 연결할 수 있습니다.</string>
+    <string name="smb_description">공유 음악 폴더를 Dial에 지정하세요 — NAS 또는 SMB를 응답하는 Windows 공유 폴더나 연결할 수 있습니다.</string>
     <string name="smb_server_hint">nas.local 또는 192.168.1.10:4445</string>
     <string name="smb_share_hint">공유 서버 이름, 예: Music</string>
     <string name="smb_folder_hint">공유 서버 내 폴더, 예: media/music (선택)</string>
@@ -1141,8 +1141,8 @@
     <string name="version_switch_in_party">함께 듣기에서는 모두가 같은 버전을 듣습니다</string>
     <string name="bit_perfect_output">비트 퍼펙트 출력</string>
     <string name="bit_perfect_bypassed_footer">비트 퍼펙트 출력이 준비되어 흐리게 표시된 설정은 우회되고 Dolby Atmos 버전은 요청되지 않습니다. DAC를 분리하거나 모드를 끄면 다시 작동합니다.</string>
-    <string name="bit_perfect_sheet_warning">트랙을 변경 없이 DAC로 보냅니다. 이퀄라이저, 체감 음량 평준화, 크로스페이드, 자동 믹스, 재생 속도, BitChord 음량은 우회됩니다.</string>
-    <string name="bit_perfect_mode_off_subtitle">오디오가 Android 믹서와 BitChord 효과를 거칩니다.</string>
+    <string name="bit_perfect_sheet_warning">트랙을 변경 없이 DAC로 보냅니다. 이퀄라이저, 체감 음량 평준화, 크로스페이드, 자동 믹스, 재생 속도, Dial 음량은 우회됩니다.</string>
+    <string name="bit_perfect_mode_off_subtitle">오디오가 Android 믹서와 Dial 효과를 거칩니다.</string>
     <string name="bit_perfect_mode_usb_android">USB DAC</string>
     <string name="bit_perfect_mode_usb_android_subtitle">Android 14가 믹싱이나 리샘플링 없이 각 트랙의 샘플레이트와 비트 심도로 DAC를 엽니다.</string>
     <string name="bit_perfect_requires_android_14">Android 14 이상 필요</string>
@@ -1150,13 +1150,13 @@
     <string name="bit_perfect_mode_dap_exclusive_subtitle">자체 DAC가 있는 음악 플레이어용입니다. 헤드폰 또는 라인 출력을 각 트랙의 샘플레이트로 독점해서 엽니다. 모든 기기가 독점 모드를 허용하는 것은 아닙니다.</string>
     <string name="bit_perfect_requires_android_8_1">Android 8.1 이상 필요</string>
     <string name="bit_perfect_mode_usb_direct">USB DAC(직접 드라이버)</string>
-    <string name="bit_perfect_mode_usb_direct_subtitle">어떤 Android 버전에서든 BitChord가 DAC를 직접 구동하고 음량을 DAC에서 설정합니다. USB 권한을 요청합니다. 일반 출력보다 훨씬 크게 들릴 수 있습니다.</string>
+    <string name="bit_perfect_mode_usb_direct_subtitle">어떤 Android 버전에서든 Dial이 DAC를 직접 구동하고 음량을 DAC에서 설정합니다. USB 권한을 요청합니다. 일반 출력보다 훨씬 크게 들릴 수 있습니다.</string>
     <string name="dac_volume">DAC 음량</string>
     <string name="dac_volume_subtitle">DAC 자체에서 설정되며 음악 데이터는 조정되지 않습니다</string>
     <string name="usb_allow_fixed_volume">음량 조절이 없는 DAC 허용</string>
     <string name="usb_allow_fixed_volume_subtitle">허용하지 않으면 이런 DAC는 일반 출력으로 재생됩니다</string>
     <string name="usb_allow_fixed_volume_confirm_title">최대 레벨로 재생할까요?</string>
-    <string name="usb_allow_fixed_volume_confirm_message">BitChord에서 이 유형의 DAC 음량을 설정할 수 없어 최대 레벨로 재생되며, DAC 자체의 노브가 있는 경우에만 음량을 조절할 수 있습니다. 민감한 헤드폰에서는 위험할 정도로 크게 들릴 수 있습니다.</string>
+    <string name="usb_allow_fixed_volume_confirm_message">Dial에서 이 유형의 DAC 음량을 설정할 수 없어 최대 레벨로 재생되며, DAC 자체의 노브가 있는 경우에만 음량을 조절할 수 있습니다. 민감한 헤드폰에서는 위험할 정도로 크게 들릴 수 있습니다.</string>
     <string name="convert_for_limited_dac">저사양 DAC에 맞게 변환</string>
     <string name="convert_for_limited_dac_subtitle">DAC 한도를 넘는 트랙을 DAC의 최고 포맷으로 변환합니다. 트랙 시작이 더 오래 걸릴 수 있으며 원본 대비 비트 퍼펙트가 아닙니다.</string>
     <string name="bit_perfect_confirm_title">비트 퍼펙트 출력을 켤까요?</string>
