@@ -15,11 +15,13 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.unit.dp
@@ -109,6 +111,28 @@ fun ProvidePlayerInk(artLuminance: Float? = null, content: @Composable () -> Uni
         label = "playerInk",
     )
     CompositionLocalProvider(LocalPlayerInk provides ink, content = content)
+}
+
+/**
+ * The player's controls, drawn in "difference": pure white ink composited onto whatever
+ * is behind it with [BlendMode.Difference], so each pixel of a glyph comes out as the
+ * inverse of the backdrop under it. Over a bright sleeve the controls go dark, over a dark
+ * one they stay light, and across a sleeve that is half and half they change part-way along.
+ *
+ * The ink is forced to plain white here (not the tinted, sometimes darkened ink of
+ * [ProvidePlayerInk]): white is what makes the difference an exact inversion; a cast or a
+ * grey would come out as a colour or a dim smear. The lyrics keep [ProvidePlayerInk]'s ink.
+ *
+ * Put this on the ink alone, never on a glass disc or capsule around it: those would be
+ * inverted too. Where an ancestor is drawn into a layer of its own (a fade in progress), the
+ * blend has only that layer to work against and the ink simply shows as white.
+ */
+internal fun Modifier.differenceInk(): Modifier = graphicsLayer { blendMode = BlendMode.Difference }
+
+/** [content] in the white ink that [differenceInk] needs; pair the two. */
+@Composable
+internal fun ProvideDifferenceInk(content: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalPlayerInk provides Color.White, content = content)
 }
 
 /** Whether a sleeve of [artLuminance] is white enough to switch the player to dark ink. */

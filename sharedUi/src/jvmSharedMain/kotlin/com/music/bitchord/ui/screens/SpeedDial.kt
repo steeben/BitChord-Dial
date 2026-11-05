@@ -102,7 +102,9 @@ import com.music.bitchord.ui.components.LongPressOrigin
 import com.music.bitchord.ui.components.HeldItem
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.graphics.layer.GraphicsLayer
+import com.music.bitchord.ui.components.dialParallax
 import com.music.bitchord.ui.components.dialTileBorder
+import com.music.bitchord.ui.components.dialTileOutset
 import com.music.bitchord.ui.icons.BitChordIcons
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
@@ -804,6 +806,7 @@ private fun SpeedDialTile(
     spot.layer = drawn
     Box(
         modifier = modifier
+            .dialTileOutset()
             .onPlaced { spot.coordinates = it }
             .tilePress(press)
             .drawWithContent {
@@ -825,7 +828,7 @@ private fun SpeedDialTile(
             )
             .contextClick(onLongPress),
     ) {
-        SpeedDialArt(item.thumbnailUrl, item.title, Modifier.fillMaxSize())
+        SpeedDialArt(item.thumbnailUrl, item.title, Modifier.fillMaxSize().dialParallax())
         if (showLabel) {
             Box(
                 Modifier
@@ -906,10 +909,11 @@ private fun HistoryTile(
     val press = rememberTilePress()
     Box(
         modifier
+            .dialTileOutset()
             .tilePress(press)
             .clip(shape)
             .dialTileBorder(shape)
-            .background(DICE_GROUND)
+            .background(HISTORY_GROUND)
             .clickable(
                 interactionSource = press.interactions,
                 indication = null,
@@ -1115,6 +1119,7 @@ private fun LuckyDiceTile(
     val press = rememberTilePress()
     Box(
         modifier
+            .dialTileOutset()
             .tilePress(press)
             .clip(shape)
             .dialTileBorder(shape)
@@ -1223,6 +1228,9 @@ private val DICE_WASHES = listOf(
     DiceWash(Color(0xFF38BDF8), 1f, 0.1f, 0.5f, 0.18f),
 )
 private val DICE_GROUND = Color(0xFF141414)
+
+/** The history tile's ground: the die's grey at half strength, so what is behind shows through. */
+private val HISTORY_GROUND = DICE_GROUND.copy(alpha = 0.5f)
 private val DICE_UNLIT = Color(0xFF262626)
 
 /** The die's squares round its edge, clockwise from the top left (row by row, 0–8). */

@@ -23,8 +23,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -1101,7 +1099,7 @@ fun SettingsScreen(
                 )
             }
             val appIconTitle = stringResource(R.string.app_icon)
-            row(appIconTitle, "icon", "launcher", "logo", "glass") {
+            row(appIconTitle, "icon", "launcher", "logo") {
                 // Read from the package manager rather than a setting, so it is
                 // whatever the launcher is really showing.
                 var selectedIcon by remember { mutableStateOf(AppIcon.current(context)) }
@@ -1138,29 +1136,14 @@ fun SettingsScreen(
                                     },
                                 )
                                 .padding(4.dp)
-                            val preview = option.previewRes
-                            if (preview == null) {
-                                // An ImageView draws the adaptive icon through the
-                                // device's own mask, the shape the launcher will use.
-                                AndroidView(
-                                    factory = { ctx ->
-                                        android.widget.ImageView(ctx).apply { setImageResource(option.iconRes) }
-                                    },
-                                    modifier = tile,
-                                )
-                            } else {
-                                // A shaped icon's foreground holds the finished icon on
-                                // the central 72 of 108 dp: scaled 1.5× it fills the tile
-                                // as designed, rather than through the device's mask.
-                                Box(tile.clipToBounds(), contentAlignment = Alignment.Center) {
-                                    Image(
-                                        painter = painterResource(preview),
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Fit,
-                                        modifier = Modifier.fillMaxSize().scale(1.5f),
-                                    )
-                                }
-                            }
+                            // An ImageView draws the adaptive icon through the
+                            // device's own mask, the shape the launcher will use.
+                            AndroidView(
+                                factory = { ctx ->
+                                    android.widget.ImageView(ctx).apply { setImageResource(option.iconRes) }
+                                },
+                                modifier = tile,
+                            )
                             Text(
                                 text = stringResource(option.labelRes),
                                 textAlign = TextAlign.Center,

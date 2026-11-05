@@ -15,6 +15,11 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.activity.compose.BackHandler
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -621,25 +626,14 @@ fun SongActionsSheet(
         }
         // Near the bottom, just above the log: a repair for the track playing
         // now, reached for rarely and only when something is visibly wrong.
-        canvasAudioFixes?.takeIf { it.isNotEmpty() }?.let { choices ->
+        // Its choices slide up as a page of their own — see [SongFixPage].
+        if (!canvasAudioFixes.isNullOrEmpty()) {
             ActionRow(
                 icon = Icons.Rounded.Build,
                 label = stringResource(R.string.fix_canvas_audio_mismatch),
                 accent = palette.accent,
-                highlighted = showingCanvasAudioFixes,
-                onClick = { showingCanvasAudioFixes = !showingCanvasAudioFixes },
+                onClick = { showingCanvasAudioFixes = true },
             )
-            if (showingCanvasAudioFixes) {
-                choices.forEach { choice ->
-                    ActionRow(
-                        icon = choice.icon,
-                        label = choice.label,
-                        description = choice.description,
-                        accent = palette.accent,
-                        onClick = choice.onClick,
-                    )
-                }
-            }
         }
         // Last, and only from the player: it is about the track playing right
         // now rather than about the song as a thing in a library, and it is
@@ -647,6 +641,15 @@ fun SongActionsSheet(
         onCopyLog?.let {
             ActionRow(Icons.Rounded.BugReport, stringResource(R.string.copy_log), accent = palette.accent, onClick = it)
         }
+    }
+
+    // The fix choices are a page that slides up over the menu; back (the
+    // arrow or the system gesture) drops it again rather than closing it all.
+    val fixChoices = canvasAudioFixes.orEmpty()
+    val fixing = showingCanvasAudioFixes && fixChoices.isNotEmpty()
+    BackHandler(enabled = fixing) { showingCanvasAudioFixes = false }
+    val fixPage: @Composable () -> Unit = {
+        SongFixPage(song = song, choices = fixChoices, palette = palette, onBack = { showingCanvasAudioFixes = false })
     }
 
     if (menu) {
@@ -657,7 +660,7 @@ fun SongActionsSheet(
                 if (pickingSleepTimer) {
                     SleepTimerPicker(palette = palette, onBack = { pickingSleepTimer = false })
                 } else {
-                    rows()
+                    SlideUpPage(showing = fixing, page = fixPage) { Column(Modifier.fillMaxWidth(), content = rows) }
                 }
             }
         }
@@ -668,11 +671,13 @@ fun SongActionsSheet(
         when {
             pickingSleepTimer -> SleepTimerPicker(palette = palette, onBack = { pickingSleepTimer = false })
             showingSongInfo -> SongInfoPage(song = song, palette = palette, onBack = { showingSongInfo = false })
-            else -> {
-                SheetTrackHeader(song, subtitleColor = palette.onBackgroundVariant)
-                HorizontalDivider(thickness = 0.5.dp, color = palette.divider)
-                rows()
-                Spacer(Modifier.height(24.dp))
+            else -> SlideUpPage(showing = fixing, page = fixPage) {
+                Column(Modifier.fillMaxWidth()) {
+                    SheetTrackHeader(song, subtitleColor = palette.onBackgroundVariant)
+                    HorizontalDivider(thickness = 0.5.dp, color = palette.divider)
+                    rows()
+                    Spacer(Modifier.height(24.dp))
+                }
             }
         }
     }
@@ -681,6 +686,63 @@ fun SongActionsSheet(
         Column(modifier.fillMaxWidth(), content = page)
     } else {
         TintedSheet(palette = palette, imageUrl = song.thumbnailUrl, modifier = modifier, content = page)
+    }
+}
+
+/**
+ * Swaps [content] for [page] by sliding the page up from the menu's bottom
+ * edge while the rows behind it sink back and fade; going back runs it in
+ * reverse. The menu springs to the page's height as it goes.
+ */
+@Composable
+private fun SlideUpPage(showing: Boolean, page: @Composable () -> Unit, content: @Composable () -> Unit) {
+    AnimatedContent(
+        targetState = showing,
+        transitionSpec = {
+            val slide = spring<IntOffset>(dampingRatio = 0.88f, stiffness = Spring.StiffnessMediumLow)
+            val size = SizeTransform(clip = true) { _, _ ->
+                spring(dampingRatio = 0.9f, stiffness = Spring.StiffnessMediumLow)
+            }
+            if (targetState) {
+                (slideInVertically(slide) { it } + fadeIn(tween(180)))
+                    .togetherWith(fadeOut(tween(220)) + scaleOut(tween(260), targetScale = 0.94f))
+                    .using(size)
+            } else {
+                (fadeIn(tween(240, delayMillis = 60)) + scaleIn(tween(280, delayMillis = 60), initialScale = 0.94f))
+                    .togetherWith(slideOutVertically(slide) { it } + fadeOut(tween(220, delayMillis = 80)))
+                    .using(size)
+                    .apply { targetContentZIndex = -1f }
+            }
+        },
+        contentAlignment = Alignment.TopStart,
+        label = "slideUpPage",
+    ) { onPage ->
+        if (onPage) page() else content()
+    }
+}
+
+/**
+ * The repairs for the playing track's Canvas and audio, on a page of their
+ * own under a back arrow, reached from the menu's fix row.
+ */
+@Composable
+private fun SongFixPage(song: Song, choices: List<SongMenuChoice>, palette: ArtworkPalette, onBack: () -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+        SleepTimerHeader(
+            title = stringResource(R.string.fix_canvas_audio_mismatch),
+            subtitle = listOf(song.title, song.artist).filter { it.isNotBlank() }.joinToString(" · "),
+            onBack = onBack,
+        )
+        HorizontalDivider(thickness = 0.5.dp, color = palette.divider)
+        choices.forEach { choice ->
+            ActionRow(
+                icon = choice.icon,
+                label = choice.label,
+                description = choice.description,
+                accent = palette.accent,
+                onClick = choice.onClick,
+            )
+        }
     }
 }
 
