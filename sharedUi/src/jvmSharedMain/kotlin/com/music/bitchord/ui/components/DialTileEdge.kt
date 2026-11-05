@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.unit.dp
 
 /** How the dials' tiles are edged. */
@@ -22,7 +23,7 @@ enum class DialTileStyle {
     /** A bevelled rim that catches the light along the top. */
     EDGE,
 
-    /** Liquid glass's own rim, bending the artwork slightly along the edge, with none of its blur. */
+    /** Clear glass over the art, which fills the tile: bent and frosted only along the edge. */
     GLASS,
 }
 
@@ -36,9 +37,8 @@ val LocalDialTileGlassEdge = staticCompositionLocalOf<((Shape) -> Modifier)?> { 
 
 /**
  * How far past its cell a tile reaches on each side, set by the app: glass
- * tiles set their artwork inside a rim of glass, and grow outward by most of
- * that rim so the art inside stays close to the size the other styles show.
- * Zero while tiles aren't glass, or the glass is drawn without its rim.
+ * tiles grow outward a little, their art filling them edge to edge. Zero
+ * while tiles aren't glass.
  */
 val LocalDialTileOutset = staticCompositionLocalOf { 0.dp }
 
@@ -60,6 +60,19 @@ fun Modifier.dialTileOutset(): Modifier = composed {
             placeable.place(-grow, -grow)
         }
     }
+}
+
+/**
+ * Where a tile's title sits in from its bottom-left corner: 8dp in and 6dp
+ * up, or, on a tile grown past its cell by [LocalDialTileOutset], closer to
+ * the edge by more than the tile grew, so the title moves outward with it.
+ */
+fun Modifier.dialTileLabelPadding(): Modifier = composed {
+    val outset = LocalDialTileOutset.current.coerceAtLeast(0.dp)
+    padding(
+        horizontal = (8.dp - outset * 1.5f).coerceAtLeast(4.dp),
+        vertical = (6.dp - outset).coerceAtLeast(3.dp),
+    )
 }
 
 /**

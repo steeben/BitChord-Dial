@@ -45,18 +45,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.graphicsLayer
 import com.music.bitchord.ui.components.backdrop.RuntimeShader
-import com.music.bitchord.ui.components.backdrop.internal.RoundedRectRefractionShaderString
+import com.music.bitchord.ui.components.backdrop.internal.DialTileGlassShaderString
 import com.music.bitchord.ui.components.backdrop.internal.RuntimeShaderEffect
 import com.music.bitchord.ui.components.backdrop.shadow.Shadow
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.CornerSize
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.LayoutDirection
 
 /** Whether the liquid glass nav bar is turned on — see [AppSettings.liquidGlass]. */
 val LocalLiquidGlassEnabled = staticCompositionLocalOf { false }
@@ -436,93 +429,55 @@ private val DIAL_TILE_WARP_BAND = 12.dp
 private val DIAL_TILE_WARP_AMOUNT = 9.dp
 
 /**
- * The dial's tiles in their Glass style: each tile a pane of liquid glass,
- * drawn as [liquidGlass] draws the bar, sampling the colour behind the dial
- * (see [DialTileBackdropLayer]), with the artwork set in it a little smaller
- * and rounded to match, so a rim of glass shows all the way round and bends
- * and lights up with whatever is behind it.
+ * The Glass style's frost: fixed, whatever the bar's glass options say. The
+ * glass is fully clear, with no tint and no darkening; only its edge is
+ * frosted, [DIAL_TILE_GLASS_BLUR] at the rim, fading out [DIAL_TILE_BLUR_BAND] in.
+ */
+private val DIAL_TILE_GLASS_BLUR = 3.dp
+private val DIAL_TILE_BLUR_BAND = 6.dp
+
+/**
+ * The dial's tiles in their Glass style: each tile's own artwork, filling the
+ * whole tile, seen through a pane of clear glass. The glass bends the art
+ * along the rim as a panel's lens bends what is under it, frosts it
+ * [DIAL_TILE_GLASS_BLUR] at the very edge and not at all in the middle, and
+ * wears the same angled light and hairline as [liquidGlass]. It adds no tint.
  *
- * Where the glass can't sample anything — before Android 12, or under
- * "reduce dynamic blur" — the tile keeps its art full size and wears the rim
- * [dialTileWarpEdge] draws instead.
+ * The bend and the frost need Android 13; before that the tile keeps just the
+ * light and the hairline. Under "reduce dynamic blur" the art is bent but not
+ * frosted.
  */
 fun dialTileGlassEdge(shape: Shape): Modifier = Modifier.composed {
-    val backdrop = LocalDialTileBackdrop.current
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
-    if (backdrop == null || shape !is CornerBasedShape || !isGlassSupported() || reduceDynamicBlur) {
-        return@composed dialTileWarpEdge(shape)
-    }
-    Modifier
-        .liquidGlass(shape, backdrop = backdrop, exportedBackdrop = null)
-        .padding(DIAL_TILE_GLASS_RIM)
-        .clip(ConcentricShape(shape, DIAL_TILE_GLASS_RIM))
-}
-
-/** How much of a glass tile is glass, all the way round its artwork. */
-private val DIAL_TILE_GLASS_RIM = 4.dp
-
-/**
- * How far glass tiles reach past their cells on each side (see
- * [dialTileOutset]): 70% of the rim the art was brought in by, so the art
- * comes back close to the size the other styles show and the tile itself is
- * what grows. Zero whenever [dialTileGlassEdge] would draw no rim.
- */
-@Composable
-fun dialTileGlassOutset(style: DialTileStyle): Dp {
-    val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
-    val rimmed = style == DialTileStyle.GLASS && isGlassSupported() && !reduceDynamicBlur
-    return if (rimmed) DIAL_TILE_GLASS_RIM * 0.7f else 0.dp
-}
-
-/**
- * [outer]'s corners, brought in by [inset] so they run parallel to it: the
- * shape of what sits [inset] inside a tile of [outer]'s shape.
- */
-private class ConcentricShape(private val outer: CornerBasedShape, private val inset: Dp) : Shape {
-    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
-        val pad = with(density) { inset.toPx() }
-        val outerSize = Size(size.width + 2f * pad, size.height + 2f * pad)
-        fun corner(c: CornerSize) = CornerSize((c.toPx(outerSize, density) - pad).coerceAtLeast(0f))
-        return RoundedCornerShape(
-            topStart = corner(outer.topStart),
-            topEnd = corner(outer.topEnd),
-            bottomEnd = corner(outer.bottomEnd),
-            bottomStart = corner(outer.bottomStart),
-        ).createOutline(size, layoutDirection, density)
-    }
-
-    override fun equals(other: Any?): Boolean =
-        other is ConcentricShape && other.outer == outer && other.inset == inset
-
-    override fun hashCode(): Int = 31 * outer.hashCode() + inset.hashCode()
-}
-
-/**
- * Liquid glass's edge with nothing behind it to sample: the tile's own
- * artwork bent a little along its rim, as a panel's lens bends what is
- * under it, with the same angled light and hairline as [liquidGlass] on top.
- * Nothing is blurred; the middle of the tile is left as it is. The bend needs
- * Android 13; before that the tile keeps just the light and the hairline.
- */
-private fun dialTileWarpEdge(shape: Shape): Modifier = Modifier.composed {
-    val warp = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && shape is CornerBasedShape) {
-        val shader = remember { RuntimeShader(RoundedRectRefractionShaderString) }
+    val glass = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && shape is CornerBasedShape) {
+        val shader = remember { RuntimeShader(DialTileGlassShaderString) }
         Modifier.graphicsLayer {
             val radius = shape.topStart.toPx(size, this).coerceAtMost(size.minDimension / 2f)
             shader.setFloatUniform("size", size.width, size.height)
-            shader.setFloatUniform("offset", 0f, 0f)
-            shader.setFloatUniform("cornerRadii", radius, radius, radius, radius)
+            shader.setFloatUniform("radius", radius)
             shader.setFloatUniform("refractionHeight", DIAL_TILE_WARP_BAND.toPx())
             shader.setFloatUniform("refractionAmount", -DIAL_TILE_WARP_AMOUNT.toPx())
-            shader.setFloatUniform("depthEffect", 0f)
+            shader.setFloatUniform("blurBand", DIAL_TILE_BLUR_BAND.toPx())
+            shader.setFloatUniform("blur", if (reduceDynamicBlur) 0f else DIAL_TILE_GLASS_BLUR.toPx())
             renderEffect = RuntimeShaderEffect(shader, "content")
         }
     } else {
         Modifier
     }
-    // The light and the hairline go outside the bend, so they stay crisp on top of it.
+    // The light and the hairline go outside the glass, so they stay crisp on top of it.
     Modifier
         .then(HighlightElement(shapeProvider = ShapeProvider { shape }, highlight = dialTileHighlight))
         .border(GLASS_EDGE_WIDTH, GLASS_EDGE_COLOR, shape)
-        .then(warp)
+        .then(glass)
 }
+
+/**
+ * How far glass tiles reach past their cells on each side (see
+ * [dialTileOutset]): a touch, so the Glass style's tiles, art and all, sit
+ * very slightly smaller than they did when the art was set inside a rim.
+ */
+@Composable
+fun dialTileGlassOutset(style: DialTileStyle): Dp =
+    if (style == DialTileStyle.GLASS) DIAL_TILE_GLASS_OUTSET else 0.dp
+
+private val DIAL_TILE_GLASS_OUTSET = 2.dp

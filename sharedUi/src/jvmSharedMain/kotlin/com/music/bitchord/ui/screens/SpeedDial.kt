@@ -104,6 +104,7 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import com.music.bitchord.ui.components.dialParallax
 import com.music.bitchord.ui.components.dialTileBorder
+import com.music.bitchord.ui.components.dialTileLabelPadding
 import com.music.bitchord.ui.components.dialTileOutset
 import com.music.bitchord.ui.icons.BitChordIcons
 import kotlinx.coroutines.delay
@@ -845,7 +846,7 @@ private fun SpeedDialTile(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                    .dialTileLabelPadding(),
             )
         }
         if (newRelease != null) NewReleaseTag(newRelease, Modifier.align(Alignment.TopStart))
@@ -935,7 +936,7 @@ private fun HistoryTile(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                    .dialTileLabelPadding(),
             )
         }
         DimOverlay(dim)
