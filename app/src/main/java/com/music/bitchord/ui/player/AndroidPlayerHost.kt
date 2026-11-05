@@ -13,7 +13,9 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.data.CanvasAudioFixes
 import com.music.bitchord.data.canvas.CanvasArtwork
+import com.music.bitchord.data.canvas.CanvasDownloads
 import com.music.bitchord.data.canvas.CanvasRepository
+import com.music.bitchord.download.Downloads
 import com.music.bitchord.data.listentogether.ListenTogether
 import com.music.bitchord.data.lyrics.LyricLine
 import com.music.bitchord.data.lyrics.LyricsTranslation
@@ -96,15 +98,26 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
 
     // A track the listener set to its album's animated cover (from the ⋯
     // menu's fixes) asks for the album's clip instead of its own.
+    //
+    // A clip saved with the song's download answers first, online or not:
+    // it is the one the listener had when they downloaded it, and it costs
+    // nothing to show. A saved music video answers "no clip" without a lookup,
+    // which is what lets its picture stand in — see [CanvasDownloads].
     override fun cachedCanvas(song: Song): CanvasArtwork? =
-        if (CanvasAudioFixes.showsAlbumArt(song.videoId)) CanvasRepository.cachedAlbum(song) else CanvasRepository.cached(song)
+        CanvasDownloads.storedCanvas(song.videoId)
+            ?: if (CanvasAudioFixes.showsAlbumArt(song.videoId)) CanvasRepository.cachedAlbum(song) else CanvasRepository.cached(song)
 
-    override suspend fun canvasFor(song: Song): CanvasArtwork? =
-        if (CanvasAudioFixes.showsAlbumArt(song.videoId)) {
+    override suspend fun canvasFor(song: Song): CanvasArtwork? {
+        if (CanvasDownloads.has(song.videoId)) return CanvasDownloads.storedCanvas(song.videoId)
+        if (song.videoId in Downloads.saved.value) CanvasDownloads.onDownloadedSongShown(song)
+        return if (CanvasAudioFixes.showsAlbumArt(song.videoId)) {
             CanvasRepository.albumCanvasFor(song) ?: CanvasRepository.canvasFor(song)
         } else {
             CanvasRepository.canvasFor(song)
         }
+    }
+
+    override fun hasDownloadedCanvas(videoId: String): Boolean = CanvasDownloads.has(videoId)
 
     @Composable
     override fun CanvasVideo(spec: CanvasVideoSpec, modifier: Modifier) = AndroidCanvasVideo(spec, modifier)

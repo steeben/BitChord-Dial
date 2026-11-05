@@ -213,7 +213,7 @@
     <string name="synced_lyrics">同步歌词</string>
     <string name="synced_lyrics_subtitle">随着演唱在播放器上高亮显示歌词</string>
     <string name="lyrics_sources">歌词来源</string>
-    <string name="song_cache_limit">歌曲缓存上限</string>
+    <string name="song_cache_limit">缓存上限</string>
     <string name="clear_song_cache">清除歌曲缓存</string>
     <string name="clear_song_cache_subtitle">释放已下载音频占用的空间</string>
     <string name="clear_image_cache">清除图片缓存</string>

@@ -161,4 +161,23 @@
     <string name="speed_dial_source_recommends">Recommends</string>
     <string name="speed_dial_source_mix">Mix</string>
     <string name="dial_new_release">New release</string>
+    <string name="enable_logging">Enable logging</string>
+    <string name="enable_logging_subtitle">Records everything the app logs until you turn it off or close the app, then lets you share or save the log</string>
+    <string name="enable_logging_running">Logging now. Turn it off to share or save the log.</string>
+    <string name="log_ready_title">Log recorded</string>
+    <string name="log_ready_message">The log is %1$s. Share it, or save it to your phone\'s storage.</string>
+    <string name="share_log">Share</string>
+    <string name="save_log">Save to phone</string>
+    <string name="log_saved">Log saved</string>
+    <string name="log_save_failed">Couldn\'t save the log</string>
+    <string name="download_canvases">Download canvases</string>
+    <string name="download_canvases_subtitle">Saves each downloaded song\'s Canvas, or the music video used as one, so it plays offline too</string>
+    <string name="storage_usage">Storage used</string>
+    <string name="storage_audio">Audio</string>
+    <string name="storage_artwork">Artwork &amp; images</string>
+    <string name="storage_canvases">Canvases &amp; videos</string>
+    <string name="storage_other">Other</string>
+    <string name="storage_usage_of_limit">%1$s used of the %2$s cache limit</string>
+    <string name="storage_usage_unlimited">%1$s used, no cache limit</string>
+    <string name="storage_usage_measuring">Measuring…</string>
 </resources>

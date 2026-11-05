@@ -13,4 +13,6 @@
 <paths>
     <cache-path name="shared" path="shared/" />
     <cache-path name="updates" path="updates/" />
+    <!-- A log recorded from Settings' "Enable logging", shared when it ends. -->
+    <cache-path name="logs" path="logs/" />
 </paths>

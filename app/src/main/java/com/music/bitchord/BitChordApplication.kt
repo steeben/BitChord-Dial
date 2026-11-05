@@ -64,9 +64,11 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         // Per-song Canvas/audio fixes, from the player's ⋯ menu.
         com.music.bitchord.data.CanvasAudioFixStore.install(this)
         // The shared data layer (lyrics, the YouTube Music client) logs to
-        // logcat on debug builds only, as the app's own DebugLog always has.
-        if (BuildConfig.DEBUG) {
-            DebugLog.sink = DebugLog.Sink { level, tag, message, error ->
+        // logcat on debug builds only, as the app's own DebugLog always has —
+        // and, in any build, into a log session while Settings' "Enable
+        // logging" is on (TrackLog.toSession is a no-op otherwise).
+        DebugLog.sink = DebugLog.Sink { level, tag, message, error ->
+            if (BuildConfig.DEBUG) {
                 when (level) {
                     'D' -> android.util.Log.d(tag, message, error)
                     'I' -> android.util.Log.i(tag, message, error)
@@ -74,6 +76,7 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
                     else -> android.util.Log.e(tag, message, error)
                 }
             }
+            com.music.bitchord.data.TrackLog.toSession(level, tag, message, error)
         }
         // The Spotify library and import live in the shared module; the tokens are the WebView's.
         SpotifyLibrary.auth = SpotifyLibrary.Auth {
@@ -103,6 +106,8 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
             // all — it is the fix for canvas clips re-fetching the same few
             // seconds of video from the network on every loop.
             CanvasCache.init(this)
+            // The canvases saved with downloaded songs, read ahead of that cache.
+            com.music.bitchord.data.canvas.CanvasDownloads.init(this)
         }
         // Migration-safe: an old single cookie becomes the first encrypted
         // session, while newer installs restore the profile the listener chose.

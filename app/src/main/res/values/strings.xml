@@ -394,7 +394,7 @@
     <string name="synced_lyrics">Synced lyrics</string>
     <string name="synced_lyrics_subtitle">Lights up the words on the player as they’re sung</string>
     <string name="lyrics_sources">Lyrics sources</string>
-    <string name="song_cache_limit">Song cache limit</string>
+    <string name="song_cache_limit">Cache limit</string>
     <string name="clear_song_cache">Clear song cache</string>
     <string name="clear_song_cache_subtitle">Frees space used by downloaded audio</string>
     <string name="clear_image_cache">Clear image cache</string>

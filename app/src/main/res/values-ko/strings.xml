@@ -333,7 +333,7 @@
     <string name="synced_lyrics">싱크 가사</string>
     <string name="synced_lyrics_subtitle">지금 불리는 가사를 밝게 표시합니다</string>
     <string name="lyrics_sources">가사 소스</string>
-    <string name="song_cache_limit">음악 캐시 제한</string>
+    <string name="song_cache_limit">캐시 제한</string>
     <string name="clear_song_cache">음악 캐시 지우기</string>
     <string name="clear_song_cache_subtitle">다운로드한 오디오가 차지한 공간을 확보합니다</string>
     <string name="clear_image_cache">이미지 캐시 지우기</string>

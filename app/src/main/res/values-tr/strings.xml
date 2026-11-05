@@ -258,7 +258,7 @@
     <string name="synced_lyrics">Senkronize sözler</string>
     <string name="synced_lyrics_subtitle">Söylenirken oynatıcıdaki kelimeleri aydınlatır</string>
     <string name="lyrics_sources">Söz kaynakları</string>
-    <string name="song_cache_limit">Şarkı önbelleği sınırı</string>
+    <string name="song_cache_limit">Önbellek sınırı</string>
     <string name="clear_song_cache">Şarkı önbelleğini temizle</string>
     <string name="clear_song_cache_subtitle">İndirilen sesin kullandığı alanı boşaltır</string>
     <string name="clear_image_cache">Resim önbelleğini temizle</string>

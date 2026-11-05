@@ -219,7 +219,7 @@
     <string name="synced_lyrics">מילות שיר מסונכרנות</string>
     <string name="synced_lyrics_subtitle">מדגיש את המילים בנגן בזמן שהן מושרות</string>
     <string name="lyrics_sources">מקורות מילות שיר</string>
-    <string name="song_cache_limit">מגבלת מטמון שירים</string>
+    <string name="song_cache_limit">מגבלת מטמון</string>
     <string name="clear_song_cache">ניקוי מטמון שירים</string>
     <string name="clear_song_cache_subtitle">משחרר שטח שתפוס על ידי אודיו שהורד</string>
     <string name="clear_image_cache">ניקוי מטמון תמונות</string>

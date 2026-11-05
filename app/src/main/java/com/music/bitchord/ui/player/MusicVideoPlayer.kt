@@ -36,6 +36,7 @@ import com.music.bitchord.data.CanvasAudioFixes
 import com.music.bitchord.data.VideoCanvases
 import com.music.bitchord.data.Http
 import com.music.bitchord.data.TrackLog
+import com.music.bitchord.data.canvas.CanvasDownloads
 import com.music.bitchord.data.innertube.InnerTubeXResolver
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.settings.AppSettings
@@ -413,6 +414,27 @@ object MusicVideoEngine {
         val cap = capFor(videoId)
         loadedCap = cap
         loadJob = scope.launch {
+            // Saved with a downloaded song (Storage's "Download canvases"):
+            // played straight from disk, no stream to resolve, online or not.
+            CanvasDownloads.storedVideo(videoId)?.let { (item, stored) ->
+                val exo = player ?: return@launch
+                val source = ProgressiveMediaSource.Factory(
+                    CanvasDownloads.dataSourceFactory(OkHttpDataSource.Factory(Http.client)),
+                ).createMediaSource(item)
+                if (stored.width > 0 && stored.height > 0) _aspect.value = stored.width.toFloat() / stored.height
+                _quality.value = _quality.value.copy(
+                    heights = listOfNotNull(stored.height.takeIf { it > 0 }),
+                    activeHeight = stored.height.takeIf { it > 0 },
+                )
+                val start = pictureTime(controller?.currentPosition?.coerceAtLeast(0L) ?: 0L)
+                exo.setMediaSource(source, (start + seekLeadMs).coerceAtLeast(0L))
+                exo.playWhenReady = controller?.isPlaying == true
+                exo.prepare()
+                lastSeekAt = System.currentTimeMillis()
+                seekStartedAt = lastSeekAt
+                startSync()
+                return@launch
+            }
             val stream = try {
                 cachedStream(videoId, cap) ?: withContext(Dispatchers.IO) {
                     InnerTubeXResolver.extractVideo(videoId, cap)

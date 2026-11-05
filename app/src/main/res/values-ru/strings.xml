@@ -228,7 +228,7 @@
     <string name="synced_lyrics">Синхронизированный текст</string>
     <string name="synced_lyrics_subtitle">Подсвечивает слова в плеере по мере исполнения</string>
     <string name="lyrics_sources">Источники текстов</string>
-    <string name="song_cache_limit">Лимит кэша песен</string>
+    <string name="song_cache_limit">Лимит кэша</string>
     <string name="clear_song_cache">Очистить кэш песен</string>
     <string name="clear_song_cache_subtitle">Освобождает место, занятое загруженным аудио</string>
     <string name="clear_image_cache">Очистить кэш изображений</string>

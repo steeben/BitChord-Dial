@@ -142,7 +142,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -724,7 +723,6 @@ private fun BitChordApp(
     viewModel: MainViewModel = viewModel(),
 ) {
     val context = LocalContext.current
-    val clipboard = LocalClipboardManager.current
     val hazeState = remember { HazeState() }
     // Recording the backdrop layer costs a draw pass, so it only runs when a
     // liquid-glass surface (the nav bar or artwork-page back button) can sample it.
@@ -6371,36 +6369,9 @@ private fun BitChordApp(
                 // drops it for a local file via `isOffline`, this catches
                 // the rest.
                 onShare = share.takeIf { song.videoId.isNotBlank() },
-                // From the player in any build. In a debug build from any song's
-                // menu too: a track that fails is skipped past within seconds,
-                // after which it is no longer the one playing and the player
-                // cannot offer its log, which is exactly the log wanted. The
-                // lines are filed by track, so the copy still holds that
-                // track's story for as long as the buffer keeps it.
-                onCopyLog = if (fromPlayer || BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "benchmark") {
-                    {
-                        songActions = null
-                        scope.launch {
-                            val text = TrackLog.forTrack(song, NerdStats.current.value)
-                            clipboard.setText(AnnotatedString(text))
-                            // The line count, not just "copied": it is the
-                            // one thing the system's own paste confirmation
-                            // doesn't say, and an empty log is a real
-                            // outcome worth seeing rather than a silent one.
-                            Toast.makeText(
-                                context,
-                                context.resources.getQuantityString(
-                                    R.plurals.log_copied_line_count,
-                                    text.lineSequence().count(),
-                                    text.lineSequence().count(),
-                                ),
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                        }
-                    }
-                } else {
-                    null
-                },
+                // Copy log is hidden: Settings' "Enable logging" records a
+                // whole session to share or save instead.
+                onCopyLog = null,
                 onLyricsOffset = if (fromPlayer) {
                     {
                         songActions = null

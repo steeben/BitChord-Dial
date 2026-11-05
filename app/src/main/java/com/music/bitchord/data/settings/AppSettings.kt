@@ -240,6 +240,14 @@ object AppSettings {
     val exportDownloads = MutableStateFlow(false)
 
     /**
+     * Save a downloaded song's Canvas with it — the looping clip, or the music
+     * video standing in as its Canvas — so the player still shows it offline.
+     * Off by default: a clip adds a few megabytes to every download and a
+     * music video can add far more. See [com.music.bitchord.data.canvas.CanvasDownloads].
+     */
+    val downloadCanvases = MutableStateFlow(false)
+
+    /**
      * Check the playlists downloaded whole for newly added songs and download
      * them, in the background. Off by default: it spends data and storage
      * without being asked each time. See [com.music.bitchord.download.PlaylistSync].
@@ -915,6 +923,7 @@ object AppSettings {
         downloadQuality.value = readDownloadQuality()
         wifiOnlyDownloads.value = prefs.getBoolean(KEY_WIFI_ONLY_DOWNLOADS, true)
         exportDownloads.value = prefs.getBoolean(KEY_EXPORT_DOWNLOADS, false)
+        downloadCanvases.value = prefs.getBoolean(KEY_DOWNLOAD_CANVASES, false)
         syncDownloadedPlaylists.value = prefs.getBoolean(KEY_SYNC_DOWNLOADED_PLAYLISTS, false)
         crossfadeSeconds.value = prefs.getInt(KEY_CROSSFADE, 0)
         smartFadeEnabled.value = prefs.getBoolean(KEY_SMART_FADE, false)
@@ -1727,6 +1736,11 @@ object AppSettings {
         prefs.edit().putBoolean(KEY_EXPORT_DOWNLOADS, value).apply()
     }
 
+    fun setDownloadCanvases(value: Boolean) {
+        downloadCanvases.value = value
+        prefs.edit().putBoolean(KEY_DOWNLOAD_CANVASES, value).apply()
+    }
+
     fun setSyncDownloadedPlaylists(value: Boolean) {
         syncDownloadedPlaylists.value = value
         prefs.edit().putBoolean(KEY_SYNC_DOWNLOADED_PLAYLISTS, value).apply()
@@ -2168,6 +2182,7 @@ object AppSettings {
     private const val KEY_QUALITY_DOWNLOAD = "audio_quality_download"
     private const val KEY_WIFI_ONLY_DOWNLOADS = "wifi_only_downloads"
     private const val KEY_EXPORT_DOWNLOADS = "export_downloads"
+    private const val KEY_DOWNLOAD_CANVASES = "download_canvases"
     private const val KEY_LOSSLESS = "lossless_audio"
     private const val KEY_SYNC_DOWNLOADED_PLAYLISTS = "sync_downloaded_playlists"
     private const val KEY_CROSSFADE = "crossfade_seconds"

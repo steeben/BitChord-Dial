@@ -218,7 +218,7 @@
     <string name="synced_lyrics">Synchronisierte Songtexte</string>
     <string name="synced_lyrics_subtitle">Hebt die Wörter im Player passend zum Gesang hervor</string>
     <string name="lyrics_sources">Songtext-Quellen</string>
-    <string name="song_cache_limit">Song-Cache-Limit</string>
+    <string name="song_cache_limit">Cache-Limit</string>
     <string name="clear_song_cache">Song-Cache leeren</string>
     <string name="clear_song_cache_subtitle">Gibt den von heruntergeladenem Audio belegten Speicher frei</string>
     <string name="clear_image_cache">Bild-Cache leeren</string>

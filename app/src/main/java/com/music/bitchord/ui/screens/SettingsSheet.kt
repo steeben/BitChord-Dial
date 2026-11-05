@@ -1820,6 +1820,10 @@ fun SettingsScreen(
                     steps = CACHE_STOP_UNLIMITED - 1,
                 )
             }
+            val downloadCanvasesTitle = stringResource(R.string.download_canvases)
+            row(downloadCanvasesTitle, "canvas", "video", "offline", "downloads") {
+                DownloadCanvasesRow(downloadCanvasesTitle)
+            }
             val clearSongCacheTitle = stringResource(R.string.clear_song_cache)
             row(clearSongCacheTitle, "cache", "free space") {
                 SettingsRow(
@@ -1842,6 +1846,11 @@ fun SettingsScreen(
                         Toast.makeText(context, context.getString(R.string.image_cache_cleared), Toast.LENGTH_SHORT).show()
                     },
                 )
+            }
+            // Last in the section: what everything above adds up to.
+            val storageUsageTitle = stringResource(R.string.storage_usage)
+            row(storageUsageTitle, "space", "audio", "artwork", "canvas", "video", "size") {
+                StorageUsageBar(limitBytes = cacheLimitBytes)
             }
         }
 
@@ -2053,6 +2062,10 @@ fun SettingsScreen(
                     },
                     onClick = { AppSettings.setShowNerdStats(!nerdStats) },
                 )
+            }
+            val enableLoggingTitle = stringResource(R.string.enable_logging)
+            row(enableLoggingTitle, "log", "debug", "bug", "report", "share") {
+                EnableLoggingRow(enableLoggingTitle)
             }
             val hideUserInfoTitle = stringResource(R.string.hide_user_info)
             row(hideUserInfoTitle, "screenshot", "privacy", "profile", "name", "email", "avatar", "photo") {

@@ -246,7 +246,7 @@
     <string name="synced_lyrics">Letras sincronizadas</string>
     <string name="synced_lyrics_subtitle">Ilumina las palabras mientras se cantan</string>
     <string name="lyrics_sources">Fuentes de letras</string>
-    <string name="song_cache_limit">Límite de caché de canciones</string>
+    <string name="song_cache_limit">Límite de caché</string>
     <string name="clear_song_cache">Borrar caché de canciones</string>
     <string name="clear_song_cache_subtitle">Libera espacio usado por el audio descargado</string>
     <string name="clear_image_cache">Borrar caché de imágenes</string>

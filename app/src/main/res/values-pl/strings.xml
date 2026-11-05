@@ -216,7 +216,7 @@
     <string name="synced_lyrics">Zsynchronizowany tekst</string>
     <string name="synced_lyrics_subtitle">Podświetla słowa na odtwarzaczu w miarę ich śpiewania</string>
     <string name="lyrics_sources">Źródła tekstów</string>
-    <string name="song_cache_limit">Limit pamięci podręcznej utworów</string>
+    <string name="song_cache_limit">Limit pamięci podręcznej</string>
     <string name="clear_song_cache">Wyczyść pamięć podręczną utworów</string>
     <string name="clear_song_cache_subtitle">Zwalnia miejsce zajmowane przez pobrane pliki audio</string>
     <string name="clear_image_cache">Wyczyść pamięć podręczną obrazów</string>

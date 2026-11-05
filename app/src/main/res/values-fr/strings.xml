@@ -219,7 +219,7 @@
     <string name="synced_lyrics">Paroles synchronisées</string>
     <string name="synced_lyrics_subtitle">Met en surbrillance les mots au fil de la chanson</string>
     <string name="lyrics_sources">Sources des paroles</string>
-    <string name="song_cache_limit">Limite du cache des chansons</string>
+    <string name="song_cache_limit">Limite du cache</string>
     <string name="clear_song_cache">Vider le cache des chansons</string>
     <string name="clear_song_cache_subtitle">Libère l\'espace utilisé par l\'audio téléchargé</string>
     <string name="clear_image_cache">Vider le cache des images</string>

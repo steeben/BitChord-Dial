@@ -38,6 +38,13 @@ interface PlayerHost {
     /** Looks a Canvas up for [song]; null is the normal answer. */
     suspend fun canvasFor(song: Song): CanvasArtwork?
 
+    /**
+     * Whether a Canvas was saved on the device with [videoId]'s download —
+     * one that plays without spending data, so the over-cellular guard does
+     * not apply to it.
+     */
+    fun hasDownloadedCanvas(videoId: String): Boolean = false
+
     /** The looping clip over the cover, decoded however this platform decodes video. */
     @Composable
     fun CanvasVideo(spec: CanvasVideoSpec, modifier: Modifier)

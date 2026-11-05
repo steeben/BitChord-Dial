@@ -54,6 +54,13 @@ object VideoCanvases {
         linkFound(songVideoId, musicVideoId)
     }
 
+    /**
+     * A link kept from an earlier session — the music video saved with a
+     * downloaded song as its Canvas — so it shows offline, where [findFor]
+     * cannot look it up again.
+     */
+    fun restore(songVideoId: String, musicVideoId: String) = linkFound(songVideoId, musicVideoId)
+
     private fun linkFound(songVideoId: String, musicVideoId: String) {
         if (songVideoId.isBlank() || musicVideoId.isBlank()) return
         if (_pictures.value[songVideoId] == musicVideoId) return

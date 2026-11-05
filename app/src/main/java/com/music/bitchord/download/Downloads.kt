@@ -1,5 +1,6 @@
 package com.music.bitchord.download
 
+import com.music.bitchord.data.canvas.CanvasDownloads
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -410,6 +411,7 @@ object Downloads {
 
     private fun forget(videoId: String) {
         record(saved = { it - videoId }, meta = { it - videoId })
+        CanvasDownloads.forget(videoId)
     }
 
     /**
@@ -717,6 +719,9 @@ object Downloads {
                 it + mapOf(asked.videoId to metaAsked, fetched.videoId to metaFetched)
             },
         )
+        // Storage's "Download canvases": the clip or music video the player
+        // shows behind this song, saved so it shows offline too.
+        CanvasDownloads.onSongDownloaded(fetched.copy(albumName = album), alsoAs = ids)
     }
 
     /**

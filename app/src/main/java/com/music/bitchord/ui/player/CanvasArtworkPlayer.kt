@@ -61,6 +61,7 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import com.music.bitchord.data.Http
 import com.music.bitchord.data.canvas.CanvasArtwork
 import com.music.bitchord.data.canvas.CanvasCache
+import com.music.bitchord.data.canvas.CanvasDownloads
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlin.math.ceil
@@ -251,7 +252,13 @@ internal fun AndroidCanvasArtworkPlayer(
             // see that object's doc for why this matters far more here than
             // it would for a clip played once.
             .setMediaSourceFactory(
-                DefaultMediaSourceFactory(CanvasCache.dataSourceFactory(OkHttpDataSource.Factory(Http.client))),
+                DefaultMediaSourceFactory(
+                    // Canvases saved with downloaded songs come first, so a
+                    // saved clip plays offline and is never fetched again.
+                    CanvasDownloads.dataSourceFactory(
+                        CanvasCache.dataSourceFactory(OkHttpDataSource.Factory(Http.client)),
+                    ),
+                ),
             )
             .build()
             .apply {
@@ -301,6 +308,8 @@ internal fun AndroidCanvasArtworkPlayer(
         reportAspect(0f)
         val item = MediaItem.Builder().setUri(url)
         mimeTypeOf(url)?.let { item.setMimeType(it) }
+        // A saved HLS clip holds one rendition: ask for only that one.
+        CanvasDownloads.streamKeysFor(url).takeIf { it.isNotEmpty() }?.let { item.setStreamKeys(it) }
         player.setMediaItem(item.build())
         player.prepare()
     }
