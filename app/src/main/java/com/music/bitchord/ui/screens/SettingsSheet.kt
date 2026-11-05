@@ -903,17 +903,17 @@ fun SettingsScreen(
                     )
                 }
             }
-            if (smartFade) {
-                val sameAlbumTitle = stringResource(R.string.automix_same_album)
-                row(sameAlbumTitle, "album", "automix", "mix") {
-                    BypassedByBitPerfect(bitPerfectReady) {
-                        SettingsSubRow(
-                            title = sameAlbumTitle,
-                            subtitle = stringResource(R.string.automix_same_album_subtitle),
-                            checked = automixSameAlbum,
-                            onCheckedChange = AppSettings::setAutomixSameAlbum,
-                        )
-                    }
+            // Always listed, greyed out while Automix is off.
+            val sameAlbumTitle = stringResource(R.string.automix_same_album)
+            row(sameAlbumTitle, "album", "automix", "mix") {
+                BypassedByBitPerfect(bitPerfectReady) {
+                    SettingsSubRow(
+                        title = sameAlbumTitle,
+                        subtitle = stringResource(R.string.automix_same_album_subtitle),
+                        checked = automixSameAlbum,
+                        onCheckedChange = AppSettings::setAutomixSameAlbum,
+                        enabled = smartFade,
+                    )
                 }
             }
             val automixPerformanceTitle = stringResource(R.string.automix_performance)
