@@ -418,6 +418,8 @@ import com.music.bitchord.ui.components.masked
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInRoot
 import com.music.bitchord.ui.player.LocalPlayerDock
 import com.music.bitchord.ui.player.PlayerDock
 import com.music.bitchord.ui.screens.DetailScreen
@@ -889,6 +891,9 @@ private fun BitChordApp(
     var settingsQuery by remember { mutableStateOf("") }
     var settingsFieldScrolledOff by remember { mutableStateOf(false) }
     var settingsBarFieldFocused by remember { mutableStateOf(false) }
+    // Where the bar keeps room for Settings' search, so the page's own field
+    // can shrink into exactly that space as it scrolls up to it.
+    val settingsSearchSlot = remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
     var showLyricsSources by remember { mutableStateOf(false) }
     var showAppLanguage by remember { mutableStateOf(false) }
     var showGlassOptions by remember { mutableStateOf(false) }
@@ -4072,6 +4077,7 @@ private fun BitChordApp(
                             onSearchQueryChange = { settingsQuery = it },
                             searchInBar = settingsSearchInBar,
                             onSearchScrolledOff = { if (keySection == null) settingsFieldScrolledOff = it },
+                            searchDockSlot = { settingsSearchSlot.value },
                             section = keySection,
                             onOpenSection = { MenuNav.settingsSection = it },
                         )
@@ -5095,26 +5101,30 @@ private fun BitChordApp(
                         null
                     }
                 // Settings' search, once the page's own field has scrolled up
-                // under the bar, comes along beside the back button and stays.
+                // to the bar, sits beside the back button and stays. The page's
+                // field shrinks into this same space on its way up, so the copy
+                // here takes over where it already is, with nothing to animate.
                 val settingsSearch: (@Composable () -> Unit)? =
                     if (settingsRoot) {
                         @Composable {
-                            androidx.compose.animation.AnimatedVisibility(
-                                visible = settingsSearchInBar,
-                                enter = fadeIn() + expandHorizontally(expandFrom = Alignment.Start),
-                                exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.Start),
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .onGloballyPositioned { settingsSearchSlot.value = it.boundsInRoot() },
                             ) {
-                                SearchField(
-                                    query = settingsQuery,
-                                    onQueryChange = { settingsQuery = it },
-                                    onSubmit = {},
-                                    placeholder = stringResource(R.string.settings_search_hint),
-                                    containerColor = frostedSurfaceColor(MaterialTheme.colorScheme.surfaceVariant),
-                                    // Kept up while it is being typed into, even when
-                                    // the results are short enough to bring the
-                                    // page's own field back into view.
-                                    modifier = Modifier.onFocusChanged { settingsBarFieldFocused = it.hasFocus },
-                                )
+                                if (settingsSearchInBar) {
+                                    SearchField(
+                                        query = settingsQuery,
+                                        onQueryChange = { settingsQuery = it },
+                                        onSubmit = {},
+                                        placeholder = stringResource(R.string.settings_search_hint),
+                                        containerColor = frostedSurfaceColor(MaterialTheme.colorScheme.surfaceVariant),
+                                        // Kept up while it is being typed into, even when
+                                        // the results are short enough to bring the
+                                        // page's own field back into view.
+                                        modifier = Modifier.onFocusChanged { settingsBarFieldFocused = it.hasFocus },
+                                    )
+                                }
                             }
                         }
                     } else {
@@ -5429,6 +5439,7 @@ private fun BitChordApp(
                                         showAccountSelector = true
                                     } else showSettings = true
                                 },
+                                onLongClick = { showSettings = true },
                                 onSwipeProfile = { forward -> viewModel.stepProfile(forward) },
                             )
                         }

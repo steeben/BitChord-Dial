@@ -155,6 +155,9 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.util.lerp
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -265,6 +268,12 @@ fun SettingsScreen(
     searchInBar: Boolean = false,
     /** Told whether this page's own field has scrolled up under the bar. */
     onSearchScrolledOff: (Boolean) -> Unit = {},
+    /**
+     * Where the bar's copy of the field sits, in root coordinates, once it has
+     * been laid out: the page's field shrinks into exactly that space as it
+     * scrolls up, so the hand-over to the bar's copy can't be seen.
+     */
+    searchDockSlot: () -> Rect? = { null },
     /**
      * The category this page is, or null for the main page — which lists the
      * categories rather than their rows, until something is typed into its
@@ -485,12 +494,37 @@ fun SettingsScreen(
     val scrollState = rememberSaveable(saver = ScrollState.Saver) { ScrollState(0) }
     // How far the page scrolls before the field's bottom edge passes under the
     // top bar. Past it, the bar carries its own copy so search is always in reach.
-    val barLinePx = with(LocalDensity.current) { contentPadding.calculateTopPadding().toPx() }
+    val density = LocalDensity.current
+    val barLinePx = with(density) { contentPadding.calculateTopPadding().toPx() }
+    val dockTravelPx = with(density) { SEARCH_DOCK_TRAVEL.toPx() }
     var fieldScrolledOffAt by remember { mutableStateOf(Float.MAX_VALUE) }
-    val fieldScrolledOff by remember { derivedStateOf { scrollState.value > fieldScrolledOffAt } }
+    // The field at rest: its top at scroll 0, its height, and its left edge.
+    var fieldRestTop by remember { mutableStateOf(Float.NaN) }
+    var fieldHeight by remember { mutableStateOf(0f) }
+    var fieldRestLeft by remember { mutableStateOf(0f) }
+    val currentSlot by rememberUpdatedState(searchDockSlot)
+    // The scroll at which the field's centre meets the bar's row, when the bar
+    // has said where that is. Without it, the old hand-over line is used.
+    val dockScroll by remember {
+        derivedStateOf {
+            val slot = currentSlot()
+            if (slot == null || fieldRestTop.isNaN()) {
+                fieldScrolledOffAt
+            } else {
+                fieldRestTop - (slot.center.y - fieldHeight / 2f)
+            }
+        }
+    }
+    val fieldScrolledOff by remember { derivedStateOf { scrollState.value >= dockScroll } }
+    // What the bar was last told, so the frame in which the field drops back
+    // out of the bar shows the page's copy rather than neither.
+    var reportedScrolledOff by remember { mutableStateOf(false) }
     val reportScrolledOff by rememberUpdatedState(onSearchScrolledOff)
     LaunchedEffect(Unit) {
-        snapshotFlow { fieldScrolledOff }.collect { reportScrolledOff(it) }
+        snapshotFlow { fieldScrolledOff }.collect {
+            reportedScrolledOff = it
+            reportScrolledOff(it)
+        }
     }
     val typingInBar by rememberUpdatedState(searchInBar)
     var isFirstSearchComposition by remember { mutableStateOf(true) }
@@ -504,7 +538,12 @@ fun SettingsScreen(
             // Typed into the bar: start the results just under it rather than
             // back at the top, where the page's own field would show twice.
             scrollState.scrollTo(
-                if (typingInBar) fieldScrolledOffAt.toInt().coerceAtMost(scrollState.maxValue) + 1 else 0,
+                if (typingInBar) {
+                    (dockScroll.coerceAtMost(scrollState.maxValue.toFloat()).roundToInt() + 1)
+                        .coerceAtMost(scrollState.maxValue)
+                } else {
+                    0
+                },
             )
         }
     }
@@ -532,12 +571,55 @@ fun SettingsScreen(
                     .padding(start = 20.dp, end = 20.dp, bottom = 4.dp)
                     .onGloballyPositioned { coordinates ->
                         // Measured unclipped, so it still holds once the field is off screen.
-                        val bottom = coordinates.positionInRoot().y + coordinates.size.height
+                        val position = coordinates.positionInRoot()
+                        val bottom = position.y + coordinates.size.height
                         fieldScrolledOffAt = bottom + scrollState.value - barLinePx
+                        fieldRestTop = position.y + scrollState.value
+                        fieldHeight = coordinates.size.height.toFloat()
+                        fieldRestLeft = position.x
+                    }
+                    // As it nears the bar it narrows into the gap the bar keeps
+                    // for it, beside the back button, and holds there for the
+                    // frame it takes the bar's own copy to appear in its place.
+                    // Laid out rather than scaled, so the text stays sharp, and
+                    // only the width changes, so nothing below it moves.
+                    .layout { measurable, constraints ->
+                        val slot = currentSlot()
+                        val docking = slot != null && !fieldRestTop.isNaN()
+                        val progress = if (docking) {
+                            settingsSearchDockProgress(scrollState.value.toFloat(), dockScroll, dockTravelPx)
+                        } else {
+                            0f
+                        }
+                        val widthProgress = settingsSearchWidthProgress(progress)
+                        val fullWidth = constraints.maxWidth
+                        val width = if (docking && slot != null) {
+                            lerp(fullWidth.toFloat(), slot.width, widthProgress).roundToInt()
+                                .coerceIn(0, fullWidth)
+                        } else {
+                            fullWidth
+                        }
+                        val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
+                        val x = if (docking && slot != null) {
+                            ((slot.left - fieldRestLeft) * widthProgress).roundToInt()
+                        } else {
+                            0
+                        }
+                        // Pinned at the bar's row once it reaches it.
+                        val pin = if (docking) {
+                            (scrollState.value - dockScroll).coerceAtLeast(0f).roundToInt()
+                        } else {
+                            0
+                        }
+                        layout(fullWidth, placeable.height) { placeable.place(x, pin) }
                     }
                     // Hidden rather than removed while the bar has it, so the page
-                    // below keeps its place.
-                    .graphicsLayer { alpha = if (searchInBar) 0f else 1f },
+                    // below keeps its place. The one frame the bar still has it
+                    // after the page has scrolled back down, this copy shows.
+                    .graphicsLayer {
+                        val handingBack = reportedScrolledOff && !fieldScrolledOff
+                        alpha = if (searchInBar && !handingBack) 0f else 1f
+                    },
             )
 
             SearchableSettingsGroup(search) {
@@ -3233,6 +3315,9 @@ internal val ICON_GAP = 14.dp
 
 /** Where a row's text starts — dividers are inset to match, as on iOS. */
 internal val TEXT_INSET = ROW_INSET + ICON_SIZE + ICON_GAP
+
+/** How much scrolling it takes the search field to shrink into the top bar. */
+private val SEARCH_DOCK_TRAVEL = 64.dp
 
 /**
  * What is typed into the field under the Settings title, and whether anything

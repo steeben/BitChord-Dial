@@ -523,7 +523,10 @@ private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexedShelves(
     onRecentsViewTypeToggle: () -> Unit,
 ) {
     // The dials lead together; anything put after the lead goes after both.
-    val leadCount = if (shelves.getOrNull(1)?.title == ARTIST_DIAL_SHELF_TITLE) 2 else 1
+    // With both dials switched off there is no lead at all, so Top Picks still
+    // opens the feed rather than falling in under whichever shelf is first
+    // (Recents), and the order reads the same as it does under the dials.
+    val leadCount = homeLeadCount(shelves.map { it.title })
     // Keyed by title, not position: a shelf that lands above others (a section
     // ranked higher in Settings, the artists' dial turning up) would otherwise
     // give every shelf under it a new key, and each would fade out and back in.
@@ -636,6 +639,13 @@ private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexedShelves(
     if (shelves.size == leadCount) afterLead?.invoke(this)
     if (moodsBefore == shelves.size && shelves.size >= leadCount) moodsItem?.invoke(this)
 }
+
+/**
+ * How many of Home's first shelves are dials: the speed dial, the artists'
+ * dial, both or neither. What Home puts "after the lead" goes after these.
+ */
+internal fun homeLeadCount(titles: List<String>): Int =
+    titles.takeWhile { it == SPEED_DIAL_SHELF_TITLE || it == ARTIST_DIAL_SHELF_TITLE }.size.coerceAtMost(2)
 
 /** How many feed shelves Find Your Mood sits under when there is no Recents to follow. */
 private const val MOODS_FEED_OFFSET = 2
