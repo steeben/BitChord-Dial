@@ -120,15 +120,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -150,10 +148,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
@@ -182,7 +178,6 @@ import com.music.bitchord.ui.components.GlassTint
 import com.music.bitchord.ui.components.isGlassSupported
 import com.music.bitchord.ui.components.languageDisplayNameRes
 import com.music.bitchord.ui.components.MessageState
-import com.music.bitchord.ui.components.SearchField
 import com.music.bitchord.ui.components.thumbnailBorder
 import com.music.bitchord.ui.icons.BitChordIcons
 import com.music.bitchord.ui.performance.resolvePerformanceRefreshRate
@@ -205,9 +200,8 @@ import com.music.bitchord.data.settings.AutomixPerformanceMode
 import com.music.bitchord.R
 import com.music.bitchord.ui.components.lightweightLiquidGlass
 import com.music.bitchord.ui.components.SquareLogo
-import com.music.bitchord.ui.components.homeTitleWithDial
 import com.music.bitchord.ui.theme.LocalNowPlayingTint
-import com.music.bitchord.ui.theme.Metropolis
+import com.music.bitchord.ui.theme.Tiny5Lcd
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import com.music.bitchord.data.sources.DeviceCodecs
@@ -256,22 +250,18 @@ fun SettingsScreen(
     /** Opens the page listing the All library's detected duplicates. */
     onLibraryDuplicates: () -> Unit = {},
     /**
-     * What the rows are filtered by. Held by the caller, because the top bar
-     * shows a second copy of the field once this one has scrolled under it,
-     * and both have to be the same search.
+     * What the rows are filtered by. Held by the caller, because the field
+     * that types it lives in the top bar — see [searchDock].
      */
     searchQuery: String = "",
     onSearchQueryChange: (String) -> Unit = {},
-    /** Whether the bar's copy of the field is the one showing. */
-    searchInBar: Boolean = false,
-    /** Told whether this page's own field has scrolled up under the bar. */
-    onSearchScrolledOff: (Boolean) -> Unit = {},
     /**
-     * Where the bar's copy of the field sits, in root coordinates, once it has
-     * been laid out: the page's field shrinks into exactly that space as it
-     * scrolls up, so the hand-over to the bar's copy can't be seen.
+     * Settings' one search field is drawn by the top bar, over this page. The
+     * main page keeps an empty space for it under the title and tells [searchDock]
+     * where that is and how far it has scrolled, so the field rises with the
+     * page and docks beside the back button. Null: no space, no field.
      */
-    searchDockSlot: () -> Rect? = { null },
+    searchDock: SettingsSearchDockState? = null,
     /**
      * The category this page is, or null for the main page — which lists the
      * categories rather than their rows, until something is typed into its
@@ -491,40 +481,17 @@ fun SettingsScreen(
     // What is left after a keystroke is a different list, and the offset the
     // last one was scrolled to means nothing in it.
     val scrollState = rememberSaveable(saver = ScrollState.Saver) { ScrollState(0) }
-    // How far the page scrolls before the field's bottom edge passes under the
-    // top bar. Past it, the bar carries its own copy so search is always in reach.
-    val density = LocalDensity.current
-    val barLinePx = with(density) { contentPadding.calculateTopPadding().toPx() }
-    var fieldScrolledOffAt by remember { mutableStateOf(Float.MAX_VALUE) }
-    // The field at rest: its top at scroll 0, its height, and its left edge.
-    var fieldRestTop by remember { mutableStateOf(Float.NaN) }
-    var fieldHeight by remember { mutableStateOf(0f) }
-    var fieldRestLeft by remember { mutableStateOf(0f) }
-    val currentSlot by rememberUpdatedState(searchDockSlot)
-    // The scroll at which the field's centre meets the bar's row, when the bar
-    // has said where that is. Without it, the old hand-over line is used.
-    val dockScroll by remember {
-        derivedStateOf {
-            val slot = currentSlot()
-            if (slot == null || fieldRestTop.isNaN()) {
-                fieldScrolledOffAt
-            } else {
-                fieldRestTop - (slot.center.y - fieldHeight / 2f)
+    // Tell the bar's field how far this page has scrolled, read as it lays
+    // out, and forget this page's space for it once the page is gone.
+    if (section == null && searchDock != null) {
+        DisposableEffect(searchDock, scrollState) {
+            searchDock.scroll = { scrollState.value.toFloat() }
+            onDispose {
+                searchDock.restBounds = null
+                searchDock.scroll = { 0f }
             }
         }
     }
-    val fieldScrolledOff by remember { derivedStateOf { scrollState.value >= dockScroll } }
-    // What the bar was last told, so the frame in which the field drops back
-    // out of the bar shows the page's copy rather than neither.
-    var reportedScrolledOff by remember { mutableStateOf(false) }
-    val reportScrolledOff by rememberUpdatedState(onSearchScrolledOff)
-    LaunchedEffect(Unit) {
-        snapshotFlow { fieldScrolledOff }.collect {
-            reportedScrolledOff = it
-            reportScrolledOff(it)
-        }
-    }
-    val typingInBar by rememberUpdatedState(searchInBar)
     var isFirstSearchComposition by remember { mutableStateOf(true) }
     LaunchedEffect(searchQuery) {
         if (isFirstSearchComposition && searchQuery.isEmpty()) {
@@ -533,12 +500,13 @@ fun SettingsScreen(
             isFirstSearchComposition = false
         } else {
             isFirstSearchComposition = false
-            // Typed into the bar: start the results just under it rather than
-            // back at the top, where the page's own field would show twice.
+            // Typed into while docked: keep it docked, with the results starting
+            // just under it, rather than dropping it back under the title.
+            val dockScroll = searchDock?.dockScroll
+            val docked = dockScroll != null && scrollState.value >= dockScroll
             scrollState.scrollTo(
-                if (typingInBar) {
-                    (dockScroll.coerceAtMost(scrollState.maxValue.toFloat()).roundToInt() + 1)
-                        .coerceAtMost(scrollState.maxValue)
+                if (docked && dockScroll != null) {
+                    dockScroll.roundToInt().coerceAtMost(scrollState.maxValue)
                 } else {
                     0
                 },
@@ -559,78 +527,26 @@ fun SettingsScreen(
             modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 14.dp),
         )
         if (section == null) {
-            val fieldFallback = frostedSurfaceColor(MaterialTheme.colorScheme.surfaceVariant)
-            SearchField(
-                query = searchQuery,
-                onQueryChange = onSearchQueryChange,
-                onSubmit = {},
-                placeholder = stringResource(R.string.settings_search_hint),
-                // Round glass at the back button's height, like the bar's copy
-                // it hands over to. The page is what the bar's glass samples,
-                // so this copy wears the lightweight glass that draws no
-                // backdrop of its own.
-                containerColor = Color.Transparent,
-                shape = CircleShape,
-                height = 44.dp,
+            // The search field's space. The field is drawn over it by the top
+            // bar, so it is one field from here to its place beside the back
+            // button. The groups' inset, so its right edge is the bar's and
+            // only its left edge has anywhere to go as it docks.
+            Spacer(
                 modifier = Modifier
-                    // The groups' inset, so its right edge is the bar's: only
-                    // the left edge has anywhere to go as it docks.
                     .padding(start = GROUP_INSET, end = GROUP_INSET, bottom = 4.dp)
+                    .fillMaxWidth()
+                    .height(44.dp)
                     .onGloballyPositioned { coordinates ->
-                        // Measured unclipped, so it still holds once the field is off screen.
+                        // Measured unclipped, so it still holds once scrolled off screen.
                         val position = coordinates.positionInRoot()
-                        val bottom = position.y + coordinates.size.height
-                        fieldScrolledOffAt = bottom + scrollState.value - barLinePx
-                        fieldRestTop = position.y + scrollState.value
-                        fieldHeight = coordinates.size.height.toFloat()
-                        fieldRestLeft = position.x
-                    }
-                    // As it scrolls up, its left side draws in, in step with
-                    // the scroll, until it fits the gap beside the back button
-                    // just as it reaches the bar's row. There it is pinned, and
-                    // the bar's own copy takes over in the same place. Laid out
-                    // rather than scaled, so the text stays sharp, and only the
-                    // width changes, so nothing below it moves.
-                    .layout { measurable, constraints ->
-                        val slot = currentSlot()
-                        val fullWidth = constraints.maxWidth
-                        val docking = slot != null && !fieldRestTop.isNaN()
-                        val progress = if (docking) {
-                            settingsSearchDockProgress(scrollState.value.toFloat(), dockScroll)
-                        } else {
-                            0f
-                        }
-                        val restRight = fieldRestLeft + fullWidth
-                        val left = if (docking && slot != null) {
-                            settingsSearchDockEdge(fieldRestLeft, slot.left, progress)
-                        } else {
-                            fieldRestLeft
-                        }
-                        val right = if (docking && slot != null) {
-                            settingsSearchDockEdge(restRight, slot.right, progress)
-                        } else {
-                            restRight
-                        }
-                        val width = (right - left).roundToInt().coerceIn(0, fullWidth)
-                        val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
-                        val x = (left - fieldRestLeft).roundToInt()
-                        // Pinned at the bar's row once it reaches it.
-                        val pin = if (docking) {
-                            (scrollState.value - dockScroll).coerceAtLeast(0f).roundToInt()
-                        } else {
-                            0
-                        }
-                        layout(fullWidth, placeable.height) { placeable.place(x, pin) }
-                    }
-                    // Hidden rather than removed while the bar has it, so the page
-                    // below keeps its place. The one frame the bar still has it
-                    // after the page has scrolled back down, this copy shows.
-                    .graphicsLayer {
-                        val handingBack = reportedScrolledOff && !fieldScrolledOff
-                        alpha = if (searchInBar && !handingBack) 0f else 1f
-                    }
-                    // Inside the shrink, so the glass follows the field's width.
-                    .lightweightLiquidGlass(shape = CircleShape, fallbackColor = fieldFallback),
+                        val top = position.y + scrollState.value
+                        searchDock?.restBounds = Rect(
+                            left = position.x,
+                            top = top,
+                            right = position.x + coordinates.size.width,
+                            bottom = top + coordinates.size.height,
+                        )
+                    },
             )
 
             SearchableSettingsGroup(search) {
@@ -3832,7 +3748,7 @@ private const val REPO_URL = "https://github.com/steeben/BitChord-Dial"
 private const val MIN_CHECK_SPIN_MS = 1_100L
 
 /**
- * The foot of the main settings page: the app's name set as Home's title,
+ * The foot of the main settings page: Home's pixel "DIAL", large,
  * the version and a link to the repository under it, a frosted glass button
  * that checks for an update, and the 3x4 mark, small, below that. The mark
  * runs Home's refresh spinner for as long as the check takes.
@@ -3852,11 +3768,13 @@ private fun SettingsColophon(version: String, onShowUpdate: () -> Unit) {
             .padding(start = 24.dp, end = 24.dp, top = 28.dp, bottom = 12.dp),
     ) {
         Text(
-            text = homeTitleWithDial(stringResource(R.string.app_name), dialColor),
-            color = MaterialTheme.colorScheme.onBackground,
-            fontFamily = Metropolis,
-            fontWeight = FontWeight.W800,
-            fontSize = 30.sp,
+            // Just the pixel "DIAL" from Home's title, set larger than it
+            // ever is there, rather than the whole app name.
+            text = "DIAL",
+            color = dialColor,
+            fontFamily = Tiny5Lcd,
+            fontWeight = FontWeight.W400,
+            fontSize = 52.sp,
             maxLines = 1,
             textAlign = TextAlign.Center,
         )

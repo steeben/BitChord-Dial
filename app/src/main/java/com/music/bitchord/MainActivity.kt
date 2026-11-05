@@ -901,14 +901,10 @@ private fun BitChordApp(
     var folderSortMenuFor by remember { mutableStateOf<String?>(null) }
     // What the detected duplicates page is searched for, from the field in the bar.
     var duplicatesQuery by remember { mutableStateOf("") }
-    // Settings' search, held here so the bar can carry a copy of the field
-    // once the page's own has scrolled up under it.
+    // Settings' search, held here because its one field is drawn by the bar,
+    // over the page, from under the title up to beside the back button.
     var settingsQuery by remember { mutableStateOf("") }
-    var settingsFieldScrolledOff by remember { mutableStateOf(false) }
-    var settingsBarFieldFocused by remember { mutableStateOf(false) }
-    // Where the bar keeps room for Settings' search, so the page's own field
-    // can shrink into exactly that space as it scrolls up to it.
-    val settingsSearchSlot = remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    val settingsSearchDock = remember { com.music.bitchord.ui.screens.SettingsSearchDockState() }
     var showLyricsSources by remember { mutableStateOf(false) }
     var showAppLanguage by remember { mutableStateOf(false) }
     var showGlassOptions by remember { mutableStateOf(false) }
@@ -3578,7 +3574,6 @@ private fun BitChordApp(
                 // Settings itself, with nothing of its own pushed over it.
                 val settingsRoot = pageKey == "settings" && settingsSubScreen == null &&
                     !showDiscord && !showSpotify
-                val settingsSearchInBar = settingsRoot && (settingsFieldScrolledOff || settingsBarFieldFocused)
                 // How deep into the Library tab's own pages this one is: the
                 // tab itself, then what its menu opens (Playlists, Spotify, a
                 // library's Songs / Artists / Albums, the song history), then
@@ -4064,8 +4059,6 @@ private fun BitChordApp(
                         if (keySection == null) DisposableEffect(Unit) {
                             onDispose {
                                 settingsQuery = ""
-                                settingsFieldScrolledOff = false
-                                settingsBarFieldFocused = false
                             }
                         }
                         SettingsScreen(
@@ -4110,9 +4103,7 @@ private fun BitChordApp(
                             onLibraryDuplicates = { settingsSubScreen = LIBRARY_DUPLICATES_SCREEN },
                             searchQuery = settingsQuery,
                             onSearchQueryChange = { settingsQuery = it },
-                            searchInBar = settingsSearchInBar,
-                            onSearchScrolledOff = { if (keySection == null) settingsFieldScrolledOff = it },
-                            searchDockSlot = { settingsSearchSlot.value },
+                            searchDock = settingsSearchDock.takeIf { keySection == null },
                             section = keySection,
                             onOpenSection = { MenuNav.settingsSection = it },
                         )
@@ -5163,37 +5154,24 @@ private fun BitChordApp(
                     } else {
                         null
                     }
-                // Settings' search, once the page's own field has scrolled up
-                // to the bar, sits beside the back button and stays. The page's
-                // field shrinks into this same space on its way up, so the copy
-                // here takes over where it already is, with nothing to animate.
+                // Settings' one search field. Composed here so it draws over the
+                // page and wears the back button's glass, but placed wherever the
+                // page's space for it is: it rises with the page and, as it does,
+                // its left edge draws in until it fits beside the back button.
                 val settingsSearch: (@Composable () -> Unit)? =
                     if (settingsRoot) {
                         @Composable {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .onGloballyPositioned { settingsSearchSlot.value = it.boundsInRoot() },
+                                    .onGloballyPositioned { settingsSearchDock.slotBounds = it.boundsInRoot() },
                             ) {
-                                if (settingsSearchInBar) {
-                                    SearchField(
-                                        query = settingsQuery,
-                                        onQueryChange = { settingsQuery = it },
-                                        onSubmit = {},
-                                        placeholder = stringResource(R.string.settings_search_hint),
-                                        // The back button's glass, in the back button's
-                                        // height, so the two read as one row of controls.
-                                        containerColor = Color.Transparent,
-                                        shape = CircleShape,
-                                        height = 44.dp,
-                                        // Kept up while it is being typed into, even when
-                                        // the results are short enough to bring the
-                                        // page's own field back into view.
-                                        modifier = Modifier
-                                            .onFocusChanged { settingsBarFieldFocused = it.hasFocus }
-                                            .then(artworkPageSurface(shape = CircleShape, hazeState = hazeState)),
-                                    )
-                                }
+                                com.music.bitchord.ui.screens.SettingsDockingSearchField(
+                                    state = settingsSearchDock,
+                                    query = settingsQuery,
+                                    onQueryChange = { settingsQuery = it },
+                                    surface = artworkPageSurface(shape = CircleShape, hazeState = hazeState),
+                                )
                             }
                         }
                     } else {
