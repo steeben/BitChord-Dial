@@ -1,6 +1,7 @@
 package com.music.bitchord.ui.screens
 
 import androidx.compose.foundation.background
+import com.music.bitchord.ui.components.pageAccent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,7 +63,6 @@ import com.music.bitchord.ui.components.ROW_DIVIDER_INSET
 import com.music.bitchord.ui.components.SongRow
 import com.music.bitchord.ui.components.frostedSurfaceColor
 import com.music.bitchord.ui.components.indexSortKey
-import com.music.bitchord.ui.theme.LocalNowPlayingTint
 
 /**
  * Settings → Hide detected duplicates → the songs themselves: one row for
@@ -82,7 +82,7 @@ fun LibraryDuplicatesScreen(
 ) {
     val hide by AppSettings.hideCombinedDuplicates.collectAsStateWithLifecycle()
     val choices by AppSettings.duplicateChoices.collectAsStateWithLifecycle()
-    val accent = LocalNowPlayingTint.current ?: MaterialTheme.colorScheme.primary
+    val accent = pageAccent()
     val groups = (state as? UiState.Success)?.data.orEmpty()
     // Each set as the song it shows as, A to Z by that title.
     val rows = remember(groups, choices) {

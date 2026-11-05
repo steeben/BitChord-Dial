@@ -44,7 +44,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import com.music.bitchord.ui.theme.LocalNowPlayingTint
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -124,7 +123,7 @@ fun GlassNavBar(
     // The selected tab wears the playing song's colour. Read through a state
     // inside the held tab content rather than keyed on, so the crossfade from
     // one song's colour to the next doesn't rebuild the tabs every frame.
-    val selectedColor by rememberUpdatedState(LocalNowPlayingTint.current ?: contentColor)
+    val selectedColor by rememberUpdatedState(pageAccent(contentColor))
     val unselectedColor = contentColor.copy(alpha = 0.65f)
     val haptics = rememberHaptics()
 
@@ -329,7 +328,7 @@ private fun GlassNowPlaying(
     val swipe = rememberMiniPlayerSwipe()
     val artUrl = rememberRemoteArtworkUrl(song)
     // The app's accent, so the playhead matches the icons and nav pill around it.
-    val progressColor = LocalNowPlayingTint.current ?: MaterialTheme.colorScheme.primary
+    val progressColor = pageAccent()
     val density = androidx.compose.ui.platform.LocalDensity.current
     val pressSource = remember { MutableInteractionSource() }
     val isPressed by pressSource.collectIsPressedAsState()

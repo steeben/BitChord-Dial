@@ -12,6 +12,9 @@ import androidx.compose.ui.graphics.luminance
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.data.settings.CustomizationSettings
 import androidx.compose.runtime.State
+import androidx.compose.runtime.compositionLocalOf
+import com.music.bitchord.ui.theme.LocalNowPlayingTint
+import com.music.bitchord.ui.theme.accentOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -75,6 +78,41 @@ fun rememberAmbientBlobs(primary: Color, secondary: Color, animate: Boolean): Am
     }
     return AmbientBlobs({ first }, { second }, phase)
 }
+
+/**
+ * The accent the page's chrome takes while the ambient background is on: the
+ * blobs' main colour, lifted to an accent. Null while the background is off,
+ * so the chrome goes back to the playing song's colour.
+ *
+ * Without it a page could sit on a red wash while its progress bar and
+ * buttons wore the blue of some small detail in the cover — two colours that
+ * had nothing to do with each other on one screen.
+ */
+val LocalAmbientAccent = compositionLocalOf<Color?> { null }
+
+/**
+ * [primary] as the accent for [LocalAmbientAccent], crossfading with the
+ * blobs themselves; null when the ambient background is [on] is false.
+ */
+@Composable
+fun rememberAmbientAccent(primary: Color, on: Boolean): Color? {
+    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val accent by animateColorAsState(
+        accentOf(ambientTone(primary), dark),
+        tween(AMBIENT_COLOR_FADE_MS),
+        label = "ambientAccent",
+    )
+    return if (on) accent else null
+}
+
+/**
+ * The accent for chrome that sits on the page — the mini player's progress,
+ * the selected tab, the library's buttons: the ambient background's colour
+ * while that is on, else the playing song's, else [fallback].
+ */
+@Composable
+fun pageAccent(fallback: Color = MaterialTheme.colorScheme.primary): Color =
+    LocalAmbientAccent.current ?: LocalNowPlayingTint.current ?: fallback
 
 /** A second colour for a single brand colour: the same hue turned a little and darkened. */
 fun ambientCompanion(color: Color): Color {

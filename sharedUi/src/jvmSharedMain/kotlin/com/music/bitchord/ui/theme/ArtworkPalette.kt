@@ -401,10 +401,7 @@ private fun Seed.toPalette(dark: Boolean): ArtworkPalette = if (dark) {
             saturation = { adaptedArtworkSaturation(it, minimum = 0.20f, maximum = 0.62f) },
             lightness = { 0.22f },
         ),
-        accent = vibrant.withHsl(
-            saturation = { adaptedArtworkSaturation(it, minimum = 0.55f, maximum = 1f) },
-            lightness = { it.coerceIn(0.62f, 0.78f) },
-        ),
+        accent = accentOf(vibrant, dark = true),
         onBackground = Color.White,
         // Well above the grey the untinted screens use for secondary text. A
         // tint is a *coloured* background, not a black one, so the contrast a
@@ -427,15 +424,23 @@ private fun Seed.toPalette(dark: Boolean): ArtworkPalette = if (dark) {
             saturation = { adaptedArtworkSaturation(it, minimum = 0.14f, maximum = 0.50f) },
             lightness = { 0.83f },
         ),
-        accent = vibrant.withHsl(
-            saturation = { adaptedArtworkSaturation(it, minimum = 0.55f, maximum = 1f) },
-            lightness = { it.coerceIn(0.30f, 0.44f) },
-        ),
+        accent = accentOf(vibrant, dark = false),
         onBackground = Color.Black,
         onBackgroundVariant = Color.Black.copy(alpha = 0.70f),
         divider = Color.Black.copy(alpha = 0.10f),
     )
 }
+
+/**
+ * [color] made into an accent: saturated enough to read as a colour and lit
+ * so it stays legible on the theme's background. The same lift the artwork
+ * pages give their sleeve's brightest note, so an accent taken from anything
+ * else (the ambient background's colour, say) sits beside them as one family.
+ */
+fun accentOf(color: Color, dark: Boolean): Color = color.withHsl(
+    saturation = { adaptedArtworkSaturation(it, minimum = 0.55f, maximum = 1f) },
+    lightness = { if (dark) it.coerceIn(0.62f, 0.78f) else it.coerceIn(0.30f, 0.44f) },
+)
 
 /**
  * Keeps neutral artwork neutral instead of inventing a hue for it.

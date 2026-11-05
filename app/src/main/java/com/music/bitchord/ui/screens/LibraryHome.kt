@@ -1,6 +1,7 @@
 package com.music.bitchord.ui.screens
 
 import androidx.compose.animation.AnimatedContent
+import com.music.bitchord.ui.components.pageAccent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -105,7 +106,6 @@ import com.music.bitchord.ui.components.longPressMenuClickable
 import com.music.bitchord.ui.components.popupSurface
 import com.music.bitchord.ui.components.thumbnailBorder
 import com.music.bitchord.ui.icons.BitChordIcons
-import com.music.bitchord.ui.theme.LocalNowPlayingTint
 import dev.chrisbanes.haze.HazeState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -691,7 +691,7 @@ fun LibraryChoiceMenu(
     onSelect: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val accent = LocalNowPlayingTint.current ?: MaterialTheme.colorScheme.primary
+    val accent = pageAccent()
     GlassMenuPanel(visible = visible, hazeState = hazeState, onDismiss = onDismiss) {
         if (title != null) MenuHeading(title)
         options.forEachIndexed { index, label ->

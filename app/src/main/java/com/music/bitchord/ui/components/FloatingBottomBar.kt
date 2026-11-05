@@ -316,7 +316,7 @@ fun FloatingBottomBar(
                     selected = index == selectedIndex,
                     glassSpec = glassSpec,
                     // The playing song's colour when there is one.
-                    selectedTint = LocalNowPlayingTint.current ?: adaptiveTint,
+                    selectedTint = LocalAmbientAccent.current ?: LocalNowPlayingTint.current ?: adaptiveTint,
                     unselectedTint = adaptiveTint?.copy(alpha = 0.65f),
                     onClick = { onTabSelected(index) },
                     modifier = Modifier.weight(1f),

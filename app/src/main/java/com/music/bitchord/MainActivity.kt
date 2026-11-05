@@ -251,6 +251,9 @@ import com.music.bitchord.ui.components.AmbientSpotifyColor
 import com.music.bitchord.ui.components.AmbientYouTubeColor
 import com.music.bitchord.ui.components.ambientBlobs
 import com.music.bitchord.ui.components.rememberAmbientBlobs
+import com.music.bitchord.ui.components.rememberAmbientAccent
+import com.music.bitchord.ui.components.LocalAmbientAccent
+import com.music.bitchord.ui.components.pageAccent
 import com.music.bitchord.ui.components.ambientCompanion
 import com.music.bitchord.ui.screens.libraryExtraLinks
 import com.music.bitchord.ui.screens.LibraryHomeScreen
@@ -3284,6 +3287,9 @@ private fun BitChordApp(
     // [LocalNowPlayingTint]. Provided around the whole app rather than handed
     // down, so the library's own pages can pick it up the same way.
     val nowPlayingTint = rememberNowPlayingTint(player.song?.thumbnailUrl)
+    // The page chrome's accent while the ambient background is on: the blobs'
+    // own colour, so the progress bar and buttons match the wash behind them.
+    val ambientAccent = rememberAmbientAccent(ambientPrimary, on = ambientOn)
     Box(
         Modifier
             .fillMaxSize()
@@ -3297,7 +3303,10 @@ private fun BitChordApp(
     // fewer (MainActivityClassSizeTest keeps watch). If it comes back, split
     // again rather than unwrap: inlined into BitChordApp, the body passes the
     // JVM's 64KB per-method code limit. The bodies keep their old indent.
-    CompositionLocalProvider(LocalNowPlayingTint provides nowPlayingTint) {
+    CompositionLocalProvider(
+        LocalNowPlayingTint provides nowPlayingTint,
+        LocalAmbientAccent provides ambientAccent,
+    ) {
         // A pushed album/artist/playlist page replaces the tab content but
         // leaves the tab bar and mini player in place.
         // Replay's three layers unwind in the order they were opened. Ahead of
@@ -4773,7 +4782,7 @@ private fun BitChordApp(
                                 source = librarySource,
                                 signedIn = signedIn,
                                 feed = libraryFeed?.takeIf { it.source == librarySource },
-                                accent = LocalNowPlayingTint.current ?: MaterialTheme.colorScheme.primary,
+                                accent = pageAccent(),
                                 listState = libraryListState,
                                 currentSong = player.song,
                                 onSuggestionClick = { suggestion, rowTitle ->
@@ -5701,7 +5710,10 @@ private fun BitChordApp(
 
         }
     }
-    CompositionLocalProvider(LocalNowPlayingTint provides nowPlayingTint) {
+    CompositionLocalProvider(
+        LocalNowPlayingTint provides nowPlayingTint,
+        LocalAmbientAccent provides ambientAccent,
+    ) {
 
         // ---- Album / playlist detail ----
         // ---- Long-press track actions ----
@@ -7405,7 +7417,7 @@ private fun BitChordApp(
                 selected = librarySource,
                 signedIn = signedIn,
                 hazeState = hazeState,
-                accent = LocalNowPlayingTint.current ?: MaterialTheme.colorScheme.primary,
+                accent = pageAccent(),
                 onSelect = { picked ->
                     CustomizationSettings.setLibrarySource(picked)
                     libraryMenuOpen = false

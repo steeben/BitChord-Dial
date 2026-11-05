@@ -1,6 +1,7 @@
 package com.music.bitchord.ui.screens
 
 import com.music.bitchord.ui.components.menuAnchor
+import com.music.bitchord.ui.components.pageAccent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -107,7 +108,6 @@ import coil3.compose.AsyncImage
 import com.music.bitchord.data.AlbumArtChoices
 import com.music.bitchord.data.LibraryArtists
 import com.music.bitchord.data.model.BrowseType
-import com.music.bitchord.ui.theme.LocalNowPlayingTint
 import dev.chrisbanes.haze.HazeState
 import com.music.bitchord.data.model.CARD_ART_PX
 import com.music.bitchord.data.model.ROW_ART_PX
@@ -367,7 +367,7 @@ fun LocalMusicScreen(
         // ── Tab row ──────────────────────────────────────────────────────────
         // The picked tab wears the playing song's colour, as the Library's
         // own marks and menu do.
-        val tabAccent = LocalNowPlayingTint.current ?: MaterialTheme.colorScheme.primary
+        val tabAccent = pageAccent()
         val deviceTabs = devicePlaylists != null
         val shownTab = if (deviceTabs) selectedTab.coerceIn(0, LOCAL_TAB_FOLDERS) else selectedTab.coerceIn(0, LOCAL_TAB_ALBUMS)
         val tabs: @Composable () -> Unit = {
@@ -2001,7 +2001,7 @@ private fun LocalSearchField(
     val haptics = rememberHaptics()
     // The playing song's colour for the cursor and a selection, as for the
     // tab under the field.
-    val accent = LocalNowPlayingTint.current ?: MaterialTheme.colorScheme.primary
+    val accent = pageAccent()
     val selectionColors = remember(accent) {
         TextSelectionColors(handleColor = accent, backgroundColor = accent.copy(alpha = 0.4f))
     }
@@ -2233,7 +2233,7 @@ private fun LocalTab(
             if (!selected) haptics.play(Haptic.Select)
             onClick()
         },
-        selectedContentColor = LocalNowPlayingTint.current ?: MaterialTheme.colorScheme.primary,
+        selectedContentColor = pageAccent(),
         unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
     ) {
         Row(

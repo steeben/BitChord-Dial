@@ -54,7 +54,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.music.bitchord.data.model.ROW_ART_PX
-import com.music.bitchord.ui.theme.LocalNowPlayingTint
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.model.artworkAt
 import com.music.bitchord.data.settings.AppSettings
@@ -399,7 +398,7 @@ fun MiniPlayer(
     val swipe = rememberMiniPlayerSwipe()
     val artUrl = rememberRemoteArtworkUrl(song)
     // The app's accent, so the playhead matches the icons and nav pill around it.
-    val progressColor = LocalNowPlayingTint.current ?: MaterialTheme.colorScheme.primary
+    val progressColor = pageAccent()
     // percent rather than a dp figure, so the corner stays exactly half the
     // height if the row's contents ever change it — which is what keeps a pill
     // a pill instead of a rounded rectangle. Same idiom as [FloatingBottomBar]
