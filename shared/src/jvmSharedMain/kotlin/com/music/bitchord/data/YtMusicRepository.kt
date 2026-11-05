@@ -807,10 +807,27 @@ object YtMusicRepository {
         } else {
             pageOf(response)
         }
+        // Liked Music answering empty right after a cold launch is the one
+        // case still not understood, so its shape goes in the log: which
+        // renderers came back, and any alert YouTube put on the page.
+        if (browseId == LIKED_MUSIC && page.songs.isEmpty()) {
+            Log.w(TAG, "liked music empty; continuation=${page.continuation != null} shape=${shapeOf(response)}")
+        }
         // Only a playlist has an owner in the sense that matters — see
         // parsePlaylistOwned — and only its own first response can be asked.
         return if (!browseId.startsWith("VL")) page
         else page.copy(owned = InnertubeParser.parsePlaylistOwned(response))
+    }
+
+    /** Object keys of [element], three levels deep — arrays read as their first item. */
+    private fun shapeOf(element: kotlinx.serialization.json.JsonElement, depth: Int = 3): String = when {
+        depth == 0 -> "…"
+        element is JsonObject -> element.entries.joinToString(",", "{", "}") { (key, value) ->
+            if (value is JsonObject || value is kotlinx.serialization.json.JsonArray) "$key:${shapeOf(value, depth - 1)}" else key
+        }
+        element is kotlinx.serialization.json.JsonArray ->
+            "[${element.size}:${element.firstOrNull()?.let { shapeOf(it, depth - 1) } ?: ""}]"
+        else -> ""
     }
 
     /**

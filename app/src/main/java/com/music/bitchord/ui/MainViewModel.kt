@@ -3560,7 +3560,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * same for any session, so only this one, which is the account's own,
      * showed the window. So an empty or failed answer here isn't taken as the
      * answer while the page is still open: it is asked again a few times,
-     * further apart each time, with the spinner left up. The Library tab reads
+     * a little further apart each time, with the spinner left up. The Library tab reads
      * the same list on its own, so if that copy has rows by then, they stand
      * in for the page's first response.
      */
@@ -3575,7 +3575,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             libraryLikedPage()?.let { return Result.success(it) }
             if (_detailStack.value.none { it.browseId == browseId }) return result
             delay(wait)
-            wait *= 2
+            wait += LIKED_RETRY_STEP_MS
             Log.w("BitChord", "liked music still empty, asking again")
             result = YtMusicRepository.browseSongs(browseId)
         }
@@ -4606,9 +4606,14 @@ private const val HOME_CACHE_WRITE_DELAY_MS = 2_000L
 private const val DETAIL_CACHE_SIZE = 40
 private const val DETAIL_CACHE_TTL_MS = 30 * 60 * 1000L
 
-/** Liked Music's patience at launch — see MainViewModel.likedAwareBrowse: waits of 1s, 2s, then 4s. */
-private const val LIKED_RETRIES = 3
+/**
+ * Liked Music's patience at launch — see MainViewModel.likedAwareBrowse:
+ * waits of 1s, 2s, 3s, 4s, then 5s, about 15s in all. A cold launch has been
+ * seen to need about 7s before the list comes back, so this covers twice that.
+ */
+private const val LIKED_RETRIES = 5
 private const val LIKED_RETRY_FIRST_MS = 1_000L
+private const val LIKED_RETRY_STEP_MS = 1_000L
 
 /** How many seeds "I'm Feeling Lucky" keeps per session. */
 private const val LUCKY_POOL_SIZE = 20
