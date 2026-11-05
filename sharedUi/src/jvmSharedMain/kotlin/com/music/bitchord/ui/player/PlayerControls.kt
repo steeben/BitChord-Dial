@@ -229,6 +229,9 @@ internal fun PlayerScrubber(
     val mixPulse = rememberMixPulse({ mixBlend.value }, enabled = !reduceAnimation)
     // Read here rather than in the player around the bar: the accent crossfades on every skip.
     val waveAccents = rememberWaveAccents(waveArtwork.takeIf { waves }).takeIf { waves }
+    // The bar and its labels in difference ink (see [differenceInk]). Not the
+    // waves: their colours are the song's accent, and inverted they'd be its opposite.
+    ProvideDifferenceInk {
     Column(Modifier.fillMaxWidth()) {
         ThinSlider(
             value = shown,
@@ -241,13 +244,15 @@ internal fun PlayerScrubber(
             waves = waveAccents,
             wavesPlaying = playing,
             animateWaves = !reduceAnimation,
+            modifier = if (waveAccents == null) Modifier.differenceInk() else Modifier,
         )
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 // The slider's touch target extends well past the drawn bar,
                 // so pull the labels back up under it.
-                .offset(y = (-9).dp),
+                .offset(y = (-9).dp)
+                .differenceInk(),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -280,6 +285,7 @@ internal fun PlayerScrubber(
                 MixingLabel(mixPulse, Modifier.align(Alignment.Center))
             }
         }
+    }
     }
 }
 
@@ -467,8 +473,10 @@ internal fun TransportRow(
     val playSize = if (compact) 58.dp else 74.dp
     val playTouch = if (compact) 76.dp else 92.dp
     val skipSize = if (compact) 44.dp else PLAYER_SKIP_ICON_SIZE
+    // No discs behind the transport, so the whole row goes in difference ink.
+    ProvideDifferenceInk {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().differenceInk(),
         // SpaceAround, not SpaceEvenly: the outer margins take half a gap, so
         // the three buttons spread a little further apart from each other.
         horizontalArrangement = Arrangement.SpaceAround,
@@ -516,6 +524,7 @@ internal fun TransportRow(
             haptic = Haptic.SkipNext,
         )
     }
+    }
 }
 
 /** ThinSlider's fixed touch target at the volume bar's size: 10dp + 22dp. */
@@ -532,8 +541,9 @@ internal fun VolumeRow(
     onValueChange: (Float) -> Unit,
     onValueChangeFinished: () -> Unit,
 ) {
+    ProvideDifferenceInk {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().differenceInk(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -558,6 +568,7 @@ internal fun VolumeRow(
             tint = PlayerInk.copy(alpha = 0.5f),
             modifier = Modifier.size(20.dp),
         )
+    }
     }
 }
 
@@ -705,6 +716,9 @@ internal fun CircleGlyph(
             },
         contentAlignment = Alignment.Center,
     ) {
+        // The glyph alone in difference ink: the disc or glass under it stays as it is.
+        ProvideDifferenceInk {
+        Box(Modifier.differenceInk(), contentAlignment = Alignment.Center) {
         if (glyph != null) {
             glyph()
         } else {
@@ -720,6 +734,8 @@ internal fun CircleGlyph(
                     modifier = Modifier.size(19.dp),
                 )
             }
+        }
+        }
         }
     }
 }
@@ -1088,11 +1104,14 @@ private fun PillSegment(
             .semantics { this.contentDescription = contentDescription },
         contentAlignment = Alignment.Center,
     ) {
+        ProvideDifferenceInk {
         val tint = PlayerInk.copy(alpha = if (highlighted) 1f else 0.75f)
         Crossfade(
             targetState = loading,
             animationSpec = tween(durationMillis = 200),
             label = "pillSegmentLoading",
+            // The glyph alone: the capsule's glass and the lit segment's wash stay as they are.
+            modifier = Modifier.differenceInk(),
         ) { isLoading ->
             if (isLoading) {
                 CircularProgressIndicator(
@@ -1132,6 +1151,7 @@ private fun PillSegment(
                     fontWeight = FontWeight.Bold,
                 )
             }
+        }
         }
     }
 }
@@ -1301,13 +1321,14 @@ private fun BottomGlyph(
             .semantics { this.contentDescription = contentDescription },
         contentAlignment = Alignment.Center,
     ) {
+        ProvideDifferenceInk {
         val tint = PlayerInk.copy(alpha = if (highlighted) 1f else 0.75f)
         if (icon != null) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = tint,
-                modifier = Modifier.size(26.dp),
+                modifier = Modifier.size(26.dp).differenceInk(),
             )
         } else if (label != null) {
             Text(
@@ -1315,7 +1336,9 @@ private fun BottomGlyph(
                 color = tint,
                 fontSize = 19.sp,
                 fontWeight = FontWeight.Bold,
+                modifier = Modifier.differenceInk(),
             )
+        }
         }
     }
 }
