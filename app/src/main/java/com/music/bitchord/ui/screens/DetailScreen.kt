@@ -120,6 +120,9 @@ import coil3.request.ImageRequest
 import coil3.request.transformations
 import androidx.compose.runtime.mutableIntStateOf
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.flow.first
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Constraints
 import com.music.bitchord.data.canvas.AppleArtistArt
@@ -562,11 +565,29 @@ fun DetailScreen(
         // pass comes back empty.
         canvas = CanvasRepository.canvasForAlbum(page.title, credit) ?: canvas
     }
-    // An artist's clip comes with the same Apple lookup as its photograph.
-    val artistVideo = appleArt?.videoUrl
-    LaunchedEffect(artistVideo, canvasEnabled) {
-        if (isArtist) canvas = artistVideo?.takeIf { canvasEnabled }?.let { CanvasArtwork(url = it) }
+    // Opened from a dial tile, the page grows out of that tile, and the tile's
+    // own picture is what its banner starts as: the same image, already in
+    // memory, so there is no blank frame while the full-size art loads. The
+    // banner stays that picture until the launch is over and the Apple lookup
+    // has said whether there is a moving one, then goes once, straight to what
+    // it settles on: the moving banner on wifi, the still one otherwise.
+    val dialArt = remember(page.browseId) {
+        DialLaunch.origin?.takeIf { isArtist && it.key == page.browseId }?.thumbnailUrl
     }
+    var launchSettled by remember(page.browseId) { mutableStateOf(dialArt == null) }
+    LaunchedEffect(page.browseId) {
+        if (launchSettled) return@LaunchedEffect
+        delay(DialLaunch.OPEN_MS.toLong())
+        launchSettled = true
+    }
+    val metered by AppSettings.meteredConnection.collectAsStateWithLifecycle()
+    // An artist's clip comes with the same Apple lookup as its photograph.
+    // Video is heavy, so only on an unmetered connection.
+    // Worked out here rather than in an effect, so the banner knows in the same
+    // frame as the photo whether a clip is coming and holds the photo for it.
+    val artistVideo = appleArt?.videoUrl?.takeIf { isArtist && canvasEnabled && metered == false }
+    val artistCanvas = remember(artistVideo) { artistVideo?.let { CanvasArtwork(url = it) } }
+    val bannerCanvas = if (isArtist) artistCanvas else canvas
 
     // Opening the search carries the page up to it, so the field lands just
     // clear of the frosted bar with the tracks under it rather than at the foot
@@ -724,10 +745,11 @@ fun DetailScreen(
                 PageBackground(
                     page = page,
                     palette = palette,
-                    canvas = canvas,
+                    canvas = bannerCanvas?.takeIf { launchSettled },
                     artHeight = artHeight,
                     listState = listState,
-                    heroUrl = appleArt?.heroUrl,
+                    heroUrl = appleArt?.heroUrl?.takeIf { launchSettled },
+                    placeholderUrl = dialArt,
                     stopScroll = headerStopScroll,
                     modifier = Modifier
                         .matchParentSize()
@@ -1733,6 +1755,12 @@ private fun PageBackground(
     listState: LazyListState,
     heroUrl: String? = null,
     /**
+     * The dial tile's picture, when the page grew out of one: drawn under the
+     * banner (it is already in memory) so the banner is never blank while the
+     * full-size art loads.
+     */
+    placeholderUrl: String? = null,
+    /**
      * How far the page scrolls before its header holds, or null where it never
      * does. Up to there the picture barely rises and slowly fades as the title
      * climbs over it; from there it stays put. With no stop it follows the list.
@@ -1750,19 +1778,38 @@ private fun PageBackground(
     // over the picture already up rather than cutting to it.
     val heroArt = heroUrl?.takeIf { it != baseArt }
     var heroLoaded by remember(heroArt) { mutableStateOf(false) }
+    var baseLoaded by remember(baseArt) { mutableStateOf(false) }
+    val baseIn by animateFloatAsState(
+        targetValue = if (baseLoaded) 1f else 0f,
+        animationSpec = tween(BASE_FADE_MS, easing = FastOutSlowInEasing),
+        label = "baseIn",
+    )
+    // The moving clip, slower and only once it has a frame up, so the banner
+    // eases from still to moving instead of jumping to it.
+    var clipRendered by remember(canvas) { mutableStateOf(false) }
+    val clipIn = remember(canvas) { Animatable(0f) }
+    // While a clip is on its way the photo waits for it: the banner goes
+    // straight from the picture it opened with to the moving one, rather than
+    // to the photo and then again to the clip. Once the clip is in (or has
+    // taken too long to start) the photo comes up under it, ready for when the
+    // clip is gone.
+    var clipSettled by remember(canvas) { mutableStateOf(canvas == null) }
+    LaunchedEffect(canvas) {
+        if (canvas == null) return@LaunchedEffect
+        val started = withTimeoutOrNull(CLIP_WAIT_MS) { snapshotFlow { clipRendered }.first { it } }
+        if (started == null) {
+            clipSettled = true
+            return@LaunchedEffect
+        }
+        delay(CLIP_FADE_DELAY_MS)
+        clipIn.animateTo(1f, tween(CLIP_FADE_MS, easing = FastOutSlowInEasing))
+        clipSettled = true
+    }
     val heroIn by animateFloatAsState(
-        targetValue = if (heroLoaded) 1f else 0f,
+        targetValue = if (heroLoaded && clipSettled) 1f else 0f,
         animationSpec = tween(ART_CROSSFADE_MS, easing = FastOutSlowInEasing),
         label = "heroIn",
     )
-    // The moving clip too, slower still and only once the page has settled,
-    // so the banner eases from still to moving instead of jumping to it.
-    val clipIn = remember(canvas) { Animatable(0f) }
-    LaunchedEffect(canvas) {
-        if (canvas == null) return@LaunchedEffect
-        delay(CLIP_FADE_DELAY_MS)
-        clipIn.animateTo(1f, tween(CLIP_FADE_MS, easing = FastOutSlowInEasing))
-    }
 
     Box(modifier.clipToBounds()) {
         Box(
@@ -1778,10 +1825,28 @@ private fun PageBackground(
                 // scrim showed as a thin bright line along the artwork's edge.
                 .clipToBounds(),
         ) {
+            if (placeholderUrl != null) {
+                // The tile's own request, so it is the tile's memory-cache entry.
+                val context = LocalPlatformContext.current
+                HeaderArt(
+                    art = remember(placeholderUrl, context) { speedDialArtRequest(context, placeholderUrl) },
+                    softenFoot = softenFoot,
+                    modifier = Modifier.matchParentSize().background(palette.elevated),
+                )
+            }
             HeaderArt(
                 art = baseArt,
                 softenFoot = softenFoot,
-                modifier = Modifier.matchParentSize().background(palette.elevated),
+                onLoaded = { baseLoaded = true },
+                modifier = Modifier.matchParentSize().then(
+                    if (placeholderUrl == null) {
+                        Modifier.background(palette.elevated)
+                    } else {
+                        // Over the tile's picture it eases in, in case the
+                        // page's own art is a different shot from the tile's.
+                        Modifier.graphicsLayer { alpha = baseIn }
+                    },
+                ),
             )
             if (heroArt != null) {
                 HeaderArt(
@@ -1801,6 +1866,7 @@ private fun PageBackground(
                     canvas = clip,
                     isPlaying = true,
                     presentationAlpha = { clipIn.value },
+                    onRenderedChanged = { clipRendered = it },
                     modifier = Modifier.matchParentSize(),
                 )
             }
@@ -1887,7 +1953,8 @@ private fun LazyListState.artAlpha(stop: Float?): Float {
  */
 @Composable
 private fun HeaderArt(
-    art: String?,
+    /** A URL, or a whole request. */
+    art: Any?,
     softenFoot: Boolean,
     modifier: Modifier = Modifier,
     onLoaded: () -> Unit = {},
@@ -1926,6 +1993,12 @@ private fun HeaderArt(
 private const val ART_CROSSFADE_MS = 700
 private const val CLIP_FADE_DELAY_MS = 350L
 private const val CLIP_FADE_MS = 1100
+
+/** How long the full-size art takes to ease in over the dial tile's picture. */
+private const val BASE_FADE_MS = 300
+
+/** How long the photo holds for a clip that hasn't shown a frame yet before it comes up anyway. */
+private const val CLIP_WAIT_MS = 3000L
 
 /** Where the blurred copy starts to show and where it has fully taken over. */
 private val SOFT_FOOT_MASK = Brush.verticalGradient(
