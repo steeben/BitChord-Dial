@@ -273,6 +273,7 @@ private fun OutputRow(
 ) {
     val haptics = rememberHaptics()
     val active = device.isActive
+    val chosenIcons by PlayerSettings.outputIcons.collectAsStateWithLifecycle()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -297,7 +298,7 @@ private fun OutputRow(
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                imageVector = outputIcon(device),
+                imageVector = outputIcon(device, chosenIcons),
                 contentDescription = null,
                 tint = Color.White.copy(alpha = if (active) 1f else 0.7f),
                 modifier = Modifier.size(21.dp),

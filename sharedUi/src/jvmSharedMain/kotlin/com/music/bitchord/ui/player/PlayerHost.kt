@@ -255,7 +255,15 @@ interface PlayerSettingsSource {
     val translationLanguage: StateFlow<String>
     val versionAlignmentInProgress: StateFlow<Boolean>
 
+    /**
+     * Icons picked by long-pressing the output button, by [outputIconKey], each the name of
+     * an [AudioOutputIcon]. Outputs missing from it take the icon the platform suggests.
+     */
+    val outputIcons: StateFlow<Map<String, String>> get() = NoOutputIcons
+
     fun setLastPlayerScreen(value: LastPlayerScreen)
+    /** Gives the output under [key] its own icon; null hands it back to the automatic one. */
+    fun setOutputIcon(key: String, icon: String?) = Unit
     fun setLyricsOffsetMs(value: Int)
     /** Saves a provider priority reordered from the player's provider drawer. */
     fun setLyricsSourceOrder(value: List<LyricsSource>) = Unit
@@ -435,5 +443,6 @@ internal fun AudioPipelineDialog(hazeState: HazeState, isPlaying: Boolean, onDis
     PlayerPlatform.host.AudioPipelineDialog(hazeState, isPlaying, onDismiss)
 
 private val CompactCanvasControlsOff: StateFlow<Boolean> = kotlinx.coroutines.flow.MutableStateFlow(false)
+private val NoOutputIcons: StateFlow<Map<String, String>> = kotlinx.coroutines.flow.MutableStateFlow(emptyMap())
 private val WavyProgressBarOn: StateFlow<Boolean> = kotlinx.coroutines.flow.MutableStateFlow(true)
 private val NoPreferredLyricsSource: StateFlow<LyricsSource?> = kotlinx.coroutines.flow.MutableStateFlow(null)

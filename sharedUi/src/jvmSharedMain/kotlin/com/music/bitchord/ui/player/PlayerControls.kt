@@ -54,6 +54,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -64,9 +65,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeDown
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import com.music.bitchord.ui.components.LikeHeart
 import com.music.bitchord.ui.components.rememberLikeAnimation
@@ -229,9 +234,6 @@ internal fun PlayerScrubber(
     val mixPulse = rememberMixPulse({ mixBlend.value }, enabled = !reduceAnimation)
     // Read here rather than in the player around the bar: the accent crossfades on every skip.
     val waveAccents = rememberWaveAccents(waveArtwork.takeIf { waves }).takeIf { waves }
-    // The bar and its labels in difference ink (see [differenceInk]). Not the
-    // waves: their colours are the song's accent, and inverted they'd be its opposite.
-    ProvideDifferenceInk {
     Column(Modifier.fillMaxWidth()) {
         ThinSlider(
             value = shown,
@@ -244,15 +246,13 @@ internal fun PlayerScrubber(
             waves = waveAccents,
             wavesPlaying = playing,
             animateWaves = !reduceAnimation,
-            modifier = if (waveAccents == null) Modifier.differenceInk() else Modifier,
         )
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 // The slider's touch target extends well past the drawn bar,
                 // so pull the labels back up under it.
-                .offset(y = (-9).dp)
-                .differenceInk(),
+                .offset(y = (-9).dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -261,12 +261,12 @@ internal fun PlayerScrubber(
                 Text(
                     text = formatTime((shown * durationMs).toLong()),
                     style = MaterialTheme.typography.labelMedium,
-                    color = PlayerInk.copy(alpha = 0.55f),
+                    color = playerInk(alpha = 0.55f),
                 )
                 Text(
                     text = "-" + formatTime(durationMs - (shown * durationMs).toLong()),
                     style = MaterialTheme.typography.labelMedium,
-                    color = PlayerInk.copy(alpha = 0.55f),
+                    color = playerInk(alpha = 0.55f),
                 )
             }
             // Pinned to the box's own centre rather than squeezed into the gap
@@ -285,7 +285,6 @@ internal fun PlayerScrubber(
                 MixingLabel(mixPulse, Modifier.align(Alignment.Center))
             }
         }
-    }
     }
 }
 
@@ -316,7 +315,7 @@ private fun MixingLabel(pulse: MixPulse, modifier: Modifier = Modifier) {
             fontWeight = FontWeight.SemiBold,
             fontSize = (MaterialTheme.typography.labelMedium.fontSize.value + 1).sp,
         ),
-        color = PlayerInk.copy(alpha = 0.85f),
+        color = playerInk(alpha = 0.85f),
         maxLines = 1,
     )
 }
@@ -401,7 +400,7 @@ internal fun SleeveNerdStats(song: Song, modifier: Modifier = Modifier) {
             Text(
                 text = stats,
                 style = nerdStyle,
-                color = PlayerInk.copy(alpha = 0.65f),
+                color = playerInk(alpha = 0.65f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
@@ -436,7 +435,7 @@ internal fun SleeveNerdStats(song: Song, modifier: Modifier = Modifier) {
                 // Dimmer than the measured line above it: that one describes
                 // the audio, this one describes the app, and the ranking
                 // should show.
-                color = PlayerInk.copy(alpha = 0.5f),
+                color = playerInk(alpha = 0.5f),
                 // The detailed line runs long on a phone: a second line rather
                 // than an ellipsis through the part that says what the mix is.
                 maxLines = 2,
@@ -473,10 +472,8 @@ internal fun TransportRow(
     val playSize = if (compact) 58.dp else 74.dp
     val playTouch = if (compact) 76.dp else 92.dp
     val skipSize = if (compact) 44.dp else PLAYER_SKIP_ICON_SIZE
-    // No discs behind the transport, so the whole row goes in difference ink.
-    ProvideDifferenceInk {
     Row(
-        modifier = Modifier.fillMaxWidth().differenceInk(),
+        modifier = Modifier.fillMaxWidth(),
         // SpaceAround, not SpaceEvenly: the outer margins take half a gap, so
         // the three buttons spread a little further apart from each other.
         horizontalArrangement = Arrangement.SpaceAround,
@@ -524,7 +521,6 @@ internal fun TransportRow(
             haptic = Haptic.SkipNext,
         )
     }
-    }
 }
 
 /** ThinSlider's fixed touch target at the volume bar's size: 10dp + 22dp. */
@@ -541,15 +537,14 @@ internal fun VolumeRow(
     onValueChange: (Float) -> Unit,
     onValueChangeFinished: () -> Unit,
 ) {
-    ProvideDifferenceInk {
     Row(
-        modifier = Modifier.fillMaxWidth().differenceInk(),
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             Icons.AutoMirrored.Rounded.VolumeDown,
             contentDescription = null,
-            tint = PlayerInk.copy(alpha = 0.5f),
+            tint = playerInk(alpha = 0.5f),
             modifier = Modifier.size(20.dp),
         )
         Spacer(Modifier.width(10.dp))
@@ -565,10 +560,9 @@ internal fun VolumeRow(
         Icon(
             Icons.AutoMirrored.Rounded.VolumeUp,
             contentDescription = null,
-            tint = PlayerInk.copy(alpha = 0.5f),
+            tint = playerInk(alpha = 0.5f),
             modifier = Modifier.size(20.dp),
         )
-    }
     }
 }
 
@@ -716,9 +710,6 @@ internal fun CircleGlyph(
             },
         contentAlignment = Alignment.Center,
     ) {
-        // The glyph alone in difference ink: the disc or glass under it stays as it is.
-        ProvideDifferenceInk {
-        Box(Modifier.differenceInk(), contentAlignment = Alignment.Center) {
         if (glyph != null) {
             glyph()
         } else {
@@ -734,8 +725,6 @@ internal fun CircleGlyph(
                     modifier = Modifier.size(19.dp),
                 )
             }
-        }
-        }
         }
     }
 }
@@ -812,7 +801,7 @@ private fun TransportGlyph(
         if (icon == null) {
             PlayPauseGlyph(
                 isPlaying = playing,
-                tint = PlayerInk.copy(alpha = alpha),
+                tint = playerInk(alpha = alpha),
                 contentDescription = contentDescription,
                 modifier = Modifier.size(size),
             )
@@ -820,7 +809,7 @@ private fun TransportGlyph(
             Icon(
                 painter = painterResource(icon),
                 contentDescription = contentDescription,
-                tint = PlayerInk.copy(alpha = alpha),
+                tint = playerInk(alpha = alpha),
                 modifier = Modifier
                     .size(size)
                     .then(if (heightScale != 1f) Modifier.graphicsLayer { scaleY = heightScale } else Modifier),
@@ -1009,15 +998,22 @@ private fun OutputPartySegments(
     // capsule at the original spacing when the party half is gone.
     val showParty = shown || badge.inParty
     val segmentWidth = if (showParty) PILL_SEGMENT_WIDTH_TRIPLE else PILL_SEGMENT_WIDTH
-    PillSegment(
-        // Earbuds, headphones, a speaker or the phone: whatever the sound
-        // is actually leaving by, kept current as the route changes.
-        icon = rememberAudioOutputIcon(),
-        iconSize = PILL_HEADPHONES_SIZE,
-        contentDescription = stringResource(Res.string.audio_output),
-        onClick = onOutput,
-        width = segmentWidth,
-    )
+    // Long-pressed, a menu of icons to give whatever is playing now, kept
+    // for that device by its name (see [outputIconKey]).
+    var iconMenuOpen by remember { mutableStateOf(false) }
+    Box {
+        PillSegment(
+            // Earbuds, headphones, a speaker or the phone: whatever the sound
+            // is actually leaving by, kept current as the route changes.
+            icon = rememberAudioOutputIcon(),
+            iconSize = PILL_HEADPHONES_SIZE,
+            contentDescription = stringResource(Res.string.audio_output),
+            onClick = onOutput,
+            width = segmentWidth,
+            onLongClick = { iconMenuOpen = true },
+        )
+        OutputIconMenu(expanded = iconMenuOpen, onDismiss = { iconMenuOpen = false })
+    }
     PillDivider()
     // Shuffle sits between the two "where" halves so it is a tap away
     // without opening the queue; the queue capsule keeps its own copy.
@@ -1056,6 +1052,67 @@ private fun OutputPartySegments(
 }
 
 /**
+ * The icons the output that is playing can wear, from a long press on the output button.
+ * "Automatic" hands it back to the icon the platform suggests. The pick is kept for that
+ * device ([outputIconKey]) and shows on the button and in the output drawer alike.
+ */
+@Composable
+private fun OutputIconMenu(expanded: Boolean, onDismiss: () -> Unit) {
+    val haptics = rememberHaptics()
+    val active = rememberActiveAudioOutput()
+    val key = outputIconKey(active)
+    val chosen by PlayerSettings.outputIcons.collectAsStateWithLifecycle()
+    val current = chosen[key]
+    val choose: (AudioOutputIcon?) -> Unit = { icon ->
+        haptics.play(Haptic.Select)
+        PlayerSettings.setOutputIcon(key, icon?.name)
+        onDismiss()
+    }
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(14.dp),
+        containerColor = Color(0xFF2A2A2C),
+        modifier = Modifier.heightIn(max = 420.dp),
+    ) {
+        val automatic = stringResource(Res.string.output_icon_automatic)
+        OutputIconRow(
+            name = automatic,
+            icon = if (active != null) outputIcon(active) else AudioOutputIcon.PHONE.vector,
+            checked = current == null,
+            onClick = { choose(null) },
+        )
+        HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
+        AudioOutputIcon.entries.forEach { option ->
+            OutputIconRow(
+                name = stringResource(option.label),
+                icon = option.vector,
+                checked = current == option.name,
+                onClick = { choose(option) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun OutputIconRow(name: String, icon: ImageVector, checked: Boolean, onClick: () -> Unit) {
+    DropdownMenuItem(
+        text = { Text(name, color = Color.White, fontSize = 15.sp) },
+        leadingIcon = {
+            Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+        },
+        trailingIcon = {
+            Box(Modifier.size(18.dp), contentAlignment = Alignment.Center) {
+                if (checked) {
+                    Icon(Icons.Rounded.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                }
+            }
+        },
+        onClick = onClick,
+    )
+}
+
+/**
  * One control inside a [Pill] — [BottomGlyph]'s twin, squared off.
  *
  * Same behaviour down to the tap window, and deliberately not the same
@@ -1063,6 +1120,7 @@ private fun OutputPartySegments(
  * has to fill its share of the capsule edge to edge or the join stops reading
  * as one.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PillSegment(
     contentDescription: String,
@@ -1078,6 +1136,7 @@ private fun PillSegment(
     tapWindowMs: Long = 0L,
     /** Per-segment override — see [OutputPartySegments]'s three-up capsule. */
     width: Dp = PILL_SEGMENT_WIDTH,
+    onLongClick: (() -> Unit)? = null,
 ) {
     val haptics = rememberHaptics()
     val lastTap = remember { mutableLongStateOf(-tapWindowMs) }
@@ -1089,10 +1148,16 @@ private fun PillSegment(
             .background(if (highlighted) Color.White.copy(alpha = 0.14f) else Color.Transparent)
             // Inside the capsule's clip, so it glows within its own segment.
             .pressPulse(interaction, color = PlayerInk)
-            .clickable(
+            .combinedClickable(
                 interactionSource = interaction,
                 indication = null,
                 enabled = !loading,
+                onLongClick = onLongClick?.let { longClick ->
+                    {
+                        haptics.play(Haptic.Tap)
+                        longClick()
+                    }
+                },
             ) {
                 val now = uptimeMillis()
                 if (now - lastTap.longValue >= tapWindowMs) {
@@ -1104,14 +1169,11 @@ private fun PillSegment(
             .semantics { this.contentDescription = contentDescription },
         contentAlignment = Alignment.Center,
     ) {
-        ProvideDifferenceInk {
-        val tint = PlayerInk.copy(alpha = if (highlighted) 1f else 0.75f)
+        val tint = playerInk(alpha = if (highlighted) 1f else 0.75f)
         Crossfade(
             targetState = loading,
             animationSpec = tween(durationMillis = 200),
             label = "pillSegmentLoading",
-            // The glyph alone: the capsule's glass and the lit segment's wash stay as they are.
-            modifier = Modifier.differenceInk(),
         ) { isLoading ->
             if (isLoading) {
                 CircularProgressIndicator(
@@ -1151,7 +1213,6 @@ private fun PillSegment(
                     fontWeight = FontWeight.Bold,
                 )
             }
-        }
         }
     }
 }
@@ -1206,7 +1267,7 @@ internal fun OutputCaption(
         Text(
             text = if (badge.inParty) jamName else outputName,
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-            color = PlayerInk.copy(alpha = 0.55f),
+            color = playerInk(alpha = 0.55f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
@@ -1321,14 +1382,13 @@ private fun BottomGlyph(
             .semantics { this.contentDescription = contentDescription },
         contentAlignment = Alignment.Center,
     ) {
-        ProvideDifferenceInk {
-        val tint = PlayerInk.copy(alpha = if (highlighted) 1f else 0.75f)
+        val tint = playerInk(alpha = if (highlighted) 1f else 0.75f)
         if (icon != null) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = tint,
-                modifier = Modifier.size(26.dp).differenceInk(),
+                modifier = Modifier.size(26.dp),
             )
         } else if (label != null) {
             Text(
@@ -1336,9 +1396,7 @@ private fun BottomGlyph(
                 color = tint,
                 fontSize = 19.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.differenceInk(),
             )
-        }
         }
     }
 }
@@ -1950,7 +2008,7 @@ private fun LosslessLabel(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val tint = PlayerInk.copy(alpha = if (animated) 0.7f else 0.45f)
+        val tint = playerInk(alpha = if (animated) 0.7f else 0.45f)
         if (iconPainter != null) {
             // At the drawable's own size — the wave is wide, the double-D
             // nearly square, and one box squashed one of them.
@@ -1976,7 +2034,7 @@ private fun LosslessLabel(
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontSize = (MaterialTheme.typography.labelMedium.fontSize.value + 1).sp,
                 ),
-                color = PlayerInk.copy(alpha = 0.45f),
+                color = playerInk(alpha = 0.45f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

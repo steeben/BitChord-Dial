@@ -1,6 +1,7 @@
 package com.music.bitchord.ui.player
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -12,16 +13,15 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.unit.dp
@@ -79,6 +79,36 @@ internal val PlayerInk: Color
     @Composable get() = LocalPlayerInk.current
 
 /**
+ * What the player around the ink is doing, written by the player as it changes and read by
+ * [ProvidePlayerInk]. [dim] is how much darker the backdrop has gone than the plain player
+ * (the Canvas deck's dim, the lyrics and queue scrim), 0 to 1. [canvasShowing] is a moving
+ * cover playing behind the controls, which always takes the light ink.
+ */
+@Stable
+class PlayerInkConditions {
+    var dim by mutableFloatStateOf(0f)
+    var canvasShowing by mutableStateOf(false)
+}
+
+/**
+ * How far the light ink is brightened toward plain white, and its faded tones toward full
+ * strength, to make up for a dimmed backdrop. Follows [PlayerInkConditions.dim]; 0 under
+ * the dark ink, which never brightens.
+ */
+internal val LocalPlayerInkLift = compositionLocalOf { 0f }
+
+/**
+ * [PlayerInk] at [alpha], with the faded tone brought up by the ink's lift: as the backdrop
+ * dims, a 55% caption moves toward full strength by the same share, so it keeps the
+ * contrast it had over the brighter backdrop.
+ */
+@Composable
+internal fun playerInk(alpha: Float): Color {
+    val lift = LocalPlayerInkLift.current
+    return PlayerInk.copy(alpha = (alpha + (1f - alpha) * lift).coerceIn(0f, 1f))
+}
+
+/**
  * Hands the player's [content] its ink, off the same accent [rememberWaveAccents] follows
  * (or the theme's own, with nothing playing). Only [PLAYER_INK_TINT] of the way there, so
  * it reads as white with a cast, not as a colour. A grey accent leaves it plain white.
@@ -88,13 +118,23 @@ internal val PlayerInk: Color
  * [INK_DARK_FROM] (mostly white) flips the ink to its dark form, leaning further into the
  * accent ([PLAYER_INK_TINT_BRIGHT]) and going [PLAYER_INK_DARKEN] of the way to black.
  * Anything short of that keeps the plain light ink, so a mid-toned backdrop never ends up
- * with dim, low-contrast text.
+ * with dim, low-contrast text. A playing Canvas ([PlayerInkConditions.canvasShowing])
+ * keeps the light ink whatever the sleeve.
+ *
+ * With the light ink, a dimmed backdrop ([PlayerInkConditions.dim]) brightens the ink by
+ * the same amount: that share of the way to white, and (through [playerInk]) that share of
+ * the way to full strength for its faded tones. Every change eases, never snaps.
  */
 @Composable
-fun ProvidePlayerInk(artLuminance: Float? = null, content: @Composable () -> Unit) {
+fun ProvidePlayerInk(
+    artLuminance: Float? = null,
+    conditions: PlayerInkConditions? = null,
+    content: @Composable () -> Unit,
+) {
     val accent = LocalNowPlayingTint.current ?: MaterialTheme.colorScheme.primary
-    val tint = playerInkTint(artLuminance)
-    val darken = playerInkDarken(artLuminance)
+    val dark = playerInkIsDark(artLuminance) && conditions?.canvasShowing != true
+    val tint = if (dark) PLAYER_INK_TINT_BRIGHT else PLAYER_INK_TINT
+    val darken = if (dark) PLAYER_INK_DARKEN else 0f
     val target = remember(accent, tint, darken) {
         val base = accent.toHsl()
         val cast = if (base.s < GREY_SATURATION) {
@@ -110,29 +150,16 @@ fun ProvidePlayerInk(artLuminance: Float? = null, content: @Composable () -> Uni
         tween(durationMillis = 900, easing = FastOutSlowInEasing),
         label = "playerInk",
     )
-    CompositionLocalProvider(LocalPlayerInk provides ink, content = content)
-}
-
-/**
- * The player's controls, drawn in "difference": pure white ink composited onto whatever
- * is behind it with [BlendMode.Difference], so each pixel of a glyph comes out as the
- * inverse of the backdrop under it. Over a bright sleeve the controls go dark, over a dark
- * one they stay light, and across a sleeve that is half and half they change part-way along.
- *
- * The ink is forced to plain white here (not the tinted, sometimes darkened ink of
- * [ProvidePlayerInk]): white is what makes the difference an exact inversion; a cast or a
- * grey would come out as a colour or a dim smear. The lyrics keep [ProvidePlayerInk]'s ink.
- *
- * Put this on the ink alone, never on a glass disc or capsule around it: those would be
- * inverted too. Where an ancestor is drawn into a layer of its own (a fade in progress), the
- * blend has only that layer to work against and the ink simply shows as white.
- */
-internal fun Modifier.differenceInk(): Modifier = graphicsLayer { blendMode = BlendMode.Difference }
-
-/** [content] in the white ink that [differenceInk] needs; pair the two. */
-@Composable
-internal fun ProvideDifferenceInk(content: @Composable () -> Unit) {
-    CompositionLocalProvider(LocalPlayerInk provides Color.White, content = content)
+    val lift by animateFloatAsState(
+        targetValue = if (dark) 0f else (conditions?.dim ?: 0f).coerceIn(0f, 1f),
+        animationSpec = tween(durationMillis = 420, easing = FastOutSlowInEasing),
+        label = "playerInkLift",
+    )
+    CompositionLocalProvider(
+        LocalPlayerInk provides lerp(ink, Color.White.copy(alpha = ink.alpha), lift),
+        LocalPlayerInkLift provides lift,
+        content = content,
+    )
 }
 
 /** Whether a sleeve of [artLuminance] is white enough to switch the player to dark ink. */

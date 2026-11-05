@@ -1958,6 +1958,7 @@ internal fun LyricsPanel(
                     label = "gapSwell",
                 )
                 val instrumental = stringResource(Res.string.instrumental)
+                val dotInk = PlayerInk
                 Box(
                     contentAlignment = Alignment.CenterStart,
                     modifier = Modifier
@@ -2000,7 +2001,7 @@ internal fun LyricsPanel(
                                 // fills across it, so they light left to right.
                                 val lit = (through * GAP_DOTS - dot).coerceIn(0f, 1f)
                                 drawCircle(
-                                    color = Color.White.copy(
+                                    color = dotInk.copy(
                                         alpha = GAP_DOT_REST + (1f - GAP_DOT_REST) * lit,
                                     ),
                                     radius = radius,
@@ -2702,6 +2703,9 @@ private fun CurrentLyricLine(
                         overflow = TextOverflow.Clip,
                         softWrap = false,
                     )
+                    // In the player's ink like the lines either side of it, so
+                    // it takes the same cast and goes dark over a white sleeve.
+                    val barInk = PlayerInk
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -2710,12 +2714,12 @@ private fun CurrentLyricLine(
                             // redraw of two rounded rects, not a recomposition.
                             .drawBehind {
                                 val radius = CornerRadius(size.height / 2f)
-                                drawRoundRect(Color.White.copy(alpha = 0.22f), cornerRadius = radius)
+                                drawRoundRect(barInk.copy(alpha = 0.22f), cornerRadius = radius)
                                 val through = ((clock.longValue - from).toFloat() / (until - from))
                                     .coerceIn(0f, 1f)
                                 if (through > 0f) {
                                     drawRoundRect(
-                                        Color.White.copy(alpha = 0.85f),
+                                        barInk.copy(alpha = 0.85f),
                                         size = Size(size.width * through, size.height),
                                         cornerRadius = radius,
                                     )

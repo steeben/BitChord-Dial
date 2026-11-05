@@ -111,6 +111,12 @@ object CustomizationSettings {
     /** One UI 9's wave progress on the player's seek bar. Off, the plain thin bar. */
     val wavyProgressBar = MutableStateFlow(true)
 
+    /**
+     * Icons the listener gave audio outputs from the player's output button, by the
+     * player's output key ("BLUETOOTH:Pixel Buds Pro"), each an AudioOutputIcon name.
+     */
+    val outputIcons = MutableStateFlow<Map<String, String>>(emptyMap())
+
     private val DEFAULT_TAB_VIEWS = listOf(LibraryViewType.LIST, LibraryViewType.LIST, LibraryViewType.GRID)
 
     /** List or grid for each folder tab — songs, artists, albums — on its own. */
@@ -204,6 +210,7 @@ object CustomizationSettings {
             .firstOrNull { it.name == p.getString(KEY_MINI_PLAYER_SHAPE, null) } ?: MiniPlayerShape.CIRCULAR
         compactCanvasControls.value = p.getBoolean(KEY_COMPACT_CANVAS_CONTROLS, true)
         wavyProgressBar.value = p.getBoolean(KEY_WAVY_PROGRESS_BAR, true)
+        outputIcons.value = readOutputIcons(p.getString(KEY_OUTPUT_ICONS, null))
         libraryTabViews.value = p.getString(KEY_LIBRARY_TAB_VIEWS, null)
             ?.split(",")
             ?.mapNotNull { name -> LibraryViewType.entries.firstOrNull { it.name == name } }
@@ -688,6 +695,21 @@ object CustomizationSettings {
         prefs?.edit()?.putBoolean(KEY_WAVY_PROGRESS_BAR, value)?.apply()
     }
 
+    fun setOutputIcon(key: String, icon: String?) {
+        val updated = if (icon == null) outputIcons.value - key else outputIcons.value + (key to icon)
+        outputIcons.value = updated
+        val json = JSONObject().apply { updated.forEach { (k, v) -> put(k, v) } }
+        prefs?.edit()?.putString(KEY_OUTPUT_ICONS, json.toString())?.apply()
+    }
+
+    private fun readOutputIcons(raw: String?): Map<String, String> {
+        if (raw.isNullOrBlank()) return emptyMap()
+        return runCatching {
+            val json = JSONObject(raw)
+            json.keys().asSequence().associateWith { json.getString(it) }
+        }.getOrDefault(emptyMap())
+    }
+
     fun setCompactCanvasControls(value: Boolean) {
         compactCanvasControls.value = value
         prefs?.edit()?.putBoolean(KEY_COMPACT_CANVAS_CONTROLS, value)?.apply()
@@ -770,6 +792,7 @@ object CustomizationSettings {
     const val DEFAULT_CLEAR_GLASS_TINT_DARKNESS_LIGHT = 0.1f
 
     private const val KEY_NAV_TABS = "custom_nav_tabs"
+    private const val KEY_OUTPUT_ICONS = "output_icons"
     private const val KEY_COMPACT_CANVAS_CONTROLS = "custom_compact_canvas_controls"
     private const val KEY_WAVY_PROGRESS_BAR = "custom_wavy_progress_bar"
     private const val KEY_AMBIENT_BACKGROUND = "custom_ambient_background"

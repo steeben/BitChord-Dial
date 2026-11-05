@@ -248,6 +248,12 @@ private val ART_TITLE_GAP = 20.dp
  */
 private const val QUEUE_TRAVEL_MS = 420
 
+/**
+ * How much darker the lyrics and queue backdrop is than the main player's: the full-cover
+ * blur's 34–64% scrim against the mesh's 6–30%, about 30 points through the middle.
+ */
+private const val SUBVIEW_INK_DIM = 0.30f
+
 /** How long a Canvas can drop its picture before the player stops presenting it. */
 private const val CANVAS_DROP_GRACE_MS = 1_200L
 
@@ -925,7 +931,10 @@ fun NowPlayingScreen(
     // out of everyone's diffs. The brighter the sleeve, the further the ink
     // leans into the accent, so text doesn't vanish into a washed-out backdrop.
     val inkArtLuminance = rememberArtworkLuminance(remoteArt, CARD_ART_PX)
-    ProvidePlayerInk(artLuminance = inkArtLuminance) {
+    // The dims and the Canvas the ink answers to, filled in further down once
+    // they're known (see the SideEffect after [canvasCompactMode]).
+    val inkConditions = remember { PlayerInkConditions() }
+    ProvidePlayerInk(artLuminance = inkArtLuminance, conditions = inkConditions) {
     val density = LocalDensity.current
     val haptics = rememberHaptics()
 
@@ -1697,6 +1706,23 @@ fun NowPlayingScreen(
     // live lyric and the transport stay, and everything else slides away.
     val canvasCompactMode = compactCanvasControls && spotifyCanvasPresentation &&
         !spotifyCanvasControlsOpen && !lyricsOpen && !queueOpen
+    // The ink brightens by as much as the backdrop under it dims: the Canvas
+    // deck's flat dim (the same targets as spotifyCanvasDim below), or the
+    // heavier scrim the lyrics and queue sit on. A playing Canvas always takes
+    // the light ink, even where the still sleeve would have made it dark.
+    val inkDim = maxOf(
+        when {
+            canvasChromeUp && spotifyCanvasControlsOpen -> 0.5f
+            canvasCompactMode -> 0.15f
+            else -> 0f
+        },
+        if (lyricsOpen || queueOpen) SUBVIEW_INK_DIM else 0f,
+    )
+    val inkCanvasShowing = canvas != null && canvasRendered
+    SideEffect {
+        inkConditions.dim = inkDim
+        inkConditions.canvasShowing = inkCanvasShowing
+    }
     val canvasCompact = animateFloatAsState(
         targetValue = if (canvasCompactMode) 1f else 0f,
         animationSpec = tween(SPOTIFY_CANVAS_CONTROLS_ANIMATION_MS, easing = FastOutSlowInEasing),
@@ -4149,16 +4175,13 @@ fun NowPlayingScreen(
                         // ("… (Live)") dissolves into the new one instead of
                         // snapping while the rest of the switch moves around
                         // it.
-                        // In difference ink, like the rest of the controls:
-                        // dark over a bright backdrop, light over a dark one.
-                        ProvideDifferenceInk {
                         Crossfade(
                             targetState = song.title to song.artist,
                             animationSpec = tween(durationMillis = 300),
                             label = "playerCredits",
                         ) {
                             val scrolling = scrolls()
-                            Column(Modifier.differenceInk()) {
+                            Column {
                                 MarqueeText(
                                     text = song.title,
                                     style = MaterialTheme.typography.titleLarge.copy(
@@ -4185,7 +4208,7 @@ fun NowPlayingScreen(
                                         fontWeight = FontWeight.W500,
                                         fontSize = 20.sp,
                                     ),
-                                    color = PlayerInk.copy(alpha = 0.55f),
+                                    color = playerInk(alpha = 0.55f),
                                     enabled = scrolling,
                                     // A title that's also scrolling gets to go first —
                                     // starting together reads as clutter, so the artist
@@ -4194,7 +4217,6 @@ fun NowPlayingScreen(
                                     onOpenArtist = onOpenArtist,
                                 )
                             }
-                        }
                         }
                     }
                     // Out of the way under the compact Canvas controls, back

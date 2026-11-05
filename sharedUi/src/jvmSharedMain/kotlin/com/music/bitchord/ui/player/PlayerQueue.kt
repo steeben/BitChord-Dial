@@ -477,7 +477,7 @@ private fun QueueHeading(
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
-            color = PlayerInk.copy(alpha = 0.75f),
+            color = playerInk(alpha = 0.75f),
             modifier = Modifier.weight(1f),
         )
         trailing()
@@ -489,7 +489,7 @@ private fun QueueClearButton(style: TextStyle, locked: Boolean, onClear: () -> U
     Text(
         text = stringResource(Res.string.clear),
         style = style,
-        color = PlayerInk.copy(alpha = if (locked) 0.25f else 0.75f),
+        color = playerInk(alpha = if (locked) 0.25f else 0.75f),
         modifier = Modifier
             .clip(RoundedCornerShape(percent = 50))
             .clickable(enabled = !locked, onClick = onClear)
@@ -508,7 +508,7 @@ private fun AutoplayHeading(hasTracks: Boolean, modifier: Modifier = Modifier) {
         Icon(
             BitChordIcons.Infinity,
             contentDescription = null,
-            tint = PlayerInk.copy(alpha = 0.75f),
+            tint = playerInk(alpha = 0.75f),
             modifier = Modifier.size(18.dp),
         )
         Spacer(Modifier.width(8.dp))
@@ -523,7 +523,7 @@ private fun AutoplayHeading(hasTracks: Boolean, modifier: Modifier = Modifier) {
                     if (hasTracks) Res.string.autoplay_queue_description else Res.string.autoplay_empty_description,
                 ),
                 style = MaterialTheme.typography.bodyMedium,
-                color = PlayerInk.copy(alpha = 0.55f),
+                color = playerInk(alpha = 0.55f),
             )
         }
     }
@@ -790,7 +790,7 @@ private fun InlineQueueRow(
             Icon(
                 Icons.Rounded.DragHandle,
                 contentDescription = stringResource(Res.string.drag_to_reorder),
-                tint = PlayerInk.copy(alpha = 0.4f),
+                tint = playerInk(alpha = 0.4f),
                 modifier = Modifier
                     .size(20.dp)
                     // The glyph sits well inset in its own box; this pulls it
@@ -825,12 +825,12 @@ private fun InlineQueueRow(
             ExplicitSongTitle(
                 song = song,
                 style = MaterialTheme.typography.titleMedium,
-                color = if (isCurrent) PlayerInk else PlayerInk.copy(alpha = 0.92f),
+                color = if (isCurrent) PlayerInk else playerInk(alpha = 0.92f),
             )
             Text(
                 text = song.artist,
                 style = MaterialTheme.typography.bodyMedium,
-                color = PlayerInk.copy(alpha = 0.55f),
+                color = playerInk(alpha = 0.55f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -855,7 +855,7 @@ private fun InlineQueueRow(
                 Icon(
                     Icons.Rounded.Close,
                     contentDescription = stringResource(Res.string.remove_from_queue),
-                    tint = PlayerInk.copy(alpha = 0.55f),
+                    tint = playerInk(alpha = 0.55f),
                     modifier = Modifier.size(18.dp),
                 )
             }

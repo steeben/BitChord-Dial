@@ -66,6 +66,8 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
         override val wavyProgressBar
             get() = com.music.bitchord.data.settings.CustomizationSettings.wavyProgressBar
         override val lastPlayerScreen get() = AppSettings.lastPlayerScreen
+        override val outputIcons
+            get() = com.music.bitchord.data.settings.CustomizationSettings.outputIcons
         override val legacyMeshGradient get() = AppSettings.legacyMeshGradient
         override val lyricsBlur get() = AppSettings.lyricsBlur
         override val lyricsOffsetMs get() = AppSettings.lyricsOffsetMs
@@ -93,6 +95,8 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
 
         override fun setLastPlayerScreen(value: LastPlayerScreen) = AppSettings.setLastPlayerScreen(value)
         override fun setLyricsOffsetMs(value: Int) = AppSettings.setLyricsOffsetMs(value)
+        override fun setOutputIcon(key: String, icon: String?) =
+            com.music.bitchord.data.settings.CustomizationSettings.setOutputIcon(key, icon)
         override fun setLyricsSourceOrder(value: List<com.music.bitchord.data.lyrics.LyricsSource>) = AppSettings.setLyricsSourceOrder(value)
     }
 
