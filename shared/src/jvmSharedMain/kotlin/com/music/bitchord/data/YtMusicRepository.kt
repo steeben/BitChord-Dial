@@ -809,7 +809,7 @@ object YtMusicRepository {
         }
         // Only a playlist has an owner in the sense that matters — see
         // parsePlaylistOwned — and only its own first response can be asked.
-        if (!browseId.startsWith("VL")) page
+        return if (!browseId.startsWith("VL")) page
         else page.copy(owned = InnertubeParser.parsePlaylistOwned(response))
     }
 
