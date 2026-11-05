@@ -29,7 +29,6 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /** The three waves' colours: a light tint of the accent, the accent, a darker shade of it. */
@@ -83,12 +82,11 @@ internal val PlayerInk: Color
  * it reads as white with a cast, not as a colour. A grey accent leaves it plain white.
  *
  * [artLuminance] is how white the sleeve is overall (mean relative luminance, null while
- * unknown). A bright sleeve washes the backdrop out toward the same white the text is in,
- * so the brighter it is the further the ink leans into the accent, up to
- * [PLAYER_INK_TINT_BRIGHT]: enough colour to separate the text from a pale backdrop
- * without turning it into a coloured label. On top of that cast the ink also darkens with
- * the sleeve, up to [PLAYER_INK_DARKEN_MAX] of the way to black (see [playerInkDarken]), so
- * text over near-white art stops being white-on-white.
+ * unknown). It is an either/or switch, not a ramp: only a sleeve at or past
+ * [INK_DARK_FROM] (mostly white) flips the ink to its dark form, leaning further into the
+ * accent ([PLAYER_INK_TINT_BRIGHT]) and going [PLAYER_INK_DARKEN] of the way to black.
+ * Anything short of that keeps the plain light ink, so a mid-toned backdrop never ends up
+ * with dim, low-contrast text.
  */
 @Composable
 fun ProvidePlayerInk(artLuminance: Float? = null, content: @Composable () -> Unit) {
@@ -102,7 +100,7 @@ fun ProvidePlayerInk(artLuminance: Float? = null, content: @Composable () -> Uni
         } else {
             lerp(Color.White, Color.hsl(base.h, base.s.coerceAtLeast(0.6f), 0.6f), tint)
         }
-        // Toward black in linear proportion: 0.7 leaves 30% of each channel.
+        // Toward black in linear proportion: 0.5 leaves half of each channel.
         lerp(cast, Color.Black, darken)
     }
     val ink by animateColorAsState(
@@ -113,44 +111,30 @@ fun ProvidePlayerInk(artLuminance: Float? = null, content: @Composable () -> Uni
     CompositionLocalProvider(LocalPlayerInk provides ink, content = content)
 }
 
-/**
- * How far the ink leans toward the accent for a sleeve of [artLuminance]: the base cast up
- * to a mid-grey sleeve, then easing up to the bright cap as the art approaches white.
- * Rounded to a few steps so a luminance that wobbles in its last digits doesn't re-key
- * the ink's animation.
- */
-internal fun playerInkTint(artLuminance: Float?): Float {
-    val l = artLuminance ?: return PLAYER_INK_TINT
-    val t = ((l - INK_BRIGHT_FROM) / (INK_BRIGHT_TO - INK_BRIGHT_FROM)).coerceIn(0f, 1f)
-    val eased = t * t * (3f - 2f * t)
-    val tint = PLAYER_INK_TINT + (PLAYER_INK_TINT_BRIGHT - PLAYER_INK_TINT) * eased
-    return (tint * 100f).roundToInt() / 100f
-}
+/** Whether a sleeve of [artLuminance] is white enough to switch the player to dark ink. */
+internal fun playerInkIsDark(artLuminance: Float?): Boolean =
+    artLuminance != null && artLuminance >= INK_DARK_FROM
 
-/**
- * How far toward black the ink goes for a sleeve of [artLuminance]: nothing up to a
- * mid-grey sleeve, then easing up to [PLAYER_INK_DARKEN_MAX] as the art approaches white.
- * Same ramp and same rounding as [playerInkTint], so the cast and the darkening move
- * together.
- */
-internal fun playerInkDarken(artLuminance: Float?): Float {
-    val l = artLuminance ?: return 0f
-    val t = ((l - INK_BRIGHT_FROM) / (INK_BRIGHT_TO - INK_BRIGHT_FROM)).coerceIn(0f, 1f)
-    val eased = t * t * (3f - 2f * t)
-    return (PLAYER_INK_DARKEN_MAX * eased * 100f).roundToInt() / 100f
-}
+/** How far the ink leans toward the accent: the bright cast on a dark-ink sleeve, else the base. */
+internal fun playerInkTint(artLuminance: Float?): Float =
+    if (playerInkIsDark(artLuminance)) PLAYER_INK_TINT_BRIGHT else PLAYER_INK_TINT
+
+/** How far toward black the ink goes: [PLAYER_INK_DARKEN] on a dark-ink sleeve, else none. */
+internal fun playerInkDarken(artLuminance: Float?): Float =
+    if (playerInkIsDark(artLuminance)) PLAYER_INK_DARKEN else 0f
 
 private const val PLAYER_INK_TINT = 0.28f
-
-/** The most the ink darkens, on a sleeve that is as white as it gets: 70% darker. */
-private const val PLAYER_INK_DARKEN_MAX = 0.70f
 private const val PLAYER_INK_TINT_BRIGHT = 0.40f
 
-/** Mean relative luminance where a sleeve starts reading as bright (about a mid grey). */
-private const val INK_BRIGHT_FROM = 0.22f
+/** How much darker the ink is in its dark form: 50% of the way to black. */
+private const val PLAYER_INK_DARKEN = 0.50f
 
-/** ...and where it is as white as the ink is going to get about it. */
-private const val INK_BRIGHT_TO = 0.75f
+/**
+ * Mean relative luminance (linear light) a sleeve must reach before the ink goes dark.
+ * 0.6 is roughly an sRGB grey of 205/255 across the whole sleeve, i.e. art that is
+ * mostly white, not merely mid-toned.
+ */
+private const val INK_DARK_FROM = 0.60f
 
 /**
  * The waves' clock and swell. [time] runs only while the music does, so a paused bar costs no

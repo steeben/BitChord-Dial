@@ -7,21 +7,23 @@ import org.junit.Assert.assertTrue
 
 class BrightArtTest {
     @Test
-    fun inkTintScalesWithBrightnessUpToFortyPercent() {
+    fun inkTintIsEitherOr() {
         assertEquals(0.28f, playerInkTint(null), 0.0001f)
         assertEquals(0.28f, playerInkTint(0.05f), 0.0001f)
+        assertEquals(0.28f, playerInkTint(0.48f), 0.0001f)
+        assertEquals(0.40f, playerInkTint(0.60f), 0.0001f)
         assertEquals(0.40f, playerInkTint(0.95f), 0.0001f)
-        val mid = playerInkTint(0.48f)
-        assertTrue("mid was $mid", mid > 0.28f && mid < 0.40f)
     }
 
     @Test
-    fun inkDarkensWithBrightnessUpToSeventyPercent() {
+    fun inkDarkensFiftyPercentOnlyOnMostlyWhiteArt() {
         assertEquals(0f, playerInkDarken(null), 0.0001f)
         assertEquals(0f, playerInkDarken(0.05f), 0.0001f)
-        assertEquals(0.70f, playerInkDarken(0.95f), 0.0001f)
-        val mid = playerInkDarken(0.48f)
-        assertTrue("mid was $mid", mid > 0f && mid < 0.70f)
+        // Mid-toned art (the old ramp already darkened here) keeps light ink.
+        assertEquals(0f, playerInkDarken(0.48f), 0.0001f)
+        assertEquals(0f, playerInkDarken(0.59f), 0.0001f)
+        assertEquals(0.50f, playerInkDarken(0.60f), 0.0001f)
+        assertEquals(0.50f, playerInkDarken(0.95f), 0.0001f)
     }
 
     @Test
