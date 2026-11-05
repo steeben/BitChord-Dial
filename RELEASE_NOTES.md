@@ -1,28 +1,36 @@
-BitChord Dial 1.3.1
+BitChord Dial 1.4.0
 
-### Liquid Glass
-- The app now ships with the New glass style: 80% transparency, 3dp blur, 110% saturation, a black tint, and 30% tint darkness on the dark theme (10% on the light one). If you already set your own glass options, they're kept
-- New has its own transparency, blur, saturation, tint and darkness sliders, kept apart from Classic's, with its own reset; darkness is remembered for each theme
-- Glass now sees Settings sub-screens, the player's dimmed Canvas and menu scrims, so bars and menus no longer show a stale or too-bright page behind them
-- The Liquid Glass options drawer is see-through, so it previews your changes, and the player's ⋯ menu bends the whole player
-- A Black tint swatch
+### Speed dial
+- Choose where unpinned tiles come from: History, Recommends (the new default, shuffling Quick picks, Forgotten favorites, Listen again and Recents) or Mix. Recommends and Mix add one to three new releases on the first page, marked with a star
+- Glass is now the default tile style: the art fills the tile under clear glass with a frosted edge, and every tile style is the same size
+- Tiles lean as you swipe between pages, and the art drifts with the phone's tilt (a "Tilt parallax" switch in the dial menu turns it off)
+- After a pull to refresh, every unpinned tile leaves and the new deal pops in tile by tile; pinned tiles stay put
+- Opening an artist from a dial carries the tile's picture straight into the banner
 
-### Scrobbling
-- Last.fm sign-in approves BitChord on last.fm in the browser, so your password never passes through the app (password sign-in is still there)
-- Signing in turns scrobbling on; release builds carry the Last.fm and ListenBrainz keys, and you can bring your own Last.fm API key
-
-### Home and pages
-- A switch to turn the speed dials off entirely, in Home's ⋯ menu and Settings › Layout
-- Pull down on an album, playlist or artist page to refresh it
+### Song fixes
+- The player menu's fix row is now "Song fixes", a page of its own that slides up over the menu
+- Songs without their own Canvas use their music video instead, and you can search for the right video, pick the right song when the audio match is wrong, play from another addon, or use the album's animated cover
+- Choose light or dark controls over album art and over Canvas, per song
+- "Find this song's details" gives files on your device and your YouTube Music uploads their proper title, artist, album and cover
+- Canvases can be downloaded with songs so they play offline (Settings › Storage)
 
 ### Player
-- Text and icons stay readable on bright artwork: ink darkens and leans into the accent, and the status bar turns dark over near-white sleeves
-- The bottom capsule stays put when the queue or lyrics open
-- The colour mesh behind the player prefers the art's colours over flat greys
-- Lyric share cards carry the Dial mark and "dial." watermark
+- Player text stays light until the sleeve is mostly white, then switches to a darker ink; ink brightens or darkens with dimmed backdrops so it keeps its contrast
+- Long-press the audio output button to pick an icon for each output device
+- Back with nothing before it restarts the song
+- Firmer seek haptics, with a notch every 2% of the song
 
-### Haptics
-- Seek-bar notches while scrubbing, a press in and out on dial tiles, a ticking I'm Feeling Lucky spin, Home pull-to-refresh squares, and every player button
+### Library and pages
+- Hold a track to start a multi-select, with Play, Play next, Add to queue, Download and more behind the ⋯
+- Library folders get a glass tab pill in the top bar; tap the picked tab for list/grid and sort, and Shuffle tucks away as you scroll
+- Library accents follow the ambient background's colour
+- Album, playlist and artist headers hold their picture as you scroll, rows slide under glass buttons, and Add to library folds its + into a tick
+- Liked Music keeps trying at launch instead of showing an empty page
 
-### Fixes
-- Fixed a crash on the splash screen at launch
+### Settings and look
+- Dark is the default app icon; the picker offers Dark and Bright, and the app is called Dial throughout Settings
+- Settings search is one glass field that docks beside the back button as you scroll
+- Long-press your account photo to open Settings
+- Automix: a "Mix within the same album" switch, off by default
+- Advanced › Enable logging records a log you can share or save, and Storage shows a usage bar by kind
+- Nav tabs bounce under your finger, and the glass pill magnifies what it passes over
