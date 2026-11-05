@@ -18,6 +18,12 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.material3.minimumInteractiveComponentSize
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -489,20 +495,37 @@ private fun artworkPageSurface(
  * The hairline ring is what keeps a photo with light edges from dissolving into
  * the bar's glass; it is the same one thumbnails elsewhere carry.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TopBarAccountButton(
     account: Account?,
     onClick: () -> Unit,
     onSwipeProfile: ((forward: Boolean) -> Boolean)? = null,
+    /** A long press: opens Settings, whatever a tap does. */
+    onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val translation = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
-    // Wrapped in an IconButton so it keeps the 48dp target, the ripple and the
-    // spacing every other action in this bar has.
-    IconButton(
-        onClick = onClick,
+    val haptics = LocalHapticFeedback.current
+    // The same 48dp circular target and bounded ripple as the IconButtons
+    // beside it, but clickable by hand so it can answer a long press too.
+    Box(
+        contentAlignment = Alignment.Center,
         modifier = modifier
+            .minimumInteractiveComponentSize()
+            .size(48.dp)
+            .clip(CircleShape)
+            .combinedClickable(
+                role = Role.Button,
+                onClick = onClick,
+                onLongClick = onLongClick?.let { longClick ->
+                    {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        longClick()
+                    }
+                },
+            )
             .graphicsLayer { translationY = translation.value }
             .pointerInput(onSwipeProfile) {
                 if (onSwipeProfile == null) return@pointerInput
