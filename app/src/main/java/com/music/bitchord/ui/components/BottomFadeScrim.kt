@@ -163,3 +163,48 @@ fun FloatingBarsTapGuard(
             },
     )
 }
+
+/**
+ * How far below the top bar's controls the long top fade begins. Close enough
+ * that rows start to go just as they reach the controls, far enough that the
+ * fade has not yet begun under the first row at rest.
+ */
+private val TOP_FADE_LEAD = 32.dp
+
+/**
+ * The long fade at the top of the Library and artist pages: rows passing up
+ * under the bar ease out over the whole run from just below its controls to
+ * the status bar, rather than in the short drop the upturned [BottomFadeScrim]
+ * spends most of its strip hiding.
+ *
+ * A smoothstep instead of that strip's cubic: it leaves the bottom edge as
+ * gently as the cubic does, so there is still no line where it begins, but it
+ * climbs steadily the rest of the way and is solid by the status bar instead
+ * of arriving all at once at the very top.
+ */
+@Composable
+fun TopFadeScrim(
+    modifier: Modifier = Modifier,
+    pageColor: Color = MaterialTheme.colorScheme.background,
+) {
+    val height = topBarHeight() + TOP_FADE_LEAD
+    val brush = remember(pageColor) {
+        Brush.verticalGradient(
+            // Top of the strip first. Solid over the top 15%, the status bar;
+            // the ramp spends the rest of the strip arriving.
+            colorStops = Array(TOP_STOPS) { i ->
+                val y = i / (TOP_STOPS - 1f)
+                val t = ((1f - y) / 0.85f).coerceIn(0f, 1f)
+                y to pageColor.copy(alpha = t * t * (3f - 2f * t))
+            },
+        )
+    }
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(height)
+            .background(brush),
+    )
+}
+
+private const val TOP_STOPS = 24

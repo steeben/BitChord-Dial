@@ -73,13 +73,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.Tab
-import androidx.compose.material3.ScrollableTabRow
-import androidx.compose.material3.TabPosition
 import com.music.bitchord.data.OfflinePlaylist
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -144,12 +138,12 @@ import com.music.bitchord.ui.haptics.rememberHaptics
 import com.music.bitchord.ui.icons.BitChordIcons
 import java.util.Locale
 
-private const val LOCAL_TAB_SONGS = 0
-private const val LOCAL_TAB_ARTISTS = 1
-private const val LOCAL_TAB_ALBUMS = 2
+internal const val LOCAL_TAB_SONGS = 0
+internal const val LOCAL_TAB_ARTISTS = 1
+internal const val LOCAL_TAB_ALBUMS = 2
 // The offline player's two: only on the whole-device page — see [devicePlaylists].
-private const val LOCAL_TAB_PLAYLISTS = 3
-private const val LOCAL_TAB_FOLDERS = 4
+internal const val LOCAL_TAB_PLAYLISTS = 3
+internal const val LOCAL_TAB_FOLDERS = 4
 
 /**
  * Local Music folder view with three tabs: Songs (default), Artists, Albums.
@@ -226,8 +220,9 @@ fun LocalMusicScreen(
     onSelectedTabChange: (Int) -> Unit,
     /**
      * Narrows whichever tab is showing — songs by title/artist/album, artists
-     * and albums by name. Typed into the field in the top bar (see
-     * [LibraryFolderSearchField]), so it is held by the app as well.
+     * and albums by name. Held by the app; the folder's top bar now carries
+     * its tabs ([LibraryFolderTabPill]) rather than a field, so this is blank
+     * unless the app has a query of its own to apply.
      */
     searchQuery: String,
     /**
@@ -305,151 +300,25 @@ fun LocalMusicScreen(
     }
     BackHandler(enabled = inDrillDown && !selectingDownloads) { leaveDrillDown() }
 
-    // The tab row is fixed above the scrolling content, so its own top
-    // padding has to clear the frosted top bar / status bar that the
-    // LazyColumns beneath it would otherwise scroll under.
-    val bodyContentPadding = PaddingValues(bottom = contentPadding.calculateBottomPadding())
-
-    // contentPadding.top carries extra breathing room meant for scrolling
-    // content resting under the glass bar; the tab row is fixed and sits
-    // right below the bar, so it only needs to clear the bar itself.
+    // Nothing is pinned above the list any more — the tabs are up in the top
+    // bar (see [LibraryFolderTabPill]) — so the rows start clear of the bar
+    // and scroll all the way up under it. While rows are selected the action
+    // bar floats just below the top bar, and the list makes room for it.
+    val selectionBarRoom by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (selectingDownloads) 44.dp + 8.dp else 0.dp,
+        label = "selectionBarRoom",
+    )
+    val bodyContentPadding = PaddingValues(
+        top = contentPadding.calculateTopPadding() + selectionBarRoom,
+        bottom = contentPadding.calculateBottomPadding(),
+    )
     val barHeight = topBarHeight()
+    val deviceTabs = devicePlaylists != null
+    val shownTab = if (deviceTabs) selectedTab.coerceIn(0, LOCAL_TAB_FOLDERS) else selectedTab.coerceIn(0, LOCAL_TAB_ALBUMS)
+    // Picking a tab from the bar leaves an artist or album drilled into.
+    androidx.compose.runtime.LaunchedEffect(shownTab) { if (drillDownLabel != null) leaveDrillDown() }
 
-    Column(modifier = modifier.fillMaxSize()) {
-        // ── Selection ────────────────────────────────────────────────────────
-        // The search field is up in the top bar; holding a Downloads row puts
-        // this bar of actions above the tabs while something is selected.
-        if (selectingDownloads) {
-            DownloadSelectionBar(
-                count = selectedDownloadIds.size,
-                allSelected = sortedSongs.isNotEmpty() && selectedDownloadIds.containsAll(sortedSongs.map { it.videoId }),
-                onSelectAll = { selectedDownloadIds = sortedSongs.mapTo(linkedSetOf()) { it.videoId } },
-                onDelete = {
-                    val chosen = songs.filter { it.videoId in selectedDownloadIds }
-                    selectedDownloadIds = emptySet()
-                    selectedAlbumKeys = emptySet()
-                    // The cache's selection comes out of the cache; nothing
-                    // in it is a file in Downloads to delete.
-                    (onRemoveFromCache ?: onDeleteDownloads)?.invoke(chosen)
-                },
-                deleteLabel = stringResource(
-                    if (onRemoveFromCache != null) R.string.cached_song_remove else R.string.delete,
-                ),
-                onDownload = onDownload?.let { download ->
-                    {
-                        val chosen = songs.filter { it.videoId in selectedDownloadIds }
-                        selectedDownloadIds = emptySet()
-                        selectedAlbumKeys = emptySet()
-                        download(chosen)
-                    }
-                },
-                onUpload = onUploadToWebDav?.let { upload ->
-                    {
-                        val chosen = songs.filter { it.videoId in selectedDownloadIds }
-                        selectedDownloadIds = emptySet()
-                        selectedAlbumKeys = emptySet()
-                        upload(chosen)
-                    }
-                },
-                onCancel = {
-                    selectedDownloadIds = emptySet()
-                    selectedAlbumKeys = emptySet()
-                },
-                modifier = Modifier.padding(
-                    top = barHeight + TopBarContentGap,
-                    start = PAGE_GUTTER,
-                    end = PAGE_GUTTER,
-                    bottom = 4.dp,
-                ),
-            )
-        }
-
-        // ── Tab row ──────────────────────────────────────────────────────────
-        // The picked tab wears the playing song's colour, as the Library's
-        // own marks and menu do.
-        val tabAccent = pageAccent()
-        val deviceTabs = devicePlaylists != null
-        val shownTab = if (deviceTabs) selectedTab.coerceIn(0, LOCAL_TAB_FOLDERS) else selectedTab.coerceIn(0, LOCAL_TAB_ALBUMS)
-        val tabs: @Composable () -> Unit = {
-            LocalTab(
-                icon = Icons.Rounded.MusicNote,
-                label = stringResource(R.string.songs),
-                selected = selectedTab == LOCAL_TAB_SONGS,
-                onClick = {
-                    onSelectedTabChange(LOCAL_TAB_SONGS)
-                    leaveDrillDown()
-                },
-            )
-            LocalTab(
-                icon = Icons.Rounded.Person,
-                label = stringResource(R.string.artists),
-                selected = selectedTab == LOCAL_TAB_ARTISTS,
-                onClick = {
-                    onSelectedTabChange(LOCAL_TAB_ARTISTS)
-                    leaveDrillDown()
-                },
-            )
-            LocalTab(
-                icon = Icons.Rounded.Album,
-                label = stringResource(R.string.albums),
-                selected = selectedTab == LOCAL_TAB_ALBUMS,
-                onClick = {
-                    onSelectedTabChange(LOCAL_TAB_ALBUMS)
-                    leaveDrillDown()
-                },
-            )
-            if (deviceTabs) {
-                LocalTab(
-                    icon = Icons.AutoMirrored.Rounded.QueueMusic,
-                    label = stringResource(R.string.playlists),
-                    selected = selectedTab == LOCAL_TAB_PLAYLISTS,
-                    onClick = {
-                        onSelectedTabChange(LOCAL_TAB_PLAYLISTS)
-                        leaveDrillDown()
-                    },
-                )
-                LocalTab(
-                    icon = Icons.Rounded.Folder,
-                    label = stringResource(R.string.folders),
-                    selected = selectedTab == LOCAL_TAB_FOLDERS,
-                    onClick = {
-                        onSelectedTabChange(LOCAL_TAB_FOLDERS)
-                        leaveDrillDown()
-                    },
-                )
-            }
-        }
-        // Right under the top bar, which now carries the search field.
-        val tabRowModifier = if (selectingDownloads) Modifier else Modifier.padding(top = barHeight + 4.dp)
-        val tabIndicator: @Composable (List<TabPosition>) -> Unit = { tabPositions ->
-            TabRowDefaults.SecondaryIndicator(
-                modifier = Modifier.tabIndicatorOffset(tabPositions[shownTab]),
-                color = tabAccent,
-            )
-        }
-        if (deviceTabs) {
-            // Five don't fit a phone's width with their labels whole; they
-            // scroll instead of squeezing.
-            ScrollableTabRow(
-                selectedTabIndex = shownTab,
-                modifier = tabRowModifier,
-                containerColor = frostedSurfaceColor(MaterialTheme.colorScheme.background),
-                contentColor = tabAccent,
-                edgePadding = 0.dp,
-                indicator = tabIndicator,
-                tabs = tabs,
-            )
-        } else {
-            TabRow(
-                selectedTabIndex = shownTab,
-                modifier = tabRowModifier,
-                containerColor = frostedSurfaceColor(MaterialTheme.colorScheme.background),
-                contentColor = tabAccent,
-                indicator = tabIndicator,
-                tabs = tabs,
-            )
-        }
-
+    Box(modifier = modifier.fillMaxSize()) {
         // ── Content ──────────────────────────────────────────────────────────
         AnimatedContent(
             targetState = if (inDrillDown) "drill:$drillDownLabel" else "tab:$shownTab",
@@ -700,6 +569,54 @@ fun LocalMusicScreen(
                 }
             }
         }
+
+        // ── Selection ────────────────────────────────────────────────────────
+        // Holding a Downloads row floats this bar of actions under the top
+        // bar while something is selected, over the list.
+        if (selectingDownloads) {
+            DownloadSelectionBar(
+                count = selectedDownloadIds.size,
+                allSelected = sortedSongs.isNotEmpty() && selectedDownloadIds.containsAll(sortedSongs.map { it.videoId }),
+                onSelectAll = { selectedDownloadIds = sortedSongs.mapTo(linkedSetOf()) { it.videoId } },
+                onDelete = {
+                    val chosen = songs.filter { it.videoId in selectedDownloadIds }
+                    selectedDownloadIds = emptySet()
+                    selectedAlbumKeys = emptySet()
+                    // The cache's selection comes out of the cache; nothing
+                    // in it is a file in Downloads to delete.
+                    (onRemoveFromCache ?: onDeleteDownloads)?.invoke(chosen)
+                },
+                deleteLabel = stringResource(
+                    if (onRemoveFromCache != null) R.string.cached_song_remove else R.string.delete,
+                ),
+                onDownload = onDownload?.let { download ->
+                    {
+                        val chosen = songs.filter { it.videoId in selectedDownloadIds }
+                        selectedDownloadIds = emptySet()
+                        selectedAlbumKeys = emptySet()
+                        download(chosen)
+                    }
+                },
+                onUpload = onUploadToWebDav?.let { upload ->
+                    {
+                        val chosen = songs.filter { it.videoId in selectedDownloadIds }
+                        selectedDownloadIds = emptySet()
+                        selectedAlbumKeys = emptySet()
+                        upload(chosen)
+                    }
+                },
+                onCancel = {
+                    selectedDownloadIds = emptySet()
+                    selectedAlbumKeys = emptySet()
+                },
+                modifier = Modifier.padding(
+                    top = barHeight + TopBarContentGap,
+                    start = PAGE_GUTTER,
+                    end = PAGE_GUTTER,
+                    bottom = 0.dp,
+                ),
+            )
+        }
     }
 }
 
@@ -856,7 +773,7 @@ private fun SongsTab(
                 contentPadding = PaddingValues(
                     start = PAGE_GUTTER,
                     end = PAGE_GUTTER,
-                    top = 6.dp,
+                    top = contentPadding.calculateTopPadding() + 6.dp,
                     bottom = contentPadding.calculateBottomPadding() + 8.dp,
                 ),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -888,7 +805,7 @@ private fun SongsTab(
                 onJump = { index -> gridState.scrollToItem(index + 1) },
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(top = 48.dp, bottom = contentPadding.calculateBottomPadding() + 8.dp),
+                    .padding(top = contentPadding.calculateTopPadding() + 48.dp, bottom = contentPadding.calculateBottomPadding() + 8.dp),
             )
         }
     } else {
@@ -943,7 +860,7 @@ private fun SongsTab(
                 onJump = { index -> listState.scrollToItem(index + 1) },
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(top = 48.dp, bottom = contentPadding.calculateBottomPadding() + 8.dp),
+                    .padding(top = contentPadding.calculateTopPadding() + 48.dp, bottom = contentPadding.calculateBottomPadding() + 8.dp),
             )
         }
     }
@@ -1040,7 +957,7 @@ private fun ArtistsTab(
                 contentPadding = PaddingValues(
                     start = PAGE_GUTTER,
                     end = PAGE_GUTTER,
-                    top = 6.dp,
+                    top = contentPadding.calculateTopPadding() + 6.dp,
                     bottom = contentPadding.calculateBottomPadding() + 8.dp,
                 ),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -1069,7 +986,7 @@ private fun ArtistsTab(
                 onJump = { index -> gridState.scrollToItem(index + 1) },
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(top = 48.dp, bottom = contentPadding.calculateBottomPadding() + 8.dp),
+                    .padding(top = contentPadding.calculateTopPadding() + 48.dp, bottom = contentPadding.calculateBottomPadding() + 8.dp),
             )
         }
     } else {
@@ -1106,7 +1023,7 @@ private fun ArtistsTab(
                 onJump = { index -> listState.scrollToItem(index + 1) },
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(top = 48.dp, bottom = contentPadding.calculateBottomPadding() + 8.dp),
+                    .padding(top = contentPadding.calculateTopPadding() + 48.dp, bottom = contentPadding.calculateBottomPadding() + 8.dp),
             )
         }
     }
@@ -1343,7 +1260,7 @@ private fun AlbumsTab(
                 contentPadding = PaddingValues(
                     start = PAGE_GUTTER,
                     end = PAGE_GUTTER,
-                    top = 6.dp,
+                    top = contentPadding.calculateTopPadding() + 6.dp,
                     bottom = contentPadding.calculateBottomPadding() + 8.dp,
                 ),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -1378,7 +1295,7 @@ private fun AlbumsTab(
                 onJump = { index -> gridState.scrollToItem(index + 1) },
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(top = 48.dp, bottom = contentPadding.calculateBottomPadding() + 8.dp),
+                    .padding(top = contentPadding.calculateTopPadding() + 48.dp, bottom = contentPadding.calculateBottomPadding() + 8.dp),
             )
         }
     } else {
@@ -1421,7 +1338,7 @@ private fun AlbumsTab(
                 onJump = { index -> listState.scrollToItem(index + 1) },
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(top = 48.dp, bottom = contentPadding.calculateBottomPadding() + 8.dp),
+                    .padding(top = contentPadding.calculateTopPadding() + 48.dp, bottom = contentPadding.calculateBottomPadding() + 8.dp),
             )
         }
     }
@@ -1784,7 +1701,7 @@ private fun DrillDownSongList(
             contentPadding = PaddingValues(
                 start = PAGE_GUTTER,
                 end = PAGE_GUTTER,
-                top = 0.dp,
+                top = contentPadding.calculateTopPadding(),
                 bottom = contentPadding.calculateBottomPadding() + 8.dp,
             ),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -1936,39 +1853,6 @@ internal fun List<Song>.useTrackTags(): Boolean {
  * only a list already in memory, so narrowing it on every keystroke costs
  * nothing and a submit action would just be a tap this screen doesn't need.
  */
-/**
- * A library folder's search field with its list/grid and sort controls, drawn
- * in the top bar between the back button and the account photo rather than
- * above the tabs, so the list underneath gets that height back.
- *
- * [selectedTab] picks whose list/grid choice the toggle shows and flips: each
- * of Songs, Artists and Albums keeps its own.
- */
-@Composable
-fun LibraryFolderSearchField(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    selectedTab: Int,
-    /** Opens [LibraryFolderSortMenu], which the app composes over the page. */
-    onOpenSort: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val tabViews by com.music.bitchord.data.settings.CustomizationSettings.libraryTabViews
-        .collectAsStateWithLifecycle()
-    val viewType = tabViews.getOrElse(selectedTab) { LibraryViewType.LIST }
-    LocalSearchField(
-        query = query,
-        onQueryChange = onQueryChange,
-        onOpenSort = onOpenSort,
-        viewType = viewType,
-        onViewTypeToggle = {
-            val next = if (viewType == LibraryViewType.GRID) LibraryViewType.LIST else LibraryViewType.GRID
-            com.music.bitchord.data.settings.CustomizationSettings.setLibraryTabView(selectedTab, next)
-        },
-        modifier = modifier,
-    )
-}
-
 /**
  * The library's search field on its own, without the view and sort buttons
  * a folder's has — for a list that is only ever A to Z.
@@ -2213,40 +2097,6 @@ private fun DownloadSelectionBar(
             Text(deleteLabel, color = Color(0xFFFF453A))
         }
         TextButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
-    }
-}
-
-@Composable
-private fun LocalTab(
-    icon: ImageVector,
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    // Fired here rather than at each of the three call sites, so Songs, Artists
-    // and Albums can't drift apart — and the Downloads folder, which is this
-    // same screen, gets it for free. Silent on the tab that's already showing.
-    val haptics = rememberHaptics()
-    Tab(
-        selected = selected,
-        onClick = {
-            if (!selected) haptics.play(Haptic.Select)
-            onClick()
-        },
-        selectedContentColor = pageAccent(),
-        unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-    ) {
-        Row(
-            modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelLarge,
-            )
-        }
     }
 }
 

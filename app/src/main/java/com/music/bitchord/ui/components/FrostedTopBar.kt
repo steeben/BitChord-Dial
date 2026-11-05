@@ -458,7 +458,7 @@ private fun Modifier.artworkActionEdgePadding(): Modifier = layout { measurable,
 /** The navbar's exact material choice, reusable by every floating top control. */
 @OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
-private fun artworkPageSurface(
+internal fun artworkPageSurface(
     shape: CornerBasedShape,
     hazeState: HazeState?,
 ): Modifier {
