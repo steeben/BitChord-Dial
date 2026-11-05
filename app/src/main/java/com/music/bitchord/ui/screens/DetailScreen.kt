@@ -53,7 +53,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.ui.graphics.luminance
 import com.music.bitchord.data.model.LibraryState
 import androidx.compose.material.icons.rounded.Close
@@ -185,6 +184,14 @@ import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.runtime.SideEffect
 import com.music.bitchord.ui.components.glassSheen
 import kotlin.math.roundToInt
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
+import com.music.bitchord.ui.components.LibraryCheck
+import com.music.bitchord.ui.components.liquidGlass
+import com.music.bitchord.ui.components.rememberLikeAnimation
+import com.music.bitchord.ui.components.backdrop.backdrops.LayerBackdrop
+import com.music.bitchord.ui.components.backdrop.backdrops.layerBackdrop
+import com.music.bitchord.ui.components.backdrop.backdrops.rememberLayerBackdrop
 import java.util.Locale
 
 private const val MAX_ARTIST_SONGS = 20
@@ -223,8 +230,27 @@ private const val ARTIST_ACTIONS_INDEX = 1
 /** The gap under a release's controls row, at the foot of its header. */
 private val RELEASE_HEADER_FOOT = 14.dp
 
-/** The band under the pinned controls in which rows fade out on their way up. */
-private val PIN_FADE_BAND = 28.dp
+/**
+ * The band over the held controls in which rows fade out on their way up.
+ * Rows pass whole under the buttons (their glass bends them) and are gone by
+ * the time they reach the lines above, so they read as going under the header.
+ */
+private val PIN_FADE_BAND = 14.dp
+
+/**
+ * How far the header picture rises for each pixel the page scrolls, until the
+ * header holds: it stays nearly in place while the title climbs over it.
+ */
+private const val HEADER_ART_PARALLAX = 0.3f
+
+/** How much of the header picture is left by the time the header holds. */
+private const val HEADER_ART_HELD_ALPHA = 0.45f
+
+/**
+ * What the header's glass buttons bend: the page under them. Null where real
+ * glass is off (or blur is reduced), and the buttons keep the lightweight look.
+ */
+private val LocalDetailGlass = staticCompositionLocalOf<LayerBackdrop?> { null }
 
 /** The inset the header text and the action pills share. */
 private val HEADER_GUTTER = PAGE_GUTTER + 8.dp
@@ -602,6 +628,32 @@ fun DetailScreen(
     val headerStopTop by rememberUpdatedState(
         pinTop - controlsOffset - if (isArtist) artistHeaderHeight else 0,
     )
+    // How far the page scrolls before the header holds, in px — where the
+    // picture behind it stops rising. Null until the sizes are known, or on a
+    // page with no controls to hold.
+    val headerStopScroll: () -> Float? = {
+        if (!showsControls || controlsHeight <= 0 || controlsLead <= 0 || (isArtist && artistHeaderHeight <= 0)) {
+            null
+        } else {
+            (-headerStopTop).toFloat().coerceAtLeast(1f)
+        }
+    }
+
+    // Real liquid glass on the header's buttons: they bend the page under
+    // them. Two recordings: the picture alone, for the buttons while they are
+    // still in the list (which can't sample a layer they are drawn into), and
+    // the picture with the list over it, for the held copy, which the rows
+    // scroll on under.
+    val liquidGlassOn = LocalLiquidGlassEnabled.current && isGlassSupported()
+    val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
+    val realGlass = liquidGlassOn && !reduceDynamicBlur
+    val artBackdrop = rememberLayerBackdrop()
+    val pageBackdrop = rememberLayerBackdrop()
+
+    // The artist logo, once it has been drawn: the held header's copy of the
+    // name starts with it in place, rather than showing the plain name until
+    // its own copy has faded the logo in.
+    var shownLogoUrl by remember(page.browseId) { mutableStateOf<String?>(null) }
 
     // The artist page's row, in the list and again in the held header.
     val artistActions: @Composable (Modifier, Dp) -> Unit = { rowModifier, bottomSpace ->
@@ -664,6 +716,11 @@ fun DetailScreen(
                 val artHeight = (maxWidth / if (isArtist) ARTIST_PHOTO_RATIO else SLEEVE_RATIO)
                     .coerceAtMost(maxHeight * 0.6f)
 
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .then(if (realGlass) Modifier.layerBackdrop(pageBackdrop) else Modifier),
+                ) {
                 PageBackground(
                     page = page,
                     palette = palette,
@@ -671,20 +728,23 @@ fun DetailScreen(
                     artHeight = artHeight,
                     listState = listState,
                     heroUrl = appleArt?.heroUrl,
-                    floorTop = { if (controlsPinned) headerStopTop.toFloat() else Float.NEGATIVE_INFINITY },
-                    modifier = Modifier.matchParentSize(),
+                    stopScroll = headerStopScroll,
+                    modifier = Modifier
+                        .matchParentSize()
+                        .then(if (realGlass) Modifier.layerBackdrop(artBackdrop) else Modifier),
                 )
 
+                CompositionLocalProvider(LocalDetailGlass provides artBackdrop.takeIf { realGlass }) {
                 LazyColumn(
                     state = listState,
                     modifier = Modifier
                         .fillMaxSize()
                         // Once the header is held, the list scrolls on under it:
-                        // rows fade out in the band just under the controls and
-                        // are gone by the time they reach them, so nothing of the
-                        // list shows behind the held header or the top bar.
-                        // Offscreen only then, so the cut is out of the list
-                        // alone and not the artwork painted behind it.
+                        // rows pass whole under the held buttons, where their
+                        // glass bends them, and fade out in the band just above,
+                        // so they go under the header rather than over its title
+                        // or the top bar. Offscreen only then, so the cut is out
+                        // of the list alone and not the artwork painted behind it.
                         .graphicsLayer {
                             compositingStrategy = if (controlsPinned) {
                                 CompositingStrategy.Offscreen
@@ -695,7 +755,7 @@ fun DetailScreen(
                         .drawWithContent {
                             drawContent()
                             if (!controlsPinned) return@drawWithContent
-                            val cut = pinTop + controlsHeight.toFloat()
+                            val cut = (pinTop - pinBandPx).coerceAtLeast(0f)
                             drawRect(
                                 color = Color.Transparent,
                                 topLeft = Offset.Zero,
@@ -728,6 +788,8 @@ fun DetailScreen(
                             appleArt = appleArt,
                             signature = signature,
                             onNamePlaced = { controlsLead = it },
+                            shownLogoUrl = shownLogoUrl,
+                            onLogoShown = { shownLogoUrl = it },
                         )
                     }
                 } else {
@@ -1031,6 +1093,8 @@ fun DetailScreen(
             }
             if (isArtist) aboutItem()
         }
+                }
+                }
 
                 // The held header: a copy of the page's top — title, credit
                 // and controls — at the place it stopped. The artwork behind it
@@ -1038,7 +1102,7 @@ fun DetailScreen(
                 // the list's own copy is cut away while this one is up, so only
                 // one is ever seen or pressed. Nothing in it but the buttons
                 // takes a touch, so a drag on the title still scrolls the list.
-                if (controlsPinned) {
+                if (controlsPinned) CompositionLocalProvider(LocalDetailGlass provides pageBackdrop.takeIf { realGlass }) {
                     Box(
                         Modifier
                             .fillMaxWidth()
@@ -1052,6 +1116,7 @@ fun DetailScreen(
                                     artHeight = artHeight,
                                     appleArt = appleArt,
                                     signature = signature,
+                                    shownLogoUrl = shownLogoUrl,
                                 )
                                 artistActions(Modifier, 0.dp)
                             }
@@ -1287,19 +1352,34 @@ private fun ReleaseActions(
                 enabled = false,
             )
         } else {
+            // A tick, not a filled-in plus: the pair reads as "not yet / done",
+            // which is what the state is. The plus folds into it, flashing
+            // green with the like heart's burst, and folds back on undo.
+            val saveBurst = rememberLikeAnimation()
+            val description = if (library.saved) {
+                stringResource(R.string.remove_from_library)
+            } else {
+                stringResource(R.string.add_to_library)
+            }
             CircleIconButton(
-                // A tick, not a filled-in plus: the pair reads as
-                // "not yet / done", which is what the state is.
                 icon = if (library.saved) BitChordIcons.Check else BitChordIcons.Plus,
-                contentDescription = if (library.saved) {
-                    stringResource(R.string.remove_from_library)
-                } else {
-                    stringResource(R.string.add_to_library)
-                },
+                contentDescription = description,
                 palette = palette,
-                onClick = { onToggleLibrary?.invoke() },
+                onClick = {
+                    saveBurst.onToggle(wasLiked = library.saved)
+                    onToggleLibrary?.invoke()
+                },
                 haptic = if (library.saved) Haptic.ToggleOff else Haptic.ToggleOn,
                 size = circleSize,
+                glyph = { tint, glyphSize ->
+                    LibraryCheck(
+                        saved = library.saved,
+                        animation = saveBurst,
+                        tint = tint,
+                        size = glyphSize,
+                        contentDescription = description,
+                    )
+                },
             )
         }
         CircleIconButton(
@@ -1496,6 +1576,14 @@ private fun ArtistHeader(
     signature: ArtistSignature? = null,
     /** How far the name (or logo) starts above the foot of this header, in px. */
     onNamePlaced: (Int) -> Unit = {},
+    /**
+     * The logo another copy of this header has already drawn. A copy composed
+     * fresh — the held one, or the list's own scrolled back into view — starts
+     * with that logo in place: fading it in again showed the plain name for a
+     * moment each time the header reached its stop.
+     */
+    shownLogoUrl: String? = null,
+    onLogoShown: (String) -> Unit = {},
 ) {
     val headerCoords = remember { arrayOfNulls<LayoutCoordinates>(1) }
     fun reportName(name: LayoutCoordinates) {
@@ -1516,7 +1604,7 @@ private fun ArtistHeader(
         // Whether the logo has actually been drawn. Until it has — a first fetch
         // of an Apple logo is a few hundred KB the CDN may still be resizing — the
         // name stands in for it, so the header is never left with nothing in it.
-        var logoShown by remember(imageUrl) { mutableStateOf(false) }
+        var logoShown by remember(imageUrl) { mutableStateOf(imageUrl != null && imageUrl == shownLogoUrl) }
         // The logo fades in over the name rather than replacing it outright.
         val logoIn by animateFloatAsState(
             targetValue = if (logoShown) 1f else 0f,
@@ -1572,7 +1660,10 @@ private fun ArtistHeader(
                     colorFilter = if (isSignatureSvg) ColorFilter.tint(palette.onBackground) else null,
                     onState = { state ->
                         when (state) {
-                            is AsyncImagePainter.State.Success -> logoShown = true
+                            is AsyncImagePainter.State.Success -> {
+                                logoShown = true
+                                onLogoShown(imageUrl)
+                            }
                             is AsyncImagePainter.State.Error -> failed = true
                             else -> Unit
                         }
@@ -1641,8 +1732,12 @@ private fun PageBackground(
     artHeight: Dp,
     listState: LazyListState,
     heroUrl: String? = null,
-    /** The highest the artwork goes: where it holds while the page's header is held. */
-    floorTop: () -> Float = { Float.NEGATIVE_INFINITY },
+    /**
+     * How far the page scrolls before its header holds, or null where it never
+     * does. Up to there the picture barely rises and slowly fades as the title
+     * climbs over it; from there it stays put. With no stop it follows the list.
+     */
+    stopScroll: () -> Float? = { null },
     modifier: Modifier = Modifier,
 ) {
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
@@ -1675,9 +1770,9 @@ private fun PageBackground(
                 .fillMaxWidth()
                 .height(artHeight)
                 .offset {
-                    val top = maxOf(listState.headerTop(artHeight.toPx()), floorTop())
-                    IntOffset(0, top.roundToInt())
+                    IntOffset(0, listState.artTop(artHeight.toPx(), stopScroll()).roundToInt())
                 }
+                .graphicsLayer { alpha = listState.artAlpha(stopScroll()) }
                 // The blurred foot is an offscreen layer, and while the page is
                 // scaled open its bounds round outward: a row of it past the
                 // scrim showed as a thin bright line along the artwork's edge.
@@ -1739,7 +1834,7 @@ private fun PageBackground(
                 .fillMaxWidth()
                 .height(HEADER_SEAM_COVER)
                 .offset {
-                    val top = maxOf(listState.headerTop(artHeight.toPx()), floorTop())
+                    val top = listState.artTop(artHeight.toPx(), stopScroll())
                     val edge = top + artHeight.toPx() - HEADER_SEAM_COVER.toPx() / 2f
                     IntOffset(0, edge.roundToInt())
                 }
@@ -1762,6 +1857,26 @@ private val HEADER_SEAM_COVER = 4.dp
  */
 private fun LazyListState.headerTop(artHeightPx: Float): Float =
     if (firstVisibleItemIndex == 0) -firstVisibleItemScrollOffset.toFloat() else -artHeightPx * 2f
+
+/**
+ * Where the top of the picture sits. On a page whose header holds ([stop] is
+ * how far it scrolls first) the picture rises a fraction of the scroll and
+ * stops with the header; past the header item it stays at that stop.
+ * Elsewhere it follows the list, as [headerTop].
+ */
+private fun LazyListState.artTop(artHeightPx: Float, stop: Float?): Float {
+    if (stop == null) return headerTop(artHeightPx)
+    val scrolled = if (firstVisibleItemIndex == 0) firstVisibleItemScrollOffset.toFloat() else stop
+    return -minOf(scrolled, stop) * HEADER_ART_PARALLAX
+}
+
+/** How much of the picture shows: fading toward [HEADER_ART_HELD_ALPHA] as the header nears its stop. */
+private fun LazyListState.artAlpha(stop: Float?): Float {
+    if (stop == null) return 1f
+    val scrolled = if (firstVisibleItemIndex == 0) firstVisibleItemScrollOffset.toFloat() else stop
+    val progress = (scrolled / stop).coerceIn(0f, 1f)
+    return 1f - (1f - HEADER_ART_HELD_ALPHA) * progress
+}
 
 /**
  * One picture for the header: the artwork, and (when [softenFoot]) the same
@@ -1971,6 +2086,17 @@ private fun PlayPill(
     // Resume rather than a flat tap: this button starts a queue, and the rising
     // pair says so.
     val haptics = rememberHaptics()
+    val glass = LocalDetailGlass.current
+    // Slightly see-through, so the page shows faintly through it as it does
+    // through the glass circles beside it; on glass, over that glass.
+    val fill = containerColor.copy(alpha = containerColor.alpha * PLAY_FILL_ALPHA)
+    // Glass under the fill where real glass is on, else the sheen and rim
+    // that stand in for it.
+    val surface = if (glass != null) {
+        Modifier.liquidGlass(CircleShape, backdrop = glass, exportedBackdrop = null, surfaceTint = Color.Transparent)
+    } else {
+        Modifier.glassSheen(CircleShape)
+    }
     if (iconOnly && cutout) {
         Box(
             modifier = modifier
@@ -1981,12 +2107,12 @@ private fun PlayPill(
                     onClick()
                 }
                 // The glass buttons' light and rim, over the fill and the cut.
-                .glassSheen(CircleShape)
+                .then(surface)
                 // Offscreen so the clear below cuts the circle drawn under it,
                 // not whatever the page has behind.
                 .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                 .drawWithContent {
-                    drawCircle(containerColor)
+                    drawCircle(fill)
                     val box = this.size.minDimension * iconScale
                     val unit = box / 24f
                     val origin = Offset((this.size.width - box) / 2f, (this.size.height - box) / 2f)
@@ -2017,9 +2143,14 @@ private fun PlayPill(
         modifier = modifier
             .then(if (iconOnly) Modifier.size(size) else Modifier.height(size))
             .clip(CircleShape)
-            .background(containerColor)
-            // The glass buttons' light and rim beside it, over its own colour.
-            .glassSheen(CircleShape)
+            .then(
+                if (glass != null) {
+                    surface.background(fill)
+                } else {
+                    // The glass buttons' light and rim beside it, over its own colour.
+                    Modifier.background(fill).glassSheen(CircleShape)
+                },
+            )
             .clickable {
                 haptics.play(Haptic.Resume)
                 onClick()
@@ -2045,6 +2176,9 @@ private fun PlayPill(
     }
 }
 
+/** How much of the Play circle's colour is laid down: a touch see-through. */
+private const val PLAY_FILL_ALPHA = 0.85f
+
 /**
  * Small circular icon-only button — used for Shuffle and Download flanking the
  * Play pill. Translucent glassy fill, accent-coloured icon.
@@ -2063,8 +2197,11 @@ private fun CircleIconButton(
     lit: Boolean = false,
     /** False keeps the circle in its slot, greyed out and inert. */
     enabled: Boolean = true,
+    /** Drawn in place of [icon], given its tint and size: an animated glyph. */
+    glyph: (@Composable (tint: Color, size: Dp) -> Unit)? = null,
 ) {
     val haptics = rememberHaptics()
+    val glass = LocalDetailGlass.current
     Box(
         modifier = Modifier
             .size(size)
@@ -2072,6 +2209,10 @@ private fun CircleIconButton(
             .then(
                 if (lit) {
                     Modifier.clip(CircleShape).background(Color.White)
+                } else if (glass != null) {
+                    // The real thing, as on the bars: the page under the
+                    // button, blurred and bent at the rim.
+                    Modifier.liquidGlass(CircleShape, backdrop = glass, exportedBackdrop = null)
                 } else if (lightFill) {
                     Modifier.artistVeil(CircleShape)
                 } else {
@@ -2087,12 +2228,17 @@ private fun CircleIconButton(
             },
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = if (lit) Color.Black else MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.size(size * 0.44f),
-        )
+        val tint = if (lit) Color.Black else MaterialTheme.colorScheme.onSurface
+        if (glyph != null) {
+            glyph(tint, size * 0.44f)
+        } else {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = tint,
+                modifier = Modifier.size(size * 0.44f),
+            )
+        }
     }
 }
 
@@ -2549,6 +2695,7 @@ private fun TopReleaseCard(
     val shape = RoundedCornerShape(28.dp)
     val coverShape = RoundedCornerShape(12.dp)
     val haptics = rememberHaptics()
+    val saveBurst = rememberLikeAnimation()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -2603,17 +2750,19 @@ private fun TopReleaseCard(
                     .artistVeil(CircleShape)
                     .clickable {
                         haptics.play(if (saved) Haptic.ToggleOff else Haptic.ToggleOn)
+                        saveBurst.onToggle(wasLiked = saved)
                         onToggleSaved()
                     },
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = if (saved) Icons.Rounded.Check else Icons.Rounded.Add,
+                LibraryCheck(
+                    saved = saved,
+                    animation = saveBurst,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    size = 22.dp,
                     contentDescription = stringResource(
                         if (saved) R.string.remove_from_library else R.string.add_to_library,
                     ),
-                    tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(22.dp),
                 )
             }
         }

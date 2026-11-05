@@ -15,6 +15,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -71,8 +72,48 @@ fun rememberLikeAnimation(): LikeAnimation {
     return remember(scope) { LikeAnimation(scope) }
 }
 
-private fun segment(p: Float, from: Float, to: Float): Float =
+internal fun segment(p: Float, from: Float, to: Float): Float =
     ((p - from) / (to - from)).coerceIn(0f, 1f)
+
+/**
+ * The ring of short lines a like (or a save, see [LibraryCheck]) bursts with,
+ * at [p] of the run: the first ~45%, like the CSS's 0.5s of a 1s fill. It
+ * grows from the glyph's edge to 1.4x while fading out over its second half.
+ */
+internal fun DrawScope.drawLikeBurst(p: Float, base: Color, bright: Color) {
+    if (p >= 1f) return
+    val t = segment(p, 0.08f, 0.5f)
+    if (t <= 0f || t >= 1f) return
+    val grow = FastOutSlowInEasing.transform(t)
+    val alpha = if (t < 0.5f) 1f else 1f - (t - 0.5f) * 2f
+    val half = size.minDimension / 2f
+    val outer = half * (0.75f + 0.65f * grow)
+    val length = half * 0.32f * (1f - grow * 0.6f)
+    val stroke = size.minDimension * 0.08f
+    val color = lerp(base, bright, alpha * 0.5f).copy(alpha = alpha)
+    for (i in 0 until 8) {
+        // Rotated off the vertical so no ray lands in the heart's notch, and
+        // every other one shorter for a less mechanical ring.
+        val angle = (i * 45f + 22.5f) * (PI / 180f).toFloat()
+        val reach = if (i % 2 == 0) outer else outer * 0.88f
+        val dir = Offset(cos(angle), sin(angle))
+        drawLine(
+            color = color,
+            start = center + dir * (reach - length),
+            end = center + dir * reach,
+            strokeWidth = stroke,
+            cap = StrokeCap.Round,
+        )
+    }
+}
+
+/** The pop the glyph lands with at [q] of the run: 0 -> 1.2 -> 1. */
+internal fun likePopScale(q: Float): Float = when {
+    q >= 1f -> 1f
+    q < 0.25f -> 1.2f * FastOutSlowInEasing.transform(segment(q, 0f, 0.25f))
+    q < 0.5f -> 1.2f - 0.2f * FastOutSlowInEasing.transform(segment(q, 0.25f, 0.5f))
+    else -> 1f
+}
 
 /**
  * A like heart that, on [animation]'s cue, pops in filled and red with a ring
@@ -96,37 +137,7 @@ fun LikeHeart(
     Box(
         modifier = modifier
             .size(size)
-            .drawBehind {
-                val p = animation.progress.value
-                if (p >= 1f) return@drawBehind
-                // The burst: the first ~45% of the run, like the CSS's 0.5s
-                // of a 1s fill. It grows from the heart's edge to 1.4× while
-                // fading out over its second half.
-                val t = segment(p, 0.08f, 0.5f)
-                if (t <= 0f || t >= 1f) return@drawBehind
-                val grow = FastOutSlowInEasing.transform(t)
-                val alpha = if (t < 0.5f) 1f else 1f - (t - 0.5f) * 2f
-                val half = this.size.minDimension / 2f
-                val outer = half * (0.75f + 0.65f * grow)
-                val length = half * 0.32f * (1f - grow * 0.6f)
-                val stroke = this.size.minDimension * 0.08f
-                val color = lerp(LikeRed, LikeRedBright, alpha * 0.5f).copy(alpha = alpha)
-                for (i in 0 until 8) {
-                    // Rotated off the vertical so no ray lands in the heart's
-                    // notch, and every other one shorter for a less mechanical
-                    // ring.
-                    val angle = (i * 45f + 22.5f) * (PI / 180f).toFloat()
-                    val reach = if (i % 2 == 0) outer else outer * 0.88f
-                    val dir = Offset(cos(angle), sin(angle))
-                    drawLine(
-                        color = color,
-                        start = center + dir * (reach - length),
-                        end = center + dir * reach,
-                        strokeWidth = stroke,
-                        cap = StrokeCap.Round,
-                    )
-                }
-            },
+            .drawBehind { drawLikeBurst(animation.progress.value, LikeRed, LikeRedBright) },
         contentAlignment = Alignment.Center,
     ) {
         val p = animation.progress.value
@@ -149,13 +160,7 @@ fun LikeHeart(
                 .size(size)
                 .graphicsLayer {
                     // Read in the layer so the scale doesn't recompose per frame.
-                    val q = animation.progress.value
-                    val s = when {
-                        q >= 1f -> 1f
-                        q < 0.25f -> 1.2f * FastOutSlowInEasing.transform(segment(q, 0f, 0.25f))
-                        q < 0.5f -> 1.2f - 0.2f * FastOutSlowInEasing.transform(segment(q, 0.25f, 0.5f))
-                        else -> 1f
-                    }
+                    val s = likePopScale(animation.progress.value)
                     scaleX = s
                     scaleY = s
                 },
