@@ -113,8 +113,16 @@ object CanvasAudioFixes {
 
     fun hideCanvas(songVideoId: String) = update { it.copy(hiddenCanvas = it.hiddenCanvas + songVideoId) }
 
-    fun hideVideoCanvas(songVideoId: String) =
-        update { it.copy(hiddenVideoCanvas = it.hiddenVideoCanvas + songVideoId) }
+    /**
+     * Stops using a music video as [songVideoId]'s Canvas: the one found on its
+     * own, and the one the listener searched for and picked, alike.
+     */
+    fun hideVideoCanvas(songVideoId: String) = update {
+        it.copy(
+            hiddenVideoCanvas = it.hiddenVideoCanvas + songVideoId,
+            pairedVideo = it.pairedVideo - songVideoId,
+        )
+    }
 
     /** The music video the listener picked as [songVideoId]'s Canvas, if they picked one. */
     fun pairedVideo(songVideoId: String): String? = _state.value.pairedVideo[songVideoId]

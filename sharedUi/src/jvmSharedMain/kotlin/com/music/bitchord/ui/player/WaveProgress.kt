@@ -92,9 +92,9 @@ class PlayerInkConditions {
 }
 
 /**
- * How far the light ink is brightened toward plain white, and its faded tones toward full
- * strength, to make up for a dimmed backdrop. Follows [PlayerInkConditions.dim]; 0 under
- * the dark ink, which never brightens.
+ * How far the ink is pushed toward its pole (white for the light ink, black for the dark),
+ * and its faded tones toward full strength, to make up for a dimmed backdrop. Follows
+ * [PlayerInkConditions.dim].
  */
 internal val LocalPlayerInkLift = compositionLocalOf { 0f }
 
@@ -122,9 +122,10 @@ internal fun playerInk(alpha: Float): Color {
  * with dim, low-contrast text. A pick made for the song ([PlayerInkConditions.forcedDark])
  * overrides the sleeve either way.
  *
- * With the light ink, a dimmed backdrop ([PlayerInkConditions.dim]) brightens the ink by
- * the same amount: that share of the way to white, and (through [playerInk]) that share of
- * the way to full strength for its faded tones. Every change eases, never snaps.
+ * A dimmed backdrop ([PlayerInkConditions.dim]) pushes the ink by the same amount: the
+ * light ink that share of the way to white, the dark ink that share of the way to black,
+ * and (through [playerInk]) either one's faded tones that share of the way to full
+ * strength. Every change eases, never snaps.
  */
 @Composable
 fun ProvidePlayerInk(
@@ -151,22 +152,21 @@ fun ProvidePlayerInk(
         tween(durationMillis = 900, easing = FastOutSlowInEasing),
         label = "playerInk",
     )
-    val dimLift by animateFloatAsState(
+    val lift by animateFloatAsState(
         targetValue = (conditions?.dim ?: 0f).coerceIn(0f, 1f),
         animationSpec = tween(durationMillis = 420, easing = FastOutSlowInEasing),
         label = "playerInkLift",
     )
-    // The dark ink takes none of the lift, from the moment it is picked: a
-    // dimmed backdrop never brightens it. Going back to the light ink, the
-    // lift eases in on the same clock as the ink's colour.
-    val lightness by animateFloatAsState(
-        targetValue = if (dark) 0f else 1f,
-        animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing),
-        label = "playerInkLightness",
+    // Where a dimmed backdrop pushes the ink: the light ink toward white, the
+    // dark ink toward black, so either keeps its contrast as the backdrop
+    // under it goes darker. Crossfades on the ink's own clock.
+    val pole by animateColorAsState(
+        if (dark) Color.Black else Color.White,
+        tween(durationMillis = 900, easing = FastOutSlowInEasing),
+        label = "playerInkPole",
     )
-    val lift = if (dark) 0f else dimLift * lightness
     CompositionLocalProvider(
-        LocalPlayerInk provides lerp(ink, Color.White.copy(alpha = ink.alpha), lift),
+        LocalPlayerInk provides lerp(ink, pole.copy(alpha = ink.alpha), lift),
         LocalPlayerInkLift provides lift,
         content = content,
     )
