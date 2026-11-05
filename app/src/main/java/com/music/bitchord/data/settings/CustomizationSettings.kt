@@ -90,7 +90,7 @@ object CustomizationSettings {
     val dialPinIcon = MutableStateFlow(true)
 
     /** How the dials' tiles are edged: the plain hairline, a contoured rim, or a glass rim. */
-    val dialTileStyle = MutableStateFlow(DialTileStyle.NONE)
+    val dialTileStyle = MutableStateFlow(DialTileStyle.GLASS)
 
     /** Whether the dials' artwork shifts with the phone's tilt, read off the gyroscope. */
     val dialParallax = MutableStateFlow(true)
@@ -250,7 +250,8 @@ object CustomizationSettings {
         dialTileStyle.value = p.getString(KEY_DIAL_TILE_STYLE, null)
             ?.let { name -> DialTileStyle.entries.firstOrNull { it.name == name } }
             // The style's first form was one switch, for the contoured rim.
-            ?: if (p.getBoolean(KEY_DIAL_CONTOURED_EDGE, false)) DialTileStyle.EDGE else DialTileStyle.NONE
+            // Glass is the default when nothing was chosen.
+            ?: if (p.getBoolean(KEY_DIAL_CONTOURED_EDGE, false)) DialTileStyle.EDGE else DialTileStyle.GLASS
     }
 
     // ── Speed dial ──────────────────────────────────────────────────────

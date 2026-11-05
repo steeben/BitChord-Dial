@@ -327,8 +327,8 @@ internal fun SpeedDialShelf(
     val density = LocalDensity.current
     val haptics = LocalHapticFeedback.current
     // Tiles already shown, so that one arriving later (a fresh dial replacing
-    // the saved one) fades in rather than popping, while the dial's first
-    // appearance and every page swiped to stay instant.
+    // the saved one, or a pull dealing it again) pops in as the launch's do,
+    // while every page swiped to stays instant.
     val shownIds = remember { HashSet<String>() }
     SideEffect { display.forEach { item -> item?.let { shownIds += it.dialId() } } }
     // The first dial of a launch comes in tile by tile; see [SpeedDialIntro].
@@ -495,26 +495,26 @@ internal fun SpeedDialShelf(
                                     label = "speedDialTile",
                                 )
                                 val id = item.dialId()
-                                val entering = intro && page == 0
-                                val appear = remember(id) {
-                                    Animatable(if (entering || (shownIds.isNotEmpty() && id !in shownIds)) 0f else 1f)
+                                // A tile pops in as the launch's do when it is
+                                // in the launch's first page, or when it arrives
+                                // later (a pull to refresh dealing the dial again,
+                                // or a fresh dial replacing the saved one).
+                                val entering = remember(id) {
+                                    (intro && page == 0) || (shownIds.isNotEmpty() && id !in shownIds)
                                 }
+                                val appear = remember(id) { Animatable(if (entering) 0f else 1f) }
                                 LaunchedEffect(appear) {
                                     if (appear.value >= 1f) return@LaunchedEffect
-                                    if (entering) {
-                                        // Along each row, then the next: A1, B1, C1,
-                                        // A2 and on. Not before the app is actually
-                                        // on screen. A bouncy spring, so each tile
-                                        // grows a little past full size and settles.
-                                        snapshotFlow { SpeedDialIntro.canStart }.first { it }
-                                        delay(cell * INTRO_STEP_MS)
-                                        appear.animateTo(
-                                            1f,
-                                            spring(dampingRatio = INTRO_BOUNCE, stiffness = Spring.StiffnessMediumLow),
-                                        )
-                                    } else {
-                                        appear.animateTo(1f, tween(TILE_FADE_MS))
-                                    }
+                                    // Along each row, then the next: A1, B1, C1,
+                                    // A2 and on. Not before the app is actually
+                                    // on screen. A bouncy spring, so each tile
+                                    // grows a little past full size and settles.
+                                    snapshotFlow { SpeedDialIntro.canStart }.first { it }
+                                    delay(cell * INTRO_STEP_MS)
+                                    appear.animateTo(
+                                        1f,
+                                        spring(dampingRatio = INTRO_BOUNCE, stiffness = Spring.StiffnessMediumLow),
+                                    )
                                 }
                                 val pinnedTile = id in pinnedIds
                                 // Each its own beat, so the jiggle isn't in step.
@@ -674,8 +674,6 @@ fun speedDialArtRequest(context: PlatformContext, url: String?): ImageRequest =
         .data(url?.artworkAt(CARD_ART_PX))
         .size(CARD_ART_PX)
         .build()
-
-private const val TILE_FADE_MS = 300
 
 /** How long new art takes to sweep across a tile, top left to bottom right. */
 private const val ART_WIPE_MS = 1400
