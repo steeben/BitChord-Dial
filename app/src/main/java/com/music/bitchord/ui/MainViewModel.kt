@@ -4606,7 +4606,7 @@ private const val HOME_CACHE_WRITE_DELAY_MS = 2_000L
 private const val DETAIL_CACHE_SIZE = 40
 private const val DETAIL_CACHE_TTL_MS = 30 * 60 * 1000L
 
-/** Liked Music's patience at launch — see MainViewModel.likedAwareBrowse: 1s, 2s, 4s. */
+/** Liked Music's patience at launch — see MainViewModel.likedAwareBrowse: waits of 1s, 2s, then 4s. */
 private const val LIKED_RETRIES = 3
 private const val LIKED_RETRY_FIRST_MS = 1_000L
 
