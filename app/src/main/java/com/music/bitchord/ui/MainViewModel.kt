@@ -3476,7 +3476,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 )
             }
             else -> {
-                YtMusicRepository.browseSongs(browseId).fold(
+                likedAwareBrowse(browseId).fold(
                     onSuccess = { page ->
                         // Free here — the page that returned these rows is
                         // the one thing that states who made the playlist,
@@ -3549,6 +3549,45 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         // Only once the first page is on screen: [fillIn] appends to it,
         // and has nothing to append to before this.
         more?.let { fillIn(browseId, it, thumbnailUrl ?: artwork) }
+    }
+
+    /**
+     * [YtMusicRepository.browseSongs], made patient for Liked Music.
+     *
+     * Opened in the first seconds after launch, Liked Music very often came
+     * back empty, and only loaded once some other page had been opened first
+     * — that is, once enough time had passed. Every other playlist reads the
+     * same for any session, so only this one, which is the account's own,
+     * showed the window. So an empty or failed answer here isn't taken as the
+     * answer while the page is still open: it is asked again a few times,
+     * further apart each time, with the spinner left up. The Library tab reads
+     * the same list on its own, so if that copy has rows by then, they stand
+     * in for the page's first response.
+     */
+    private suspend fun likedAwareBrowse(browseId: String): Result<YtMusicRepository.SongPage> {
+        var result = YtMusicRepository.browseSongs(browseId)
+        val liked = browseId == YtMusicRepository.LIKED_MUSIC || browseId == "LM"
+        if (!liked || Innertube.cookie == null) return result
+        fun hasRows() = result.getOrNull()?.songs?.isNotEmpty() == true
+        var wait = LIKED_RETRY_FIRST_MS
+        repeat(LIKED_RETRIES) {
+            if (hasRows()) return result
+            libraryLikedPage()?.let { return Result.success(it) }
+            if (_detailStack.value.none { it.browseId == browseId }) return result
+            delay(wait)
+            wait *= 2
+            Log.w("BitChord", "liked music still empty, asking again")
+            result = YtMusicRepository.browseSongs(browseId)
+        }
+        if (hasRows()) return result
+        return libraryLikedPage()?.let { Result.success(it) } ?: result
+    }
+
+    /** The Library tab's copy of Liked Music as a first page, when it has rows. */
+    private fun libraryLikedPage(): YtMusicRepository.SongPage? {
+        val library = (_library.value as? UiState.Success)?.data ?: return null
+        if (library.likedSongs.isEmpty()) return null
+        return YtMusicRepository.SongPage(library.likedSongs, library.likedContinuation)
     }
 
     /**
@@ -4566,6 +4605,10 @@ private const val HOME_CACHE_WRITE_DELAY_MS = 2_000L
 
 private const val DETAIL_CACHE_SIZE = 40
 private const val DETAIL_CACHE_TTL_MS = 30 * 60 * 1000L
+
+/** Liked Music's patience at launch — see MainViewModel.likedAwareBrowse: 1s, 2s, 4s. */
+private const val LIKED_RETRIES = 3
+private const val LIKED_RETRY_FIRST_MS = 1_000L
 
 /** How many seeds "I'm Feeling Lucky" keeps per session. */
 private const val LUCKY_POOL_SIZE = 20
