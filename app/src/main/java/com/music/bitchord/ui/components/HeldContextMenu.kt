@@ -207,6 +207,7 @@ fun <T : Any> HeldContextMenu(
                                 state = hazeState,
                                 style = HazeMaterials.ultraThin(MaterialTheme.colorScheme.background),
                             ) {
+                                blurRadius = MENU_BACKDROP_BLUR
                                 alpha = backdropAlpha()
                             }
                         },
@@ -383,6 +384,14 @@ fun <T : Any> HeldContextMenu(
  */
 private const val BACK_SWIPE_TRAVEL = 0.35f
 
+/**
+ * How far the page behind the menu is blurred: lighter than the material's
+ * default, so the page still reads as itself behind the menu. The glass plate
+ * and menu frost what they bend by the same amount, so they match the page
+ * around them instead of showing it sharp.
+ */
+private val MENU_BACKDROP_BLUR = 14.dp
+
 /** The plate's and the menu's ground: liquid glass when it is on, frost otherwise. */
 @Composable
 private fun Modifier.menuGround(
@@ -392,7 +401,7 @@ private fun Modifier.menuGround(
     hairline: Color,
     underlay: Color,
 ): Modifier = if (glass) {
-    liquidGlass(shape, underlay = underlay)
+    liquidGlass(shape, underlay = underlay, minBlurDp = MENU_BACKDROP_BLUR.value)
 } else {
     background(plate).border(0.5.dp, hairline, shape)
 }

@@ -349,6 +349,13 @@ fun Modifier.liquidGlass(
     surfaceTint: Color? = null,
     /** The scrim the surface sits on, if it sits on one; see [LocalGlassUnderlay]. */
     underlay: Color = LocalGlassUnderlay.current,
+    /**
+     * The least the glass frosts what it bends, in dp, whatever the user's blur.
+     * A surface over a blurred page passes that page's blur: the backdrop is the
+     * page unblurred, so glass at its own lighter frost read as a sharp window
+     * cut through the blur around it.
+     */
+    minBlurDp: Float = 0f,
 ): Modifier {
     if (!isGlassSupported()) return this
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
@@ -373,13 +380,13 @@ fun Modifier.liquidGlass(
             backdrop = backdrop,
             exportedBackdrop = exportedBackdrop,
             surfaceColor = clearGlassFill(surfaceTint ?: clearGlassVeil(), themeTint).over(underlay),
-            blurDp = if (followsOptions) clearBlur else CustomizationSettings.DEFAULT_CLEAR_GLASS_BLUR,
+            blurDp = maxOf(minBlurDp, if (followsOptions) clearBlur else CustomizationSettings.DEFAULT_CLEAR_GLASS_BLUR),
             saturation = if (followsOptions) clearSaturation else CustomizationSettings.DEFAULT_CLEAR_GLASS_SATURATION,
         )
     }
     val density = LocalDensity.current
     val userBlurDp by CustomizationSettings.glassBlur.collectAsStateWithLifecycle()
-    val blurDp = if (followsOptions) userBlurDp else CustomizationSettings.DEFAULT_GLASS_BLUR
+    val blurDp = maxOf(minBlurDp, if (followsOptions) userBlurDp else CustomizationSettings.DEFAULT_GLASS_BLUR)
     val userSaturation by CustomizationSettings.glassSaturation.collectAsStateWithLifecycle()
     val saturation = if (followsOptions) userSaturation else CustomizationSettings.DEFAULT_GLASS_SATURATION
     val blurPx = with(density) { blurDp.dp.toPx() } * GLASS_RESOLUTION_SCALE

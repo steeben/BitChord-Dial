@@ -7,6 +7,15 @@ import com.music.bitchord.R
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -535,27 +544,39 @@ fun SongActionsSheet(
         // Where the track leads, set apart in the menu as a menu's "Go to" is,
         // with the album and artist named under each row.
         if (menu) GroupSeparator(palette)
-        when (val id = song.albumId) {
-            null -> if (resolvingLinks) {
-                LoadingActionRow(Icons.Rounded.Album, stringResource(R.string.open_album), palette)
+        // The lookup can land after the menu is up: the rows fade into their
+        // found form and the menu grows to fit, rather than snapping taller.
+        val albumId = song.albumId
+        LinkRowSlot(linkRowState(albumId, resolvingLinks)) { state ->
+            when (state) {
+                LinkRowState.Loading ->
+                    LoadingActionRow(Icons.Rounded.Album, stringResource(R.string.open_album), palette)
+                LinkRowState.Ready -> albumId?.let { id ->
+                    ActionRow(
+                        Icons.Rounded.Album,
+                        stringResource(R.string.open_album),
+                        accent = palette.accent,
+                        description = song.albumName?.takeIf { menu && it.isNotBlank() },
+                    ) { onOpenAlbum(id) }
+                }
+                LinkRowState.Absent -> Unit
             }
-            else -> ActionRow(
-                Icons.Rounded.Album,
-                stringResource(R.string.open_album),
-                accent = palette.accent,
-                description = song.albumName?.takeIf { menu && it.isNotBlank() },
-            ) { onOpenAlbum(id) }
         }
-        when (val id = song.artistId) {
-            null -> if (resolvingLinks) {
-                LoadingActionRow(Icons.Rounded.Person, stringResource(R.string.open_artist), palette)
+        val artistId = song.artistId
+        LinkRowSlot(linkRowState(artistId, resolvingLinks)) { state ->
+            when (state) {
+                LinkRowState.Loading ->
+                    LoadingActionRow(Icons.Rounded.Person, stringResource(R.string.open_artist), palette)
+                LinkRowState.Ready -> artistId?.let { id ->
+                    ActionRow(
+                        Icons.Rounded.Person,
+                        stringResource(R.string.open_artist),
+                        accent = palette.accent,
+                        description = song.artist.takeIf { menu && it.isNotBlank() },
+                    ) { onOpenArtist(id) }
+                }
+                LinkRowState.Absent -> Unit
             }
-            else -> ActionRow(
-                Icons.Rounded.Person,
-                stringResource(R.string.open_artist),
-                accent = palette.accent,
-                description = song.artist.takeIf { menu && it.isNotBlank() },
-            ) { onOpenArtist(id) }
         }
         ActionRow(Icons.Rounded.Info, stringResource(R.string.song_info), accent = palette.accent) {
             showingSongInfo = true
@@ -1296,6 +1317,44 @@ internal fun ActionRow(
             Spacer(Modifier.width(14.dp))
             iconView()
         }
+    }
+}
+
+/** Where an "Open album" / "Open artist" row stands while its id is looked up. */
+private enum class LinkRowState { Loading, Ready, Absent }
+
+private fun linkRowState(id: String?, resolving: Boolean): LinkRowState = when {
+    id != null -> LinkRowState.Ready
+    resolving -> LinkRowState.Loading
+    else -> LinkRowState.Absent
+}
+
+/**
+ * Holds a link row through its lookup. The spinner row gives way to the found
+ * one (now two lines, with the album or artist named under it) by fading
+ * across while the slot springs to its new height, so the menu around it
+ * grows smoothly instead of jumping when the answer comes back. A row that
+ * turns out not to exist folds away the same way. A row that is already known
+ * when the menu opens is simply there.
+ */
+@Composable
+private fun LinkRowSlot(state: LinkRowState, content: @Composable (LinkRowState) -> Unit) {
+    AnimatedContent(
+        targetState = state,
+        transitionSpec = {
+            (fadeIn(tween(durationMillis = 220, delayMillis = 70)) +
+                scaleIn(tween(durationMillis = 260, delayMillis = 70), initialScale = 0.94f))
+                .togetherWith(fadeOut(tween(durationMillis = 90)))
+                .using(
+                    SizeTransform(clip = true) { _, _ ->
+                        spring(dampingRatio = 0.86f, stiffness = Spring.StiffnessMediumLow)
+                    },
+                )
+        },
+        contentAlignment = Alignment.TopStart,
+        label = "linkRow",
+    ) { target ->
+        content(target)
     }
 }
 
