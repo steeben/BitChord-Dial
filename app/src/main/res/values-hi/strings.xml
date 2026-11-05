@@ -1339,7 +1339,6 @@
     <string name="search_addons_none">कोई ऐडऑन चालू नहीं है। सेटिंग → स्रोत में जाकर एक जोड़ें।</string>
     <string name="search_addons_hint">Search your addons</string>
     <string name="app_icon">ऐप आइकन</string>
-    <string name="app_icon_default">डिफ़ॉल्ट</string>
     <string name="song_info">गाने की जानकारी</string>
     <string name="song_info_album">एल्बम</string>
     <string name="song_info_release_date">रिलीज़ की तारीख</string>

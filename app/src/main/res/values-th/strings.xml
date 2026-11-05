@@ -1322,7 +1322,6 @@
     <string name="search_addons_none">ยังไม่ได้เปิดใช้แอดออน เพิ่มได้ที่ การตั้งค่า → แหล่งที่มา</string>
     <string name="search_addons_hint">Search your addons</string>
     <string name="app_icon">ไอคอนแอป</string>
-    <string name="app_icon_default">ค่าเริ่มต้น</string>
     <string name="song_info">ข้อมูลเพลง</string>
     <string name="song_info_album">อัลบั้ม</string>
     <string name="song_info_release_date">วันที่เผยแพร่</string>

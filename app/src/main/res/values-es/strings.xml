@@ -1311,7 +1311,6 @@
     <string name="search_addons_none">No hay addons activados. Añade uno en Ajustes → Fuentes.</string>
     <string name="search_addons_hint">Search your addons</string>
     <string name="app_icon">Icono de la app</string>
-    <string name="app_icon_default">Predeterminado</string>
     <string name="song_info">Información de la canción</string>
     <string name="song_info_album">Álbum</string>
     <string name="song_info_release_date">Fecha de lanzamiento</string>

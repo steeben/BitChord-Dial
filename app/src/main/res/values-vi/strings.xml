@@ -1256,7 +1256,6 @@
     <string name="search_addons_none">Chưa bật addon nào. Hãy thêm một addon trong Cài đặt → Nguồn.</string>
     <string name="search_addons_hint">Search your addons</string>
     <string name="app_icon">Biểu tượng ứng dụng</string>
-    <string name="app_icon_default">Mặc định</string>
     <string name="song_info">Thông tin bài hát</string>
     <string name="song_info_album">Album</string>
     <string name="song_info_release_date">Ngày phát hành</string>

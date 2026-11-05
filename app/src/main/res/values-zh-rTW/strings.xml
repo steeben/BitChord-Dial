@@ -1316,7 +1316,6 @@
     <string name="search_addons_none">尚未啟用任何外掛。請在「設定 → 來源」中新增。</string>
     <string name="search_addons_hint">Search your addons</string>
     <string name="app_icon">應用程式圖示</string>
-    <string name="app_icon_default">預設</string>
     <string name="song_info">歌曲資訊</string>
     <string name="song_info_album">專輯</string>
     <string name="song_info_release_date">發行日期</string>

@@ -1314,7 +1314,6 @@
     <string name="search_addons_none">未启用任何插件。请在“设置 → 音源”中添加。</string>
     <string name="search_addons_hint">Search your addons</string>
     <string name="app_icon">应用图标</string>
-    <string name="app_icon_default">默认</string>
     <string name="song_info">歌曲信息</string>
     <string name="song_info_album">专辑</string>
     <string name="song_info_release_date">发行日期</string>

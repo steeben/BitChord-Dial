@@ -1344,7 +1344,6 @@
     <string name="search_addons_none">אין תוספים מופעלים. אפשר להוסיף אחד בהגדרות ← מקורות.</string>
     <string name="search_addons_hint">Search your addons</string>
     <string name="app_icon">סמל האפליקציה</string>
-    <string name="app_icon_default">ברירת מחדל</string>
     <string name="song_info">מידע על השיר</string>
     <string name="song_info_album">אלבום</string>
     <string name="song_info_release_date">תאריך יציאה</string>

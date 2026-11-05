@@ -345,9 +345,7 @@
     <string name="show_listen_together_button">Show Listen Together button</string>
     <string name="show_listen_together_button_subtitle">The output and Listen Together pill under the player controls</string>
     <string name="app_icon">App icon</string>
-    <string name="app_icon_default">Default</string>
-    <string name="app_icon_glass_light" translatable="false">Glass</string>
-    <string name="app_icon_glass_dark" translatable="false">Glass Dark</string>
+    <string name="app_icon_bright" translatable="false">Bright</string>
     <string name="app_icon_dark" translatable="false">Dark</string>
     <string name="app_icon_bitchord" translatable="false">BitChord</string>
     <string name="app_icon_monochrome" translatable="false">BitChord Monochrome</string>

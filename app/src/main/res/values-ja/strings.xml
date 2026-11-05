@@ -1317,7 +1317,6 @@
     <string name="search_addons_none">有効なアドオンがありません。設定 → ソースで追加してください。</string>
     <string name="search_addons_hint">Search your addons</string>
     <string name="app_icon">アプリアイコン</string>
-    <string name="app_icon_default">デフォルト</string>
     <string name="song_info">曲の情報</string>
     <string name="song_info_album">アルバム</string>
     <string name="song_info_release_date">リリース日</string>

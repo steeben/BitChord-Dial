@@ -1344,7 +1344,6 @@
     <string name="search_addons_none">Nenhum addon ativado. Adicione um em Configurações → Fontes.</string>
     <string name="search_addons_hint">Search your addons</string>
     <string name="app_icon">Ícone do app</string>
-    <string name="app_icon_default">Padrão</string>
     <string name="song_info">Informações da música</string>
     <string name="song_info_album">Álbum</string>
     <string name="song_info_release_date">Data de lançamento</string>

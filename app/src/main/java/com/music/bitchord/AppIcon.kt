@@ -8,20 +8,16 @@ import android.content.pm.PackageManager
  * The home-screen icon choices. Each is an `<activity-alias>` in the manifest
  * carrying the launcher intent filter; exactly one is enabled at a time.
  *
- * The glass icons are full adaptive icons built from the logo grid (see
- * docs/icons/glass_icon.py), so the launcher's own mask shapes them like any
- * other icon on the device.
- *
  * BitChord's glass and neon icons are adaptive icons whose foreground already
  * holds the finished icon in its own shape (Apple squircle, Samsung squircle
  * or Pixel circle), so [previewRes] — that foreground — shows the variant as
  * designed rather than through the device's launcher mask.
  */
 enum class AppIcon(val alias: String, val iconRes: Int, val labelRes: Int, val previewRes: Int? = null) {
-    Default("LauncherDefault", R.mipmap.ic_launcher, R.string.app_icon_default),
-    GlassLight("LauncherGlassLight", R.mipmap.ic_launcher_glass_light, R.string.app_icon_glass_light),
-    GlassDark("LauncherGlassDark", R.mipmap.ic_launcher_glass_dark, R.string.app_icon_glass_dark),
+    // Dark is the one that ships enabled. Bright keeps the old Default alias
+    // name, so an install that had picked it explicitly keeps it.
     Dark("LauncherDark", R.mipmap.ic_launcher_dark, R.string.app_icon_dark),
+    Bright("LauncherDefault", R.mipmap.ic_launcher, R.string.app_icon_bright),
 
     // BitChord's own icons, after Dial's. Their aliases are prefixed so
     // none of them takes over a Dial icon's alias name.
@@ -60,8 +56,36 @@ enum class AppIcon(val alias: String, val iconRes: Int, val labelRes: Int, val p
             return entries.firstOrNull {
                 pm.getComponentEnabledSetting(it.component(context)) ==
                     PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-            } ?: Default
+            } ?: Dark
         }
+
+        /**
+         * The Glass and Glass Dark icons were removed; their aliases stay in the
+         * manifest (drawn with the Dark icon) only so an install that had picked
+         * one is never left without a home-screen entry. Moves such an install
+         * onto Dark and switches the retired alias off.
+         */
+        fun migrateRetired(context: Context) {
+            val pm = context.packageManager
+            val retired = RETIRED_ALIASES.map { ComponentName(context.packageName, "com.music.bitchord.$it") }
+            val anyRetiredEnabled = retired.any {
+                runCatching { pm.getComponentEnabledSetting(it) }.getOrNull() ==
+                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            }
+            if (!anyRetiredEnabled) return
+            apply(context, Dark)
+            retired.forEach {
+                runCatching {
+                    pm.setComponentEnabledSetting(
+                        it,
+                        PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                        PackageManager.DONT_KILL_APP,
+                    )
+                }
+            }
+        }
+
+        private val RETIRED_ALIASES = listOf("LauncherGlassLight", "LauncherGlassDark")
 
         /** Enables [icon] before disabling the rest so there is never a moment with no launcher entry. */
         fun apply(context: Context, icon: AppIcon) {

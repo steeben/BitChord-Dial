@@ -1278,7 +1278,6 @@
     <string name="search_addons_none">Nessun addon attivo. Aggiungine uno in Impostazioni → Fonti.</string>
     <string name="search_addons_hint">Search your addons</string>
     <string name="app_icon">Icona dell’app</string>
-    <string name="app_icon_default">Predefinita</string>
     <string name="song_info">Informazioni sul brano</string>
     <string name="song_info_album">Album</string>
     <string name="song_info_release_date">Data di uscita</string>

@@ -54,6 +54,8 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
     @OptIn(UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
+        // An install that had the removed Glass icons moves onto Dark.
+        runCatching { AppIcon.migrateRetired(this) }
         // The player is drawn by the shared UI module; this is what it reads
         // underneath — settings, the Canvas decoder, outputs, the party.
         AndroidStreamHooks.installEarly()

@@ -1340,7 +1340,6 @@
     <string name="search_addons_none">Aucun addon n\'est activé. Ajoutez-en un dans Réglages → Sources.</string>
     <string name="search_addons_hint">Search your addons</string>
     <string name="app_icon">Icône de l’app</string>
-    <string name="app_icon_default">Par défaut</string>
     <string name="song_info">Informations sur le titre</string>
     <string name="song_info_album">Album</string>
     <string name="song_info_release_date">Date de sortie</string>

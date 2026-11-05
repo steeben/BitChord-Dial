@@ -60,10 +60,10 @@
         android:usesCleartextTraffic="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/ic_launcher_dark"
         android:label="@string/app_name"
         android:localeConfig="@xml/locales_config"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@mipmap/ic_launcher_dark"
         android:supportsRtl="true"
         android:theme="@style/Theme.BitChord"
         tools:targetApi="34">
@@ -262,12 +262,13 @@
         <!--
           The home-screen entries, one per app icon. Settings swaps the icon by
           enabling one alias and disabling the rest (see AppIcon); exactly one is
-          enabled at a time, and Default is the one that ships enabled. No label of
+          enabled at a time, and Dark is the one that ships enabled. LauncherDefault
+          is the Bright icon; its name stays so an install that picked it keeps it. No label of
           their own, so each shows the application's (the dev flavour renames it).
         -->
         <activity-alias
             android:name=".LauncherDefault"
-            android:enabled="true"
+            android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/ic_launcher"
             android:roundIcon="@mipmap/ic_launcher_round"
@@ -278,12 +279,17 @@
             </intent-filter>
         </activity-alias>
 
+        <!--
+          The retired Glass and Glass Dark icons. Kept, disabled and drawn with the
+          Dark icon, so an install that had picked one still has a home-screen
+          entry until AppIcon.migrateRetired moves it onto LauncherDark.
+        -->
         <activity-alias
             android:name=".LauncherGlassLight"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_glass_light"
-            android:roundIcon="@mipmap/ic_launcher_glass_light"
+            android:icon="@mipmap/ic_launcher_dark"
+            android:roundIcon="@mipmap/ic_launcher_dark"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -295,8 +301,8 @@
             android:name=".LauncherGlassDark"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_glass_dark"
-            android:roundIcon="@mipmap/ic_launcher_glass_dark"
+            android:icon="@mipmap/ic_launcher_dark"
+            android:roundIcon="@mipmap/ic_launcher_dark"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -306,7 +312,7 @@
 
         <activity-alias
             android:name=".LauncherDark"
-            android:enabled="false"
+            android:enabled="true"
             android:exported="true"
             android:icon="@mipmap/ic_launcher_dark"
             android:roundIcon="@mipmap/ic_launcher_dark"

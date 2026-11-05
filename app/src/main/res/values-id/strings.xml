@@ -1316,7 +1316,6 @@
     <string name="search_addons_none">Tidak ada addon yang aktif. Tambahkan satu di Pengaturan → Sumber.</string>
     <string name="search_addons_hint">Search your addons</string>
     <string name="app_icon">Ikon aplikasi</string>
-    <string name="app_icon_default">Default</string>
     <string name="song_info">Info lagu</string>
     <string name="song_info_album">Album</string>
     <string name="song_info_release_date">Tanggal rilis</string>
