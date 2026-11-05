@@ -306,7 +306,7 @@ fun FrostedTopBar(
             // handler is kept so the button still works while it shrinks.
             var lastOnBack by remember { mutableStateOf(onBack) }
             if (onBack != null) lastOnBack = onBack
-            AnimatedVisibility(
+            androidx.compose.animation.AnimatedVisibility(
                 visible = onBack != null,
                 enter = scaleIn(
                     animationSpec = spring(dampingRatio = BACK_BOUNCE_DAMPING, stiffness = Spring.StiffnessMediumLow),
