@@ -63,6 +63,8 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         com.music.bitchord.ui.AppUi.install(com.music.bitchord.ui.AndroidAppUiHost)
         // Per-song Canvas/audio fixes, from the player's ⋯ menu.
         com.music.bitchord.data.CanvasAudioFixStore.install(this)
+        // Details picked from YouTube Music for the listener's own files and uploads.
+        com.music.bitchord.data.SongMetadataFixStore.install(this)
         // The shared data layer (lyrics, the YouTube Music client) logs to
         // logcat on debug builds only, as the app's own DebugLog always has —
         // and, in any build, into a log session while Settings' "Enable

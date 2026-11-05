@@ -739,7 +739,8 @@ object InnertubeParser {
         val thumbnails = renderer.o("thumbnail").o("musicThumbnailRenderer")
             .o("thumbnail").a("thumbnails")
 
-        return Song(
+        // An upload the listener renamed from Song fixes reads its new name.
+        return com.music.bitchord.data.SongMetadataFixes.apply(Song(
             videoId = videoId,
             title = title,
             // Preserve the whole artist segment even when only some of its
@@ -771,7 +772,7 @@ object InnertubeParser {
             isExplicit = renderer.hasExplicitBadge(),
             // Extract the "Remove from history" feedback token from the row's menu, if present.
             feedbackToken = extractFeedbackToken(renderer),
-        )
+        ))
     }
 
     /**

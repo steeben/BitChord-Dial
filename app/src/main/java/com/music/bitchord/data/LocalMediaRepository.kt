@@ -317,7 +317,7 @@ object LocalMediaRepository {
                 null
             }
             val artworkUrl = if (artId > 0) ContentUris.withAppendedId(ALBUM_ART_URI, artId).toString() else null
-            return LocalLinks.apply(Song(
+            return SongMetadataFixes.apply(LocalLinks.apply(Song(
                 videoId = videoIdByUri[contentUri] ?: contentUri,
                 title = songTitle,
                 artist = cursor.getString(artist).cleanTag() ?: "Unknown Artist",
@@ -331,7 +331,7 @@ object LocalMediaRepository {
                 localDateAddedSeconds = cursor.getLong(dateAdded),
                 localDateModifiedSeconds = cursor.getLong(dateModified),
                 trackNumber = trackNumber,
-            ))
+            )))
         }
     }
 
@@ -544,7 +544,7 @@ object LocalMediaRepository {
             }
         }
 
-        return Song(
+        return SongMetadataFixes.apply(Song(
             videoId = uriStr,
             title = title,
             artist = artist,
@@ -555,7 +555,7 @@ object LocalMediaRepository {
             localDateAddedSeconds = scanned?.dateAddedSeconds,
             localDateModifiedSeconds = scanned?.dateModifiedSeconds,
             trackNumber = trackNumber,
-        )
+        ))
     }
 
     /**

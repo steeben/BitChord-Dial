@@ -15,7 +15,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.EditNote
 import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.LibraryMusic
@@ -31,6 +33,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -47,6 +50,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.session.MediaController
 import com.music.bitchord.R
 import com.music.bitchord.data.CanvasAudioFixes
+import com.music.bitchord.data.LocalLinks
+import com.music.bitchord.data.SongMetadataFixes
 import com.music.bitchord.data.VideoCanvases
 import com.music.bitchord.data.YtMusicRepository
 import com.music.bitchord.data.canvas.CanvasRepository
@@ -63,9 +68,11 @@ import com.music.bitchord.playback.SourcePins
 import com.music.bitchord.playback.StreamChoice
 import com.music.bitchord.playback.swapToVersion
 import com.music.bitchord.playback.toSong
+import com.music.bitchord.playback.retagCurrent
 import com.music.bitchord.playback.useSource
 import com.music.bitchord.ui.theme.LocalNowPlayingTint
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 
 /**
  * The searches behind the player's "Song fixes" rows: pick the
@@ -74,7 +81,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
  * limits — it only places [SongFixHost] and adds [rememberSongFixChoices].
  */
 object SongFixRequests {
-    enum class Kind { VIDEO, SONG, SOURCE }
+    /** [DETAILS] searches for a song's title, artist, album and cover; [RESTORE_DETAILS] undoes that, without a sheet. */
+    enum class Kind { VIDEO, SONG, SOURCE, DETAILS, RESTORE_DETAILS }
 
     data class Request(val kind: Kind, val song: Song)
 
@@ -136,6 +144,10 @@ fun rememberSongFixChoices(song: Song, onClose: () -> Unit): List<SongMenuChoice
         SourceRegistry.activeForPlayback().any { it.kind != SourceKind.YOUTUBE }
     }
     val close by rememberUpdatedState(onClose)
+    // Only the listener's own files and uploads: a catalogue track's details are YouTube Music's already.
+    val metadataFixes by SongMetadataFixes.fixes.collectAsStateWithLifecycle()
+    val ownSong = SongMetadataFixes.canFix(song)
+    val detailsFix = remember(metadataFixes, song.videoId, song.localUri) { SongMetadataFixes.fixOf(song) }
     return buildList {
         add(
             SongMenuChoice(
@@ -168,6 +180,30 @@ fun rememberSongFixChoices(song: Song, onClose: () -> Unit): List<SongMenuChoice
                 ) {
                     close()
                     SongFixRequests.open(SongFixRequests.Kind.SOURCE, song)
+                },
+            )
+        }
+        if (ownSong) {
+            add(
+                SongMenuChoice(
+                    icon = Icons.Rounded.EditNote,
+                    label = context.getString(R.string.song_fix_find_details),
+                    description = context.getString(R.string.song_fix_find_details_detail),
+                ) {
+                    close()
+                    SongFixRequests.open(SongFixRequests.Kind.DETAILS, song)
+                },
+            )
+        }
+        if (detailsFix != null) {
+            add(
+                SongMenuChoice(
+                    icon = Icons.Rounded.Restore,
+                    label = context.getString(R.string.song_fix_restore_details),
+                    description = context.getString(R.string.song_fix_restore_details_detail, detailsFix.original.title),
+                ) {
+                    close()
+                    SongFixRequests.open(SongFixRequests.Kind.RESTORE_DETAILS, song)
                 },
             )
         }
@@ -210,7 +246,19 @@ fun SongFixHost(
     }
 
     val request by SongFixRequests.request.collectAsStateWithLifecycle()
-    val open = request ?: return
+    val scope = rememberCoroutineScope()
+    // The playing item, when it is [song]: what a rename or restore is applied to.
+    fun playing(song: Song) = controller?.takeIf { it.currentMediaItem?.mediaId == song.videoId }
+    LaunchedEffect(request) {
+        val restoring = request?.takeIf { it.kind == SongFixRequests.Kind.RESTORE_DETAILS } ?: return@LaunchedEffect
+        SongFixRequests.request.value = null
+        val c = playing(restoring.song)
+        val base = c?.currentMediaItem?.toSong() ?: restoring.song
+        val original = SongMetadataFixes.restore(base) ?: return@LaunchedEffect
+        c?.retagCurrent(original)
+        onNotice(context.getString(R.string.song_fix_details_restored))
+    }
+    val open = request?.takeUnless { it.kind == SongFixRequests.Kind.RESTORE_DETAILS } ?: return
     val dismiss = { SongFixRequests.request.value = null }
     SlideDownBottomSheet(
         onDismissRequest = dismiss,
@@ -253,6 +301,29 @@ fun SongFixHost(
                 }
                 onNotice(context.getString(R.string.song_fix_song_picked))
             }
+            SongFixRequests.Kind.DETAILS -> SearchPicker(
+                title = stringResource(R.string.song_fix_find_details),
+                about = stringResource(R.string.song_fix_find_details_about),
+                song = open.song,
+                current = SongMetadataFixes.fixOf(open.song)?.details?.matchedVideoId,
+                search = YtMusicRepository::searchSongs,
+            ) { picked ->
+                dismiss()
+                scope.launch {
+                    // A search row can leave off the album and artist ids that
+                    // Open album and Open artist need.
+                    val match = runCatching { LocalLinks.withIds(picked) }.getOrDefault(picked)
+                    val c = playing(open.song)
+                    val base = c?.currentMediaItem?.toSong() ?: open.song
+                    val renamed = SongMetadataFixes.fix(base, match) ?: return@launch
+                    // A file is tied to the track too, which is what its menu's
+                    // Open artist and Open album follow.
+                    if (LocalLinks.keyOf(open.song) != null) LocalLinks.link(open.song, match)
+                    c?.retagCurrent(renamed)
+                    onNotice(context.getString(R.string.song_fix_details_picked))
+                }
+            }
+            SongFixRequests.Kind.RESTORE_DETAILS -> Unit
             SongFixRequests.Kind.SOURCE -> SourcePicker(song = open.song) { configId ->
                 dismiss()
                 controller?.takeIf { it.currentMediaItem?.mediaId == open.song.videoId }?.useSource(configId)

@@ -23,6 +23,7 @@ import androidx.media3.common.Timeline
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionToken
+import com.music.bitchord.data.SongMetadataFixes
 import com.music.bitchord.data.model.ArtistRef
 import com.music.bitchord.data.model.NOTIFICATION_ART_PX
 import com.music.bitchord.data.model.PlaybackSourceType
@@ -187,6 +188,14 @@ fun MediaController.revertToOriginal() {
     sendCustomCommand(
         SessionCommand(ACTION_REVERT_TO_ORIGINAL, Bundle.EMPTY),
         Bundle.EMPTY,
+    )
+}
+
+/** Asks the service to show the playing track under [song]'s details — see [ACTION_RETAG_CURRENT]. */
+fun MediaController.retagCurrent(song: Song) {
+    sendCustomCommand(
+        SessionCommand(ACTION_RETAG_CURRENT, Bundle.EMPTY),
+        bundleOf(EXTRA_RETAG_SONG to song.toSongBundle()),
     )
 }
 
@@ -648,7 +657,14 @@ private fun Song.matchQuery(): String = buildString {
     if (isVideo) append("&m=1")
 }
 
-fun Song.toMediaItem(): MediaItem {
+/**
+ * The player's item for this song, under the details the listener picked for
+ * it if it is a file or upload of theirs — see [SongMetadataFixes]. Applied
+ * here so a renamed song reads its new name in every queue it enters.
+ */
+fun Song.toMediaItem(): MediaItem = SongMetadataFixes.apply(this).buildMediaItem()
+
+private fun Song.buildMediaItem(): MediaItem {
     val sourceTrack = SourceRegistry.parseTrackKey(videoId)
     // A row from search or a playlist carries no file of its own, but the track
     // may still be on disk from a download — see [Downloads.saved].

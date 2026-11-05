@@ -183,4 +183,12 @@
     <string name="storage_usage_of_limit">%1$s used of the %2$s cache limit</string>
     <string name="storage_usage_unlimited">%1$s used, no cache limit</string>
     <string name="storage_usage_measuring">Measuring…</string>
+    <!-- Song fixes: details from YouTube Music for the listener's own files and uploads -->
+    <string name="song_fix_find_details">Find this song\'s details</string>
+    <string name="song_fix_find_details_detail">Take the title, artist, album and cover from YouTube Music</string>
+    <string name="song_fix_find_details_about">Pick the YouTube Music song this is. Its title, artist, album and cover replace this one\'s everywhere in the app. The audio doesn\'t change.</string>
+    <string name="song_fix_details_picked">Details updated</string>
+    <string name="song_fix_restore_details">Restore original details</string>
+    <string name="song_fix_restore_details_detail">Back to “%1$s”</string>
+    <string name="song_fix_details_restored">Original details restored</string>
 </resources>

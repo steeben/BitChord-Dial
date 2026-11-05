@@ -242,6 +242,14 @@ const val EXTRA_SOURCE_CONFIG_ID = "sourceConfigId"
 const val SOURCE_YOUTUBE = "youtube"
 
 /**
+ * Session command behind Song fixes' "Find this song's details": shows the
+ * playing item under the song in [EXTRA_RETAG_SONG] (its new or restored
+ * title, artist, album and cover) without touching what it plays.
+ */
+const val ACTION_RETAG_CURRENT = "com.music.bitchord.action.RETAG_CURRENT"
+const val EXTRA_RETAG_SONG = "retagSong"
+
+/**
  * App-side gate for explicit quality retries.
  *
  * Automatic upgrades never pass through this object. Returning the remaining
@@ -801,6 +809,7 @@ class PlaybackService : MediaLibraryService() {
     private val upgradeQualityCommand = SessionCommand(ACTION_UPGRADE_QUALITY, Bundle.EMPTY)
     private val useSourceCommand = SessionCommand(ACTION_USE_SOURCE, Bundle.EMPTY)
     private val swapVersionCommand = SessionCommand(ACTION_SWAP_VERSION, Bundle.EMPTY)
+    private val retagCurrentCommand = SessionCommand(ACTION_RETAG_CURRENT, Bundle.EMPTY)
     private val queueDragCommand = SessionCommand(ACTION_QUEUE_DRAG, Bundle.EMPTY)
 
     private var favoriteActionJob: Job? = null
@@ -2733,6 +2742,31 @@ class PlaybackService : MediaLibraryService() {
         activePlayer.seekTo(index, position)
         if (wasPlaying) activePlayer.play()
         refreshCustomLayouts()
+    }
+
+    /**
+     * Gives the playing item [target]'s title, artist, album and cover. Only
+     * the metadata changes: the uri stays as it is, so Media3 updates the
+     * item in place rather than reopening the stream.
+     */
+    private fun retagCurrent(target: Song) {
+        val activePlayer = player ?: return
+        val item = activePlayer.currentMediaItem ?: return
+        if (item.mediaId != target.videoId || crossfade?.isTransitioning() == true) return
+        val live = item.toSong()
+        val metadata = live.copy(
+            title = target.title,
+            artist = target.artist,
+            albumName = target.albumName,
+            albumId = target.albumId,
+            artistId = target.artistId,
+            artists = target.artists,
+            thumbnailUrl = target.thumbnailUrl,
+        ).toMediaItem().mediaMetadata
+        val retagged = item.buildUpon().setMediaMetadata(metadata).build()
+        live.queueEntryId?.let { mediaItemEntryIds[retagged] = it }
+        mediaItemTiers[retagged] = live.queueTier
+        activePlayer.replaceMediaItem(activePlayer.currentMediaItemIndex, retagged)
     }
 
     private fun toggleShuffleFromSession() {
@@ -9229,6 +9263,7 @@ class PlaybackService : MediaLibraryService() {
                 .add(upgradeQualityCommand)
                 .add(useSourceCommand)
                 .add(swapVersionCommand)
+                .add(retagCurrentCommand)
                 .add(queueDragCommand)
                 .build()
             return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
@@ -9266,6 +9301,7 @@ class PlaybackService : MediaLibraryService() {
                 ACTION_COMMIT_RADIO_QUEUE -> player?.let(::saveQueueSnapshotImmediately)
                 ACTION_UPGRADE_QUALITY -> upgradeQualityNow()
                 ACTION_USE_SOURCE -> useSourceForCurrent(args.getString(EXTRA_SOURCE_CONFIG_ID))
+                ACTION_RETAG_CURRENT -> args.getBundle(EXTRA_RETAG_SONG)?.let { retagCurrent(songFromBundle(it)) }
                 ACTION_SWAP_VERSION -> {
                     val bundle = args.getBundle(EXTRA_SWAP_MEDIA_ITEM)
                     if (bundle != null) {
