@@ -175,7 +175,6 @@ import com.music.bitchord.data.model.CARD_ART_PX
 import com.music.bitchord.data.model.PLAYER_ART_PX
 import com.music.bitchord.data.model.artworkAt
 import com.music.bitchord.data.model.Song
-import com.music.bitchord.playback.BACK_RESTARTS_AFTER_MS
 import dev.chrisbanes.haze.HazeInputScale
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
@@ -1149,12 +1148,10 @@ fun NowPlayingScreen(
     val barStartMs = sample?.startMs ?: 0L
     val barDurationMs = sample?.lengthMs ?: durationMs
     val shown: () -> Float = { scrub.shown(position.positionMs - barStartMs, barDurationMs) }
-    // Back restarts the track rather than stepping back once it is a few
-    // seconds in. Derived, so this scope hears about the playhead once, when
-    // it crosses that point, rather than on every tick.
-    val pastRestartPoint by remember(position) {
-        derivedStateOf { position.positionMs > BACK_RESTARTS_AFTER_MS }
-    }
+    // Back is never dimmed: a few seconds in it restarts the track, and at the
+    // very start with nothing before it in the queue it restarts it as well
+    // (Player.seekToPrevious falls back to seeking to 0), so it always does
+    // something.
     // The queue lives inside the player, Apple-style, rather than in a sheet.
     // Read once when this expanded-player instance is created. Every change is
     // written below, so reopening the player (and a process restart) returns to
@@ -2256,7 +2253,7 @@ fun NowPlayingScreen(
                     TransportRow(
                         isPlaying = isPlaying,
                         isLoading = isLoading || audioVersionSwitching,
-                        previousEnabled = !controlsLocked && (hasPrevious || pastRestartPoint),
+                        previousEnabled = !controlsLocked,
                         nextEnabled = !controlsLocked && hasNext,
                         onPrevious = onPrevious,
                         onPlayPause = onPlayPause,
@@ -2488,8 +2485,7 @@ fun NowPlayingScreen(
                             TransportRow(
                                 isPlaying = isPlaying,
                                 isLoading = isLoading || audioVersionSwitching,
-                                previousEnabled = !controlsLocked &&
-                                    (hasPrevious || pastRestartPoint),
+                                previousEnabled = !controlsLocked,
                                 nextEnabled = !controlsLocked && hasNext,
                                 onPrevious = onPrevious,
                                 onPlayPause = onPlayPause,
@@ -4538,8 +4534,7 @@ fun NowPlayingScreen(
                 TransportRow(
                     isPlaying = isPlaying,
                     isLoading = isLoading || audioVersionSwitching,
-                    previousEnabled = !controlsLocked &&
-                        (hasPrevious || pastRestartPoint),
+                    previousEnabled = !controlsLocked,
                     nextEnabled = !controlsLocked && hasNext,
                     onPrevious = onPrevious,
                     onPlayPause = onPlayPause,

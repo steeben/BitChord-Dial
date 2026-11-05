@@ -35,6 +35,9 @@
  *   the tab on a spring, squashes it with its acceleration, and sheds the glass
  *   back into a flat fill on landing. Horizontal drags pick it up the same way,
  *   resist at the ends, tick across tab boundaries, and settle on release.
+ *   The lens magnifies what it passes over while it is lifted.
+ * - Tab glyphs push in under the finger and bounce back on release
+ *   ([pressBounce]).
  */
 
 package com.music.bitchord.ui.components.floatingtabbar
@@ -499,6 +502,7 @@ private fun SharedTransitionScope.InlineTab(
     modifier: Modifier,
     tabBarContentModifier: @Composable () -> Modifier
 ) {
+    val press = remember { MutableInteractionSource() }
     Box(
         modifier = modifier
             .sharedElement(
@@ -522,7 +526,7 @@ private fun SharedTransitionScope.InlineTab(
                     inlineTab.onClick()
                 },
                 indication = inlineTab.indication?.invoke(),
-                interactionSource = remember { MutableInteractionSource() }
+                interactionSource = press
             )
             .padding(sizes.tabInlineContentPadding)
     ) {
@@ -533,7 +537,7 @@ private fun SharedTransitionScope.InlineTab(
                         sharedContentState = rememberSharedContentState("tab#${inlineTab.key}-icon"),
                         animatedVisibilityScope = animatedVisibilityScope,
                         zIndexInOverlay = 1f
-                    )
+                    ).pressBounce(press)
                 ) {
                     inlineTab.icon()
                 }
@@ -554,8 +558,9 @@ private fun SharedTransitionScope.InlineStandaloneTab(
     modifier: Modifier,
     tabBarContentModifier: @Composable () -> Modifier
 ) {
+    val press = remember { MutableInteractionSource() }
     Tab(
-        icon = standaloneTab.icon,
+        icon = { Box(Modifier.pressBounce(press)) { standaloneTab.icon() } },
         title = standaloneTab.title,
         isInline = true,
         isStandalone = true,
@@ -578,7 +583,7 @@ private fun SharedTransitionScope.InlineStandaloneTab(
             .clickable(
                 onClick = standaloneTab.onClick,
                 indication = standaloneTab.indication?.invoke(),
-                interactionSource = remember { MutableInteractionSource() }
+                interactionSource = press
             )
     )
 }
@@ -925,6 +930,7 @@ private fun SharedTransitionScope.ExpandedTabs(
                 ) {
                     scope.tabs.forEach { tab ->
                         val isSelected = tab.key == selectedTabKey
+                        val press = remember(tab.key) { MutableInteractionSource() }
                         val iconScale by animateFloatAsState(
                             targetValue = if (isSelected) 1.08f else 1f,
                             animationSpec = selectionSpec,
@@ -947,7 +953,7 @@ private fun SharedTransitionScope.ExpandedTabs(
                                     }).graphicsLayer {
                                         scaleX = iconScale
                                         scaleY = iconScale
-                                    }
+                                    }.pressBounce(press)
                                 ) {
                                     tab.icon()
                                 }
@@ -973,7 +979,7 @@ private fun SharedTransitionScope.ExpandedTabs(
                                 .clickable(
                                     onClick = tab.onClick,
                                     indication = tab.indication?.invoke(),
-                                    interactionSource = remember { MutableInteractionSource() }
+                                    interactionSource = press
                                 )
                                 .padding(sizes.tabExpandedContentPadding)
                         )
@@ -1009,8 +1015,9 @@ private fun SharedTransitionScope.ExpandedStandaloneTab(
     modifier: Modifier,
     tabBarContentModifier: @Composable () -> Modifier
 ) {
+    val press = remember { MutableInteractionSource() }
     Tab(
-        icon = standaloneTab.icon,
+        icon = { Box(Modifier.pressBounce(press)) { standaloneTab.icon() } },
         title = standaloneTab.title,
         isInline = false,
         isStandalone = true,
@@ -1033,7 +1040,7 @@ private fun SharedTransitionScope.ExpandedStandaloneTab(
             .clickable(
                 onClick = standaloneTab.onClick,
                 indication = standaloneTab.indication?.invoke(),
-                interactionSource = remember { MutableInteractionSource() }
+                interactionSource = press
             )
     )
 }

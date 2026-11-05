@@ -4896,10 +4896,15 @@ private fun BitChordApp(
                 // these pages had no status-bar scrim, title or back button, and
                 // Discord (pushed over Account) was covered by the page it opened
                 // from — hence skipped while it is up.
+                // These pages sit outside the AnimatedContent that feeds every
+                // other page's scroll into the glass bar, so they hand their
+                // scroll to it themselves; without this the bar stayed
+                // expanded on Account & integrations and the rest.
+                val subPageBarScroll = if (glassActive) Modifier.nestedScroll(navBarScroll) else Modifier
                 when (settingsSubScreen.takeUnless { showDiscord || showSpotify }) {
                     "account_scrobbling" -> {
                         Surface(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.fillMaxSize().then(subPageBarScroll),
                             color = MaterialTheme.colorScheme.background,
                         ) {
                             AccountAndScrobblingScreen(
@@ -4926,7 +4931,7 @@ private fun BitChordApp(
                     }
                     "sources" -> {
                         Surface(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.fillMaxSize().then(subPageBarScroll),
                             color = MaterialTheme.colorScheme.background,
                         ) {
                             SourcesScreen(
@@ -4940,7 +4945,7 @@ private fun BitChordApp(
                     }
                     "listen_together" -> {
                         Surface(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.fillMaxSize().then(subPageBarScroll),
                             color = MaterialTheme.colorScheme.background,
                         ) {
                             ListenTogetherScreen(
@@ -4963,7 +4968,7 @@ private fun BitChordApp(
                     }
                     "equalizer" -> {
                         Surface(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.fillMaxSize().then(subPageBarScroll),
                             color = MaterialTheme.colorScheme.background,
                         ) {
                             EqualizerScreen(contentPadding = listPadding)
@@ -4971,7 +4976,7 @@ private fun BitChordApp(
                     }
                     LIBRARY_DUPLICATES_SCREEN -> {
                         Surface(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.fillMaxSize().then(subPageBarScroll),
                             color = MaterialTheme.colorScheme.background,
                         ) {
                             // Read again each time the page opens, so a song added since shows.
@@ -4993,7 +4998,7 @@ private fun BitChordApp(
                     "replay" -> {
                         if (showReplay && !showReplayShare) {
                             Surface(
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = Modifier.fillMaxSize().then(subPageBarScroll),
                                 color = MaterialTheme.colorScheme.background,
                             ) {
                                 ReplayScreen(

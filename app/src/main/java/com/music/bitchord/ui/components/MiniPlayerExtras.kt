@@ -176,6 +176,11 @@ fun Modifier.miniPlayerProgress(
         )
     }
     val taper = minOf(GLOW_TAPER.toPx(), end * 0.5f)
+    // The mask covers the whole layer, not just up to the playhead. DstIn only
+    // touches the pixels it draws, so a mask that stopped at `end` left the
+    // antialiased column at the playhead partly unmasked, and as `end` crept
+    // across a pixel that column flickered in and out as a faint bright line.
+    // Past `end` the gradient clamps to transparent and clears it.
     drawRect(
         brush = Brush.horizontalGradient(
             0f to Color.Black,
@@ -185,7 +190,7 @@ fun Modifier.miniPlayerProgress(
             endX = end,
         ),
         topLeft = Offset.Zero,
-        size = Size(end, size.height + spill),
+        size = Size(size.width, size.height + spill),
         blendMode = BlendMode.DstIn,
     )
     drawContext.canvas.restore()

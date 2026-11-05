@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -475,13 +474,13 @@ private fun GlassNowPlaying(
                 }
             } else {
                 val playPausePress = remember { MutableInteractionSource() }
-                IconButton(
+                MiniPlayerTransportButton(
                     onClick = {
                         haptics.play(if (isPlaying) Haptic.Pause else Haptic.Resume)
                         onPlayPause()
                     },
-                    modifier = Modifier.pressPulse(playPausePress, color = contentColor).size(glyphSlot),
                     interactionSource = playPausePress,
+                    modifier = Modifier.size(glyphSlot),
                 ) {
                     PlayPauseGlyph(
                         isPlaying = isPlaying,
@@ -497,14 +496,14 @@ private fun GlassNowPlaying(
             if (!isInline && showNext) {
                 Spacer(Modifier.width(8.dp))
                 val nextPress = remember { MutableInteractionSource() }
-                IconButton(
+                MiniPlayerTransportButton(
                     onClick = {
                         haptics.play(Haptic.SkipNext)
                         onNext()
                     },
                     enabled = !controlsLocked,
-                    modifier = Modifier.pressPulse(nextPress, color = contentColor).size(glyphSlot),
                     interactionSource = nextPress,
+                    modifier = Modifier.size(glyphSlot),
                 ) {
                     MiniPlayerNextGlyph(
                         tint = contentColor.copy(alpha = if (controlsLocked) 0.3f else 1f),

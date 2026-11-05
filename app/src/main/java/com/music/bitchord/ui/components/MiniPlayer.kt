@@ -539,13 +539,13 @@ fun MiniPlayer(
                 }
             } else {
                 val playPausePress = remember { MutableInteractionSource() }
-                IconButton(
+                MiniPlayerTransportButton(
                     onClick = {
                         haptics.play(if (isPlaying) Haptic.Pause else Haptic.Resume)
                         onPlayPause()
                     },
-                    modifier = Modifier.pressPulse(playPausePress, color = MaterialTheme.colorScheme.onBackground).size(GLYPH_SLOT),
                     interactionSource = playPausePress,
+                    modifier = Modifier.size(GLYPH_SLOT),
                 ) {
                     PlayPauseGlyph(
                         isPlaying = isPlaying,
@@ -561,14 +561,14 @@ fun MiniPlayer(
                 // Faded and inert rather than removed while the host holds the
                 // controls, so the bar keeps its shape — see [controlsLocked].
                 val nextPress = remember { MutableInteractionSource() }
-                IconButton(
+                MiniPlayerTransportButton(
                     onClick = {
                         haptics.play(Haptic.SkipNext)
                         onNext()
                     },
                     enabled = !controlsLocked,
-                    modifier = Modifier.pressPulse(nextPress, color = MaterialTheme.colorScheme.onBackground).size(GLYPH_SLOT),
                     interactionSource = nextPress,
+                    modifier = Modifier.size(GLYPH_SLOT),
                 ) {
                     MiniPlayerNextGlyph(
                         tint = MaterialTheme.colorScheme.onBackground
@@ -577,6 +577,36 @@ fun MiniPlayer(
                 }
             }
         }
+    }
+}
+
+/**
+ * A transport button on either mini player: the glyph and, on press, a white
+ * glow swelling out from behind it ([pressPulse]) and nothing else. An
+ * [IconButton] would also lay its circular ripple over the glow, which showed
+ * as a grey disc appearing and fading on every tap.
+ */
+@Composable
+internal fun MiniPlayerTransportButton(
+    onClick: () -> Unit,
+    interactionSource: MutableInteractionSource,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable () -> Unit,
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .pressPulse(interactionSource, color = Color.White)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                enabled = enabled,
+                role = androidx.compose.ui.semantics.Role.Button,
+                onClick = onClick,
+            ),
+    ) {
+        content()
     }
 }
 

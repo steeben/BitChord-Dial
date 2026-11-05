@@ -29,6 +29,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Constraints
@@ -526,9 +527,13 @@ internal fun GlassSelectionPill(
     val page = LocalAppBackdrop.current
     val shape = remember { RoundedCornerShape(percent = 50) }
     val backdrop = remember(page, barGlass, tabRow, fillColor) {
-        SelectionPillBackdrop(page, barGlass, tabRow) {
-            fillColor.copy(alpha = fillColor.alpha * (1f - motion.material))
-        }
+        SelectionPillBackdrop(
+            page = page,
+            bar = barGlass,
+            tabs = tabRow,
+            fill = { fillColor.copy(alpha = fillColor.alpha * (1f - motion.material)) },
+            magnify = { 1f + LENS_MAGNIFY * motion.material },
+        )
     }
     Box(
         modifier.drawBackdrop(
@@ -558,6 +563,9 @@ internal fun GlassSelectionPill(
 /** The rim and its shadow are gone by the time the hand-off is 55% through. */
 private fun rimOf(presence: Float): Float = ((presence - 0.45f) / 0.55f).coerceIn(0f, 1f)
 
+/** How much bigger things look through the lifted lens than beside it. */
+private const val LENS_MAGNIFY = 0.2f
+
 private val LENS_HEIGHT = 12.dp
 private val LENS_AMOUNT = 14.dp
 
@@ -571,17 +579,37 @@ private val PILL_SHADOW = Shadow(
  * What the pill refracts, bottom to top: the page, the bar's glass, the
  * selection fill, and the tab row. The fill sits under the tabs here for the
  * same reason the flat pill does — over them it would grey the glyphs.
+ *
+ * All of it is drawn scaled up about the pill's centre by [magnify], so the
+ * lifted lens reads as a magnifier over the icons it is dragged across; at
+ * rest the factor is 1 and the landed pill matches the flat one exactly.
  */
 private class SelectionPillBackdrop(
     private val page: Backdrop,
     private val bar: Backdrop,
     private val tabs: Backdrop,
     private val fill: () -> Color,
+    private val magnify: () -> Float,
 ) : Backdrop {
 
     override val isCoordinatesDependent: Boolean = true
 
     override fun DrawScope.drawBackdrop(
+        density: Density,
+        coordinates: LayoutCoordinates?,
+        layerBlock: (GraphicsLayerScope.() -> Unit)?,
+    ) {
+        val factor = magnify()
+        if (factor != 1f && coordinates != null) {
+            // The canvas origin here is the pill's own top left.
+            val pivot = Offset(coordinates.size.width / 2f, coordinates.size.height / 2f)
+            scale(factor, pivot) { drawLayers(density, coordinates, layerBlock) }
+        } else {
+            drawLayers(density, coordinates, layerBlock)
+        }
+    }
+
+    private fun DrawScope.drawLayers(
         density: Density,
         coordinates: LayoutCoordinates?,
         layerBlock: (GraphicsLayerScope.() -> Unit)?,
