@@ -11,6 +11,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.DoneAll
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -139,6 +140,7 @@ fun PublishListSelection(
  * The bulk actions sheet: what the ⋯ opens while rows are selected. Every
  * action ends the selection, the same way the Downloads bar always did.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListSelectionSheetHost(
     onPlay: (List<Song>) -> Unit,
