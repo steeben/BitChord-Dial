@@ -16,6 +16,8 @@ object CanvasAudioFixStore {
     private const val PAIRED_VIDEO = "paired_video"
     private const val SONG_PICKS = "song_picks"
     private const val ALBUM_ART_CANVAS = "album_art_canvas"
+    private const val LYRIC_INK_ART = "lyric_ink_art"
+    private const val LYRIC_INK_CANVAS = "lyric_ink_canvas"
 
     fun install(context: Context) {
         val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -36,6 +38,8 @@ object CanvasAudioFixStore {
                 }.toMap(),
                 songPicks = prefs.getStringSet(SONG_PICKS, null).orEmpty().mapNotNull(::readPick).toMap(),
                 albumArtCanvas = prefs.getStringSet(ALBUM_ART_CANVAS, null).orEmpty().toSet(),
+                lyricInkArt = readInks(prefs.getStringSet(LYRIC_INK_ART, null)),
+                lyricInkCanvas = readInks(prefs.getStringSet(LYRIC_INK_CANVAS, null)),
             ),
         )
         CanvasAudioFixes.persist = { state ->
@@ -47,9 +51,23 @@ object CanvasAudioFixStore {
                 .putStringSet(PAIRED_VIDEO, state.pairedVideo.map { (key, value) -> "$key=$value" }.toSet())
                 .putStringSet(SONG_PICKS, state.songPicks.map { (key, pick) -> writePick(key, pick) }.toSet())
                 .putStringSet(ALBUM_ART_CANVAS, state.albumArtCanvas.toSet())
+                .putStringSet(LYRIC_INK_ART, writeInks(state.lyricInkArt))
+                .putStringSet(LYRIC_INK_CANVAS, writeInks(state.lyricInkCanvas))
                 .apply()
         }
     }
+
+    private fun readInks(entries: Set<String>?): Map<String, CanvasAudioFixes.LyricInk> =
+        entries.orEmpty().mapNotNull { entry ->
+            val split = entry.lastIndexOf('=')
+            if (split <= 0) return@mapNotNull null
+            val ink = CanvasAudioFixes.LyricInk.entries.firstOrNull { it.name == entry.substring(split + 1) }
+                ?: return@mapNotNull null
+            entry.substring(0, split) to ink
+        }.toMap()
+
+    private fun writeInks(inks: Map<String, CanvasAudioFixes.LyricInk>): Set<String> =
+        inks.map { (id, ink) -> "$id=${ink.name}" }.toSet()
 
     private fun writePick(key: String, pick: CanvasAudioFixes.SongPick): String = JSONObject()
         .put("for", key)

@@ -35,6 +35,10 @@ object CanvasAudioFixes {
         val songPicks: Map<String, SongPick> = emptyMap(),
         /** Tracks that show their album's animated cover as the Canvas. */
         val albumArtCanvas: Set<String> = emptySet(),
+        /** The lyrics' text the listener picked for a track while its album art is behind them. */
+        val lyricInkArt: Map<String, LyricInk> = emptyMap(),
+        /** The same pick for while a Canvas plays behind them. */
+        val lyricInkCanvas: Map<String, LyricInk> = emptyMap(),
     ) {
         fun touches(videoId: String): Boolean =
             videoId in keepVideoAudio || videoId in hiddenCanvas || videoId in hiddenVideoCanvas ||
@@ -77,6 +81,9 @@ object CanvasAudioFixes {
             )
         }
     }
+
+    /** Light or dark lyrics text, picked by hand for one song. No pick means the player decides. */
+    enum class LyricInk { LIGHT, DARK }
 
     /** What the Canvas on screen is, so the menu can offer the fix that fits it. */
     enum class Shown { NONE, CANVAS, VIDEO_PICTURE }
@@ -150,6 +157,20 @@ object CanvasAudioFixes {
             pairedVideo = it.pairedVideo - songVideoId,
         )
     }
+
+    /** The lyrics text picked for [songVideoId] over its album art ([overCanvas] false) or its Canvas. */
+    fun lyricInk(songVideoId: String, overCanvas: Boolean): LyricInk? =
+        lyricInkOf(_state.value, songVideoId, overCanvas)
+
+    /** Picks [songVideoId]'s lyrics text over its album art or its Canvas; null goes back to automatic. */
+    fun setLyricInk(songVideoId: String, overCanvas: Boolean, ink: LyricInk?) = update { state ->
+        val current = if (overCanvas) state.lyricInkCanvas else state.lyricInkArt
+        val next = if (ink == null) current - songVideoId else current + (songVideoId to ink)
+        if (overCanvas) state.copy(lyricInkCanvas = next) else state.copy(lyricInkArt = next)
+    }
+
+    fun lyricInkOf(state: State, songVideoId: String, overCanvas: Boolean): LyricInk? =
+        (if (overCanvas) state.lyricInkCanvas else state.lyricInkArt)[songVideoId]
 
     fun setSyncOffset(musicVideoId: String, songVideoId: String, offsetMs: Long) =
         update { it.copy(syncOffsets = it.syncOffsets + (key(musicVideoId, songVideoId) to offsetMs)) }

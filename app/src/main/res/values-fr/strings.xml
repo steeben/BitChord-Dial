@@ -1411,7 +1411,13 @@
     <string name="ai_mix_started">AI Mix : extraits de 50 secondes mixés comme un set de DJ</string>
     <string name="ai_mix_enabled">(activé)</string>
     <string name="ai_mix_stopped">AI Mix désactivé</string>
-    <string name="fix_canvas_audio_mismatch">Corriger la correspondance Canvas/audio</string>
+    <string name="fix_canvas_audio_mismatch">Corrections du titre</string>
+    <string name="lyrics_text_heading">Texte des paroles</string>
+    <string name="lyrics_text_over_art">Sur la pochette</string>
+    <string name="lyrics_text_over_canvas">Sur le Canvas</string>
+    <string name="lyrics_text_auto">Auto</string>
+    <string name="lyrics_text_light">Clair</string>
+    <string name="lyrics_text_dark">Sombre</string>
     <string name="canvas_fix_wrong_audio">L\'audio est une autre chanson</string>
     <string name="canvas_fix_wrong_audio_detail">Lire l\'audio de la vidéo elle-même désormais</string>
     <string name="canvas_fix_wrong_canvas">Le Canvas n\'est pas le bon clip</string>

@@ -1393,7 +1393,13 @@
     <string name="ai_mix_started">AI Mix: ตัวอย่าง 50 วินาที มิกซ์แบบเซ็ต DJ</string>
     <string name="ai_mix_enabled">(เปิดอยู่)</string>
     <string name="ai_mix_stopped">ปิด AI Mix</string>
-    <string name="fix_canvas_audio_mismatch">แก้การจับคู่ Canvas/เสียง</string>
+    <string name="fix_canvas_audio_mismatch">แก้ไขเพลง</string>
+    <string name="lyrics_text_heading">ข้อความเนื้อเพลง</string>
+    <string name="lyrics_text_over_art">บนปกอัลบั้ม</string>
+    <string name="lyrics_text_over_canvas">บน Canvas</string>
+    <string name="lyrics_text_auto">อัตโนมัติ</string>
+    <string name="lyrics_text_light">สว่าง</string>
+    <string name="lyrics_text_dark">มืด</string>
     <string name="canvas_fix_wrong_audio">เสียงเป็นเพลงอื่น</string>
     <string name="canvas_fix_wrong_audio_detail">เล่นเสียงของวิดีโอเองตั้งแต่นี้ไป</string>
     <string name="canvas_fix_wrong_canvas">Canvas เป็นคลิปที่ผิด</string>

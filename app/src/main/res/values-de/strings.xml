@@ -1410,7 +1410,13 @@
     <string name="ai_mix_started">AI Mix: 50-Sekunden-Ausschnitte, gemischt wie ein DJ-Set</string>
     <string name="ai_mix_enabled">(aktiviert)</string>
     <string name="ai_mix_stopped">AI Mix aus</string>
-    <string name="fix_canvas_audio_mismatch">Canvas/Audio-Zuordnung korrigieren</string>
+    <string name="fix_canvas_audio_mismatch">Song-Korrekturen</string>
+    <string name="lyrics_text_heading">Liedtext-Farbe</string>
+    <string name="lyrics_text_over_art">Über dem Albumcover</string>
+    <string name="lyrics_text_over_canvas">Über dem Canvas</string>
+    <string name="lyrics_text_auto">Auto</string>
+    <string name="lyrics_text_light">Hell</string>
+    <string name="lyrics_text_dark">Dunkel</string>
     <string name="canvas_fix_wrong_audio">Audio ist ein anderer Song</string>
     <string name="canvas_fix_wrong_audio_detail">Ab jetzt den Ton des Videos selbst abspielen</string>
     <string name="canvas_fix_wrong_canvas">Canvas ist der falsche Clip</string>

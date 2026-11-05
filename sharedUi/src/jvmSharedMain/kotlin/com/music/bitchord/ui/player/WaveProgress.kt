@@ -81,13 +81,14 @@ internal val PlayerInk: Color
 /**
  * What the player around the ink is doing, written by the player as it changes and read by
  * [ProvidePlayerInk]. [dim] is how much darker the backdrop has gone than the plain player
- * (the Canvas deck's dim, the lyrics and queue scrim), 0 to 1. [canvasShowing] is a moving
- * cover playing behind the controls, which always takes the light ink.
+ * (the Canvas deck's dim, the lyrics and queue scrim), 0 to 1. [forcedDark] is the light or
+ * dark text the listener picked for this song from its ⋯ menu's Song fixes (over its album
+ * art or over its Canvas, whichever is behind it now); null leaves it to the sleeve.
  */
 @Stable
 class PlayerInkConditions {
     var dim by mutableFloatStateOf(0f)
-    var canvasShowing by mutableStateOf(false)
+    var forcedDark by mutableStateOf<Boolean?>(null)
 }
 
 /**
@@ -118,8 +119,8 @@ internal fun playerInk(alpha: Float): Color {
  * [INK_DARK_FROM] (mostly white) flips the ink to its dark form, leaning further into the
  * accent ([PLAYER_INK_TINT_BRIGHT]) and going [PLAYER_INK_DARKEN] of the way to black.
  * Anything short of that keeps the plain light ink, so a mid-toned backdrop never ends up
- * with dim, low-contrast text. A playing Canvas ([PlayerInkConditions.canvasShowing])
- * keeps the light ink whatever the sleeve.
+ * with dim, low-contrast text. A pick made for the song ([PlayerInkConditions.forcedDark])
+ * overrides the sleeve either way.
  *
  * With the light ink, a dimmed backdrop ([PlayerInkConditions.dim]) brightens the ink by
  * the same amount: that share of the way to white, and (through [playerInk]) that share of
@@ -132,7 +133,7 @@ fun ProvidePlayerInk(
     content: @Composable () -> Unit,
 ) {
     val accent = LocalNowPlayingTint.current ?: MaterialTheme.colorScheme.primary
-    val dark = playerInkIsDark(artLuminance) && conditions?.canvasShowing != true
+    val dark = conditions?.forcedDark ?: playerInkIsDark(artLuminance)
     val tint = if (dark) PLAYER_INK_TINT_BRIGHT else PLAYER_INK_TINT
     val darken = if (dark) PLAYER_INK_DARKEN else 0f
     val target = remember(accent, tint, darken) {

@@ -1387,7 +1387,13 @@
     <string name="ai_mix_started">AI Mix: cuplikan 50 detik, dimiks seperti set DJ</string>
     <string name="ai_mix_enabled">(aktif)</string>
     <string name="ai_mix_stopped">AI Mix nonaktif</string>
-    <string name="fix_canvas_audio_mismatch">Perbaiki kecocokan Canvas/audio</string>
+    <string name="fix_canvas_audio_mismatch">Perbaikan lagu</string>
+    <string name="lyrics_text_heading">Teks lirik</string>
+    <string name="lyrics_text_over_art">Di atas sampul album</string>
+    <string name="lyrics_text_over_canvas">Di atas Canvas</string>
+    <string name="lyrics_text_auto">Otomatis</string>
+    <string name="lyrics_text_light">Terang</string>
+    <string name="lyrics_text_dark">Gelap</string>
     <string name="canvas_fix_wrong_audio">Audio adalah lagu lain</string>
     <string name="canvas_fix_wrong_audio_detail">Putar audio video itu sendiri mulai sekarang</string>
     <string name="canvas_fix_wrong_canvas">Canvas adalah klip yang salah</string>

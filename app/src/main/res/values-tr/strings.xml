@@ -1367,7 +1367,13 @@
     <string name="ai_mix_started">AI Mix: DJ seti gibi karıştırılmış 50 saniyelik örnekler</string>
     <string name="ai_mix_enabled">(etkin)</string>
     <string name="ai_mix_stopped">AI Mix kapalı</string>
-    <string name="fix_canvas_audio_mismatch">Canvas/ses eşleşmesini düzelt</string>
+    <string name="fix_canvas_audio_mismatch">Şarkı düzeltmeleri</string>
+    <string name="lyrics_text_heading">Şarkı sözü metni</string>
+    <string name="lyrics_text_over_art">Albüm kapağında</string>
+    <string name="lyrics_text_over_canvas">Canvas üzerinde</string>
+    <string name="lyrics_text_auto">Otomatik</string>
+    <string name="lyrics_text_light">Açık</string>
+    <string name="lyrics_text_dark">Koyu</string>
     <string name="canvas_fix_wrong_audio">Ses başka bir şarkı</string>
     <string name="canvas_fix_wrong_audio_detail">Bundan sonra videonun kendi sesini çal</string>
     <string name="canvas_fix_wrong_canvas">Canvas yanlış klip</string>

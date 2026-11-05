@@ -1708,8 +1708,9 @@ fun NowPlayingScreen(
         !spotifyCanvasControlsOpen && !lyricsOpen && !queueOpen
     // The ink brightens by as much as the backdrop under it dims: the Canvas
     // deck's flat dim (the same targets as spotifyCanvasDim below), or the
-    // heavier scrim the lyrics and queue sit on. A playing Canvas always takes
-    // the light ink, even where the still sleeve would have made it dark.
+    // heavier scrim the lyrics and queue sit on. The light or dark text picked
+    // for this song in Song fixes, over its art or over its Canvas, wins over
+    // the sleeve's own choice.
     val inkDim = maxOf(
         when {
             canvasChromeUp && spotifyCanvasControlsOpen -> 0.5f
@@ -1718,10 +1719,11 @@ fun NowPlayingScreen(
         },
         if (lyricsOpen || queueOpen) SUBVIEW_INK_DIM else 0f,
     )
-    val inkCanvasShowing = canvas != null && canvasRendered
+    val inkForcedDark = CanvasAudioFixes.lyricInkOf(canvasFixes, song.videoId, overCanvas = canvas != null && canvasRendered)
+        ?.let { it == CanvasAudioFixes.LyricInk.DARK }
     SideEffect {
         inkConditions.dim = inkDim
-        inkConditions.canvasShowing = inkCanvasShowing
+        inkConditions.forcedDark = inkForcedDark
     }
     val canvasCompact = animateFloatAsState(
         targetValue = if (canvasCompactMode) 1f else 0f,

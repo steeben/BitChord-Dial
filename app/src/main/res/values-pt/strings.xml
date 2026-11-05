@@ -1415,7 +1415,13 @@
     <string name="ai_mix_started">AI Mix: amostras de 50 segundos mixadas como um set de DJ</string>
     <string name="ai_mix_enabled">(ativado)</string>
     <string name="ai_mix_stopped">AI Mix desativado</string>
-    <string name="fix_canvas_audio_mismatch">Corrigir correspondência de Canvas/áudio</string>
+    <string name="fix_canvas_audio_mismatch">Correções da música</string>
+    <string name="lyrics_text_heading">Texto da letra</string>
+    <string name="lyrics_text_over_art">Sobre a capa do álbum</string>
+    <string name="lyrics_text_over_canvas">Sobre o Canvas</string>
+    <string name="lyrics_text_auto">Auto</string>
+    <string name="lyrics_text_light">Claro</string>
+    <string name="lyrics_text_dark">Escuro</string>
     <string name="canvas_fix_wrong_audio">O áudio é outra música</string>
     <string name="canvas_fix_wrong_audio_detail">Tocar o áudio do próprio vídeo a partir de agora</string>
     <string name="canvas_fix_wrong_canvas">O Canvas é o clipe errado</string>
