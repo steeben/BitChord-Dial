@@ -50,8 +50,45 @@ object YtMusicRepository {
     // Cache for video version lookups from audio tracks (null means no video found).
     private val videoVersionCache = ConcurrentHashMap<String, Song?>()
 
-    fun cachedAudioVersion(videoId: String): Song? = audioVersionCache[videoId]
+    fun cachedAudioVersion(videoId: String): Song? =
+        CanvasAudioFixes.songPick(videoId) ?: audioVersionCache[videoId]
     fun cachedVideoVersion(videoId: String): Song? = videoVersionCache[videoId]
+
+    // YouTube's own answer about a track: video or song, and its other half.
+    private val versionPairCache = ConcurrentHashMap<String, InnertubeParser.VersionPair>()
+
+    /**
+     * Whether YouTube files [videoId] as a video, and the other half of its
+     * Song/Video pair when YouTube pairs it with one. Read off the watch
+     * queue, the same place YouTube Music's own Song/Video switch comes from,
+     * so it is YouTube's pairing rather than a search's best guess. Null when
+     * the request fails or the queue doesn't list the track.
+     */
+    suspend fun versionPair(videoId: String): InnertubeParser.VersionPair? {
+        if (videoId.isBlank()) return null
+        versionPairCache[videoId]?.let { return it }
+        val pair = runCatching { InnertubeParser.parseVersionPair(Innertube.next(videoId), videoId) }
+            .onFailure { Log.w(TAG, "version pair lookup failed for $videoId: ${it.message}") }
+            .getOrNull()
+            ?: return null
+        versionPairCache[videoId] = pair
+        return pair
+    }
+
+    /**
+     * Music videos for [query], for picking one by hand — the fix menu's
+     * "find the music video". Videos only, in YouTube's order.
+     */
+    suspend fun searchVideos(query: String): Result<List<Song>> =
+        search(query, SearchFilter.VIDEOS).map { rows ->
+            rows.filterIsInstance<SearchResult.Track>().map { it.song.copy(isVideo = true, isVideoOrigin = true) }
+        }
+
+    /** Songs for [query], for picking the right one by hand — the fix menu's "find the right song". */
+    suspend fun searchSongs(query: String): Result<List<Song>> =
+        search(query, SearchFilter.SONGS).map { rows ->
+            rows.filterIsInstance<SearchResult.Track>().map { it.song }
+        }
 
     /**
      * The core personalised feed. It stays deliberately independent from the
@@ -413,7 +450,17 @@ object YtMusicRepository {
      */
     suspend fun resolveAudio(song: Song): Song {
         if (!song.isVideo) return song
+        // Picked by hand from the fix menu: the match the search lands on was
+        // the wrong song, and the listener said which one is right.
+        CanvasAudioFixes.songPick(song.videoId)?.let { return it }
         audioVersionCache[song.videoId]?.let { return it }
+        // YouTube's own pairing first: when it pairs this video with a song,
+        // that is the song, with no search to get it wrong.
+        versionPair(song.videoId)?.counterpart?.takeIf { !it.isVideo }?.let { paired ->
+            Log.d(TAG, "audio switch: '${song.title}' -> '${paired.title}' (YouTube's pairing)")
+            audioVersionCache[song.videoId] = paired
+            return paired
+        }
         val target = TrackMatcher.targetOf(song)
         for (query in TrackMatcher.queries(target)) {
             val candidates = search(query, SearchFilter.SONGS)
@@ -451,6 +498,17 @@ object YtMusicRepository {
     suspend fun resolveVideo(song: Song): Song? {
         if (song.isVideo) return null
         videoVersionCache[song.videoId]?.let { return it }
+        // The video this song replaced, when it did: no search can find a
+        // better answer than the one the listener started from.
+        VideoCanvases.sourceOf(song.videoId)?.let { source ->
+            return cachedVideoSource(source) ?: song.copy(videoId = source, isVideo = true, isVideoOrigin = true)
+        }
+        // YouTube's own Song/Video pair, as its player's switch has it.
+        versionPair(song.videoId)?.counterpart?.takeIf { it.isVideo }?.let { paired ->
+            Log.d(TAG, "video switch: '${song.title}' -> '${paired.title}' (YouTube's pairing)")
+            videoVersionCache[song.videoId] = paired
+            return paired
+        }
         val target = TrackMatcher.targetOf(song)
         for (query in TrackMatcher.queries(target)) {
             val candidates = search(query, SearchFilter.VIDEOS)
@@ -467,6 +525,16 @@ object YtMusicRepository {
         Log.w(TAG, "video switch: no video match for '${song.title}' by '${song.artist}'")
         videoVersionCache[song.videoId] = null
         return null
+    }
+
+    /**
+     * The music video [videoId] as a playable row: the song it was swapped
+     * for is cached against it, so its title and art are the song's — fine for
+     * the player, which shows the song's credits either way.
+     */
+    private fun cachedVideoSource(videoId: String): Song? {
+        val audio = audioVersionCache.entries.firstOrNull { it.key == videoId }?.value ?: return null
+        return audio.copy(videoId = videoId, isVideo = true, isVideoOrigin = true)
     }
 
     /** Signed-in profile for the settings header. Null when signed out. */

@@ -1020,11 +1020,26 @@ fun NowPlayingScreen(
     // A song that replaced a music video keeps that video's picture as its
     // Canvas when it has none of its own — once the search for one is over,
     // so a clip found a moment later never pushes the video out mid-play.
-    val pictureVideoId = videoPictures[song.videoId]?.takeIf {
+    // A music video the listener picked by hand from the ⋯ menu outranks
+    // everything: they chose it over whatever was there.
+    val canvasNeeded = canvasLookup.canvas == null || song.videoId in canvasFixes.hiddenCanvas
+    val pictureVideoId = canvasFixes.pairedVideo[song.videoId]?.takeIf {
+        !musicVideo && canvasLookup.allowed && playerFillsWindow(windowWidth)
+    } ?: videoPictures[song.videoId]?.takeIf {
         !musicVideo && canvasLookup.allowed && playerFillsWindow(windowWidth) &&
             song.videoId !in canvasFixes.hiddenVideoCanvas &&
-            (canvasLookup.canvas == null || song.videoId in canvasFixes.hiddenCanvas) &&
+            song.videoId !in canvasFixes.albumArtCanvas &&
+            canvasNeeded &&
             canvasLookup.settled
+    }
+    // No Canvas of its own (or the one found was marked wrong): look for its
+    // music video to stand in, once the search for a Canvas is over.
+    LaunchedEffect(song.videoId, canvasLookup.settled, canvasNeeded, canvasLookup.allowed) {
+        if (!musicVideo && canvasLookup.allowed && canvasLookup.settled && canvasNeeded &&
+            song.videoId !in canvasFixes.albumArtCanvas
+        ) {
+            VideoCanvases.findFor(song)
+        }
     }
     val canvas = if (videoAsCanvas || pictureVideoId != null) {
         val pictureId = pictureVideoId ?: song.videoId

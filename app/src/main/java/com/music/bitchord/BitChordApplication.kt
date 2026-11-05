@@ -144,6 +144,8 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         // by [Song.toMediaItem], so it has to be open before the restart
         // snapshot below is turned back into queue items.
         OriginalVersion.init(this)
+        // And the ones sent to one particular addon from the fix menu.
+        com.music.bitchord.playback.SourcePins.init(this)
         // What's already saved to Downloads, so the song menu can say so
         // without a media-store query per row.
         Downloads.init(this)

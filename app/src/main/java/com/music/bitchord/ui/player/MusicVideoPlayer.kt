@@ -326,8 +326,13 @@ object MusicVideoEngine {
                 song.videoId !in noPicture && song.videoId !in AudioOnlyVideos
             }
         }
-        val picture = VideoCanvases.pictureFor(song.videoId) ?: return null
-        if (picture in noPicture || song.videoId in CanvasAudioFixes.state.value.hiddenVideoCanvas) return null
+        val paired = CanvasAudioFixes.pairedVideo(song.videoId)
+        val picture = paired ?: VideoCanvases.pictureFor(song.videoId) ?: return null
+        if (picture in noPicture) return null
+        // "Doesn't match" hides a video the app found, never one picked by hand.
+        if (paired == null && song.videoId in CanvasAudioFixes.state.value.hiddenVideoCanvas) return null
+        // A song that is itself a video shows its own picture: same clock, nothing to line up.
+        if (picture == song.videoId) return picture to null
         return picture to song
     }
 

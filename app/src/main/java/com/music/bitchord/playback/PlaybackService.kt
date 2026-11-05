@@ -233,6 +233,15 @@ const val ACTION_COMMIT_RADIO_QUEUE = "com.music.bitchord.action.COMMIT_RADIO_QU
 const val ACTION_UPGRADE_QUALITY = "com.music.bitchord.action.UPGRADE_QUALITY"
 
 /**
+ * Session command behind the fix menu's "play from another addon": plays the
+ * current track from the source in [EXTRA_SOURCE_CONFIG_ID] and keeps it
+ * there — see [SourcePins]. [SOURCE_YOUTUBE] means YouTube's own upload.
+ */
+const val ACTION_USE_SOURCE = "com.music.bitchord.action.USE_SOURCE"
+const val EXTRA_SOURCE_CONFIG_ID = "sourceConfigId"
+const val SOURCE_YOUTUBE = "youtube"
+
+/**
  * App-side gate for explicit quality retries.
  *
  * Automatic upgrades never pass through this object. Returning the remaining
@@ -790,6 +799,7 @@ class PlaybackService : MediaLibraryService() {
     private val beginRadioQueueCommand = SessionCommand(ACTION_BEGIN_RADIO_QUEUE, Bundle.EMPTY)
     private val commitRadioQueueCommand = SessionCommand(ACTION_COMMIT_RADIO_QUEUE, Bundle.EMPTY)
     private val upgradeQualityCommand = SessionCommand(ACTION_UPGRADE_QUALITY, Bundle.EMPTY)
+    private val useSourceCommand = SessionCommand(ACTION_USE_SOURCE, Bundle.EMPTY)
     private val swapVersionCommand = SessionCommand(ACTION_SWAP_VERSION, Bundle.EMPTY)
     private val queueDragCommand = SessionCommand(ACTION_QUEUE_DRAG, Bundle.EMPTY)
 
@@ -1622,6 +1632,28 @@ class PlaybackService : MediaLibraryService() {
                     .setHttpRequestHeaders(serving.headers)
                     .build()
             }
+            // Sent to one source by hand from the fix menu — see [SourcePins].
+            // Only that source is asked, wherever it ranks; YouTube below is
+            // the fallback when it can't serve the track.
+            SourcePins.of(videoId)?.let { configId ->
+                val pinned = runBlocking(about) {
+                    withTimeoutOrNull(SUBSTITUTE_TIMEOUT_MS) {
+                        runCatching { SourceResolver.streamFrom(configId, SourceResolver.targetIn(dataSpec.uri)) }.getOrNull()
+                    }
+                }
+                if (pinned != null) {
+                    val sourceName = SourceRegistry.config(configId)?.displayName ?: "Module"
+                    NerdStats.onSourceStream(videoId, pinned.format, sourceName)
+                    NerdStats.recordSource(videoId, sourceName)
+                    StreamChoice.remember(videoId, pinned, substituted = true)
+                    TrackLog.d("BitChord", "serving $videoId from $sourceName, pinned by hand", about = videoId)
+                    return@Resolver dataSpec.buildUpon()
+                        .setUri(Uri.parse(pinned.url))
+                        .setHttpRequestHeaders(pinned.headers)
+                        .build()
+                }
+                TrackLog.w("BitChord", "pinned source $configId couldn't serve $videoId; using YouTube", about = videoId)
+            }
             // A track queued from YouTube may be held by a source the user
             // ranked above it — see [SourceResolver.substituteForYouTube] and
             // [raceYouTubeOrModule]. Only worth the extra lookup when
@@ -2453,6 +2485,8 @@ class PlaybackService : MediaLibraryService() {
     private fun measureVersionAlignmentAsync(sourceSong: Song, targetSong: Song): Deferred<Long?> {
         val sourceId = sourceSong.videoId
         val targetId = targetSong.videoId
+        // The same upload, shown as its video or played as a song: one clock.
+        if (sourceId == targetId) return 0L
         val key = sourceId to targetId
         VersionAudioAligner.getCachedOffsetMs(sourceId, targetId)?.let { return CompletableDeferred(it) }
         versionAlignmentMeasurements[key]?.let { return it }
@@ -2655,6 +2689,7 @@ class PlaybackService : MediaLibraryService() {
         }
 
         OriginalVersion.pin(song.videoId)
+        SourcePins.unpin(song.videoId)
         val position = activePlayer.currentPosition
         val wasPlaying = activePlayer.isPlaying
         swappingMediaId = song.videoId
@@ -4656,6 +4691,51 @@ class PlaybackService : MediaLibraryService() {
      * served the copy that was found rather than the one being replaced. The
      * listener hears one cut, for the change they asked for.
      */
+    /**
+     * Plays the current track from [configId] from now on — the fix menu's
+     * "play from another addon", for a source whose copy is the wrong audio.
+     * [SOURCE_YOUTUBE] goes back to YouTube's own upload, the way "Revert to
+     * original" does.
+     *
+     * Swapped in under the playing track the way an upgrade is (see
+     * [swapIn]), with the stream the menu already found when it has one.
+     * Copies of the track cached from the source being replaced are dropped
+     * once the swap is through, so a later play can't read them back.
+     */
+    private fun useSourceForCurrent(configId: String?) {
+        val player = player ?: return
+        val item = player.currentMediaItem ?: return
+        val mediaId = item.mediaId
+        if (configId.isNullOrBlank() || SourceRegistry.parseTrackKey(mediaId) != null) return
+        if (configId == SOURCE_YOUTUBE) {
+            SourcePins.unpin(mediaId)
+            revertCurrentToOriginal()
+            return
+        }
+        OriginalVersion.unpin(mediaId)
+        SourcePins.pin(mediaId, configId)
+        val uri = item.localConfiguration?.uri ?: return
+        val target = SourceResolver.targetIn(uri)
+        cancelStaleUpgradeJob()
+        scope.launch(TrackLog.about(mediaId)) {
+            val stream = SourcePins.takeOffered(mediaId, configId)
+                ?: withContext(Dispatchers.IO) { runCatching { SourceResolver.streamFrom(configId, target) }.getOrNull() }
+            if (stream == null) {
+                TrackLog.w("BitChord", "pinned source $configId has no copy of $mediaId", about = mediaId)
+                return@launch
+            }
+            TrackLog.d("BitChord", "playing $mediaId from $configId, as picked by hand", about = mediaId)
+            NerdStats.onLosslessRaceStart(mediaId)
+            try {
+                swapIn(mediaId, stream)
+            } finally {
+                NerdStats.onLosslessRaceEnd(mediaId)
+            }
+            StreamChoice.forget(mediaId)
+            AudioCache.remove(mediaId)
+        }
+    }
+
     private fun upgradeQualityNow() {
         val player = player ?: return
         val mediaId = player.currentMediaItem?.mediaId ?: return
@@ -4679,6 +4759,7 @@ class PlaybackService : MediaLibraryService() {
             return
         }
         OriginalVersion.unpin(mediaId)
+        SourcePins.unpin(mediaId)
         // A manual retry is a request for the addon's state *now*. In
         // particular, do not replay a successful empty search cached while one
         // of the addon's upstreams was unavailable or reuse an earlier stream
@@ -9146,6 +9227,7 @@ class PlaybackService : MediaLibraryService() {
                 .add(beginRadioQueueCommand)
                 .add(commitRadioQueueCommand)
                 .add(upgradeQualityCommand)
+                .add(useSourceCommand)
                 .add(swapVersionCommand)
                 .add(queueDragCommand)
                 .build()
@@ -9183,6 +9265,7 @@ class PlaybackService : MediaLibraryService() {
                 ACTION_BEGIN_RADIO_QUEUE -> beginRadioQueue()
                 ACTION_COMMIT_RADIO_QUEUE -> player?.let(::saveQueueSnapshotImmediately)
                 ACTION_UPGRADE_QUALITY -> upgradeQualityNow()
+                ACTION_USE_SOURCE -> useSourceForCurrent(args.getString(EXTRA_SOURCE_CONFIG_ID))
                 ACTION_SWAP_VERSION -> {
                     val bundle = args.getBundle(EXTRA_SWAP_MEDIA_ITEM)
                     if (bundle != null) {

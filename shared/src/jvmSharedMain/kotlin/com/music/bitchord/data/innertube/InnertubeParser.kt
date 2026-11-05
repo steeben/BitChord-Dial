@@ -1320,35 +1320,77 @@ object InnertubeParser {
             val foundId = found.s("videoId") ?: return@forEach
             if (foundId in dropped) return@forEach
             val renderer = replacements[foundId] ?: found
-            val videoId = renderer.s("videoId") ?: return@forEach
-            val title = renderer.o("title").runs()
-            if (title.isBlank()) return@forEach
-            // The byline packs artist, views and likes into one run list; only
-            // the leading runs before the first bullet are the credit.
-            val bylineRuns = renderer.o("longBylineText").a("runs").orEmpty()
-            val byline = bylineRuns.map { it.s("text").orEmpty() }
-            val artist = byline.takeWhile { !it.contains("•") }.joinToString("").trim()
-            // Those same runs link out to the artist and album pages, which is
-            // how a track started from the queue knows where it came from.
-            val credits = creditsOf(bylineRuns)
-            out[videoId] = Song(
-                videoId = videoId,
-                title = title,
-                artist = artist,
-                thumbnailUrl = renderer.o("thumbnail").a("thumbnails").best(),
-                durationText = renderer.o("lengthText").runs().takeIf { it.isNotBlank() },
-                artistId = credits.artistId,
-                artists = completeArtistCredits(artist.orEmpty(), credits.artists),
-                albumId = credits.albumId,
-                albumName = credits.albumName,
-                // A catalogue track is credited "Artist • Album • Year"; the
-                // matching music video is "Artist • 417M views • 2.4M likes".
-                isVideo = byline.any { it.contains("views", ignoreCase = true) },
-                isExplicit = renderer.hasExplicitBadge(),
-            )
+            val song = panelSong(renderer) ?: return@forEach
+            out[song.videoId] = song
         }
         return out.values.toList()
     }
+
+    /** One watch-queue row as a [Song], or null for a row with no id or title. */
+    private fun panelSong(renderer: JsonObject): Song? {
+        val videoId = renderer.s("videoId") ?: return null
+        val title = renderer.o("title").runs()
+        if (title.isBlank()) return null
+        // The byline packs artist, views and likes into one run list; only
+        // the leading runs before the first bullet are the credit.
+        val bylineRuns = renderer.o("longBylineText").a("runs").orEmpty()
+        val byline = bylineRuns.map { it.s("text").orEmpty() }
+        val artist = byline.takeWhile { !it.contains("•") }.joinToString("").trim()
+        // Those same runs link out to the artist and album pages, which is
+        // how a track started from the queue knows where it came from.
+        val credits = creditsOf(bylineRuns)
+        return Song(
+            videoId = videoId,
+            title = title,
+            artist = artist,
+            thumbnailUrl = renderer.o("thumbnail").a("thumbnails").best(),
+            durationText = renderer.o("lengthText").runs().takeIf { it.isNotBlank() },
+            artistId = credits.artistId,
+            artists = completeArtistCredits(artist, credits.artists),
+            albumId = credits.albumId,
+            albumName = credits.albumName,
+            // A catalogue track is credited "Artist • Album • Year"; the
+            // matching music video is "Artist • 417M views • 2.4M likes".
+            isVideo = byline.any { it.contains("views", ignoreCase = true) },
+            isExplicit = renderer.hasExplicitBadge(),
+        )
+    }
+
+    private fun JsonObject.musicVideoType(): String? =
+        o("navigationEndpoint").o("watchEndpoint").o("watchEndpointMusicSupportedConfigs")
+            .o("watchEndpointMusicConfig").s("musicVideoType")
+
+    /** A music video or a plain upload, rather than a catalogue song or an episode. */
+    private fun String.isVideoType(): Boolean =
+        this == "MUSIC_VIDEO_TYPE_OMV" || this == "MUSIC_VIDEO_TYPE_UGC"
+
+    /**
+     * What a watch queue says about [videoId] itself: whether YouTube files it
+     * as a video (a music video or a plain upload) or as a song, and the other
+     * half of its Song/Video pair when YouTube pairs it with one — the same
+     * switch YouTube Music's own player offers.
+     *
+     * Null when the queue has no row for [videoId] at all.
+     */
+    fun parseVersionPair(root: JsonElement, videoId: String): VersionPair? {
+        val row = collectRenderers(root, "playlistPanelVideoRenderer")
+            .firstOrNull { it.s("videoId") == videoId }
+        val wrapper = collectRenderers(root, "playlistPanelVideoWrapperRenderer")
+            .firstOrNull { wrapper -> wrapperRenderers(wrapper).any { it.s("videoId") == videoId } }
+        val halves = wrapper?.let(::wrapperRenderers).orEmpty()
+        val self = row ?: halves.firstOrNull { it.s("videoId") == videoId } ?: return null
+        val other = halves.firstOrNull { it.s("videoId") != null && it.s("videoId") != videoId }
+        val type = self.musicVideoType()
+        return VersionPair(
+            isVideo = type?.isVideoType() ?: (panelSong(self)?.isVideo == true),
+            counterpart = other?.let(::panelSong)?.let { song ->
+                other.musicVideoType()?.let { song.copy(isVideo = it.isVideoType(), isVideoOrigin = it.isVideoType()) } ?: song
+            },
+        )
+    }
+
+    /** See [parseVersionPair]. */
+    data class VersionPair(val isVideo: Boolean, val counterpart: Song?)
 
     /**
      * The "Remove from history" feedback token on a history row's menu, or

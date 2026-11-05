@@ -263,6 +263,8 @@ import com.music.bitchord.ui.screens.LibraryDuplicatesScreen
 import com.music.bitchord.data.LocalLinks
 import com.music.bitchord.data.linkedTo
 import com.music.bitchord.ui.components.LinkToYouTubeSheet
+import com.music.bitchord.ui.components.SongFixHost
+import com.music.bitchord.ui.components.rememberSongFixChoices
 import com.music.bitchord.ui.screens.LibrarySearchField
 import com.music.bitchord.ui.screens.LibraryFolderSortMenu
 import com.music.bitchord.ui.screens.LibraryFeed
@@ -1798,6 +1800,20 @@ private fun BitChordApp(
             val stillCurrent = c.currentMediaItemIndex == index &&
                 c.currentMediaItem?.mediaId == song.videoId
 
+            if ((video == null || video.videoId == song.videoId) && stillCurrent &&
+                YtMusicRepository.versionPair(song.videoId)?.isVideo == true
+            ) {
+                // The "song" is a YouTube video itself, filed as a song where
+                // it was queued from: its own picture is the video version.
+                TrackLog.d("Player", "video switch: the track is a video itself", song.videoId)
+                convertedFromAudio = song
+                convertedVideoId = song.videoId
+                keepVideoId = song.videoId
+                if (holdUntilAligned) AppSettings.versionAlignmentInProgress.value = false
+                c.swapToVersion(song.copy(isVideo = true, isVideoOrigin = true))
+                if (resumeAfterResolution) c.play()
+                return
+            }
             if (video == null || video.videoId == song.videoId) {
                 TrackLog.w("Player", "video switch found no distinct video", song.videoId)
                 if (song.videoId !in missingVersions) missingVersions += song.videoId
@@ -5940,7 +5956,7 @@ private fun BitChordApp(
                 if (fromPlayer && controller?.currentMediaItem?.mediaId == song.videoId) {
                     val shownHere = canvasShowing?.takeIf { it.songVideoId == song.videoId }
                     // The music video this song stands in for, when it does.
-                    val sourceVideo = VideoCanvases.pictureFor(song.videoId)
+                    val sourceVideo = VideoCanvases.sourceOf(song.videoId)
                     val saved = { showQueueNotice(context.getString(R.string.canvas_fix_saved)) }
                     buildList {
                         if (sourceVideo != null) {
@@ -6021,6 +6037,7 @@ private fun BitChordApp(
                                 ) {
                                     songActions = null
                                     CanvasAudioFixes.reset(*listOfNotNull(song.videoId, sourceVideo).toTypedArray())
+                                    VideoCanvases.forget(song.videoId)
                                     showQueueNotice(context.getString(R.string.canvas_fix_reset_done))
                                 },
                             )
@@ -6029,6 +6046,13 @@ private fun BitChordApp(
                 } else {
                     null
                 }
+            // The searches — a music video for the Canvas, the right song, another
+            // addon — and the album's animated cover, ahead of the undo row.
+            val songFixChoices = canvasAudioFixChoices?.let { fixes ->
+                val searches = rememberSongFixChoices(song) { songActions = null }
+                val undo = fixes.lastOrNull()?.takeIf { it.label == context.getString(R.string.canvas_fix_reset) }
+                (fixes - listOfNotNull(undo).toSet()) + searches + listOfNotNull(undo)
+            }
             SongActionsSheet(
                 song = song,
                 presentation = presentation,
@@ -6286,7 +6310,7 @@ private fun BitChordApp(
                 upgradeQualityInProgress = fromPlayer && song.videoId in qualityUpgradesInFlight,
                 onToggleAudioVersion = onToggleVersion,
                 isAudioVersion = menuIsAudioVersion,
-                canvasAudioFixes = canvasAudioFixChoices,
+                canvasAudioFixes = songFixChoices,
                 audioVersionMissing = song.videoId in missingVersions,
                 // Hidden outright when there's no real YouTube id behind
                 // this row to build a link from — SongActionsSheet already
@@ -7380,6 +7404,7 @@ private fun BitChordApp(
                 LinkToYouTubeSheet(file = file, onDone = { linkingFile = null })
             }
         }
+        SongFixHost(controller = controller, currentSong = player.song, onNotice = showQueueNotice)
 
         if (showLyricsSources) {
             BackHandler { showLyricsSources = false }

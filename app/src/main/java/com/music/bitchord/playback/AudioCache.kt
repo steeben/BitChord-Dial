@@ -1281,7 +1281,11 @@ object AudioCache {
             // read, and pinning a substitute for it would pin a source it is
             // never going to use. The URL half below is still worth having: a
             // reverted track resolves through YouTube, which is what it warms.
-            val pinnedToYouTube = OriginalVersion.isPinned(next)
+            // A track sent to one source by hand from the fix menu is treated
+            // the same way: playback asks only that source, so read-ahead must
+            // neither warm another source's copy nor write YouTube's bytes
+            // where the pinned source's will be read from.
+            val pinnedToYouTube = OriginalVersion.isPinned(next) || SourcePins.of(next) != null
             scope.launch {
                 // With substitution on, the *bytes* half above used to be
                 // switched off outright, and the paragraph explaining why is
@@ -1360,7 +1364,9 @@ object AudioCache {
         val id = upcoming.mediaId
         // A source-backed row resolves through its own source when opened, and
         // a downloaded or reverted track never reads this entry at all.
-        if (SourceRegistry.parseTrackKey(id) != null || id in Downloads.saved.value || OriginalVersion.isPinned(id)) {
+        if (SourceRegistry.parseTrackKey(id) != null || id in Downloads.saved.value || OriginalVersion.isPinned(id) ||
+            SourcePins.of(id) != null
+        ) {
             directJob = null
             return
         }

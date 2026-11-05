@@ -304,6 +304,9 @@ object QualityUpgrade {
         // overruled — see [askByHand].
         if (mediaId !in handAsked && uri.getQueryParameter(MARKER) != null) return false
         if (mediaId in asked || mediaId in refused || pending.containsKey(mediaId)) return false
+        // Sent to one source by hand from the fix menu: an automatic search
+        // must not move it off the copy the listener chose.
+        if (mediaId !in handAsked && SourcePins.of(mediaId) != null) return false
         // Direct Source Stream never swaps an addon's answer on its own. A track
         // it had to start on YouTube is still looked for, as it is with the
         // setting off. Asking by hand always works: that is the listener

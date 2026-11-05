@@ -57,4 +57,40 @@ class CanvasAudioFixesTest {
         assertFalse(state.touches("video"))
         assertTrue("other" in state.hiddenCanvas)
     }
+
+    @Test
+    fun `a picked music video undoes doesn't-match and outranks a found one`() {
+        CanvasAudioFixes.hideVideoCanvas("song")
+        VideoCanvases.link("song", "found")
+        CanvasAudioFixes.pairVideo("song", "picked")
+
+        assertEquals("picked", VideoCanvases.pictureFor("song"))
+        assertFalse("song" in CanvasAudioFixes.state.value.hiddenVideoCanvas)
+        assertEquals("found", VideoCanvases.foundFor("song"))
+    }
+
+    @Test
+    fun `a picked song replaces keeping the video's audio and is undone with the rest`() {
+        CanvasAudioFixes.keepVideoAudio("video")
+        CanvasAudioFixes.pickSong("video", com.music.bitchord.data.model.Song("right", "Title", "Artist", null))
+
+        assertEquals("right", CanvasAudioFixes.songPick("video")?.videoId)
+        assertFalse(CanvasAudioFixes.keepsVideoAudio("video"))
+        assertTrue(CanvasAudioFixes.state.value.touches("video"))
+
+        CanvasAudioFixes.reset("video")
+        assertNull(CanvasAudioFixes.songPick("video"))
+    }
+
+    @Test
+    fun `album art brings back a hidden Canvas and drops a picked video`() {
+        CanvasAudioFixes.hideCanvas("song")
+        CanvasAudioFixes.pairVideo("song", "video")
+        CanvasAudioFixes.useAlbumArt("song")
+
+        val state = CanvasAudioFixes.state.value
+        assertTrue(CanvasAudioFixes.showsAlbumArt("song"))
+        assertFalse("song" in state.hiddenCanvas)
+        assertNull(CanvasAudioFixes.pairedVideo("song"))
+    }
 }

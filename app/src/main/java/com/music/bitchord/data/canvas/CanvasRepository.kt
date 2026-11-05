@@ -123,6 +123,23 @@ object CanvasRepository {
     }
 
     /**
+     * The animated cover of [song]'s album, or null when it has none or the
+     * album isn't known. What the fix menu offers as "use the animated album
+     * art", and what the player shows once that is picked.
+     */
+    suspend fun albumCanvasFor(song: Song): CanvasArtwork? {
+        val album = song.albumName?.takeIf { it.isNotBlank() } ?: return null
+        return canvasForAlbum(album, song.artist)
+    }
+
+    /** [albumCanvasFor] from the cache alone. */
+    fun cachedAlbum(song: Song): CanvasArtwork? {
+        val album = song.albumName?.cleaned()?.takeIf { it.isNotBlank() } ?: return null
+        val key = cacheKey("album|$album|${song.artist.cleaned()}", AppSettings.prioritizeSpotifyCanvas.value)
+        return synchronized(cache) { cache[key]?.artwork }
+    }
+
+    /**
      * The canvas for a release, for the album page's header artwork.
      *
      * A separate lookup rather than the first track's: the services hang

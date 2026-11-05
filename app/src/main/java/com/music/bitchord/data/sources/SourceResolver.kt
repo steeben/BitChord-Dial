@@ -234,6 +234,44 @@ object SourceResolver {
     }
 
     /**
+     * What every enabled source other than YouTube holds of [target], asked at
+     * once — for the fix menu's "play from another addon", which shows which
+     * of them have the song before the listener picks one. A source with no
+     * match, or one that fails or runs out of time, answers null.
+     */
+    suspend fun matchesAcross(target: TrackMatcher.Target): List<Pair<MusicSource, SourceStream?>> {
+        if (target.title.isBlank()) return emptyList()
+        val sources = SourceRegistry.activeForPlayback().filter { it.kind != SourceKind.YOUTUBE }
+        val request = requestForNow()
+        return coroutineScope {
+            sources.map { source ->
+                async {
+                    source to withTimeoutOrNull(PICK_TIMEOUT_MS) {
+                        try {
+                            matchAndStream(source, target, request)?.copy(sourceConfigId = source.configId)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+                }
+            }.map { it.await() }
+        }
+    }
+
+    /**
+     * [target] from the one source [configId] names, for a track the listener
+     * pinned to it — see [com.music.bitchord.playback.SourcePins]. Null when
+     * that source is off or doesn't have it.
+     */
+    suspend fun streamFrom(configId: String, target: TrackMatcher.Target): SourceStream? {
+        if (target.title.isBlank()) return null
+        val source = SourceRegistry.activeForPlayback().firstOrNull { it.configId == configId } ?: return null
+        return matchAndStream(source, target, requestForNow())?.copy(sourceConfigId = source.configId)
+    }
+
+    /**
      * The addons Direct Source Stream plays from: enabled, inside the
      * connection's ceiling, and ranked above YouTube — in rank order.
      *
@@ -1265,6 +1303,9 @@ object SourceResolver {
      * somewhere, and the extra rows cost one response body, not one request.
      */
     private const val MATCH_CANDIDATES = 15
+
+    /** How long the fix menu waits on one source before calling it a miss. */
+    private const val PICK_TIMEOUT_MS = 25_000L
 
     /**
      * How many of the matching rows are worth actually opening.

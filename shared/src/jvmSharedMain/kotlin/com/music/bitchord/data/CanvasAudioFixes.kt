@@ -1,5 +1,6 @@
 package com.music.bitchord.data
 
+import com.music.bitchord.data.model.Song
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,10 +26,56 @@ object CanvasAudioFixes {
         val hiddenVideoCanvas: Set<String> = emptySet(),
         /** Measured picture-to-audio shifts the listener asked for, by "video>audio". */
         val syncOffsets: Map<String, Long> = emptyMap(),
+        /** Tracks whose Canvas is a music video the listener searched for and picked, by track. */
+        val pairedVideo: Map<String, String> = emptyMap(),
+        /**
+         * The song the listener picked as the right audio, by the id it replaces:
+         * a music video whose matched song was the wrong one, or a song itself.
+         */
+        val songPicks: Map<String, SongPick> = emptyMap(),
+        /** Tracks that show their album's animated cover as the Canvas. */
+        val albumArtCanvas: Set<String> = emptySet(),
     ) {
         fun touches(videoId: String): Boolean =
             videoId in keepVideoAudio || videoId in hiddenCanvas || videoId in hiddenVideoCanvas ||
+                videoId in pairedVideo || videoId in songPicks || videoId in albumArtCanvas ||
                 syncOffsets.keys.any { it.startsWith("$videoId>") || it.endsWith(">$videoId") }
+    }
+
+    /** Enough of a [Song] to play it again after a restart. */
+    data class SongPick(
+        val videoId: String,
+        val title: String,
+        val artist: String,
+        val thumbnailUrl: String? = null,
+        val durationText: String? = null,
+        val albumName: String? = null,
+        val albumId: String? = null,
+        val artistId: String? = null,
+    ) {
+        fun toSong(): Song = Song(
+            videoId = videoId,
+            title = title,
+            artist = artist,
+            thumbnailUrl = thumbnailUrl,
+            durationText = durationText,
+            artistId = artistId,
+            albumId = albumId,
+            albumName = albumName,
+        )
+
+        companion object {
+            fun of(song: Song) = SongPick(
+                videoId = song.videoId,
+                title = song.title,
+                artist = song.artist,
+                thumbnailUrl = song.thumbnailUrl,
+                durationText = song.durationText,
+                albumName = song.albumName,
+                albumId = song.albumId,
+                artistId = song.artistId,
+            )
+        }
     }
 
     /** What the Canvas on screen is, so the menu can offer the fix that fits it. */
@@ -62,6 +109,48 @@ object CanvasAudioFixes {
     fun hideVideoCanvas(songVideoId: String) =
         update { it.copy(hiddenVideoCanvas = it.hiddenVideoCanvas + songVideoId) }
 
+    /** The music video the listener picked as [songVideoId]'s Canvas, if they picked one. */
+    fun pairedVideo(songVideoId: String): String? = _state.value.pairedVideo[songVideoId]
+
+    /** The song the listener picked to play in place of [videoId], if they picked one. */
+    fun songPick(videoId: String): Song? = _state.value.songPicks[videoId]?.toSong()
+
+    fun showsAlbumArt(songVideoId: String): Boolean = songVideoId in _state.value.albumArtCanvas
+
+    /**
+     * Makes [musicVideoId] [songVideoId]'s Canvas: it outranks a looked-up clip
+     * and any video found on its own, and undoes an earlier "doesn't match".
+     */
+    fun pairVideo(songVideoId: String, musicVideoId: String) = update {
+        it.copy(
+            pairedVideo = it.pairedVideo + (songVideoId to musicVideoId),
+            hiddenVideoCanvas = it.hiddenVideoCanvas - songVideoId,
+            albumArtCanvas = it.albumArtCanvas - songVideoId,
+        )
+    }
+
+    /** Plays [song] wherever [replacing] would have played, from now on. */
+    fun pickSong(replacing: String, song: Song) {
+        if (replacing == song.videoId) return
+        // A picked song is the answer to "the audio is wrong", so it replaces
+        // "play the video's own audio" if that was the answer before.
+        update {
+            it.copy(
+                songPicks = it.songPicks + (replacing to SongPick.of(song)),
+                keepVideoAudio = it.keepVideoAudio - replacing,
+            )
+        }
+    }
+
+    /** Shows the album's animated cover as [songVideoId]'s Canvas. */
+    fun useAlbumArt(songVideoId: String) = update {
+        it.copy(
+            albumArtCanvas = it.albumArtCanvas + songVideoId,
+            hiddenCanvas = it.hiddenCanvas - songVideoId,
+            pairedVideo = it.pairedVideo - songVideoId,
+        )
+    }
+
     fun setSyncOffset(musicVideoId: String, songVideoId: String, offsetMs: Long) =
         update { it.copy(syncOffsets = it.syncOffsets + (key(musicVideoId, songVideoId) to offsetMs)) }
 
@@ -72,6 +161,9 @@ object CanvasAudioFixes {
             keepVideoAudio = state.keepVideoAudio - ids,
             hiddenCanvas = state.hiddenCanvas - ids,
             hiddenVideoCanvas = state.hiddenVideoCanvas - ids,
+            pairedVideo = state.pairedVideo - ids,
+            songPicks = state.songPicks - ids,
+            albumArtCanvas = state.albumArtCanvas - ids,
             syncOffsets = state.syncOffsets.filterKeys { key ->
                 ids.none { key.startsWith("$it>") || key.endsWith(">$it") }
             },

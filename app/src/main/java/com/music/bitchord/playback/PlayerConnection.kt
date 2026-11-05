@@ -153,6 +153,18 @@ suspend fun MediaController.beginRadioQueue() {
 }
 
 /**
+ * Plays the current track from the source [configId] names from now on, or
+ * YouTube's own upload for [SOURCE_YOUTUBE] — the fix menu's "play from
+ * another addon". See [SourcePins].
+ */
+fun MediaController.useSource(configId: String) {
+    sendCustomCommand(
+        SessionCommand(ACTION_USE_SOURCE, Bundle.EMPTY),
+        bundleOf(EXTRA_SOURCE_CONFIG_ID to configId),
+    )
+}
+
+/**
  * Asks the service to go looking for a better copy of the playing track, now,
  * because the listener asked for it.
  *

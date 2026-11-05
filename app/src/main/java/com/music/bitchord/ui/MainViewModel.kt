@@ -3089,6 +3089,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 // and never takes the YouTube path — warming either half of
                 // this for one would be work nothing asks for.
                 if (SourceRegistry.parseTrackKey(audio.videoId) != null) return@runCatching
+                // Pinned to one source by hand: playback asks only that one.
+                if (com.music.bitchord.playback.SourcePins.of(audio.videoId) != null) return@runCatching
                 // JioSaavn first, on the same reasoning as the queue's
                 // read-ahead: it is the copy that will actually be played if it
                 // has the track, so warming YouTube's URL instead warms the one

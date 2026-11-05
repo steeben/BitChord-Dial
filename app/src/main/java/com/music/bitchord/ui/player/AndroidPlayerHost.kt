@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.music.bitchord.data.CanvasAudioFixes
 import com.music.bitchord.data.canvas.CanvasArtwork
 import com.music.bitchord.data.canvas.CanvasRepository
 import com.music.bitchord.data.listentogether.ListenTogether
@@ -93,9 +94,17 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
         override fun setLyricsSourceOrder(value: List<com.music.bitchord.data.lyrics.LyricsSource>) = AppSettings.setLyricsSourceOrder(value)
     }
 
-    override fun cachedCanvas(song: Song): CanvasArtwork? = CanvasRepository.cached(song)
+    // A track the listener set to its album's animated cover (from the ⋯
+    // menu's fixes) asks for the album's clip instead of its own.
+    override fun cachedCanvas(song: Song): CanvasArtwork? =
+        if (CanvasAudioFixes.showsAlbumArt(song.videoId)) CanvasRepository.cachedAlbum(song) else CanvasRepository.cached(song)
 
-    override suspend fun canvasFor(song: Song): CanvasArtwork? = CanvasRepository.canvasFor(song)
+    override suspend fun canvasFor(song: Song): CanvasArtwork? =
+        if (CanvasAudioFixes.showsAlbumArt(song.videoId)) {
+            CanvasRepository.albumCanvasFor(song) ?: CanvasRepository.canvasFor(song)
+        } else {
+            CanvasRepository.canvasFor(song)
+        }
 
     @Composable
     override fun CanvasVideo(spec: CanvasVideoSpec, modifier: Modifier) = AndroidCanvasVideo(spec, modifier)

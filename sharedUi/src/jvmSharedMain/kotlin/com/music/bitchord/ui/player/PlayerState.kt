@@ -1,5 +1,7 @@
 package com.music.bitchord.ui.player
 
+import com.music.bitchord.data.CanvasAudioFixes
+
 import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.snapshotFlow
 import com.music.bitchord.playback.PlaybackPosition
@@ -74,7 +76,10 @@ internal fun rememberCanvasLookup(song: Song): CanvasLookup {
     // adopted, by [CanvasArtwork.matches].
     var canvas by remember(song.title, song.artist) { mutableStateOf<CanvasArtwork?>(null) }
     var settled by remember(song.videoId) { mutableStateOf(false) }
-    LaunchedEffect(song.videoId, song.albumName, canvasAllowedNow, prioritizeSpotifyCanvas) {
+    // Picked from the ⋯ menu: the album's animated cover instead of the track's clip.
+    val canvasFixes by CanvasAudioFixes.state.collectAsStateWithLifecycle()
+    val albumArt = song.videoId in canvasFixes.albumArtCanvas
+    LaunchedEffect(song.videoId, song.albumName, canvasAllowedNow, prioritizeSpotifyCanvas, albumArt) {
         if (!canvasAllowedNow) {
             canvas = null
             settled = true
@@ -89,7 +94,7 @@ internal fun rememberCanvasLookup(song: Song): CanvasLookup {
         // what is playing: [CanvasArtwork.matches] is what stops a preserved
         // clip from being a different song's that happens to share a title.
         canvas = PlayerPlatform.host.cachedCanvas(song)
-            ?: canvas?.takeIf { it.matches(song.title, song.artist, song.albumName) }
+            ?: canvas?.takeIf { !albumArt && it.matches(song.title, song.artist, song.albumName) }
 
         // The album name is looked up separately and lands a moment after the
         // player opens, and it is the field that makes the catalogue searches
