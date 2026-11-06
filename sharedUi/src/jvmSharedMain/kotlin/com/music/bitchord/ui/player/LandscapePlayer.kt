@@ -35,6 +35,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.MoreHoriz
+import androidx.compose.material.icons.rounded.Fullscreen
+import androidx.compose.material.icons.rounded.FullscreenExit
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import com.music.bitchord.ui.theme.HideSystemBars
+import kotlinx.coroutines.delay
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -149,13 +159,25 @@ internal fun LandscapePlayerLayout(
     modifier: Modifier = Modifier,
     /** Off with "Hide song status", which takes the handle with the caption. */
     showHandle: Boolean = true,
+    /**
+     * The music video behind the player is full screen: everything but
+     * [background] fades away. Whoever sets this also covers the screen with
+     * the way back, so nothing faded out can still be touched.
+     */
+    chromeHidden: Boolean = false,
 ) {
+    val chromeAlpha by animateFloatAsState(
+        targetValue = if (chromeHidden) 0f else 1f,
+        animationSpec = tween(LANDSCAPE_CANVAS_DIM_MS),
+        label = "landscapeChrome",
+    )
     Box(modifier = modifier.fillMaxSize()) {
         background(Modifier.fillMaxSize())
 
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
+                .graphicsLayer { alpha = chromeAlpha }
                 .windowInsetsPadding(WindowInsets.safeDrawing),
             contentAlignment = Alignment.TopCenter,
         ) {
@@ -354,11 +376,14 @@ internal fun LandscapeArtwork(
     }
 }
 
-/** The flat dim over a landscape backdrop clip with the player up. */
-private const val LANDSCAPE_CANVAS_DIM = 0.38f
+/**
+ * The flat dim over a landscape backdrop clip with the player up: the same
+ * darkened tint the portrait Canvas sits under while its controls are up.
+ */
+private const val LANDSCAPE_CANVAS_DIM = 0.5f
 
 /** The heavier dim over it with the lyrics or the queue open. */
-private const val LANDSCAPE_CANVAS_PANEL_DIM = 0.58f
+private const val LANDSCAPE_CANVAS_PANEL_DIM = 0.62f
 
 /** How long the backdrop's dim takes to follow a pane being turned. */
 private const val LANDSCAPE_CANVAS_DIM_MS = 260
@@ -383,16 +408,18 @@ internal fun landscapeCanvasDim(panelOpen: Boolean): Float =
 internal fun LandscapeCanvasBackdrop(
     canvas: CanvasArtwork,
     isPlaying: Boolean,
-    /** Whether the clip has a frame on screen. */
-    rendered: Boolean,
     panelOpen: Boolean,
     onRenderedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     pausedForTransition: Boolean = false,
     presentationAlpha: () -> Float = { 1f },
+    /** The clip is being watched full screen, with no player over it to read. */
+    fullscreen: Boolean = false,
 ) {
+    // Laid on from the start rather than at the clip's first frame: the cover's
+    // blur under it until then is dimmed the same, so the tint never pops in.
     val dim by animateFloatAsState(
-        targetValue = if (rendered) landscapeCanvasDim(panelOpen) else 0f,
+        targetValue = if (fullscreen) 0f else landscapeCanvasDim(panelOpen),
         animationSpec = tween(LANDSCAPE_CANVAS_DIM_MS),
         label = "landscapeCanvasDim",
     )
@@ -412,6 +439,70 @@ internal fun LandscapeCanvasBackdrop(
                 .graphicsLayer { alpha = dim * presentationAlpha() }
                 .background(Color.Black),
         )
+    }
+}
+
+/** How long the exit button stays over a full-screen video untouched. */
+private const val LANDSCAPE_FULLSCREEN_IDLE_MS = 3_000L
+
+/**
+ * Laid over the landscape player while its music video is full screen (see
+ * [LandscapePlayerLayout]'s chromeHidden): the system bars go away, a tap
+ * brings up the exit button in the corner for a few seconds, and back, or
+ * that button, puts the player back over the video.
+ */
+@Composable
+internal fun LandscapeVideoFullscreenOverlay(
+    onExit: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    HideSystemBars(true)
+    PlayerBackHandler(enabled = true, onBack = onExit)
+    var exitShown by remember { mutableStateOf(true) }
+    // Bumped by each tap that brings the button up, so the timer starts over.
+    var taps by remember { mutableIntStateOf(0) }
+    LaunchedEffect(exitShown, taps) {
+        if (exitShown) {
+            delay(LANDSCAPE_FULLSCREEN_IDLE_MS)
+            exitShown = false
+        }
+    }
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+            ) {
+                exitShown = !exitShown
+                taps++
+            },
+    ) {
+        AnimatedVisibility(
+            visible = exitShown,
+            enter = fadeIn(tween(200)),
+            exit = fadeOut(tween(300)),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .windowInsetsPadding(WindowInsets.displayCutout)
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.Black.copy(alpha = 0.38f))
+                    .clickable(onClick = onExit),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.FullscreenExit,
+                    contentDescription = stringResource(Res.string.exit_full_screen_video),
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+        }
     }
 }
 
@@ -486,6 +577,8 @@ internal fun LandscapeCredits(
     /** Null browse id for anyone but the lead credit — see [NowPlayingScreen]. */
     onOpenArtist: (browseId: String?, name: String) -> Unit,
     modifier: Modifier = Modifier,
+    /** Set while a music video plays behind the player: puts it full screen. */
+    onFullscreenVideo: (() -> Unit)? = null,
 ) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         Crossfade(
@@ -524,6 +617,14 @@ internal fun LandscapeCredits(
             }
         }
         Spacer(Modifier.width(10.dp))
+        if (onFullscreenVideo != null) {
+            CircleGlyph(
+                icon = Icons.Rounded.Fullscreen,
+                contentDescription = stringResource(Res.string.full_screen_video),
+                onClick = onFullscreenVideo,
+            )
+            Spacer(Modifier.width(8.dp))
+        }
         // Same gate as the portrait player's: no account to like against for a
         // guest — but a local file or a finished download is liked on the
         // device, which needs none.

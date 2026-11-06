@@ -1091,6 +1091,15 @@ fun NowPlayingScreen(
         landscapeLayout && !videoMode &&
             (it.source == CanvasSource.SPOTIFY || it.musicVideoId != null)
     }
+    // The music video behind the landscape player, watched full screen from
+    // the button beside the like. Let go of whenever there stops being one:
+    // turned upright, or on to a song without one.
+    var landscapeVideoFullscreenAsked by remember { mutableStateOf(false) }
+    val landscapeVideoBehind = landscapeBackdropClip?.musicVideoId != null
+    LaunchedEffect(landscapeVideoBehind) {
+        if (!landscapeVideoBehind) landscapeVideoFullscreenAsked = false
+    }
+    val landscapeVideoFullscreen = landscapeVideoFullscreenAsked && landscapeVideoBehind
     // Told to the ⋯ menu, so "fix mismatched Canvas/audio" knows what is on screen.
     SideEffect {
         CanvasAudioFixes.showing.value = CanvasAudioFixes.Showing(
@@ -1742,7 +1751,7 @@ fun NowPlayingScreen(
             else -> 0f
         },
         if (lyricsOpen || queueOpen) SUBVIEW_INK_DIM else 0f,
-        if (landscapeBackdropClip != null && canvasRendered) {
+        if (landscapeBackdropClip != null) {
             landscapeCanvasDim(panelOpen = lyricsOpen || queueOpen)
         } else 0f,
     )
@@ -2425,8 +2434,8 @@ fun NowPlayingScreen(
                                 LandscapeCanvasBackdrop(
                                     canvas = clip,
                                     isPlaying = isPlaying,
-                                    rendered = canvasRendered,
                                     panelOpen = panelOpen,
+                                    fullscreen = landscapeVideoFullscreen,
                                     onRenderedChange = { canvasRendered = it },
                                     pausedForTransition = dockMoving,
                                     // A TextureView doesn't reliably take the
@@ -2537,6 +2546,11 @@ fun NowPlayingScreen(
                                 onOpenMenu = onOpenMenu,
                                 onOpenAlbum = onOpenAlbum,
                                 onOpenArtist = onOpenArtist,
+                                onFullscreenVideo = if (landscapeVideoBehind) {
+                                    { landscapeVideoFullscreenAsked = true }
+                                } else {
+                                    null
+                                },
                             )
                         },
                         lyricStrip = if (lyricStripShown) {
@@ -2690,7 +2704,11 @@ fun NowPlayingScreen(
                         modifier = Modifier.fillMaxSize().panelBackSwipe(panelBack.progress),
                     )
                 },
+                chromeHidden = landscapeVideoFullscreen,
             )
+            if (landscapeVideoFullscreen) {
+                LandscapeVideoFullscreenOverlay(onExit = { landscapeVideoFullscreenAsked = false })
+            }
             playerOverlays()
         }
         return@ProvidePlayerInk
