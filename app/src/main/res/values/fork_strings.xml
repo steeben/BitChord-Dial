@@ -167,8 +167,6 @@
     <string name="library_menu">Library options</string>
     <string name="speed_dial_source">Speed dial picks</string>
     <string name="speed_dial_source_history">History</string>
-    <string name="speed_dial_source_recommends">Recommends</string>
-    <string name="speed_dial_source_mix">Mix</string>
     <string name="speed_dial_source_youtube">YT Music</string>
     <string name="dial_new_release">New release</string>
     <string name="enable_logging">Enable logging</string>

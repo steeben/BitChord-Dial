@@ -8413,23 +8413,17 @@ private fun rememberHomeFeed(
     val homeFresh by viewModel.homeFresh.collectAsStateWithLifecycle()
     // With the dials off Home is only the sections, so there's no dial to hold.
     val speedDialsOn by CustomizationSettings.speedDials.collectAsStateWithLifecycle()
-    // Recommends and Mix are dealt once a round (app load, pull to refresh)
-    // and kept, so a song starting doesn't reshuffle the tiles.
+    // YT Music is dealt once a round (app load, pull to refresh) and kept, so
+    // a song starting doesn't move the tiles.
     val dialSource by CustomizationSettings.speedDialSource.collectAsStateWithLifecycle()
     val dialRound by viewModel.dialRound.collectAsStateWithLifecycle()
-    val dialNewReleases by viewModel.dialNewReleases.collectAsStateWithLifecycle()
     val lastDialNewReleases by CustomizationSettings.lastDialNewReleases.collectAsStateWithLifecycle()
-    val dealReady = homeFresh && dialNewReleases != null && homeState is UiState.Success
+    val dealReady = homeFresh && homeState is UiState.Success
     val dealtPicks = remember(dialRound, dialSource, dealReady) {
         if (dialSource == SpeedDialSource.HISTORY || !dealReady) {
             null
         } else {
-            CustomizationSettings.pickSpeedDial(
-                dialSource,
-                (homeState as? UiState.Success)?.data.orEmpty(),
-                dialNewReleases.orEmpty(),
-                kotlin.random.Random(System.nanoTime()),
-            )
+            CustomizationSettings.pickSpeedDial(dialSource, (homeState as? UiState.Success)?.data.orEmpty())
         }
     }
     val dealt = dialSource == SpeedDialSource.HISTORY || dealtPicks != null
