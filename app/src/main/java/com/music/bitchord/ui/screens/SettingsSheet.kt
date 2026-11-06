@@ -44,6 +44,7 @@ import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.automirrored.rounded.VolumeOff
 import androidx.compose.material.icons.rounded.Animation
 import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.Backup
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.BlurOff
@@ -1851,6 +1852,10 @@ fun SettingsScreen(
                     onClick = { confirmImport = true },
                 )
             }
+            val autoBackupTitle = stringResource(R.string.auto_backup)
+            row(autoBackupTitle, "backup", "automatic", "schedule", "daily", "weekly", "monthly", "folder") {
+                AutoBackupRows(autoBackupTitle)
+            }
         }
 
         // No footer: it only restated the stop-on-close row's own subtitle,
@@ -2378,6 +2383,80 @@ fun SettingsScreen(
 }
 
 /** "3 months of listening" — the unit a backup is actually measured in. */
+/**
+ * The automatic backup controls in Your data: how often, which folder, and a
+ * "back up now". The folder is picked through the system tree picker, and the
+ * grant is kept so the background worker can write there later.
+ */
+@Composable
+private fun AutoBackupRows(title: String) {
+    val context = LocalContext.current
+    val frequency by com.music.bitchord.data.stats.AutoBackup.frequency.collectAsStateWithLifecycle()
+    val folder by com.music.bitchord.data.stats.AutoBackup.folder.collectAsStateWithLifecycle()
+    val lastAt by com.music.bitchord.data.stats.AutoBackup.lastBackupAt.collectAsStateWithLifecycle()
+    val lastError by com.music.bitchord.data.stats.AutoBackup.lastError.collectAsStateWithLifecycle()
+    val folderPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(),
+    ) { picked ->
+        if (picked != null) com.music.bitchord.data.stats.AutoBackup.setFolder(context, picked)
+    }
+    val frequencies = com.music.bitchord.data.stats.AutoBackup.Frequency.entries
+    SettingsRow(
+        icon = Icons.Rounded.Backup,
+        title = title,
+        subtitle = when {
+            lastError != null -> stringResource(R.string.auto_backup_failed, lastError.orEmpty())
+            lastAt > 0L -> stringResource(
+                R.string.auto_backup_last,
+                android.text.format.DateUtils.getRelativeTimeSpanString(lastAt).toString(),
+            )
+            else -> stringResource(R.string.auto_backup_subtitle)
+        },
+    )
+    SegmentedControl(
+        options = listOf(
+            stringResource(R.string.auto_backup_off),
+            stringResource(R.string.auto_backup_daily),
+            stringResource(R.string.auto_backup_weekly),
+            stringResource(R.string.auto_backup_monthly),
+        ),
+        selectedIndex = frequencies.indexOf(frequency),
+        onSelect = { index ->
+            com.music.bitchord.data.stats.AutoBackup.setFrequency(context, frequencies[index])
+            // A schedule with nowhere to write: ask for the folder straight away.
+            if (frequencies[index] != com.music.bitchord.data.stats.AutoBackup.Frequency.OFF && folder.isEmpty()) {
+                folderPicker.launch(null)
+            }
+        },
+        modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, bottom = 14.dp),
+    )
+    SettingsRow(
+        icon = Icons.Rounded.Folder,
+        title = stringResource(R.string.auto_backup_folder),
+        subtitle = folder.takeIf { it.isNotEmpty() }?.let(::backupFolderLabel)
+            ?: stringResource(R.string.auto_backup_folder_none),
+        onClick = { folderPicker.launch(folder.takeIf { it.isNotEmpty() }?.let(android.net.Uri::parse)) },
+    )
+    if (folder.isNotEmpty()) {
+        SettingsRow(
+            icon = Icons.Rounded.FileUpload,
+            title = stringResource(R.string.auto_backup_now),
+            subtitle = stringResource(R.string.auto_backup_now_subtitle, com.music.bitchord.data.stats.AutoBackup.KEEP),
+            onClick = {
+                com.music.bitchord.data.stats.AutoBackup.backUpNow(context)
+                android.widget.Toast.makeText(context, R.string.auto_backup_started, android.widget.Toast.LENGTH_SHORT).show()
+            },
+        )
+    }
+}
+
+/** "Documents/Backups" out of a tree URI like ".../tree/primary%3ADocuments%2FBackups". */
+private fun backupFolderLabel(uri: String): String = runCatching {
+    android.provider.DocumentsContract.getTreeDocumentId(android.net.Uri.parse(uri))
+        .substringAfter(':')
+        .ifEmpty { uri }
+}.getOrDefault(uri)
+
 private fun Context.countOfMonths(months: Int): String = if (months == 0) {
     getString(R.string.no_listening_history)
 } else {

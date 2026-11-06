@@ -198,4 +198,17 @@
     <string name="animated_art_music_video_detail">The song’s music video, shown as its Canvas</string>
     <string name="animated_art_move_up">Move up</string>
     <string name="animated_art_move_down">Move down</string>
+    <string name="auto_backup">Automatic backup</string>
+    <string name="auto_backup_subtitle">Save settings, song settings and listening history to a folder on a schedule. No images or videos.</string>
+    <string name="auto_backup_last">Last backup %1$s</string>
+    <string name="auto_backup_failed">Last backup failed: %1$s</string>
+    <string name="auto_backup_off">Off</string>
+    <string name="auto_backup_daily">Daily</string>
+    <string name="auto_backup_weekly">Weekly</string>
+    <string name="auto_backup_monthly">Monthly</string>
+    <string name="auto_backup_folder">Backup folder</string>
+    <string name="auto_backup_folder_none">Choose where backups are saved</string>
+    <string name="auto_backup_now">Back up now</string>
+    <string name="auto_backup_now_subtitle">Keeps the newest %1$d automatic backups in the folder</string>
+    <string name="auto_backup_started">Backing up…</string>
 </resources>

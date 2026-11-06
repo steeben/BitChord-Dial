@@ -32,7 +32,10 @@ object LocalPlaylistStore {
 
     private fun load() {
         if (!this::prefs.isInitialized) return
-        val raw = prefs.getString(KEY_PLAYLISTS, null) ?: return
+        val raw = prefs.getString(KEY_PLAYLISTS, null) ?: run {
+            _playlists.value = emptyList()
+            return
+        }
         runCatching {
             val list = mutableListOf<LocalPlaylist>()
             val jsonArray = JSONArray(raw)

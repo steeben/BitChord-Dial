@@ -2,6 +2,7 @@ package com.music.bitchord.data.stats
 
 import android.content.Context
 import android.net.Uri
+import android.provider.DocumentsContract
 import com.music.bitchord.BuildConfig
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.SearchHistory
@@ -62,21 +63,102 @@ object Backup {
      */
     suspend fun exportTo(context: Context, target: Uri): Result<Int> = withContext(Dispatchers.IO) {
         runCatching {
-            val buckets = ListeningStats.exportAll()
-            val file = BackupFile(
-                versionName = BuildConfig.VERSION_NAME,
-                exportedAt = Instant.now().toString(),
-                settings = AppSettings.exportPrefs().mapNotNull { (key, value) ->
-                    PrefValue.of(value)?.let { key to it }
-                }.toMap(),
-                listening = buckets,
-            )
-            val text = json.encodeToString(BackupFile.serializer(), file)
+            val (text, months) = encode(context)
             context.contentResolver.openOutputStream(target, "wt")
                 ?.use { it.write(text.toByteArray()) }
                 ?: error("Couldn't open that file for writing")
-            buckets.size
+            months
         }
+    }
+
+    /**
+     * Writes a new, dated backup into [folder], a document tree the user picked
+     * for automatic backups, and returns the name it was given.
+     */
+    suspend fun exportToFolder(context: Context, folder: Uri): Result<String> = withContext(Dispatchers.IO) {
+        runCatching {
+            val (text, _) = encode(context)
+            val resolver = context.contentResolver
+            val parent = DocumentsContract.buildDocumentUriUsingTree(
+                folder,
+                DocumentsContract.getTreeDocumentId(folder),
+            )
+            val name = autoName()
+            val target = DocumentsContract.createDocument(resolver, parent, "application/json", name)
+                ?: error("Couldn't create a file in that folder")
+            resolver.openOutputStream(target, "wt")
+                ?.use { it.write(text.toByteArray()) }
+                ?: error("Couldn't open that file for writing")
+            name
+        }
+    }
+
+    /** The JSON of a backup, and how many months of listening it holds. */
+    private fun encode(context: Context): Pair<String, Int> {
+        val buckets = ListeningStats.exportAll()
+        val file = BackupFile(
+            versionName = BuildConfig.VERSION_NAME,
+            exportedAt = Instant.now().toString(),
+            settings = AppSettings.exportPrefs().toPrefValues(),
+            songData = SONG_DATA_FILES.associateWith { name ->
+                context.getSharedPreferences(name, Context.MODE_PRIVATE).all.toPrefValues()
+            }.filterValues { it.isNotEmpty() },
+            listening = buckets,
+        )
+        return json.encodeToString(BackupFile.serializer(), file) to buckets.size
+    }
+
+    private fun Map<String, Any?>.toPrefValues(): Map<String, PrefValue> =
+        mapNotNull { (key, value) -> PrefValue.of(value)?.let { key to it } }.toMap()
+
+    /** Automatic backups carry the time too, so a manual run the same day gets its own file. */
+    private fun autoName(): String =
+        "$AUTO_PREFIX${DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmm").format(
+            Instant.now().atZone(ZoneId.systemDefault()),
+        )}.json"
+
+    /** Names start with this so the folder's old automatic backups can be told from anything else in it. */
+    const val AUTO_PREFIX = "bitchord-auto-backup-"
+
+    /**
+     * Per-song choices kept outside the main settings file: metadata fixes,
+     * canvas and video fixes, source and original-version pins, and imported
+     * playlists. Song metadata and settings, so they travel with a backup.
+     * Album art picks and local file links are left out: they point at images
+     * and files on this device, which a backup does not carry.
+     */
+    private val SONG_DATA_FILES = listOf(
+        "song_metadata_fixes",
+        "canvas_audio_fixes",
+        "bitchord_source_pins",
+        "bitchord_original_versions",
+        "bitchord_local_playlists",
+    )
+
+    /** Replaces each per-song file the backup has, and has its owner read it again. */
+    private fun restoreSongData(context: Context, songData: Map<String, Map<String, PrefValue>>) {
+        songData.filterKeys { it in SONG_DATA_FILES }.forEach { (name, values) ->
+            context.getSharedPreferences(name, Context.MODE_PRIVATE).edit().apply {
+                clear()
+                values.forEach { (key, pref) ->
+                    when (val value = pref.decoded()) {
+                        is Boolean -> putBoolean(key, value)
+                        is Int -> putInt(key, value)
+                        is Long -> putLong(key, value)
+                        is Float -> putFloat(key, value)
+                        is String -> putString(key, value)
+                        is Set<*> -> putStringSet(key, value.filterIsInstance<String>().toSet())
+                        else -> Unit
+                    }
+                }
+            }.commit()
+        }
+        if (songData.isEmpty()) return
+        com.music.bitchord.data.SongMetadataFixStore.install(context)
+        com.music.bitchord.data.CanvasAudioFixStore.install(context)
+        com.music.bitchord.playback.SourcePins.init(context)
+        com.music.bitchord.playback.OriginalVersion.init(context)
+        com.music.bitchord.data.spotify.LocalPlaylistStore.init(context)
     }
 
     /**
@@ -101,6 +183,7 @@ object Backup {
 
             ListeningStats.importAll(file.listening)
             AppSettings.importPrefs(file.settings.mapValues { it.value.decoded() })
+            restoreSongData(context, file.songData)
             // Shares AppSettings' preference file, so it has already been
             // overwritten by the line above — it just doesn't know yet.
             SearchHistory.reload()
@@ -138,6 +221,8 @@ object Backup {
         val versionName: String = "",
         val exportedAt: String = "",
         val settings: Map<String, PrefValue> = emptyMap(),
+        /** Per-song preference files by name; see [SONG_DATA_FILES]. */
+        val songData: Map<String, Map<String, PrefValue>> = emptyMap(),
         val listening: List<StoredBucket> = emptyList(),
     )
 
