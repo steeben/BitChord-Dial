@@ -6,9 +6,11 @@ import kotlin.random.Random
 
 /**
  * Where the speed dial's tiles after the pins come from: what was played
- * lately, a shuffle of the feed's picks for the listener, or a blend of both.
+ * lately, a shuffle of the feed's picks for the listener, a blend of both, or
+ * YouTube Music's own picks exactly as its Home gives them. New entries go at
+ * the end: the pickers show them in this order.
  */
-enum class SpeedDialSource { HISTORY, RECOMMENDS, MIX }
+enum class SpeedDialSource { HISTORY, RECOMMENDS, MIX, YOUTUBE }
 
 /** The dial's tiles past the pins, and which of them are new releases (for their tag). */
 data class DialPicks(
@@ -70,6 +72,7 @@ object SpeedDialPicker {
         random: Random,
     ): DialPicks {
         if (source == SpeedDialSource.HISTORY) return DialPicks(history, emptySet())
+        if (source == SpeedDialSource.YOUTUBE) return DialPicks(official(recommends, fill, size), emptySet())
         val releaseIds = newReleases.mapNotNullTo(HashSet()) { it.speedDialId }
         fun List<ShelfItem>.usable() = filter { it.speedDialId != null && it.speedDialId !in releaseIds }
             .distinctBy { it.speedDialId }
@@ -101,5 +104,21 @@ object SpeedDialPicker {
         val placed = releases.zip(spots)
         placed.forEach { (item, at) -> dial.add(at, item) }
         return DialPicks(dial, placed.mapNotNullTo(HashSet()) { it.first.speedDialId })
+    }
+
+    /**
+     * YouTube Music's picks as its own app shows them: [recommends] in the
+     * feed's order (Quick picks and the shelves beside it, as YouTube placed
+     * them), unshuffled and with nothing added in, topped up from [fill] only
+     * when the feed has too few.
+     */
+    private fun official(recommends: List<ShelfItem>, fill: List<ShelfItem>, size: Int): List<ShelfItem> {
+        val dial = recommends.filter { it.speedDialId != null }.distinctBy { it.speedDialId }.toMutableList()
+        val seen = dial.mapNotNullTo(HashSet()) { it.speedDialId }
+        fill.forEach { item ->
+            val id = item.speedDialId ?: return@forEach
+            if (dial.size < size && seen.add(id)) dial += item
+        }
+        return dial
     }
 }
