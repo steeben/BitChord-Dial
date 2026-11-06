@@ -36,6 +36,10 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.Image
@@ -448,7 +452,31 @@ internal fun AndroidCanvasArtworkPlayer(
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .matchParentSize()
-                .graphicsLayer { this.alpha = currentPresentationAlpha() },
+                .graphicsLayer {
+                    this.alpha = currentPresentationAlpha()
+                    // Offscreen so the fade below erases the frame rather
+                    // than whatever is drawn behind it.
+                    compositingStrategy = CompositingStrategy.Offscreen
+                }
+                // The clip's own bottom fade, which the view's RenderEffect
+                // (or its frame, below API 31) puts on the video but not on
+                // this stand-in. Left off, coming back to the player or
+                // turning the phone upright showed the frame with a hard
+                // bottom edge until the video took over and the fade popped in.
+                .drawWithContent {
+                    drawContent()
+                    val endY = (bottomFadeEndPx ?: size.height).coerceIn(0f, size.height)
+                    if (bottomFade > 0.001f && endY > 0f) {
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(Color.Black, Color.Transparent),
+                                startY = endY * (1f - bottomFade.coerceAtMost(1f)),
+                                endY = endY,
+                            ),
+                            blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
+                        )
+                    }
+                },
         )
     }
     AndroidView(

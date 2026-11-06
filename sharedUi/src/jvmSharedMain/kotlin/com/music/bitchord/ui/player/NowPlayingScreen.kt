@@ -2400,7 +2400,14 @@ fun NowPlayingScreen(
                     // no full-bleed banner here to be it instead. The clip and
                     // its dim are recorded with it, so the glass over the
                     // player sees the video as dim as the screen shows it.
-                    Box(backgroundModifier.hazeSource(playerHaze)) {
+                    // Recorded for the glass buttons as well, as the portrait
+                    // backdrop is (see [PlayerGlass]): left out, the glass in
+                    // landscape had nothing behind it to bend.
+                    val landscapeGlass = LocalPlayerGlass.current
+                    Box(
+                        backgroundModifier.hazeSource(playerHaze)
+                            .let { landscapeGlass?.source(it) ?: it },
+                    ) {
                         fullArtworkBlurContent(Modifier.fillMaxSize())
                         landscapeBackdropClip?.let { clip ->
                             key(clip.url) {
