@@ -102,7 +102,6 @@ import com.music.bitchord.ui.components.LongPressOrigin
 import com.music.bitchord.ui.components.HeldItem
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.graphics.layer.GraphicsLayer
-import com.music.bitchord.ui.components.dialParallax
 import com.music.bitchord.ui.components.dialTileBorder
 import com.music.bitchord.ui.components.dialTileLabelPadding
 import com.music.bitchord.ui.components.dialTileOutset
@@ -838,7 +837,7 @@ private fun SpeedDialTile(
             )
             .contextClick(onLongPress),
     ) {
-        SpeedDialArt(item.thumbnailUrl, item.title, Modifier.fillMaxSize().dialParallax())
+        SpeedDialArt(item.thumbnailUrl, item.title, Modifier.fillMaxSize())
         if (showLabel) {
             Box(
                 Modifier
