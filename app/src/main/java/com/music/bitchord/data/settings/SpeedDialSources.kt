@@ -107,10 +107,10 @@ object SpeedDialPicker {
     }
 
     /**
-     * YouTube Music's picks as its own app shows them: [recommends] in the
-     * feed's order (Quick picks and the shelves beside it, as YouTube placed
-     * them), unshuffled and with nothing added in, topped up from [fill] only
-     * when the feed has too few.
+     * YouTube Music's picks as its own app shows them: [recommends] (its Speed
+     * dial shelf, then the shelves built from the listener's plays) in the
+     * feed's order, unshuffled and with nothing added in, topped up from
+     * [fill] only when the feed has too few.
      */
     private fun official(recommends: List<ShelfItem>, fill: List<ShelfItem>, size: Int): List<ShelfItem> {
         val dial = recommends.filter { it.speedDialId != null }.distinctBy { it.speedDialId }.toMutableList()
