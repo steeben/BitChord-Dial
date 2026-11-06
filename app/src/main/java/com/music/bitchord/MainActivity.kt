@@ -504,6 +504,13 @@ private object MenuNav {
     /** The Settings category open as a page of its own, or null for Settings' main page. */
     var settingsSection by mutableStateOf<com.music.bitchord.ui.screens.SettingsCategory?>(null)
 
+    /**
+     * Settings' main page's scroll. Kept out here, past the page's own life in
+     * the transition, so backing out of a category returns to where the list
+     * was; set back to the top once Settings itself closes.
+     */
+    val settingsMainScroll = androidx.compose.foundation.ScrollState(0)
+
     /** The page key Settings is shown under: its main page, or one category's. */
     val settingsPageKey: String
         get() = settingsSection?.let { SETTINGS_SECTION_KEY_PREFIX + it.name } ?: "settings"
@@ -3410,12 +3417,18 @@ private fun BitChordApp(
         // After Settings' own, so it is asked first: back leaves the page, not Settings.
         BackHandler(enabled = settingsSubScreen == LIBRARY_DUPLICATES_SCREEN) { settingsSubScreen = null }
         // A category's page steps back to Settings' main page, not out of Settings.
+        // Blurred only under "reduce animation": otherwise the page slides back
+        // off to the right under the finger, as it slid in — see `libraryBack`.
         SettingsPredictiveBack(
-            enabled = showSettings && MenuNav.settingsSection != null && settingsSubScreen == null &&
+            enabled = reduceAnimationSetting && showSettings && MenuNav.settingsSection != null && settingsSubScreen == null &&
                 !showSpotify && !showAccountScrobbling && !showSources && !showListenTogether &&
                 !showEqualizer && !showReplay,
             progress = detailBackProgress,
         ) { MenuNav.settingsSection = null }
+        // Settings opens at the top of its main page each time.
+        LaunchedEffect(showSettings) {
+            if (!showSettings) MenuNav.settingsMainScroll.scrollTo(0)
+        }
         BackHandler(
             enabled = detail == null && !showSettings && !showAccountScrobbling && !showSpotify &&
                 !showSources && !showListenTogether && !showEqualizer && !showReplay && selectedMoodGenre == null &&
@@ -3598,7 +3611,13 @@ private fun BitChordApp(
                 val dialBack = !reduceAnimationSetting && detail != null && detailStack.size == 1 &&
                     pageKey == detail.browseId && DialLaunch.origin?.key == pageKey &&
                     pageKeyFor(top = null) == HOME_PAGE_KEY
+                // A Settings category's page, with nothing laid over it: the swipe
+                // slides it back off to the right with the main page coming in
+                // from the left, the reverse of how it was opened.
+                val settingsCategoryBack = !reduceAnimationSetting && showSettings && !showReplay &&
+                    settingsSubScreen == null && pageKey.startsWith(SETTINGS_SECTION_KEY_PREFIX)
                 val libraryBack: Pair<String, () -> Unit>? = when {
+                    settingsCategoryBack -> "settings" to { MenuNav.settingsSection = null }
                     dialBack -> HOME_PAGE_KEY to { viewModel.closeDetail(); Unit }
                     libraryDepth == null || libraryDepth == 0 || detailActiveShelf != null -> null
                     pageKey == "history" -> pageKeyFor(history = false) to { showHistory = false }
@@ -3641,8 +3660,11 @@ private fun BitChordApp(
                 // letting go finishes the slide, cancelling slides it back.
                 // A dial tile's page shrinks toward its tile the same way.
                 PredictiveBackHandler(
-                    enabled = libraryBack != null && !showSettings && !showAccountScrobbling && !showSources &&
-                        !showListenTogether && !showEqualizer && !showReplay && !showStats && !showDiscord,
+                    enabled = libraryBack != null && (
+                        settingsCategoryBack ||
+                            !showSettings && !showAccountScrobbling && !showSources &&
+                            !showListenTogether && !showEqualizer && !showReplay && !showStats && !showDiscord
+                        ),
                 ) { events ->
                     val back = currentLibraryBack
                     val dialing = dialBack
@@ -4104,6 +4126,7 @@ private fun BitChordApp(
                             searchDock = settingsSearchDock.takeIf { keySection == null },
                             section = keySection,
                             onOpenSection = { MenuNav.settingsSection = it },
+                            mainScrollState = MenuNav.settingsMainScroll,
                         )
                     } else if (page != null && page.browseId.isDeviceFolder()) {
                         // Local Music and Downloads — both the tabbed Songs / Artists /

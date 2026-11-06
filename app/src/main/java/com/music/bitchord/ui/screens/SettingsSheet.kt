@@ -274,6 +274,12 @@ fun SettingsScreen(
     section: SettingsCategory? = null,
     /** Opens one category as a page of its own. */
     onOpenSection: (SettingsCategory) -> Unit = {},
+    /**
+     * The main page's scroll, held by the caller so stepping into a category
+     * and back lands where the list was left rather than at its top. Unused
+     * on a category page.
+     */
+    mainScrollState: ScrollState? = null,
 ) {
     val context = LocalContext.current
 
@@ -485,7 +491,8 @@ fun SettingsScreen(
 
     // What is left after a keystroke is a different list, and the offset the
     // last one was scrolled to means nothing in it.
-    val scrollState = rememberSaveable(saver = ScrollState.Saver) { ScrollState(0) }
+    val ownScrollState = rememberSaveable(saver = ScrollState.Saver) { ScrollState(0) }
+    val scrollState = mainScrollState?.takeIf { section == null } ?: ownScrollState
     // Tell the bar's field how far this page has scrolled, read as it lays
     // out, and forget this page's space for it once the page is gone.
     if (section == null && searchDock != null) {
