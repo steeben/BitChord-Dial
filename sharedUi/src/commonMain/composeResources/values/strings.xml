@@ -120,6 +120,7 @@
     <string name="lyrics_translation_unavailable">Translation is unavailable right now</string>
     <string name="medium_quality">Medium Quality</string>
     <string name="mono">Mono</string>
+    <string name="full_screen_video">Full screen video</string>
     <string name="more">More</string>
     <string name="next_from">Next from: %1$s</string>
     <string name="next_in_queue">Next in queue</string>

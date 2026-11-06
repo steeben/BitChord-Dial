@@ -1742,7 +1742,7 @@ fun NowPlayingScreen(
             else -> 0f
         },
         if (lyricsOpen || queueOpen) SUBVIEW_INK_DIM else 0f,
-        if (landscapeBackdropClip != null && canvasRendered) {
+        if (landscapeBackdropClip != null) {
             landscapeCanvasDim(panelOpen = lyricsOpen || queueOpen)
         } else 0f,
     )
@@ -2352,6 +2352,14 @@ fun NowPlayingScreen(
         val versionAligning by PlayerSettings.versionAlignmentInProgress.collectAsStateWithLifecycle()
         val transitionWindow by PlayerSettings.smartTransitionWindow.collectAsStateWithLifecycle()
         val panelOpen = lyricsOpen || queueOpen
+        // A music video behind the player can have the screen to itself, from
+        // the button beside the like. Turned off by any tap, by back, by a
+        // panel opening, and by the video going (a new song, or turning
+        // upright, which leaves this branch and forgets it).
+        val videoBehind = landscapeBackdropClip?.musicVideoId != null
+        var videoFullscreenAsked by remember(landscapeBackdropClip?.url) { mutableStateOf(false) }
+        val videoFullscreen = videoFullscreenAsked && videoBehind && !panelOpen
+        PlayerBackHandler(enabled = videoFullscreen) { videoFullscreenAsked = false }
 
         // Where the sleeve is drawn this frame on its way to or from the mini
         // player's cover, or null when it can't be worked out.
@@ -2401,6 +2409,8 @@ fun NowPlayingScreen(
         Box(modifier = modifier.fillMaxSize().then(dockHost)) {
             LandscapePlayerLayout(
                 showHandle = !hideSongStatus,
+                fullscreen = videoFullscreen,
+                onExitFullscreen = { videoFullscreenAsked = false },
                 pane = when {
                     lyricsOpen -> PlayerPane.Lyrics
                     queueOpen -> PlayerPane.Queue
@@ -2425,8 +2435,8 @@ fun NowPlayingScreen(
                                 LandscapeCanvasBackdrop(
                                     canvas = clip,
                                     isPlaying = isPlaying,
-                                    rendered = canvasRendered,
                                     panelOpen = panelOpen,
+                                    fullscreen = videoFullscreen,
                                     onRenderedChange = { canvasRendered = it },
                                     pausedForTransition = dockMoving,
                                     // A TextureView doesn't reliably take the
@@ -2537,6 +2547,11 @@ fun NowPlayingScreen(
                                 onOpenMenu = onOpenMenu,
                                 onOpenAlbum = onOpenAlbum,
                                 onOpenArtist = onOpenArtist,
+                                onFullscreen = if (videoBehind) {
+                                    { videoFullscreenAsked = true }
+                                } else {
+                                    null
+                                },
                             )
                         },
                         lyricStrip = if (lyricStripShown) {

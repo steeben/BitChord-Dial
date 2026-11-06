@@ -11,6 +11,8 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -34,6 +36,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Undo
+import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -149,13 +152,25 @@ internal fun LandscapePlayerLayout(
     modifier: Modifier = Modifier,
     /** Off with "Hide song status", which takes the handle with the caption. */
     showHandle: Boolean = true,
+    /**
+     * The player stood aside so the music video behind it fills the screen
+     * on its own; a tap anywhere brings it back through [onExitFullscreen].
+     */
+    fullscreen: Boolean = false,
+    onExitFullscreen: () -> Unit = {},
 ) {
+    val chromeAlpha by animateFloatAsState(
+        targetValue = if (fullscreen) 0f else 1f,
+        animationSpec = tween(LANDSCAPE_FULLSCREEN_FADE_MS),
+        label = "landscapeChrome",
+    )
     Box(modifier = modifier.fillMaxSize()) {
         background(Modifier.fillMaxSize())
 
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
+                .graphicsLayer { alpha = chromeAlpha }
                 .windowInsetsPadding(WindowInsets.safeDrawing),
             contentAlignment = Alignment.TopCenter,
         ) {
@@ -258,8 +273,25 @@ internal fun LandscapePlayerLayout(
                 )
             }
         }
+
+        // Over everything while the video has the screen, so no tap reaches
+        // the hidden controls; any tap brings them back.
+        if (fullscreen) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onExitFullscreen,
+                    ),
+            )
+        }
     }
 }
+
+/** How long the landscape player takes to step aside for its video, and back. */
+private const val LANDSCAPE_FULLSCREEN_FADE_MS = 280
 
 /**
  * The landscape player's sleeve: the still cover, and over it the looping
@@ -354,11 +386,14 @@ internal fun LandscapeArtwork(
     }
 }
 
-/** The flat dim over a landscape backdrop clip with the player up. */
-private const val LANDSCAPE_CANVAS_DIM = 0.38f
+/**
+ * The flat dim over a landscape backdrop clip with the player up: the 50% the
+ * portrait Canvas sits under while its controls are up.
+ */
+private const val LANDSCAPE_CANVAS_DIM = 0.50f
 
 /** The heavier dim over it with the lyrics or the queue open. */
-private const val LANDSCAPE_CANVAS_PANEL_DIM = 0.58f
+private const val LANDSCAPE_CANVAS_PANEL_DIM = 0.62f
 
 /** How long the backdrop's dim takes to follow a pane being turned. */
 private const val LANDSCAPE_CANVAS_DIM_MS = 260
@@ -377,22 +412,26 @@ internal fun landscapeCanvasDim(panelOpen: Boolean): Float =
  *
  * The sleeve keeps the still cover (or an animated one) meanwhile — see
  * [LandscapeArtwork]. Until the clip's first frame the backdrop under it,
- * the cover's blur, is what shows, so nothing goes dark waiting for it.
+ * the cover's blur, is what shows, under the same dim.
  */
 @Composable
 internal fun LandscapeCanvasBackdrop(
     canvas: CanvasArtwork,
     isPlaying: Boolean,
-    /** Whether the clip has a frame on screen. */
-    rendered: Boolean,
     panelOpen: Boolean,
     onRenderedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     pausedForTransition: Boolean = false,
     presentationAlpha: () -> Float = { 1f },
+    /** The player stood aside for the video (see [LandscapePlayerLayout]): no dim. */
+    fullscreen: Boolean = false,
 ) {
+    // Dimmed from the start, not from the clip's first frame: the blurred
+    // cover under it until then is dimmed just the same, so nothing jumps
+    // when the picture lands, and a late or missed first-frame report never
+    // leaves the video bright under the player.
     val dim by animateFloatAsState(
-        targetValue = if (rendered) landscapeCanvasDim(panelOpen) else 0f,
+        targetValue = if (fullscreen) 0f else landscapeCanvasDim(panelOpen),
         animationSpec = tween(LANDSCAPE_CANVAS_DIM_MS),
         label = "landscapeCanvasDim",
     )
@@ -486,6 +525,8 @@ internal fun LandscapeCredits(
     /** Null browse id for anyone but the lead credit — see [NowPlayingScreen]. */
     onOpenArtist: (browseId: String?, name: String) -> Unit,
     modifier: Modifier = Modifier,
+    /** Shown left of the like button when set: puts the backdrop video full screen. */
+    onFullscreen: (() -> Unit)? = null,
 ) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         Crossfade(
@@ -524,6 +565,16 @@ internal fun LandscapeCredits(
             }
         }
         Spacer(Modifier.width(10.dp))
+        // Only while a music video runs behind the player: lets it have the
+        // whole screen. Never in portrait, where this row isn't drawn.
+        if (onFullscreen != null) {
+            CircleGlyph(
+                icon = Icons.Rounded.Fullscreen,
+                contentDescription = stringResource(Res.string.full_screen_video),
+                onClick = onFullscreen,
+            )
+            Spacer(Modifier.width(8.dp))
+        }
         // Same gate as the portrait player's: no account to like against for a
         // guest — but a local file or a finished download is liked on the
         // device, which needs none.
