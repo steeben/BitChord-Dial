@@ -494,13 +494,13 @@ object CustomizationSettings {
         random: kotlin.random.Random,
     ): DialPicks {
         val history = historyPicks(shelves)
-        // YouTube Music's own picks leave out Recents, which is the app's, not YouTube's.
-        val recommends = shelves.filter {
-            SpeedDialPicker.isRecommendShelf(it.title) &&
-                !(source == SpeedDialSource.YOUTUBE && it.title.equals(RECENTS_TITLE, true))
-        }.flatMap {
-            if (it.title.equals(RECENTS_TITLE, true)) DevicePlays.withDevicePlays(it.items) else it.items
-        }.let(::asPlayed)
+        val recommends = if (source == SpeedDialSource.YOUTUBE) {
+            youTubePicks(shelves)
+        } else {
+            shelves.filter { SpeedDialPicker.isRecommendShelf(it.title) }.flatMap {
+                if (it.title.equals(RECENTS_TITLE, true)) DevicePlays.withDevicePlays(it.items) else it.items
+            }.let(::asPlayed)
+        }
         return SpeedDialPicker.pick(
             source = source,
             history = history,
@@ -512,6 +512,19 @@ object CustomizationSettings {
             random = random,
         )
     }
+
+    /**
+     * The dial as YouTube Music's own app fills it: its Speed dial shelf in
+     * YouTube's order, then, for when that shelf is short or missing, the
+     * other shelves YouTube builds from the listener's plays (Listen again,
+     * Forgotten favorites, Quick picks) in the order the feed gives them.
+     * Items are taken as YouTube gives them, without the app's Recents or the
+     * song-to-album swap the other sources make.
+     */
+    private fun youTubePicks(shelves: List<HomeShelf>): List<ShelfItem> =
+        shelfItems(shelves, SPEED_DIAL_TITLE) + shelves.filter {
+            SpeedDialPicker.isRecommendShelf(it.title) && !it.title.equals(RECENTS_TITLE, true)
+        }.flatMap { it.items }
 
     /** Pins first, then [picks], minus what was taken off the dial, up to [SPEED_DIAL_SIZE]. */
     fun assembleDial(pins: List<ShelfItem>, picks: List<ShelfItem>): List<ShelfItem> {
