@@ -3234,7 +3234,14 @@ private fun BitChordApp(
     }
     val reduceAnimationSetting by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
     val ambientBlobs = if (ambientOn) {
-        rememberAmbientBlobs(ambientPrimary, ambientSecondary, animate = !reduceAnimationSetting)
+        val ambientStyle by CustomizationSettings.ambientStyle.collectAsStateWithLifecycle()
+        rememberAmbientBlobs(
+            ambientPrimary,
+            ambientSecondary,
+            animate = !reduceAnimationSetting,
+            style = ambientStyle,
+            playing = player.isPlaying,
+        )
     } else {
         null
     }

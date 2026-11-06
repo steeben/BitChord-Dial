@@ -61,6 +61,7 @@ import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.BubbleChart
+import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material.icons.rounded.UnfoldMore
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Cloud
@@ -348,6 +349,7 @@ fun SettingsScreen(
     val feelingLucky by CustomizationSettings.feelingLucky.collectAsStateWithLifecycle()
     val ambientBackground by CustomizationSettings.ambientBackground.collectAsStateWithLifecycle()
     val ambientFollowsArtwork by CustomizationSettings.ambientFollowsArtwork.collectAsStateWithLifecycle()
+    val ambientStyle by CustomizationSettings.ambientStyle.collectAsStateWithLifecycle()
     val hideSongStatus by AppSettings.hideSongStatus.collectAsStateWithLifecycle()
     val showQueueHistory by AppSettings.showQueueHistory.collectAsStateWithLifecycle()
     val dontRepeatSuggestions by AppSettings.dontRepeatSuggestions.collectAsStateWithLifecycle()
@@ -1177,6 +1179,18 @@ fun SettingsScreen(
                 )
             }
             if (ambientBackground) {
+                val ambientStyleTitle = stringResource(R.string.ambient_style)
+                row(
+                    ambientStyleTitle, "background", "ripple", "grid", "waveform", "silk", "vinyl", "record", "blobs",
+                ) {
+                    SettingsRow(icon = Icons.Rounded.Wallpaper, title = ambientStyleTitle)
+                    com.music.bitchord.ui.components.AmbientStylePicker(
+                        selected = ambientStyle,
+                        onSelect = CustomizationSettings::setAmbientStyle,
+                        inset = ROW_INSET,
+                        modifier = Modifier.padding(bottom = 14.dp),
+                    )
+                }
                 val ambientArtTitle = stringResource(R.string.ambient_follows_artwork)
                 row(ambientArtTitle, "background", "album art", "artwork", "colour", "color") {
                     SettingsRow(
