@@ -107,8 +107,6 @@ fun HomeDialMenu(
 @Composable
 fun speedDialSourceLabels(): List<String> = listOf(
     stringResource(R.string.speed_dial_source_history),
-    stringResource(R.string.speed_dial_source_recommends),
-    stringResource(R.string.speed_dial_source_mix),
     stringResource(R.string.speed_dial_source_youtube),
 )
 

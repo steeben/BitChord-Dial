@@ -97,7 +97,7 @@ object CustomizationSettings {
     val miniPlayerShape = MutableStateFlow(MiniPlayerShape.CIRCULAR)
 
     /** Where the speed dial's unpinned tiles come from; see [SpeedDialSource]. */
-    val speedDialSource = MutableStateFlow(SpeedDialSource.RECOMMENDS)
+    val speedDialSource = MutableStateFlow(SpeedDialSource.YOUTUBE)
 
     /** How many rows of three tiles the speed dial shows per page: 3 or 4. */
     val speedDialRows = MutableStateFlow(DEFAULT_SPEED_DIAL_ROWS)
@@ -203,7 +203,7 @@ object CustomizationSettings {
         artistDial.value = p.getBoolean(KEY_ARTIST_DIAL, true)
         feelingLucky.value = p.getBoolean(KEY_FEELING_LUCKY, true)
         speedDialSource.value = SpeedDialSource.entries
-            .firstOrNull { it.name == p.getString(KEY_SPEED_DIAL_SOURCE, null) } ?: SpeedDialSource.RECOMMENDS
+            .firstOrNull { it.name == p.getString(KEY_SPEED_DIAL_SOURCE, null) } ?: SpeedDialSource.YOUTUBE
         speedDialRows.value = p.getInt(KEY_SPEED_DIAL_ROWS, DEFAULT_SPEED_DIAL_ROWS).takeIf { it in 3..4 }
             ?: DEFAULT_SPEED_DIAL_ROWS
         miniPlayerShape.value = MiniPlayerShape.entries
@@ -479,44 +479,19 @@ object CustomizationSettings {
      * The tiles past the pins for [source], drawn once per round (app load or
      * pull to refresh) by the caller, which holds on to them until the next.
      */
-    fun pickSpeedDial(
-        source: SpeedDialSource,
-        shelves: List<HomeShelf>,
-        newReleases: List<ShelfItem>,
-        random: kotlin.random.Random,
-    ): DialPicks {
-        val history = historyPicks(shelves)
-        val recommends = if (source == SpeedDialSource.YOUTUBE) {
-            youTubePicks(shelves)
-        } else {
-            shelves.filter { SpeedDialPicker.isRecommendShelf(it.title) }.flatMap {
-                if (it.title.equals(RECENTS_TITLE, true)) DevicePlays.withDevicePlays(it.items) else it.items
-            }.let(::asPlayed)
-        }
+    fun pickSpeedDial(source: SpeedDialSource, shelves: List<HomeShelf>): DialPicks {
+        fun items(match: (String) -> Boolean) = shelves.filter { match(it.title) }.flatMap { it.items }
         return SpeedDialPicker.pick(
             source = source,
-            history = history,
-            recommends = recommends,
-            newReleases = SpeedDialPicker.newReleasesOf(shelves, newReleases),
-            fill = history,
-            firstPage = SPEED_DIAL_COLUMNS * speedDialRows.value,
+            history = historyPicks(shelves),
+            official = shelfItems(shelves, SPEED_DIAL_TITLE),
+            listenAgain = items(SpeedDialPicker::isListenAgainShelf),
+            recents = asPlayed(DevicePlays.withDevicePlays(shelfItems(shelves, RECENTS_TITLE))),
+            forgotten = items(SpeedDialPicker::isForgottenShelf),
+            quickPicks = items(SpeedDialPicker::isQuickPicksShelf),
             size = SPEED_DIAL_SIZE,
-            random = random,
         )
     }
-
-    /**
-     * The dial as YouTube Music's own app fills it: its Speed dial shelf in
-     * YouTube's order, then, for when that shelf is short or missing, the
-     * other shelves YouTube builds from the listener's plays (Listen again,
-     * Forgotten favorites, Quick picks) in the order the feed gives them.
-     * Items are taken as YouTube gives them, without the app's Recents or the
-     * song-to-album swap the other sources make.
-     */
-    private fun youTubePicks(shelves: List<HomeShelf>): List<ShelfItem> =
-        shelfItems(shelves, SPEED_DIAL_TITLE) + shelves.filter {
-            SpeedDialPicker.isRecommendShelf(it.title) && !it.title.equals(RECENTS_TITLE, true)
-        }.flatMap { it.items }
 
     /** Pins first, then [picks], minus what was taken off the dial, up to [SPEED_DIAL_SIZE]. */
     fun assembleDial(pins: List<ShelfItem>, picks: List<ShelfItem>): List<ShelfItem> {
