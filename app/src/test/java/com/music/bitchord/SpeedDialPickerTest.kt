@@ -69,6 +69,21 @@ class SpeedDialPickerTest {
     }
 
     @Test
+    fun youtube_keepsTheFeedOrderWithoutNewReleases() {
+        val picks = pick(SpeedDialSource.YOUTUBE, 5)
+        assertEquals(recommends, picks.items.take(20))
+        assertTrue(picks.newReleaseIds.isEmpty())
+        assertTrue(picks.items.none { it.browseId?.startsWith("n") == true })
+    }
+
+    @Test
+    fun youtube_topsUpFromTheFillUpToTheDialSize() {
+        val picks = pick(SpeedDialSource.YOUTUBE, 5, recs = recommends.take(2))
+        assertEquals(recommends.take(2), picks.items.take(2))
+        assertEquals(history, picks.items.drop(2))
+    }
+
+    @Test
     fun shelfTitles_areRecognised() {
         assertTrue(SpeedDialPicker.isRecommendShelf("Quick picks"))
         assertTrue(SpeedDialPicker.isRecommendShelf("Forgotten favorites"))

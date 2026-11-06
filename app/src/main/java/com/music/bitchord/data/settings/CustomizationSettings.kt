@@ -486,7 +486,11 @@ object CustomizationSettings {
         random: kotlin.random.Random,
     ): DialPicks {
         val history = historyPicks(shelves)
-        val recommends = shelves.filter { SpeedDialPicker.isRecommendShelf(it.title) }.flatMap {
+        // YouTube Music's own picks leave out Recents, which is the app's, not YouTube's.
+        val recommends = shelves.filter {
+            SpeedDialPicker.isRecommendShelf(it.title) &&
+                !(source == SpeedDialSource.YOUTUBE && it.title.equals(RECENTS_TITLE, true))
+        }.flatMap {
             if (it.title.equals(RECENTS_TITLE, true)) DevicePlays.withDevicePlays(it.items) else it.items
         }.let(::asPlayed)
         return SpeedDialPicker.pick(

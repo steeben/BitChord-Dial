@@ -1398,7 +1398,7 @@ fun SettingsScreen(
                 )
             }
             val speedDialSourceTitle = stringResource(R.string.speed_dial_source)
-            row(speedDialSourceTitle, "speed dial", "history", "recommends", "mix", "new releases") {
+            row(speedDialSourceTitle, "speed dial", "history", "recommends", "mix", "youtube", "yt music", "official", "new releases") {
                 SettingsRow(icon = Icons.Rounded.CropSquare, title = speedDialSourceTitle)
                 SegmentedControl(
                     options = com.music.bitchord.ui.components.speedDialSourceLabels(),
