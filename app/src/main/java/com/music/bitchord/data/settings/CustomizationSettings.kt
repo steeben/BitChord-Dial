@@ -29,9 +29,6 @@ enum class NavPage(val id: Int) {
 
 enum class MiniPlayerShape { CIRCULAR, SQUARED }
 
-/** What the ambient background draws behind the pages, in its colour. */
-enum class AmbientStyle { BLOBS, RIPPLE_DIAL, BIT_GRID, WAVEFORM_SILK, VINYL_ORBIT }
-
 /**
  * Which library the Library tab shows: the YouTube Music account's, the
  * device's (local files and downloads together), or both at once.
@@ -131,9 +128,6 @@ object CustomizationSettings {
     /** Whether those blobs take the playing song's artwork colour. */
     val ambientFollowsArtwork = MutableStateFlow(false)
 
-    /** Which picture the ambient background draws. */
-    val ambientStyle = MutableStateFlow(AmbientStyle.BLOBS)
-
     /** How see-through Liquid Glass surfaces are, 0 (opaque fill) to 1 (no fill at all). */
     val glassTransparency = MutableStateFlow(DEFAULT_GLASS_TRANSPARENCY)
 
@@ -224,8 +218,6 @@ object CustomizationSettings {
             ?: DEFAULT_TAB_VIEWS
         ambientBackground.value = p.getBoolean(KEY_AMBIENT_BACKGROUND, true)
         ambientFollowsArtwork.value = p.getBoolean(KEY_AMBIENT_FOLLOWS_ARTWORK, false)
-        ambientStyle.value = AmbientStyle.entries
-            .firstOrNull { it.name == p.getString(KEY_AMBIENT_STYLE, null) } ?: AmbientStyle.BLOBS
         glassTransparency.value = p.getFloat(KEY_GLASS_TRANSPARENCY, DEFAULT_GLASS_TRANSPARENCY).coerceIn(0f, 1f)
         glassTint.value = GlassTint.entries
             .firstOrNull { it.name == p.getString(KEY_GLASS_TINT, null) } ?: GlassTint.DEFAULT
@@ -588,11 +580,6 @@ object CustomizationSettings {
         prefs?.edit()?.putBoolean(KEY_AMBIENT_FOLLOWS_ARTWORK, value)?.apply()
     }
 
-    fun setAmbientStyle(value: AmbientStyle) {
-        ambientStyle.value = value
-        prefs?.edit()?.putString(KEY_AMBIENT_STYLE, value.name)?.apply()
-    }
-
     fun setGlassTransparency(value: Float) {
         val clamped = value.coerceIn(0f, 1f)
         glassTransparency.value = clamped
@@ -804,7 +791,6 @@ object CustomizationSettings {
     private const val KEY_AMBIENT_BACKGROUND = "custom_ambient_background"
     private const val KEY_LIBRARY_TAB_VIEWS = "custom_library_tab_views"
     private const val KEY_AMBIENT_FOLLOWS_ARTWORK = "custom_ambient_follows_artwork"
-    private const val KEY_AMBIENT_STYLE = "custom_ambient_style"
     private const val KEY_GLASS_TRANSPARENCY = "custom_glass_transparency"
     private const val KEY_GLASS_TINT = "custom_glass_tint"
     private const val KEY_GLASS_BLUR = "custom_glass_blur"

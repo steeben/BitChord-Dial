@@ -8,12 +8,6 @@
     <string name="added_to_speed_dial">Added to speed dial</string>
     <string name="ambient_background">Ambient background</string>
     <string name="ambient_background_subtitle">Slow-moving colour behind the app\'s pages</string>
-    <string name="ambient_style">Style</string>
-    <string name="ambient_style_blobs">Blobs</string>
-    <string name="ambient_style_ripple_dial">Ripple Dial</string>
-    <string name="ambient_style_bit_grid">Bit Grid</string>
-    <string name="ambient_style_waveform_silk">Waveform Silk</string>
-    <string name="ambient_style_vinyl_orbit">Vinyl Orbit</string>
     <string name="ambient_follows_artwork">Match the playing song</string>
     <string name="ambient_follows_artwork_subtitle">Colour the background from the current album art</string>
     <string name="automix_same_album">Mix within the same album</string>
