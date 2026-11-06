@@ -21,6 +21,8 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.Animatable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -135,6 +137,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
@@ -153,6 +156,8 @@ import coil3.SingletonImageLoader
 import com.music.bitchord.ui.theme.rememberScreenOrientation
 import com.music.bitchord.ui.theme.StatusBarIcons
 import com.music.bitchord.ui.theme.rememberArtworkLuminance
+import com.music.bitchord.ui.theme.rememberArtworkControlsBandLuminance
+import com.music.bitchord.ui.theme.controlsBandLuminance
 import com.music.bitchord.ui.theme.rememberArtworkTopBandLuminance
 import com.music.bitchord.ui.theme.topBandScrimAlpha
 import com.music.bitchord.ui.LyricsProviderState
@@ -360,6 +365,48 @@ private fun Modifier.canvasSweepOut(
             )
         }
 }
+
+/**
+ * The scrim under the player's credits and controls, drawn behind the node that wears it
+ * (the title row) but well past its bounds: the full width of the window, from
+ * [CONTROLS_SCRIM_LEAD] above the row, where it fades in, down to the window's foot.
+ * [rootOrigin] is the row's top-left in the root, [rootSize] the root's size; both and
+ * [alpha] are read while drawing, so nothing here recomposes as they change.
+ */
+private fun Modifier.drawControlsScrim(
+    alpha: () -> Float,
+    rootOrigin: () -> Offset,
+    rootSize: () -> IntSize,
+): Modifier = drawBehind {
+    val a = alpha().coerceIn(0f, 1f)
+    val root = rootSize()
+    if (a <= 0.004f || root.width == 0 || root.height == 0) return@drawBehind
+    val origin = rootOrigin()
+    val lead = CONTROLS_SCRIM_LEAD.toPx()
+    val top = -lead
+    val bottom = root.height - origin.y
+    if (bottom <= top) return@drawBehind
+    val span = bottom - top
+    // Eased in over the lead, so there is no edge to see where it starts,
+    // and at full strength from the title down.
+    val reached = (lead / span).coerceIn(0f, 1f)
+    drawRect(
+        brush = Brush.verticalGradient(
+            0f to Color.Black.copy(alpha = 0f),
+            reached * 0.5f to Color.Black.copy(alpha = a * 0.35f),
+            reached to Color.Black.copy(alpha = a * 0.85f),
+            (reached + (1f - reached) * 0.25f) to Color.Black.copy(alpha = a),
+            1f to Color.Black.copy(alpha = a),
+            startY = top,
+            endY = bottom,
+        ),
+        topLeft = Offset(-origin.x, top),
+        size = Size(root.width.toFloat(), span),
+    )
+}
+
+/** How far above the title row the controls scrim starts fading in. */
+private val CONTROLS_SCRIM_LEAD = 110.dp
 
 /** Folds this away to no height as [fraction] runs from 0 to 1, fading as it goes. */
 private fun Modifier.collapseBy(slide: Boolean = false, fraction: () -> Float): Modifier =
@@ -1138,6 +1185,15 @@ fun NowPlayingScreen(
     val canvasRenderedState = remember(canvas?.url) { mutableStateOf(canvasReturning) }
     var canvasRendered by canvasRenderedState
     var canvasFrame by remember(canvas?.url) { mutableStateOf<ImageBitmap?>(null) }
+    // How bright the bottom of the clip is, read off each frame the mesh is
+    // already handed (every [MESH_REFRESH_MS]), for the ink and the scrim
+    // behind the controls. Off the main thread: it is a sort of a few
+    // thousand values.
+    var canvasFrameBand by remember(canvas?.url) { mutableStateOf<Float?>(null) }
+    LaunchedEffect(canvasFrame) {
+        val frame = canvasFrame ?: return@LaunchedEffect
+        canvasFrameBand = withContext(Dispatchers.Default) { frame.controlsBandLuminance() }
+    }
     // Spotify's phone presentation starts with the full control deck over its
     // video. It leaves on a Canvas tap, or after the optional idle timeout.
     var spotifyCanvasControlsOpen by remember(canvas?.url) { mutableStateOf(true) }
@@ -1757,9 +1813,16 @@ fun NowPlayingScreen(
     )
     val inkForcedDark = CanvasAudioFixes.lyricInkOf(canvasFixes, song.videoId, overCanvas = canvas != null && canvasRendered)
         ?.let { it == CanvasAudioFixes.LyricInk.DARK }
+    // What is behind the credits and controls: the clip's latest frame while
+    // it is the picture, else the sleeve. Its bottom band, not the whole of
+    // it, since a bright cover with a dark foot (or the reverse) is common.
+    val artControlsBand = rememberArtworkControlsBandLuminance(remoteArt, CARD_ART_PX)
+    val inkBand = canvasFrameBand?.takeIf { canvas != null && canvasRendered } ?: artControlsBand
     SideEffect {
         inkConditions.dim = inkDim
         inkConditions.forcedDark = inkForcedDark
+        inkConditions.band = inkBand
+        inkConditions.panelOpen = lyricsOpen || queueOpen
     }
     val canvasCompact = animateFloatAsState(
         targetValue = if (canvasCompactMode) 1f else 0f,
@@ -4148,6 +4211,16 @@ fun NowPlayingScreen(
                 }
 
                 // ---- Title + menu ----
+                // The scrim behind the credits and controls when the band
+                // they sit on is bright (see [LocalPlayerControlsScrim]):
+                // painted by the title row, which is drawn over the sleeve
+                // and under the deck, from just above it to the foot of the
+                // screen. Gone as the row collapses into the header.
+                val controlsScrim = LocalPlayerControlsScrim.current
+                // Only read while drawing the scrim, so a moving row redraws
+                // it and recomposes nothing.
+                var titleRowOrigin by remember { mutableStateOf(Offset.Zero) }
+                var titleRootSize by remember { mutableStateOf(IntSize.Zero) }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -4180,6 +4253,15 @@ fun NowPlayingScreen(
                             ) { placeable.placeRelative(start, 0) }
                         }
                         .height(HEADER_HEIGHT)
+                        .drawControlsScrim(
+                            alpha = { controlsScrim * (1f - p()) },
+                            rootOrigin = { titleRowOrigin },
+                            rootSize = { titleRootSize },
+                        )
+                        .onGloballyPositioned {
+                            titleRowOrigin = it.positionInRoot()
+                            titleRootSize = it.findRootCoordinates().size
+                        }
                         // Where the dismiss band ends — see its top on the
                         // artwork above. Taken from the row rather than added up
                         // from the sleeve so the gap between the two is inside

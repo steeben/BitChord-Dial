@@ -1,6 +1,8 @@
 package com.music.bitchord.ui.player
 
 import androidx.compose.animation.animateColorAsState
+import kotlin.math.roundToInt
+import androidx.compose.runtime.SideEffect
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -89,7 +91,28 @@ internal val PlayerInk: Color
 class PlayerInkConditions {
     var dim by mutableFloatStateOf(0f)
     var forcedDark by mutableStateOf<Boolean?>(null)
+
+    /**
+     * How bright the band behind the credits and controls is (see
+     * [com.music.bitchord.ui.theme.controlsBandLuminance]): off the playing Canvas or
+     * video's latest frame while one is showing, else off the sleeve. Null while unknown,
+     * which leaves the ink to the whole sleeve as before.
+     */
+    var band by mutableStateOf<Float?>(null)
+
+    /**
+     * Lyrics or the queue are up. Their text runs the height of the screen over the
+     * blurred sleeve, so the whole sleeve decides their ink, not the band at its foot.
+     */
+    var panelOpen by mutableStateOf(false)
 }
+
+/**
+ * How dark the scrim behind the player's credits and controls is, 0 to 1 (black at that
+ * alpha), as [ProvidePlayerInk] works it out from the band behind them. The player draws
+ * it from just above the title to the foot of the screen; see [controlsScrimAlpha].
+ */
+internal val LocalPlayerControlsScrim = compositionLocalOf { 0f }
 
 /**
  * How far the ink is pushed toward its pole (white for the light ink, black for the dark),
@@ -122,6 +145,11 @@ internal fun playerInk(alpha: Float): Color {
  * with dim, low-contrast text. A pick made for the song ([PlayerInkConditions.forcedDark])
  * overrides the sleeve either way.
  *
+ * On the main player, once the band behind the credits and controls is known
+ * ([PlayerInkConditions.band]), that band decides instead of the whole sleeve: light ink
+ * unless it is nearly white ([bandInkIsDark]), stood on a scrim that darkens with it
+ * ([LocalPlayerControlsScrim]). Lyrics and the queue keep the whole-sleeve rule.
+ *
  * A dimmed backdrop ([PlayerInkConditions.dim]) pushes the ink by the same amount: the
  * light ink that share of the way to white, the dark ink that share of the way to black,
  * and (through [playerInk]) either one's faded tones that share of the way to full
@@ -134,7 +162,13 @@ fun ProvidePlayerInk(
     content: @Composable () -> Unit,
 ) {
     val accent = LocalNowPlayingTint.current ?: MaterialTheme.colorScheme.primary
-    val dark = conditions?.forcedDark ?: playerInkIsDark(artLuminance)
+    val band = if (conditions == null || conditions.panelOpen) null else conditions.band
+    // The band's verdict is held between frames, so a clip hovering around the
+    // line doesn't flip the ink back and forth (see [bandInkIsDark]).
+    val bandWasDark = remember { mutableStateOf(false) }
+    val bandDark = band?.let { bandInkIsDark(it, bandWasDark.value) }
+    SideEffect { if (bandDark != null) bandWasDark.value = bandDark }
+    val dark = conditions?.forcedDark ?: bandDark ?: playerInkIsDark(artLuminance)
     val tint = if (dark) PLAYER_INK_TINT_BRIGHT else PLAYER_INK_TINT
     val darken = if (dark) PLAYER_INK_DARKEN else 0f
     val target = remember(accent, tint, darken) {
@@ -165,12 +199,65 @@ fun ProvidePlayerInk(
         tween(durationMillis = 900, easing = FastOutSlowInEasing),
         label = "playerInkPole",
     )
+    // Light ink over a bright band gets a darker floor to stand on instead of
+    // giving way to dark ink. None under dark ink, which wants the brightness,
+    // and less as the player's own dims (which already darken the backdrop) come in.
+    val scrimTarget = if (dark || band == null) {
+        0f
+    } else {
+        controlsScrimAlpha(band) * (1f - 2f * (conditions?.dim ?: 0f)).coerceIn(0f, 1f)
+    }
+    val scrim by animateFloatAsState(
+        targetValue = scrimTarget,
+        animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+        label = "playerControlsScrim",
+    )
     CompositionLocalProvider(
         LocalPlayerInk provides lerp(ink, pole.copy(alpha = ink.alpha), lift),
         LocalPlayerInkLift provides lift,
+        LocalPlayerControlsScrim provides scrim,
         content = content,
     )
 }
+
+/**
+ * Whether a controls band of [band] brightness calls for dark ink, given what it called
+ * for last time ([wasDark]). The light ink, stood on [controlsScrimAlpha]'s scrim, reads
+ * over everything short of a nearly white band, so only that goes dark: from
+ * [BAND_DARK_FROM] up, and it stays dark until the band drops below [BAND_LIGHT_BELOW].
+ * The gap between the two is what keeps a moving clip from flickering the ink.
+ */
+internal fun bandInkIsDark(band: Float, wasDark: Boolean): Boolean =
+    if (wasDark) band >= BAND_LIGHT_BELOW else band >= BAND_DARK_FROM
+
+/**
+ * The scrim behind light ink over a band of [band] brightness: none over a dark band,
+ * easing up from [SCRIM_FROM] to [CONTROLS_SCRIM_MAX] at [SCRIM_FULL_AT]. Rounded to a few
+ * steps so a clip's frame-to-frame wobble doesn't re-key the animation.
+ */
+internal fun controlsScrimAlpha(band: Float): Float {
+    val t = ((band - SCRIM_FROM) / (SCRIM_FULL_AT - SCRIM_FROM)).coerceIn(0f, 1f)
+    val eased = t * t * (3f - 2f * t)
+    return (CONTROLS_SCRIM_MAX * eased * 50f).roundToInt() / 50f
+}
+
+/** Band brightness (relative luminance, linear light) where dark ink takes over: near white. */
+private const val BAND_DARK_FROM = 0.80f
+
+/** ...and where it hands back to light ink, once it has. */
+private const val BAND_LIGHT_BELOW = 0.68f
+
+/** Band brightness below which light ink needs no scrim at all (an sRGB grey of about 125). */
+private const val SCRIM_FROM = 0.20f
+
+/** Band brightness where the scrim reaches [CONTROLS_SCRIM_MAX]. */
+private const val SCRIM_FULL_AT = 0.65f
+
+/**
+ * The darkest the scrim gets. Over a band at [BAND_DARK_FROM] it still leaves white text
+ * at about 4.5:1, the contrast body text is asked for.
+ */
+private const val CONTROLS_SCRIM_MAX = 0.50f
 
 /** Whether a sleeve of [artLuminance] is white enough to switch the player to dark ink. */
 internal fun playerInkIsDark(artLuminance: Float?): Boolean =

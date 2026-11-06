@@ -27,6 +27,28 @@ class BrightArtTest {
     }
 
     @Test
+    fun bandInkGoesDarkOnlyNearWhiteAndHoldsAcrossTheGap() {
+        // From light: only a near-white band flips it.
+        assertEquals(false, bandInkIsDark(0.30f, wasDark = false))
+        assertEquals(false, bandInkIsDark(0.75f, wasDark = false))
+        assertEquals(true, bandInkIsDark(0.80f, wasDark = false))
+        // From dark: it stays dark through the gap, so a wobbling clip can't flicker it.
+        assertEquals(true, bandInkIsDark(0.75f, wasDark = true))
+        assertEquals(true, bandInkIsDark(0.68f, wasDark = true))
+        assertEquals(false, bandInkIsDark(0.67f, wasDark = true))
+    }
+
+    @Test
+    fun controlsScrimRisesWithTheBand() {
+        assertEquals(0f, controlsScrimAlpha(0.05f), 0.0001f)
+        assertEquals(0f, controlsScrimAlpha(0.20f), 0.0001f)
+        val mid = controlsScrimAlpha(0.42f)
+        assertTrue("mid was $mid", mid > 0.1f && mid < 0.4f)
+        assertEquals(0.50f, controlsScrimAlpha(0.65f), 0.0001f)
+        assertEquals(0.50f, controlsScrimAlpha(0.95f), 0.0001f)
+    }
+
+    @Test
     fun meshPrefersColourOverCommonWhites() {
         val swatches = listOf(
             Color(0xFFF2F2F2), // paper, most common

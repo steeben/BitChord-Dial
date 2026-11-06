@@ -190,6 +190,17 @@ fun rememberArtworkTopBandLuminance(
 ): Float? = rememberArtworkSeed(imageUrl, artPx)?.topBandLuminance
 
 /**
+ * How bright the artwork's bottom band is ([controlsBandLuminance]): the part of the
+ * sleeve the player's credits and controls sit over, and that the backdrop under them is
+ * coloured from. Null while the decode is still on its way.
+ */
+@Composable
+fun rememberArtworkControlsBandLuminance(
+    imageUrl: String?,
+    artPx: Int = CARD_ART_PX,
+): Float? = rememberArtworkSeed(imageUrl, artPx)?.controlsBandLuminance
+
+/**
  * The mean relative luminance of the whole sleeve, off the same cached decode
  * as [rememberArtworkTopBandLuminance]: how white the artwork is overall,
  * which the player leans its text toward the accent by.
@@ -251,6 +262,7 @@ private data class Seed(
     val edge: Color,
     val topBandLuminance: Float,
     val luminance: Float,
+    val controlsBandLuminance: Float,
 )
 
 private fun seedOf(bitmap: ImageBitmap): Seed? {
@@ -282,6 +294,7 @@ private fun seedOf(bitmap: ImageBitmap): Seed? {
         edge = bitmap.bottomEdgeColor(),
         topBandLuminance = bitmap.topBandRelativeLuminance(),
         luminance = bitmap.relativeLuminance(),
+        controlsBandLuminance = bitmap.controlsBandLuminance(),
     )
 }
 
@@ -295,6 +308,7 @@ private fun ArtworkKeyColors.toSeed() = Seed(
     edge = background,
     topBandLuminance = relativeLuminance(background.toArgb()),
     luminance = relativeLuminance(background.toArgb()),
+    controlsBandLuminance = relativeLuminance(background.toArgb()),
 )
 
 private const val SWATCH_COUNT = 24
@@ -350,6 +364,44 @@ private fun ImageBitmap.relativeLuminance(): Float {
     readPixels(pixels, startX = 0, startY = 0, width = width, height = height)
     return averageRelativeLuminance(pixels)
 }
+
+/**
+ * How bright the bottom [CONTROLS_BAND] of a picture is, for text laid over it: the
+ * [CONTROLS_BAND_PERCENTILE] relative luminance of its pixels rather than their mean, so
+ * a band that is half white and half black reads as bright (the text would be lost over
+ * the white half) instead of averaging out to a grey that suits either ink.
+ *
+ * Works on a sleeve or on a frame grabbed from a Canvas or music video; read off the main
+ * thread, it is a sort of a few thousand values at the sizes those come in at.
+ */
+fun ImageBitmap.controlsBandLuminance(): Float {
+    val band = (height * CONTROLS_BAND).toInt().coerceIn(1, height)
+    val pixels = IntArray(width * band)
+    readPixels(pixels, startX = 0, startY = height - band, width = width, height = band)
+    return bandBrightness(pixels)
+}
+
+/** The [CONTROLS_BAND_PERCENTILE] relative luminance of [pixels]; 0 for none. */
+internal fun bandBrightness(pixels: IntArray): Float {
+    if (pixels.isEmpty()) return 0f
+    // Strided: the answer is a percentile, and every other pixel of a decode
+    // this small gives the same one.
+    val step = if (pixels.size > 4096) 2 else 1
+    val values = FloatArray((pixels.size + step - 1) / step) { relativeLuminance(pixels[it * step]) }
+    values.sort()
+    return values[((values.size - 1) * CONTROLS_BAND_PERCENTILE).toInt()]
+}
+
+/**
+ * The share of a picture's height, from its bottom edge, that the controls band is read
+ * from. On a phone the full-bleed banner ends behind the credits and the deck sits on
+ * the backdrop coloured from that same bottom edge, so the bottom third is what is
+ * behind them; a card-sized sleeve's backdrop is coloured from it too.
+ */
+private const val CONTROLS_BAND = 0.35f
+
+/** See [bandBrightness]: 70% of the band is at or below this brightness. */
+private const val CONTROLS_BAND_PERCENTILE = 0.70f
 
 /** WCAG relative luminance: average in linear light, never gamma-encoded RGB. */
 internal fun averageRelativeLuminance(pixels: IntArray): Float {
