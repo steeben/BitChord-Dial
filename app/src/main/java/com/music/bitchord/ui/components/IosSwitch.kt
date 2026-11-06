@@ -3,6 +3,7 @@ package com.music.bitchord.ui.components
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -21,11 +22,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
@@ -74,14 +77,7 @@ fun IosSwitch(
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
 
-    // The glass transparency option, measured from where it ships: denser
-    // glass gives a denser switch, clearer glass a clearer one.
-    val transparency by CustomizationSettings.glassTransparency.collectAsStateWithLifecycle()
-    val density = if (LocalLiquidGlassEnabled.current && LocalGlassFollowsOptions.current) {
-        ((1f - transparency) / (1f - CustomizationSettings.DEFAULT_GLASS_TRANSPARENCY)).coerceIn(0.55f, 1.3f)
-    } else {
-        1f
-    }
+    val density = rememberFrostedGlassDensity()
 
     val position by animateFloatAsState(
         targetValue = if (checked) 1f else 0f,
@@ -102,8 +98,7 @@ fun IosSwitch(
         targetValue = when {
             checked -> (if (dark) Color(0xFF30D158) else Color(0xFF34C759))
                 .copy(alpha = (ON_TRACK_ALPHA * density).coerceIn(0f, 1f))
-            dark -> Color.White.copy(alpha = (0.16f * density).coerceIn(0f, 1f))
-            else -> Color.Black.copy(alpha = (0.09f * density).coerceIn(0f, 1f))
+            else -> frostedTrackTint(dark, density)
         },
         label = "iosSwitchTrack",
     )
@@ -168,8 +163,41 @@ fun IosSwitch(
     }
 }
 
-/** How opaque the green is at the shipped glass transparency: enough to read as on, not solid. */
-private const val ON_TRACK_ALPHA = 0.78f
+/**
+ * How dense the frosted controls (this switch, the settings' segmented
+ * selectors) are drawn: the glass transparency option, measured from where it
+ * ships, while Liquid Glass is on and follows the options; 1 otherwise.
+ * Denser glass gives a denser control, clearer glass a clearer one.
+ */
+@Composable
+internal fun rememberFrostedGlassDensity(): Float {
+    val transparency by CustomizationSettings.glassTransparency.collectAsStateWithLifecycle()
+    return if (LocalLiquidGlassEnabled.current && LocalGlassFollowsOptions.current) {
+        ((1f - transparency) / (1f - CustomizationSettings.DEFAULT_GLASS_TRANSPARENCY)).coerceIn(0.55f, 1.3f)
+    } else {
+        1f
+    }
+}
+
+/**
+ * The switch's frosted film on any shape: a see-through [tint], the sheen
+ * across the top and a light rim. Plain drawing, no backdrop capture, so a
+ * page full of them costs nothing extra per scroll frame.
+ */
+internal fun Modifier.frostedGlassFill(tint: Color, shape: Shape, dark: Boolean): Modifier =
+    this
+        .clip(shape)
+        .background(tint, shape)
+        .background(TRACK_SHEEN, shape)
+        .border(GLASS_EDGE_WIDTH, if (dark) Color.White.copy(alpha = 0.16f) else Color.White.copy(alpha = 0.55f), shape)
+
+/** The tint of a frosted track that is off, or empty: a faint film either side of the theme. */
+internal fun frostedTrackTint(dark: Boolean, density: Float): Color =
+    if (dark) Color.White.copy(alpha = (0.16f * density).coerceIn(0f, 1f))
+    else Color.Black.copy(alpha = (0.09f * density).coerceIn(0f, 1f))
+
+/** How opaque a frosted "on" fill is at the shipped glass transparency: enough to read as on, not solid. */
+internal const val ON_TRACK_ALPHA = 0.78f
 
 /** The light the track catches across its top, as the glass buttons do. */
 private val TRACK_SHEEN = Brush.verticalGradient(

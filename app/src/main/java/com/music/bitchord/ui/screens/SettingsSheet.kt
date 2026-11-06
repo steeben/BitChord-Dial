@@ -198,7 +198,11 @@ import com.music.bitchord.playback.AudioOutputStatus
 import com.music.bitchord.playback.audio.bitperfect.BitPerfectOutput
 import com.music.bitchord.data.settings.AutomixPerformanceMode
 import com.music.bitchord.R
+import com.music.bitchord.ui.components.ON_TRACK_ALPHA
+import com.music.bitchord.ui.components.frostedGlassFill
+import com.music.bitchord.ui.components.frostedTrackTint
 import com.music.bitchord.ui.components.lightweightLiquidGlass
+import com.music.bitchord.ui.components.rememberFrostedGlassDensity
 import com.music.bitchord.ui.components.SquareLogo
 import com.music.bitchord.ui.theme.LocalNowPlayingTint
 import com.music.bitchord.ui.theme.Tiny5Lcd
@@ -3699,6 +3703,14 @@ internal fun SegmentedControl(
 ) {
     val haptics = LocalHapticFeedback.current
     val trackShape = RoundedCornerShape(10.dp)
+    val pillShape = RoundedCornerShape(8.dp)
+    // Frosted like the settings' switches: a see-through track with a sheen
+    // and a light rim, and a see-through accent pill over it, rather than a
+    // solid grey slab with a solid accent block in it.
+    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val glassDensity = rememberFrostedGlassDensity()
+    val pillTint = MaterialTheme.colorScheme.primary
+        .copy(alpha = (ON_TRACK_ALPHA * glassDensity).coerceIn(0f, 1f))
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -3709,7 +3721,7 @@ internal fun SegmentedControl(
                         fallbackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
                     )
                 } else {
-                    Modifier.clip(trackShape).background(MaterialTheme.colorScheme.outline)
+                    Modifier.frostedGlassFill(frostedTrackTint(dark, glassDensity), trackShape, dark)
                 },
             )
             // Enough of a margin for the track to read as a track. At 2dp the
@@ -3722,11 +3734,7 @@ internal fun SegmentedControl(
         options.forEachIndexed { index, label ->
             val chosen = index == selectedIndex
             val pill by animateColorAsState(
-                targetValue = if (chosen) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    Color.Transparent
-                },
+                targetValue = if (chosen) pillTint else pillTint.copy(alpha = 0f),
                 animationSpec = tween(160),
                 label = "segmentPill",
             )
@@ -3742,8 +3750,13 @@ internal fun SegmentedControl(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(pill)
+                    .then(
+                        if (pill.alpha > 0f) {
+                            Modifier.frostedGlassFill(pill, pillShape, dark)
+                        } else {
+                            Modifier.clip(pillShape)
+                        },
+                    )
                     .clickable(enabled = enabled) {
                         if (!chosen) {
                             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
