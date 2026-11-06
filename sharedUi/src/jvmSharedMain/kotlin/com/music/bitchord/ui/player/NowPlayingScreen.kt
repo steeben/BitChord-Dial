@@ -1022,6 +1022,11 @@ fun NowPlayingScreen(
     // Wider players, and the phone turned sideways, keep the 16:9 picture.
     val videoAsCanvas = musicVideo && playerFillsWindow(windowWidth)
     val videoMode = musicVideo && !videoAsCanvas
+    // The two-column player — see [landscapePlayerAvailable]. Asked this early
+    // because it runs a Canvas (or a music video standing in for one) under
+    // the whole screen, so the stand-in is looked for here as on a phone.
+    val landscapeLayout = landscapePlayerAvailable(windowWidth, windowHeight)
+    val clipBehindPlayer = playerFillsWindow(windowWidth) || landscapeLayout
     // Fixes the listener made from the ⋯ menu — see [CanvasAudioFixes].
     val canvasFixes by CanvasAudioFixes.state.collectAsStateWithLifecycle()
     val videoPictures by VideoCanvases.pictures.collectAsStateWithLifecycle()
@@ -1033,9 +1038,9 @@ fun NowPlayingScreen(
     // everything: they chose it over whatever was there.
     val canvasNeeded = canvasLookup.canvas == null || song.videoId in canvasFixes.hiddenCanvas
     val pictureVideoId = canvasFixes.pairedVideo[song.videoId]?.takeIf {
-        !musicVideo && canvasLookup.allowed && playerFillsWindow(windowWidth)
+        !musicVideo && canvasLookup.allowed && clipBehindPlayer
     } ?: videoPictures[song.videoId]?.takeIf {
-        !musicVideo && canvasLookup.allowed && playerFillsWindow(windowWidth) &&
+        !musicVideo && canvasLookup.allowed && clipBehindPlayer &&
             song.videoId !in canvasFixes.hiddenVideoCanvas &&
             song.videoId !in canvasFixes.albumArtCanvas &&
             canvasNeeded &&
@@ -1066,6 +1071,14 @@ fun NowPlayingScreen(
         if (tall != null && playerFillsWindow(windowWidth)) {
             it.copy(url = tall, fallbackUrl = it.url, portraitUrl = null)
         } else it
+    }
+    // In landscape a Canvas, or a music video standing in for one, runs under
+    // the whole screen while the sleeve keeps the still cover. An animated
+    // cover (the square motion artwork Apple and others publish) is artwork,
+    // not a backdrop, so it stays in the sleeve.
+    val landscapeBackdropClip = canvas?.takeIf {
+        landscapeLayout && !videoMode &&
+            (it.source == CanvasSource.SPOTIFY || it.musicVideoId != null)
     }
     // Told to the ⋯ menu, so "fix mismatched Canvas/audio" knows what is on screen.
     SideEffect {
@@ -1718,6 +1731,9 @@ fun NowPlayingScreen(
             else -> 0f
         },
         if (lyricsOpen || queueOpen) SUBVIEW_INK_DIM else 0f,
+        if (landscapeBackdropClip != null && canvasRendered) {
+            landscapeCanvasDim(panelOpen = lyricsOpen || queueOpen)
+        } else 0f,
     )
     val inkForcedDark = CanvasAudioFixes.lyricInkOf(canvasFixes, song.videoId, overCanvas = canvas != null && canvasRendered)
         ?.let { it == CanvasAudioFixes.LyricInk.DARK }
@@ -2126,7 +2142,7 @@ fun NowPlayingScreen(
     // gesture exist to let one tall column be the player, the lyrics and the
     // queue in turn, and in landscape none of them has anything to do — the
     // sleeve never has to get out of anything's way.
-    val landscape = landscapePlayerAvailable(windowWidth, windowHeight)
+    val landscape = landscapeLayout
     // Tablet-sized players use the full-cover blur in all three states. On a
     // phone only the lyrics and queue replace the main player's seam-aware,
     // reflected mesh; the main player deliberately keeps its existing look.
@@ -2381,8 +2397,27 @@ fun NowPlayingScreen(
                 },
                 background = { backgroundModifier ->
                     // The whole screen is the sheets' frost source: there is
-                    // no full-bleed banner here to be it instead.
-                    fullArtworkBlurContent(backgroundModifier.hazeSource(playerHaze))
+                    // no full-bleed banner here to be it instead. The clip and
+                    // its dim are recorded with it, so the glass over the
+                    // player sees the video as dim as the screen shows it.
+                    Box(backgroundModifier.hazeSource(playerHaze)) {
+                        fullArtworkBlurContent(Modifier.fillMaxSize())
+                        landscapeBackdropClip?.let { clip ->
+                            key(clip.url) {
+                                LandscapeCanvasBackdrop(
+                                    canvas = clip,
+                                    isPlaying = isPlaying,
+                                    rendered = canvasRendered,
+                                    panelOpen = panelOpen,
+                                    onRenderedChange = { canvasRendered = it },
+                                    pausedForTransition = dockMoving,
+                                    // A TextureView doesn't reliably take the
+                                    // fade from a Compose layer around it.
+                                    presentationAlpha = dockFade,
+                                )
+                            }
+                        }
+                    }
                 },
                 artwork = { artworkModifier ->
                     LandscapeArtwork(
@@ -2390,8 +2425,10 @@ fun NowPlayingScreen(
                         artLoaded = art.loaded,
                         onArtState = art::onState,
                         outgoingArt = { OutgoingArtwork(art, Modifier.fillMaxSize()) },
-                        canvas = canvas,
-                        canvasRendered = canvasRendered,
+                        // A Canvas playing behind the player leaves the
+                        // sleeve its still cover.
+                        canvas = canvas?.takeIf { landscapeBackdropClip == null },
+                        canvasRendered = canvasRendered && landscapeBackdropClip == null,
                         isPlaying = isPlaying,
                         onCanvasRenderedChange = { canvasRendered = it },
                         // A clip decoding behind a player on its way to the

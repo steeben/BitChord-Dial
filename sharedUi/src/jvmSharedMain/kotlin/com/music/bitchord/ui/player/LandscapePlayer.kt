@@ -8,6 +8,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -350,6 +351,67 @@ internal fun LandscapeArtwork(
             }
         }
         overlay()
+    }
+}
+
+/** The flat dim over a landscape backdrop clip with the player up. */
+private const val LANDSCAPE_CANVAS_DIM = 0.38f
+
+/** The heavier dim over it with the lyrics or the queue open. */
+private const val LANDSCAPE_CANVAS_PANEL_DIM = 0.58f
+
+/** How long the backdrop's dim takes to follow a pane being turned. */
+private const val LANDSCAPE_CANVAS_DIM_MS = 260
+
+/**
+ * How dark the landscape backdrop clip is laid under the player, which is
+ * also how much the player's ink brightens over it.
+ */
+internal fun landscapeCanvasDim(panelOpen: Boolean): Float =
+    if (panelOpen) LANDSCAPE_CANVAS_PANEL_DIM else LANDSCAPE_CANVAS_DIM
+
+/**
+ * A Canvas, or a music video standing in for one, run under the whole
+ * landscape player: cropped to fill the window behind both columns, with a
+ * flat dim over it so the credits, the lyrics and the queue stay readable.
+ *
+ * The sleeve keeps the still cover (or an animated one) meanwhile — see
+ * [LandscapeArtwork]. Until the clip's first frame the backdrop under it,
+ * the cover's blur, is what shows, so nothing goes dark waiting for it.
+ */
+@Composable
+internal fun LandscapeCanvasBackdrop(
+    canvas: CanvasArtwork,
+    isPlaying: Boolean,
+    /** Whether the clip has a frame on screen. */
+    rendered: Boolean,
+    panelOpen: Boolean,
+    onRenderedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    pausedForTransition: Boolean = false,
+    presentationAlpha: () -> Float = { 1f },
+) {
+    val dim by animateFloatAsState(
+        targetValue = if (rendered) landscapeCanvasDim(panelOpen) else 0f,
+        animationSpec = tween(LANDSCAPE_CANVAS_DIM_MS),
+        label = "landscapeCanvasDim",
+    )
+    Box(modifier = modifier.fillMaxSize()) {
+        CanvasArtworkPlayer(
+            canvas = canvas,
+            isPlaying = isPlaying,
+            contentMode = CanvasContentMode.CROP,
+            pausedForTransition = pausedForTransition,
+            presentationAlpha = presentationAlpha,
+            onRenderedChanged = onRenderedChange,
+            modifier = Modifier.fillMaxSize(),
+        )
+        Box(
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer { alpha = dim * presentationAlpha() }
+                .background(Color.Black),
+        )
     }
 }
 
