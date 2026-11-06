@@ -191,4 +191,13 @@
     <string name="song_fix_restore_details">Restore original details</string>
     <string name="song_fix_restore_details_detail">Back to “%1$s”</string>
     <string name="song_fix_details_restored">Original details restored</string>
+    <string name="animated_art_priority_caption">The first one a song has is what plays. Use the arrows to change the order.</string>
+    <string name="animated_art_cover">Animated album art</string>
+    <string name="animated_art_cover_detail">Motion covers from Apple Music, Tidal and the community index</string>
+    <string name="animated_art_canvas">Canvases</string>
+    <string name="animated_art_canvas_detail">Spotify Canvas clips, once Spotify is set up</string>
+    <string name="animated_art_music_video">Music videos</string>
+    <string name="animated_art_music_video_detail">The song’s music video, shown as its Canvas</string>
+    <string name="animated_art_move_up">Move up</string>
+    <string name="animated_art_move_down">Move down</string>
 </resources>

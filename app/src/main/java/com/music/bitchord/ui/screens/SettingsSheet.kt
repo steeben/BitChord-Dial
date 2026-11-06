@@ -1257,6 +1257,15 @@ fun SettingsScreen(
                         onCheckedChange = AppSettings::setCanvasOverCellular,
                     )
                 }
+                row(
+                    stringResource(R.string.animated_art_cover),
+                    stringResource(R.string.animated_art_canvas),
+                    stringResource(R.string.animated_art_music_video),
+                    "priority", "order", "canvas", "video",
+                    divided = false,
+                ) {
+                    AnimatedArtPriorityRows()
+                }
                 val spotifyCanvasTitle = stringResource(R.string.integrate_spotify_canvas)
                 row(spotifyCanvasTitle, "spotify", "canvas", divided = false) {
                     Row(

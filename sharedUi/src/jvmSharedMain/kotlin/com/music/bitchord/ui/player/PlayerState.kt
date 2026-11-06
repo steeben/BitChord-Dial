@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import coil3.request.ImageRequest
 import com.music.bitchord.data.model.CARD_ART_PX
 import com.music.bitchord.data.canvas.CanvasArtwork
+import com.music.bitchord.data.canvas.kind
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.model.artworkAt
 import kotlin.math.abs
@@ -61,7 +62,10 @@ internal class CanvasLookup(
 internal fun rememberCanvasLookup(song: Song): CanvasLookup {
     val canvasEnabled by PlayerSettings.animatedCanvas.collectAsStateWithLifecycle()
     val canvasOverCellular by PlayerSettings.canvasOverCellular.collectAsStateWithLifecycle()
-    val prioritizeSpotifyCanvas by PlayerSettings.prioritizeSpotifyCanvas.collectAsStateWithLifecycle()
+    // The kinds asked for and their order, from Appearance settings: a change
+    // there is a new question, so the lookup runs again.
+    val animatedArt by PlayerSettings.animatedArt.collectAsStateWithLifecycle()
+    val clipOrder = animatedArt.clipOrder
     val meteredConnection by PlayerSettings.meteredConnection.collectAsStateWithLifecycle()
     // The switch turns the feature off outright; this is the narrower "not
     // over cellular" case — see [PlayerSettings.canvasOverCellular] for why a
@@ -80,7 +84,7 @@ internal fun rememberCanvasLookup(song: Song): CanvasLookup {
     // Picked from the ⋯ menu: the album's animated cover instead of the track's clip.
     val canvasFixes by CanvasAudioFixes.state.collectAsStateWithLifecycle()
     val albumArt = song.videoId in canvasFixes.albumArtCanvas
-    LaunchedEffect(song.videoId, song.albumName, canvasAllowedNow, prioritizeSpotifyCanvas, albumArt) {
+    LaunchedEffect(song.videoId, song.albumName, canvasAllowedNow, clipOrder, albumArt) {
         if (!canvasAllowedNow) {
             canvas = null
             settled = true
@@ -110,7 +114,9 @@ internal fun rememberCanvasLookup(song: Song): CanvasLookup {
         settled = true
     }
 
-    return CanvasLookup(canvas, settled, canvasAllowedNow)
+    // A clip saved with a download, or carried over from before the switch
+    // was turned off, still answers to the kinds allowed now.
+    return CanvasLookup(canvas?.takeIf { it.kind in clipOrder }, settled, canvasAllowedNow)
 }
 
 /**

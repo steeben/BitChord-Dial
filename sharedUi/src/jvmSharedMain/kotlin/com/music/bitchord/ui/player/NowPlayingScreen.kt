@@ -163,6 +163,8 @@ import com.music.bitchord.ui.icons.BitChordIcons
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.data.canvas.CanvasArtwork
 import com.music.bitchord.data.canvas.CanvasSource
+import com.music.bitchord.data.canvas.AnimatedArtKind
+import com.music.bitchord.data.canvas.kind
 import com.music.bitchord.data.AudioOnlyVideos
 import com.music.bitchord.data.CanvasAudioFixes
 import com.music.bitchord.data.VideoCanvases
@@ -1020,7 +1022,11 @@ fun NowPlayingScreen(
     // On a phone held upright the music video is the Canvas: cropped to the
     // whole screen behind the controls, with the Canvas's dim, deck and sweep.
     // Wider players, and the phone turned sideways, keep the 16:9 picture.
-    val videoAsCanvas = musicVideo && playerFillsWindow(windowWidth)
+    // Off in Appearance settings, a music video keeps its 16:9 picture
+    // instead of filling the screen as the Canvas.
+    val animatedArt by PlayerSettings.animatedArt.collectAsStateWithLifecycle()
+    val videoArtAllowed = animatedArt.allows(AnimatedArtKind.MUSIC_VIDEO)
+    val videoAsCanvas = musicVideo && playerFillsWindow(windowWidth) && videoArtAllowed
     val videoMode = musicVideo && !videoAsCanvas
     // The two-column player — see [landscapePlayerAvailable]. Asked this early
     // because it runs a Canvas (or a music video standing in for one) under
@@ -1031,30 +1037,35 @@ fun NowPlayingScreen(
     val canvasFixes by CanvasAudioFixes.state.collectAsStateWithLifecycle()
     val videoPictures by VideoCanvases.pictures.collectAsStateWithLifecycle()
     val canvasLookup = rememberCanvasLookup(song)
-    // A song that replaced a music video keeps that video's picture as its
-    // Canvas when it has none of its own — once the search for one is over,
-    // so a clip found a moment later never pushes the video out mid-play.
-    // A music video the listener picked by hand from the ⋯ menu outranks
-    // everything: they chose it over whatever was there.
-    val canvasNeeded = canvasLookup.canvas == null || song.videoId in canvasFixes.hiddenCanvas
+    // A song's music video can stand in as its Canvas. Where it ranks against
+    // the animated cover and Spotify's Canvas is the listener's, from
+    // Appearance settings: ranked below a kind still being searched for, it
+    // waits for that search to end, so a clip found a moment later never
+    // pushes the video out mid-play. A music video the listener picked by
+    // hand from the ⋯ menu outranks everything: they chose it over whatever
+    // was there.
+    val ownClip = canvasLookup.canvas?.takeUnless { song.videoId in canvasFixes.hiddenCanvas }
+    val videoStandInWanted = !musicVideo && canvasLookup.allowed &&
+        song.videoId !in canvasFixes.hiddenVideoCanvas &&
+        song.videoId !in canvasFixes.albumArtCanvas &&
+        animatedArt.videoOutranks(ownClip?.kind, canvasLookup.settled)
     val pictureVideoId = canvasFixes.pairedVideo[song.videoId]?.takeIf {
-        !musicVideo && canvasLookup.allowed && clipBehindPlayer
+        !musicVideo && canvasLookup.allowed && clipBehindPlayer && videoArtAllowed
     } ?: videoPictures[song.videoId]?.takeIf {
-        !musicVideo && canvasLookup.allowed && clipBehindPlayer &&
-            song.videoId !in canvasFixes.hiddenVideoCanvas &&
-            song.videoId !in canvasFixes.albumArtCanvas &&
-            canvasNeeded &&
-            canvasLookup.settled
+        videoStandInWanted && clipBehindPlayer
     }
-    // No Canvas of its own (or the one found was marked wrong): look for its
-    // music video to stand in, once the search for a Canvas is over.
-    LaunchedEffect(song.videoId, canvasLookup.settled, canvasNeeded, canvasLookup.allowed) {
-        if (!musicVideo && canvasLookup.allowed && canvasLookup.settled && canvasNeeded &&
-            song.videoId !in canvasFixes.albumArtCanvas
-        ) {
+    // Look for its music video once it would win the slot: right away when it
+    // ranks first, otherwise once the clips ranked above it have come up empty.
+    var videoSearched by remember(song.videoId) { mutableStateOf(false) }
+    LaunchedEffect(song.videoId, videoStandInWanted) {
+        if (videoStandInWanted) {
             VideoCanvases.findFor(song)
+            videoSearched = true
         }
     }
+    // A clip the music video outranks is held back while that search runs,
+    // rather than showing for a moment and being swapped out.
+    val holdClip = videoStandInWanted && clipBehindPlayer && !videoSearched
     val canvas = if (videoAsCanvas || pictureVideoId != null) {
         val pictureId = pictureVideoId ?: song.videoId
         remember(pictureId) {
@@ -1064,7 +1075,7 @@ fun NowPlayingScreen(
                 musicVideoId = pictureId,
             )
         }
-    } else canvasLookup.canvas?.takeUnless { musicVideo || song.videoId in canvasFixes.hiddenCanvas }?.let {
+    } else ownClip?.takeUnless { musicVideo || holdClip }?.let {
         // Apple's 3:4 rendition runs under the whole phone screen, the way its
         // own player shows it; the square one stays the fallback.
         val tall = it.portraitUrl

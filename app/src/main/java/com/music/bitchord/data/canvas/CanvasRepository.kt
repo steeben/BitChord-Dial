@@ -85,25 +85,23 @@ object CanvasRepository {
         // a second time. [reusable] decides when the earlier answer still
         // stands instead.
         val album = song.albumName
-        val spotifyFirst = AppSettings.prioritizeSpotifyCanvas.value
-        val key = cacheKey("song|${song.videoId}", spotifyFirst)
+        val kinds = AppSettings.animatedArt.value.clipOrder
+        val key = cacheKey("song|${song.videoId}", kinds)
 
         return resolve(key, album != null) {
-            if (spotifyFirst) {
-                firstHit(
-                    { SpotifyCanvas.search(title, artist, album) },
-                    { AppleMusicCanvas.search(title, artist, album) },
-                    { TidalCanvas.search(title, artist, album) },
-                    { CommunityCanvas.search(title, artist, album) },
-                ) { it.matches(title, artist, album) }
-            } else {
-                firstHit(
-                    { AppleMusicCanvas.search(title, artist, album) },
-                    { TidalCanvas.search(title, artist, album) },
-                    { CommunityCanvas.search(title, artist, album) },
-                    { SpotifyCanvas.search(title, artist, album) },
-                ) { it.matches(title, artist, album) }
-            }
+            firstHit(
+                *kinds.flatMap<AnimatedArtKind, suspend () -> CanvasArtwork?> { kind ->
+                    when (kind) {
+                        AnimatedArtKind.ANIMATED_COVER -> listOf<suspend () -> CanvasArtwork?>(
+                            { AppleMusicCanvas.search(title, artist, album) },
+                            { TidalCanvas.search(title, artist, album) },
+                            { CommunityCanvas.search(title, artist, album) },
+                        )
+                        AnimatedArtKind.CANVAS -> listOf<suspend () -> CanvasArtwork?>({ SpotifyCanvas.search(title, artist, album) })
+                        AnimatedArtKind.MUSIC_VIDEO -> emptyList<suspend () -> CanvasArtwork?>()
+                    }
+                }.toTypedArray(),
+            ) { it.matches(title, artist, album) }
         }
     }
 
@@ -115,10 +113,7 @@ object CanvasRepository {
      * through the settling delay again to arrive back at the same clip.
      */
     fun cached(song: Song): CanvasArtwork? {
-        val key = cacheKey(
-            base = "song|${song.videoId}",
-            spotifyFirst = AppSettings.prioritizeSpotifyCanvas.value,
-        )
+        val key = cacheKey("song|${song.videoId}", AppSettings.animatedArt.value.clipOrder)
         return synchronized(cache) { cache[key]?.artwork }
     }
 
@@ -135,7 +130,7 @@ object CanvasRepository {
     /** [albumCanvasFor] from the cache alone. */
     fun cachedAlbum(song: Song): CanvasArtwork? {
         val album = song.albumName?.cleaned()?.takeIf { it.isNotBlank() } ?: return null
-        val key = cacheKey("album|$album|${song.artist.cleaned()}", AppSettings.prioritizeSpotifyCanvas.value)
+        val key = cacheKey("album|$album|${song.artist.cleaned()}", AppSettings.animatedArt.value.clipOrder)
         return synchronized(cache) { cache[key]?.artwork }
     }
 
@@ -152,29 +147,30 @@ object CanvasRepository {
         val credit = artist.cleaned()
         if (name.isBlank() || credit.isBlank()) return null
 
-        val spotifyFirst = AppSettings.prioritizeSpotifyCanvas.value
-        return resolve(cacheKey("album|$name|$credit", spotifyFirst), withAlbum = true) {
-            if (spotifyFirst) {
-                firstHit(
-                    { SpotifyCanvas.searchAlbum(name, credit) },
-                    { AppleMusicCanvas.searchAlbum(name, credit) },
-                    { TidalCanvas.searchAlbum(name, credit) },
-                    { CommunityCanvas.searchAlbum(name, credit) },
-                ) { it.matches(name, credit, name) }
-            } else {
-                firstHit(
-                    { AppleMusicCanvas.searchAlbum(name, credit) },
-                    { TidalCanvas.searchAlbum(name, credit) },
-                    { CommunityCanvas.searchAlbum(name, credit) },
-                    { SpotifyCanvas.searchAlbum(name, credit) },
-                ) { it.matches(name, credit, name) }
-            }
+        val kinds = AppSettings.animatedArt.value.clipOrder
+        return resolve(cacheKey("album|$name|$credit", kinds), withAlbum = true) {
+            firstHit(
+                *kinds.flatMap<AnimatedArtKind, suspend () -> CanvasArtwork?> { kind ->
+                    when (kind) {
+                        AnimatedArtKind.ANIMATED_COVER -> listOf<suspend () -> CanvasArtwork?>(
+                            { AppleMusicCanvas.searchAlbum(name, credit) },
+                            { TidalCanvas.searchAlbum(name, credit) },
+                            { CommunityCanvas.searchAlbum(name, credit) },
+                        )
+                        AnimatedArtKind.CANVAS -> listOf<suspend () -> CanvasArtwork?>({ SpotifyCanvas.searchAlbum(name, credit) })
+                        AnimatedArtKind.MUSIC_VIDEO -> emptyList<suspend () -> CanvasArtwork?>()
+                    }
+                }.toTypedArray(),
+            ) { it.matches(name, credit, name) }
         }
     }
 
-    /** Priority is part of the question, so a toggle never reuses the other order's answer. */
-    private fun cacheKey(base: String, spotifyFirst: Boolean): String =
-        "$base|spotifyFirst=$spotifyFirst"
+    /**
+     * The kinds asked for, in order, are part of the question, so a change in
+     * Appearance settings never reuses an answer to another order.
+     */
+    private fun cacheKey(base: String, kinds: List<AnimatedArtKind>): String =
+        "$base|kinds=${kinds.joinToString(",") { it.name }}"
 
     private suspend fun resolve(
         key: String,

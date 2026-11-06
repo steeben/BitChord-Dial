@@ -531,6 +531,14 @@ object AppSettings {
     val prioritizeSpotifyCanvas = MutableStateFlow(false)
 
     /**
+     * Which moving artwork the player may show — animated covers, Spotify
+     * Canvases, music videos as the Canvas — and which wins when a song has
+     * more than one. [prioritizeSpotifyCanvas] is kept in step with it: it is
+     * true while Canvas ranks above the animated cover.
+     */
+    val animatedArt = MutableStateFlow(com.music.bitchord.data.canvas.AnimatedArtPrefs())
+
+    /**
      * Mirrors the heart onto Spotify's Liked Songs through the same `sp_dc`
      * session Canvas uses. Off by default: it writes to another account.
      */
@@ -1004,6 +1012,28 @@ object AppSettings {
         canvasOverCellular.value = prefs.getBoolean(KEY_CANVAS_OVER_CELLULAR, false)
         spotifyCanvasAutoHide.value = prefs.getBoolean(KEY_SPOTIFY_CANVAS_AUTO_HIDE, true)
         prioritizeSpotifyCanvas.value = prefs.getBoolean(KEY_PRIORITIZE_SPOTIFY_CANVAS, false)
+        animatedArt.value = com.music.bitchord.data.canvas.AnimatedArtPrefs(
+            // Before the order existed, the Spotify screen's switch was the
+            // only priority there was: carry it over.
+            order = prefs.getString(KEY_ANIMATED_ART_ORDER, null)
+                ?.let { com.music.bitchord.data.canvas.AnimatedArtPrefs.decodeOrder(it) }
+                ?: if (prioritizeSpotifyCanvas.value) {
+                    listOf(
+                        com.music.bitchord.data.canvas.AnimatedArtKind.CANVAS,
+                        com.music.bitchord.data.canvas.AnimatedArtKind.ANIMATED_COVER,
+                        com.music.bitchord.data.canvas.AnimatedArtKind.MUSIC_VIDEO,
+                    )
+                } else {
+                    com.music.bitchord.data.canvas.AnimatedArtPrefs.DEFAULT_ORDER
+                },
+            enabled = com.music.bitchord.data.canvas.AnimatedArtPrefs.decodeEnabled(
+                prefs.getString(KEY_ANIMATED_ART_ENABLED, null),
+            ),
+        )
+        prioritizeSpotifyCanvas.value = animatedArt.value.order.let {
+            it.indexOf(com.music.bitchord.data.canvas.AnimatedArtKind.CANVAS) <
+                it.indexOf(com.music.bitchord.data.canvas.AnimatedArtKind.ANIMATED_COVER)
+        }
         spotifyLikeSync.value = prefs.getBoolean(KEY_SPOTIFY_LIKE_SYNC, false)
         signatureApiEnabled.value = prefs.getBoolean(KEY_SIGNATURE_API_ENABLED, true)
         signatureApiUrl.value = normalizeSignatureApiUrl(
@@ -1600,6 +1630,37 @@ object AppSettings {
     fun setPrioritizeSpotifyCanvas(value: Boolean) {
         prioritizeSpotifyCanvas.value = value
         prefs.edit().putBoolean(KEY_PRIORITIZE_SPOTIFY_CANVAS, value).apply()
+        // The Spotify screen's switch is the Canvas-over-cover half of the
+        // Appearance priority list: move Canvas to just above or below it.
+        val art = animatedArt.value
+        val canvas = com.music.bitchord.data.canvas.AnimatedArtKind.CANVAS
+        val cover = com.music.bitchord.data.canvas.AnimatedArtKind.ANIMATED_COVER
+        val canvasAbove = art.order.indexOf(canvas) < art.order.indexOf(cover)
+        if (canvasAbove != value) {
+            val rest = art.order - canvas
+            val at = rest.indexOf(cover) + if (value) 0 else 1
+            saveAnimatedArt(art.copy(order = rest.toMutableList().apply { add(at, canvas) }), syncSpotify = false)
+        }
+    }
+
+    /** Saves the Appearance settings' animated artwork switches and order. */
+    fun setAnimatedArt(value: com.music.bitchord.data.canvas.AnimatedArtPrefs) = saveAnimatedArt(value, syncSpotify = true)
+
+    private fun saveAnimatedArt(value: com.music.bitchord.data.canvas.AnimatedArtPrefs, syncSpotify: Boolean) {
+        animatedArt.value = value
+        prefs.edit()
+            .putString(KEY_ANIMATED_ART_ORDER, value.encodeOrder())
+            .putString(KEY_ANIMATED_ART_ENABLED, value.encodeEnabled())
+            .apply()
+        if (syncSpotify) {
+            val order = value.order
+            val canvasAbove = order.indexOf(com.music.bitchord.data.canvas.AnimatedArtKind.CANVAS) <
+                order.indexOf(com.music.bitchord.data.canvas.AnimatedArtKind.ANIMATED_COVER)
+            if (canvasAbove != prioritizeSpotifyCanvas.value) {
+                prioritizeSpotifyCanvas.value = canvasAbove
+                prefs.edit().putBoolean(KEY_PRIORITIZE_SPOTIFY_CANVAS, canvasAbove).apply()
+            }
+        }
     }
 
     fun setSpotifyLikeSync(value: Boolean) {
@@ -2248,6 +2309,8 @@ object AppSettings {
     private const val KEY_CANVAS_OVER_CELLULAR = "canvas_over_cellular"
     private const val KEY_SPOTIFY_CANVAS_AUTO_HIDE = "spotify_canvas_auto_hide"
     private const val KEY_PRIORITIZE_SPOTIFY_CANVAS = "prioritize_spotify_canvas"
+    private const val KEY_ANIMATED_ART_ORDER = "animated_art_order"
+    private const val KEY_ANIMATED_ART_ENABLED = "animated_art_enabled"
     private const val KEY_SPOTIFY_LIKE_SYNC = "spotify_like_sync"
     private const val KEY_FULL_BLEED_ARTWORK = "full_bleed_artwork"
     private const val KEY_LEGACY_MESH_GRADIENT = "legacy_mesh_gradient"

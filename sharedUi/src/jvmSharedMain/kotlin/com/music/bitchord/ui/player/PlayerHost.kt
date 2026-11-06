@@ -228,6 +228,8 @@ interface PlayerSettingsSource {
     val meteredConnection: StateFlow<Boolean?>
     val preferUsbDac: StateFlow<Boolean>
     val prioritizeSpotifyCanvas: StateFlow<Boolean>
+    /** Which moving artwork may show where the cover is, and which wins — see [AnimatedArtPrefs]. */
+    val animatedArt: StateFlow<com.music.bitchord.data.canvas.AnimatedArtPrefs> get() = DefaultAnimatedArt
     val reduceAnimation: StateFlow<Boolean>
     val reduceDynamicBlur: StateFlow<Boolean>
     val showNerdStats: StateFlow<Boolean>
@@ -444,5 +446,8 @@ internal fun AudioPipelineDialog(hazeState: HazeState, isPlaying: Boolean, onDis
 
 private val CompactCanvasControlsOff: StateFlow<Boolean> = kotlinx.coroutines.flow.MutableStateFlow(false)
 private val NoOutputIcons: StateFlow<Map<String, String>> = kotlinx.coroutines.flow.MutableStateFlow(emptyMap())
+private val DefaultAnimatedArt: StateFlow<com.music.bitchord.data.canvas.AnimatedArtPrefs> =
+    kotlinx.coroutines.flow.MutableStateFlow(com.music.bitchord.data.canvas.AnimatedArtPrefs())
+
 private val WavyProgressBarOn: StateFlow<Boolean> = kotlinx.coroutines.flow.MutableStateFlow(true)
 private val NoPreferredLyricsSource: StateFlow<LyricsSource?> = kotlinx.coroutines.flow.MutableStateFlow(null)
