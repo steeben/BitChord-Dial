@@ -92,8 +92,6 @@ object CustomizationSettings {
     /** How the dials' tiles are edged: the plain hairline, a contoured rim, or a glass rim. */
     val dialTileStyle = MutableStateFlow(DialTileStyle.GLASS)
 
-    /** Whether the dials' artwork shifts with the phone's tilt, read off the gyroscope. */
-    val dialParallax = MutableStateFlow(true)
     val miniPlayerShape = MutableStateFlow(MiniPlayerShape.CIRCULAR)
 
     /** Where the speed dial's unpinned tiles come from; see [SpeedDialSource]. */
@@ -246,7 +244,6 @@ object CustomizationSettings {
         dialHiddenLabels.value = p.getStringSet(KEY_DIAL_HIDDEN_LABELS, emptySet())?.toSet().orEmpty()
         dialPinIcon.value = p.getBoolean(KEY_DIAL_PIN_ICON, true)
         dialLabels.value = p.getBoolean(KEY_DIAL_LABELS, true)
-        dialParallax.value = p.getBoolean(KEY_DIAL_PARALLAX, true)
         dialTileStyle.value = p.getString(KEY_DIAL_TILE_STYLE, null)
             ?.let { name -> DialTileStyle.entries.firstOrNull { it.name == name } }
             // The style's first form was one switch, for the contoured rim.
@@ -373,11 +370,6 @@ object CustomizationSettings {
     fun setDialPinIcon(value: Boolean) {
         dialPinIcon.value = value
         prefs?.edit()?.putBoolean(KEY_DIAL_PIN_ICON, value)?.apply()
-    }
-
-    fun setDialParallax(value: Boolean) {
-        dialParallax.value = value
-        prefs?.edit()?.putBoolean(KEY_DIAL_PARALLAX, value)?.apply()
     }
 
     fun setDialTileStyle(value: DialTileStyle) {
@@ -818,7 +810,6 @@ object CustomizationSettings {
     private const val KEY_DIAL_LABELS = "custom_dial_labels"
     private const val KEY_DIAL_CONTOURED_EDGE = "custom_dial_contoured_edge"
     private const val KEY_DIAL_TILE_STYLE = "custom_dial_tile_style"
-    private const val KEY_DIAL_PARALLAX = "custom_dial_parallax"
     private const val KEY_START_PAGE = "custom_start_page"
     private const val KEY_KEEP_NAV_EXPANDED = "custom_keep_nav_expanded"
     private const val KEY_MINI_PLAYER_SHAPE = "custom_mini_player_shape"
