@@ -94,7 +94,7 @@ object Backup {
     }
 
     /** The JSON of a backup, and how many months of listening it holds. */
-    private fun encode(context: Context): Pair<String, Int> {
+    private suspend fun encode(context: Context): Pair<String, Int> {
         val buckets = ListeningStats.exportAll()
         val file = BackupFile(
             versionName = BuildConfig.VERSION_NAME,
