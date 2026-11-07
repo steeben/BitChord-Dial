@@ -574,6 +574,37 @@ private var lastControlSpread: Dp = 0.dp
 private var lastHeroSettled = false
 
 /**
+ * What a clip loaded ahead of its song has reported while it played unseen —
+ * see [NEXT_CANVAS_LOOKAHEAD_MS]. State, so its shape lays the hidden player
+ * out as it will be shown; read once more as the song starts, to start the
+ * clip from where it already is.
+ */
+private class PreloadedClip {
+    var rendered by mutableStateOf(false)
+    var aspect by mutableFloatStateOf(0f)
+    var frame by mutableStateOf<ImageBitmap?>(null)
+}
+
+/**
+ * How a clip starts out on screen: whether it is already up, its shape, a
+ * frame for the backdrop to tint from, and whether it was loaded ahead of its
+ * song (which, with no clip before it to fade out, fades in).
+ */
+private class CanvasSeed(
+    val rendered: Boolean,
+    val aspect: Float,
+    val frame: ImageBitmap?,
+    val preloaded: Boolean,
+) {
+    companion object {
+        val NONE = CanvasSeed(false, 0f, null, false)
+    }
+}
+
+/** What each of the full player's clips is there for — see `clipsOnScreen`. */
+private enum class ClipRole { NEXT, CURRENT, OUTGOING }
+
+/**
  * The Canvas last presented in full, kept past this screen: back from the
  * queue or the lyrics, or turned to landscape and back, the same Canvas comes
  * back as it was, rather than from the still sleeve with its entrance again.
@@ -1084,6 +1115,22 @@ fun NowPlayingScreen(
     val canvasFixes by CanvasAudioFixes.state.collectAsStateWithLifecycle()
     val videoPictures by VideoCanvases.pictures.collectAsStateWithLifecycle()
     val canvasLookup = rememberCanvasLookup(song)
+    // Apple's 3:4 rendition runs under the whole phone screen, the way its
+    // own player shows it; the square one stays the fallback. One rule for
+    // this song's clip and the next one's loaded ahead of it, so the two come
+    // out identical and the player loaded early is the one that carries on.
+    val playerClip: (CanvasArtwork) -> CanvasArtwork = {
+        val tall = it.portraitUrl
+        if (tall != null && playerFillsWindow(windowWidth)) {
+            it.copy(url = tall, fallbackUrl = it.url, portraitUrl = null)
+        } else it
+    }
+    // The next track's clip, looked up and loaded in the last
+    // [NEXT_CANVAS_LOOKAHEAD_MS] of this one — see [rememberNextCanvas].
+    val nextSong = queue.getOrNull(queueIndex + 1)
+    val nextClip = rememberNextCanvas(position, durationMs, nextSong)
+        ?.takeIf { nextSong != null && nextSong.videoId !in canvasFixes.hiddenCanvas }
+        ?.let(playerClip)
     // A song's music video can stand in as its Canvas. Where it ranks against
     // the animated cover and Spotify's Canvas is the listener's, from
     // Appearance settings: ranked below a kind still being searched for, it
@@ -1122,14 +1169,7 @@ fun NowPlayingScreen(
                 musicVideoId = pictureId,
             )
         }
-    } else ownClip?.takeUnless { musicVideo || holdClip }?.let {
-        // Apple's 3:4 rendition runs under the whole phone screen, the way its
-        // own player shows it; the square one stays the fallback.
-        val tall = it.portraitUrl
-        if (tall != null && playerFillsWindow(windowWidth)) {
-            it.copy(url = tall, fallbackUrl = it.url, portraitUrl = null)
-        } else it
-    }
+    } else ownClip?.takeUnless { musicVideo || holdClip }?.let { playerClip(it) }
     // In landscape a Canvas, or a music video standing in for one, runs under
     // the whole screen while the sleeve keeps the still cover. An animated
     // cover (the square motion artwork Apple and others publish) is artwork,
@@ -1168,7 +1208,30 @@ fun NowPlayingScreen(
     // is the whole screen. The full-screen buttons turn the phone's screen
     // rather than switching a layout.
     val screenOrientation = rememberScreenOrientation()
-    var canvasAspect by remember(canvas) { mutableFloatStateOf(0f) }
+    // What the hidden player loading the next track's clip has reported, by
+    // the clip's url — see [PreloadedClip]. Not keyed on anything: it has to
+    // outlive the very pass in which that track becomes this one.
+    val preloads = remember { HashMap<String, PreloadedClip>() }
+    // How this clip starts out: already on screen when it was loaded ahead of
+    // its song, or has a frame remembered from the last time it played (turned
+    // sideways and back, say). Either way the player mounts it covering the
+    // still sleeve from its first frame, rather than drawing the sleeve for a
+    // frame or two while the clip reports in.
+    val canvasSeed = remember(canvas?.url) {
+        // Its shape and frame are taken even before its first frame: the
+        // player loaded early carries on as this one and won't report them again.
+        val preloaded = canvas?.let { preloads[it.url] }?.takeIf { it.rendered || it.aspect > 0f }
+        when {
+            canvas == null -> CanvasSeed.NONE
+            canvas.musicVideoId != null ->
+                if (canvas.url == lastPresentedCanvasUrl) CanvasSeed(true, 0f, null, false) else CanvasSeed.NONE
+            preloaded != null ->
+                CanvasSeed(preloaded.rendered, preloaded.aspect, preloaded.frame, preloaded.rendered)
+            else -> PlayerPlatform.host.rememberedCanvasAspect(canvas.url)
+                ?.let { CanvasSeed(true, it, null, false) } ?: CanvasSeed.NONE
+        }
+    }
+    var canvasAspect by remember(canvas) { mutableFloatStateOf(canvasSeed.aspect) }
     // Whether the clip actually has a frame on screen right now, and one of
     // them — used to blow the sleeve out to the full-bleed hero treatment and
     // to re-tint the backdrop off the clip's own colours rather than the
@@ -1181,10 +1244,10 @@ fun NowPlayingScreen(
     // snapping open mid-loop. A different clip resets them with itself.
     // A Canvas coming back (see [lastPresentedCanvasUrl]) is taken to be up
     // from the first frame; the clip says otherwise at once if it can't be.
-    val canvasReturning = canvas?.musicVideoId != null && canvas.url == lastPresentedCanvasUrl
+    val canvasReturning = canvasSeed.rendered
     val canvasRenderedState = remember(canvas?.url) { mutableStateOf(canvasReturning) }
     var canvasRendered by canvasRenderedState
-    var canvasFrame by remember(canvas?.url) { mutableStateOf<ImageBitmap?>(null) }
+    var canvasFrame by remember(canvas?.url) { mutableStateOf(canvasSeed.frame) }
     // How bright the bottom of the clip is, read off each frame the mesh is
     // already handed (every [MESH_REFRESH_MS]), for the ink and the scrim
     // behind the controls. Off the main thread: it is a sort of a few
@@ -1202,11 +1265,6 @@ fun NowPlayingScreen(
     // retaining both measurements keeps the credits' destination stationary.
     var spotifyCanvasDeckHeight by remember(canvas?.url) { mutableStateOf(0.dp) }
     var spotifyCanvasExpandedTopHeight by remember(canvas?.url) { mutableStateOf(0.dp) }
-    // How much of the still artwork the clip is covering, reported by the clip
-    // itself. Read from a draw scope rather than in composition: it moves every
-    // frame of the fade, and the still art it governs is an AsyncImage whose
-    // request is rebuilt on each pass and so would not be skipped.
-    val canvasCover = remember(canvas?.url) { mutableFloatStateOf(0f) }
     // The last track's clip, held on screen and faded out once the track moves
     // on, rather than cut the instant its song does: the same dissolve to the
     // next sleeve that a change of album art gets. Kept on the one player
@@ -1230,6 +1288,28 @@ fun NowPlayingScreen(
         // Ready for the next handoff, whose first frame is drawn before this
         // effect gets to run again.
         outgoingFade.snapTo(1f)
+    }
+    // A clip loaded ahead of its song is already playing when the song
+    // starts. Over the last song's clip it needs nothing: that one fades out
+    // over it. Over the last song's still sleeve it fades in, as a crossfade,
+    // rather than cutting in at full strength.
+    val incomingFade = remember(canvas?.url) {
+        val clipHandsOver = lastShownClip[0]?.let { it.url != canvas?.url && it.musicVideoId == null } == true
+        Animatable(if (canvasSeed.preloaded && !clipHandsOver) 0f else 1f)
+    }
+    LaunchedEffect(incomingFade) {
+        if (incomingFade.value < 1f) {
+            incomingFade.animateTo(1f, tween(durationMillis = CANVAS_OUTGOING_FADE_MS, easing = FastOutSlowInEasing))
+        }
+    }
+    // How much of the still artwork the clip is covering, reported by the clip
+    // itself. Read from a draw scope rather than in composition: it moves every
+    // frame of the fade, and the still art it governs is an AsyncImage whose
+    // request is rebuilt on each pass and so would not be skipped. Starts
+    // covered for a clip that is already up (see [canvasSeed]), so the sleeve
+    // is out of the way in the same frame the clip is.
+    val canvasCover = remember(canvas?.url) {
+        mutableFloatStateOf(if (canvasSeed.rendered && incomingFade.value >= 1f) 1f else 0f)
     }
     // v1.5's backdrop, kept behind a switch — see [PlayerSettings.legacyMeshGradient].
     val legacyMesh by PlayerSettings.legacyMeshGradient.collectAsStateWithLifecycle()
@@ -1869,10 +1949,11 @@ fun NowPlayingScreen(
     SideEffect {
         val shownNow = heroClip?.takeIf { canvasRendered }
         val last = lastShownClip[0]
-        if (shownNow != null) {
-            lastShownClip[0] = shownNow
-            lastShownAspect[0] = canvasAspect
-        } else if (last != null && last.url != canvas?.url) {
+        // Asked first, before this song's clip is recorded: one loaded ahead
+        // of its song is up from the very pass the song changes, and recording
+        // it first overwrote the last clip before it could be handed off —
+        // which cut it, rather than fading it out over the new one.
+        if (last != null && last.url != canvas?.url) {
             // Its song has moved on with the clip still up: let it go slowly.
             // Not over a panel or mid-collapse, where it was already leaving.
             if (handingOffClip != null) {
@@ -1881,22 +1962,43 @@ fun NowPlayingScreen(
                 outgoingClip = last
             }
             lastShownClip[0] = null
+        }
+        if (shownNow != null) {
+            lastShownClip[0] = shownNow
+            lastShownAspect[0] = canvasAspect
         } else if (heroClip == null) {
             lastShownClip[0] = null
         }
+        // Only the clips that can still be asked for are worth remembering.
+        preloads.keys.retainAll(setOfNotNull(nextClip?.url, canvas?.url))
     }
-    // What the one player below is showing: the outgoing clip while it fades,
-    // then this track's.
-    val clipOnScreen = outgoingClip ?: handingOffClip ?: heroClipMounted
-    val clipOnScreenAspect = when {
-        outgoingClip != null -> outgoingAspect
-        handingOffClip != null -> lastShownAspect[0]
-        else -> canvasAspect
+    // What the players below are showing, bottom to top: the next track's
+    // clip loading unseen, this track's, and the last track's fading out over
+    // it. This track's waits for the last one's fade to finish unless it is
+    // already up (see [canvasSeed]) — then the two crossfade, clip to clip.
+    // Listed in this order so that the next clip turning into this one, and
+    // this one into the last, keeps every player where it was: none of them
+    // is moved, so none of them is torn down and started again.
+    val leavingClip = outgoingClip ?: handingOffClip
+    val clipsOnScreen = buildList {
+        nextClip?.takeIf {
+            leavingClip == null && it.url != heroClipMounted?.url &&
+                !lyricsOpen && !queueOpen && !collapseStarted
+        }?.let { add(it to ClipRole.NEXT) }
+        heroClipMounted?.takeIf { leavingClip == null || (canvasReturning && it.url != leavingClip.url) }
+            ?.let { add(it to ClipRole.CURRENT) }
+        leavingClip?.let { add(it to ClipRole.OUTGOING) }
     }
-    val clipFullscreen = spotifyCanvasOnPhone &&
-        clipOnScreen?.source == CanvasSource.SPOTIFY
-    val clipPortrait = !clipFullscreen &&
-        clipOnScreen != null && clipOnScreenAspect > 0f && clipOnScreenAspect < 1f
+    fun clipAspectOf(role: ClipRole): Float = when (role) {
+        ClipRole.OUTGOING -> if (outgoingClip != null) outgoingAspect else lastShownAspect[0]
+        // Read off its [PreloadedClip] where the hidden player is mounted.
+        ClipRole.NEXT -> 0f
+        ClipRole.CURRENT -> canvasAspect
+    }
+    fun clipFullscreenOf(clip: CanvasArtwork): Boolean =
+        clip.source == CanvasSource.SPOTIFY && playerFillsWindow(windowWidth)
+    fun clipPortraitOf(clip: CanvasArtwork, aspect: Float): Boolean =
+        !clipFullscreenOf(clip) && aspect > 0f && aspect < 1f
 
     // The setting defaults on, restoring the five-second stand-down, but the
     // listener can keep the deck open indefinitely from Spotify integration.
@@ -1972,11 +2074,9 @@ fun NowPlayingScreen(
             with(density) { videoHeight.toDp() }
         } else 0.dp
     val renderedCanvasBottom = canvasBottom(canvasFirstPortrait)
-    // The same for the mounted clip — see [heroClipMounted].
-    val clipBottom = canvasBottom(clipPortrait, clipOnScreenAspect)
     // Match the old hero's fade height in physical pixels, not its much larger
     // percentage of a portrait video. The mask ends at the real video bottom.
-    val clipFadeFraction = if (clipBottom > 0.dp) {
+    fun clipFadeFractionOf(clipBottom: Dp): Float = if (clipBottom > 0.dp) {
         (heroHeight.value * HERO_FADE_FRACTION / clipBottom.value).coerceIn(0f, 1f)
     } else 0f
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
@@ -2869,8 +2969,19 @@ fun NowPlayingScreen(
         // Mount once, behind the controls. A known portrait aspect changes the
         // invisible view to full-player bounds before its first frame is shown.
         if (heroMode && heroHeight > 0.dp) {
-            clipOnScreen?.let { clip -> key(clip.url) {
-                val outgoing = outgoingClip != null || handingOffClip != null
+            for ((clip, role) in clipsOnScreen) key(clip.url) {
+                val outgoing = role == ClipRole.OUTGOING
+                // Loading unseen: it reports into [preloads] and to nothing
+                // of this song's, and nothing of it is drawn until its song
+                // starts and it becomes [ClipRole.CURRENT] in place.
+                val next = role == ClipRole.NEXT
+                val current = role == ClipRole.CURRENT
+                val preload = if (next) preloads.getOrPut(clip.url) { PreloadedClip() } else null
+                val aspect = preload?.aspect ?: clipAspectOf(role)
+                val clipFullscreen = clipFullscreenOf(clip)
+                val clipPortrait = clipPortraitOf(clip, aspect)
+                // The same as [renderedCanvasBottom], for this clip.
+                val clipBottom = canvasBottom(clipPortrait, aspect)
                 // Keyed on the clip: the player's listeners hold the state of
                 // the clip they were made for, so a player handed a different
                 // one wrote the new clip's size into the old one's and never
@@ -2898,7 +3009,9 @@ fun NowPlayingScreen(
                     },
                     alignPortraitTop = clipPortrait,
                     // The outgoing clip answers to nothing of the new song's.
-                    onAspectRatioChanged = { if (!outgoing) canvasAspect = it },
+                    onAspectRatioChanged = {
+                        if (current) canvasAspect = it else preload?.aspect = it
+                    },
                     portraitRevealBounds = playerBounds,
                     // Gone by the half, where [heroClip] lets it go — and the
                     // still sleeve collapsing over it takes exactly the cover
@@ -2908,12 +3021,16 @@ fun NowPlayingScreen(
                     // TextureView doesn't reliably take the fade from a
                     // Compose layer around it.
                     presentationAlpha = {
-                        (1f - 2f * p()).coerceIn(0f, 1f) * dockFade() *
-                            (if (outgoing) outgoingFade.value else 1f)
+                        if (next) 0f else (1f - 2f * p()).coerceIn(0f, 1f) * dockFade() *
+                            (if (outgoing) outgoingFade.value else incomingFade.value)
                     },
-                    onRenderedChanged = { if (!outgoing) canvasRendered = it },
+                    onRenderedChanged = {
+                        if (current) canvasRendered = it else preload?.rendered = it
+                    },
                     onFrameCaptured = {
-                        if (!outgoing && !clipFullscreen && !tabletArtworkBackdrop &&
+                        if (next) {
+                            preload?.frame = it
+                        } else if (current && !clipFullscreen && !tabletArtworkBackdrop &&
                             !lyricsOpen && !queueOpen && !queueDragging
                         ) canvasFrame = it
                     },
@@ -2921,7 +3038,7 @@ fun NowPlayingScreen(
                     // Keeping this null also removes the old three-second GPU
                     // readback cadence from this provider alone.
                     refreshFrameEveryMs = if (
-                        clipFullscreen || tabletArtworkBackdrop || lyricsOpen || queueOpen ||
+                        next || clipFullscreen || tabletArtworkBackdrop || lyricsOpen || queueOpen ||
                         queueDragging || dockMoving
                     ) {
                         null
@@ -2929,11 +3046,11 @@ fun NowPlayingScreen(
                         meshRefreshMs
                     },
                     onCoverChanged = {
-                        if (outgoing) outgoingCover.floatValue = it else canvasCover.floatValue = it
+                        if (outgoing) outgoingCover.floatValue = it else if (current) canvasCover.floatValue = it
                     },
                     bottomFade = when {
                         clipFullscreen -> 0f
-                        clipPortrait -> clipFadeFraction
+                        clipPortrait -> clipFadeFractionOf(clipBottom)
                         else -> HERO_FADE_FRACTION
                     },
                     bottomFadeEndPx = if (clipPortrait) with(density) { clipBottom.toPx() }
@@ -2944,12 +3061,16 @@ fun NowPlayingScreen(
                             if (clipFullscreen || clipPortrait) Modifier.fillMaxSize()
                             else Modifier.fillMaxWidth().height(heroHeight),
                         )
-                        .hazeSource(playerHaze)
-                        .onGloballyPositioned {
-                            clipRootBounds[0] = Rect(it.positionInRoot(), it.size.toSize())
-                        },
+                        .then(if (next) Modifier else Modifier.hazeSource(playerHaze))
+                        .then(
+                            if (current) {
+                                Modifier.onGloballyPositioned {
+                                    clipRootBounds[0] = Rect(it.positionInRoot(), it.size.toSize())
+                                }
+                            } else Modifier,
+                        ),
                 )
-            } }
+            }
         }
 
         // The dims and blurs laid over the clip are recorded with it, so the
@@ -3804,8 +3925,14 @@ fun NowPlayingScreen(
                                     0f
                                 } else if (outgoingClip != null) {
                                     // Coming back in as the last track's clip
-                                    // leaves, whether or not the next has one.
-                                    1f - outgoingCover.floatValue
+                                    // leaves, whether or not the next has one —
+                                    // unless the next one's is already up under
+                                    // it, when the two crossfade with no sleeve
+                                    // between them.
+                                    1f - maxOf(
+                                        outgoingCover.floatValue,
+                                        if (heroClip != null) canvasCover.floatValue else 0f,
+                                    )
                                 } else if (heroClip != null && currentCanvasSweepPhase) {
                                     // Swept out instead — see [canvasSweepOut].
                                     1f

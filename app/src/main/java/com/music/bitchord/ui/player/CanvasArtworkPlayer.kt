@@ -230,7 +230,10 @@ internal fun AndroidCanvasArtworkPlayer(
     }
     // Aspect of the clip itself. Zero until the decoder reports it, which is
     // also the signal that there is nothing sensible to crop to yet.
-    var clipAspect by remember(canvas) { mutableFloatStateOf(0f) }
+    // Started from the remembered frame's when there is one, so a clip
+    // mounted again is laid out at its own shape from its first frame rather
+    // than at the banner's until the decoder reports back.
+    var clipAspect by remember(canvas) { mutableFloatStateOf(CanvasFrameMemory.aspect(canvas.url) ?: 0f) }
     var bounds by remember { mutableStateOf(IntSize.Zero) }
     var textureView by remember(canvas) { mutableStateOf<TextureView?>(null) }
     // Frames are counted rather than flagged, because [rendered] cannot answer
@@ -308,8 +311,13 @@ internal fun AndroidCanvasArtworkPlayer(
 
     LaunchedEffect(url) {
         rendered = false
-        clipAspect = 0f
-        reportAspect(0f)
+        // Only the fallback rendition is a new shape to wait for. The first
+        // one keeps whatever was remembered of it: zeroed here, a portrait
+        // clip mounted again dropped back to the banner for a frame.
+        if (url != canvas.url) {
+            clipAspect = 0f
+            reportAspect(0f)
+        }
         val item = MediaItem.Builder().setUri(url)
         mimeTypeOf(url)?.let { item.setMimeType(it) }
         // A saved HLS clip holds one rendition: ask for only that one.
@@ -378,7 +386,7 @@ internal fun AndroidCanvasArtworkPlayer(
         // read back before that is the clip stretched to the view's bounds, and
         // it would stand in, squished, every time the clip is mounted again.
         if (CanvasFrameMemory.get(canvas.url) == null && clipAspect > 0f) {
-            view.captureWhole(PLACEHOLDER_PX)?.let { CanvasFrameMemory.put(canvas.url, it.asImageBitmap()) }
+            view.captureWhole(PLACEHOLDER_PX)?.let { CanvasFrameMemory.put(canvas.url, it.asImageBitmap(), clipAspect) }
         }
     }
 
@@ -636,18 +644,30 @@ internal fun AndroidCanvasArtworkPlayer(
  * [CanvasArtworkPlayer] to stand in with when the same clip is mounted again.
  */
 private object CanvasFrameMemory {
-    private val frames = object : LinkedHashMap<String, ImageBitmap>(4, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ImageBitmap>?): Boolean = size > 3
+    private class Remembered(val frame: ImageBitmap, val aspect: Float)
+
+    // A few more than the three a skip back and forth needs, so the next
+    // song's clip, loaded ahead of its turn, doesn't push out the frame of the
+    // one playing now — which is the one turning the phone needs.
+    private val frames = object : LinkedHashMap<String, Remembered>(8, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Remembered>?): Boolean = size > 5
     }
 
     @Synchronized
-    fun get(url: String): ImageBitmap? = frames[url]
+    fun get(url: String): ImageBitmap? = frames[url]?.frame
+
+    /** The clip's own aspect when its frame was kept; null without one. */
+    @Synchronized
+    fun aspect(url: String): Float? = frames[url]?.aspect
 
     @Synchronized
-    fun put(url: String, frame: ImageBitmap) {
-        frames[url] = frame
+    fun put(url: String, frame: ImageBitmap, aspect: Float) {
+        frames[url] = Remembered(frame, aspect)
     }
 }
+
+/** See [PlayerHost.rememberedCanvasAspect]. */
+internal fun rememberedCanvasFrameAspect(url: String): Float? = CanvasFrameMemory.aspect(url)
 
 /**
  * The view's whole picture as it is shown, at most [maxPx] on its longest edge;

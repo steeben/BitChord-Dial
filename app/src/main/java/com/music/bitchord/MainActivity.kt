@@ -2933,6 +2933,14 @@ private fun BitChordApp(
         }
     }
 
+    // The next track's Canvas, looked up in the last seconds of this one
+    // whether or not the full player is open, so it is waiting on its turn.
+    com.music.bitchord.ui.player.NextCanvasLookahead(
+        position = player.position,
+        durationMs = player.durationMs,
+        next = player.queue.getOrNull(player.queueIndex + 1),
+    )
+
     // The player's whole parameter list, kept apart from the sheet that
     // mounts it so the sheet's own setup reads on its own.
     val nowPlaying: @Composable (Song) -> Unit = { song ->

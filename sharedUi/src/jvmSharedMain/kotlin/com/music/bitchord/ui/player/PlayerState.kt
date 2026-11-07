@@ -79,7 +79,15 @@ internal fun rememberCanvasLookup(song: Song): CanvasLookup {
     // which is the flicker. A different song keys differently and starts
     // clean; the same-titled-impostor case is guarded where the clip is
     // adopted, by [CanvasArtwork.matches].
-    var canvas by remember(song.title, song.artist) { mutableStateOf<CanvasArtwork?>(null) }
+    //
+    // Started from what is already settled for the track rather than from
+    // nothing: a clip looked up ahead of its turn (see [rememberNextCanvas]) is
+    // then there in the very pass the song changes, and the player can hand
+    // straight over to it instead of drawing the still sleeve for a frame
+    // while the effect below catches up.
+    var canvas by remember(song.title, song.artist) {
+        mutableStateOf(if (canvasAllowedNow) PlayerPlatform.host.cachedCanvas(song) else null)
+    }
     var settled by remember(song.videoId) { mutableStateOf(false) }
     // Picked from the ⋯ menu: the album's animated cover instead of the track's clip.
     val canvasFixes by CanvasAudioFixes.state.collectAsStateWithLifecycle()
@@ -117,6 +125,58 @@ internal fun rememberCanvasLookup(song: Song): CanvasLookup {
     // A clip saved with a download, or carried over from before the switch
     // was turned off, still answers to the kinds allowed now.
     return CanvasLookup(canvas?.takeIf { it.kind in clipOrder }, settled, canvasAllowedNow)
+}
+
+/**
+ * How long before the end of a track the next one's Canvas is looked up and
+ * loaded, so it is ready the moment its song starts.
+ */
+internal const val NEXT_CANVAS_LOOKAHEAD_MS = 15_000L
+
+/** Whether the playhead is close enough to the end to load the next track's Canvas. */
+internal fun nextCanvasDue(positionMs: Long, durationMs: Long): Boolean =
+    durationMs > 0L && positionMs >= 0L && durationMs - positionMs <= NEXT_CANVAS_LOOKAHEAD_MS
+
+/**
+ * The Canvas of [next], looked up once the playing track is within
+ * [NEXT_CANVAS_LOOKAHEAD_MS] of its end; null before then and when it has none.
+ *
+ * The lookup lands in the same cache the player reads when the song starts, so
+ * by its turn there is nothing left to wait on. Held once found, so seeking back
+ * out of the window doesn't drop a clip already loaded.
+ */
+@Composable
+internal fun rememberNextCanvas(position: PlaybackPosition, durationMs: Long, next: Song?): CanvasArtwork? {
+    val canvasEnabled by PlayerSettings.animatedCanvas.collectAsStateWithLifecycle()
+    val canvasOverCellular by PlayerSettings.canvasOverCellular.collectAsStateWithLifecycle()
+    val animatedArt by PlayerSettings.animatedArt.collectAsStateWithLifecycle()
+    val clipOrder = animatedArt.clipOrder
+    val meteredConnection by PlayerSettings.meteredConnection.collectAsStateWithLifecycle()
+    // Derived, so the twice-a-second playhead recomposes nothing here until
+    // the answer actually flips.
+    val due by remember(position, durationMs) {
+        derivedStateOf { nextCanvasDue(position.positionMs, durationMs) }
+    }
+    val target = next?.takeUnless { it.isVideo }
+    val allowed = target != null && canvasEnabled &&
+        (meteredConnection != true || canvasOverCellular || PlayerPlatform.host.hasDownloadedCanvas(target.videoId))
+    var found by remember(target?.videoId) { mutableStateOf<CanvasArtwork?>(null) }
+    LaunchedEffect(target?.videoId, target?.albumName, due, allowed, clipOrder) {
+        if (target == null || !due || !allowed) return@LaunchedEffect
+        found = PlayerPlatform.host.cachedCanvas(target)
+            ?: PlayerPlatform.host.canvasFor(target)
+            ?: found
+    }
+    return found?.takeIf { allowed && it.kind in clipOrder }
+}
+
+/**
+ * Looks up the next track's Canvas near the end of this one even while the
+ * full player is closed, so opening it on the new song finds the clip waiting.
+ */
+@Composable
+fun NextCanvasLookahead(position: PlaybackPosition, durationMs: Long, next: Song?) {
+    rememberNextCanvas(position, durationMs, next)
 }
 
 /**

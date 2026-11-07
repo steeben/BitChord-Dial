@@ -45,6 +45,14 @@ interface PlayerHost {
      */
     fun hasDownloadedCanvas(videoId: String): Boolean = false
 
+    /**
+     * The shape of the clip at [url] if a frame of it is still held from the
+     * last time it played, null otherwise. A clip with one stands in from its
+     * very first frame on screen, so the player can mount it already covering
+     * the still sleeve instead of drawing the sleeve for a frame first.
+     */
+    fun rememberedCanvasAspect(url: String): Float? = null
+
     /** The looping clip over the cover, decoded however this platform decodes video. */
     @Composable
     fun CanvasVideo(spec: CanvasVideoSpec, modifier: Modifier)
