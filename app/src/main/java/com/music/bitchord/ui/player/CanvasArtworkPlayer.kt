@@ -661,7 +661,7 @@ private object CanvasFrameMemory {
     fun aspect(url: String): Float? = frames[url]?.aspect
 
     @Synchronized
-    fun put(url: String, frame: ImageBitmap, aspect: Float) {
+    fun put(url: String, frame: ImageBitmap, aspect: Float = 0f) {
         frames[url] = Remembered(frame, aspect)
     }
 }
