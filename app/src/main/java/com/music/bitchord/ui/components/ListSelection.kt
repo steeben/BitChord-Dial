@@ -2,16 +2,15 @@ package com.music.bitchord.ui.components
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.DoneAll
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -30,6 +29,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.music.bitchord.R
 import com.music.bitchord.data.model.Song
+import com.music.bitchord.ui.components.backdrop.backdrops.LayerBackdrop
+import dev.chrisbanes.haze.HazeState
 
 /** One bulk action a page adds to the selection menu, on top of the shared ones. */
 class SelectionAction(
@@ -137,15 +138,20 @@ fun PublishListSelection(
 }
 
 /**
- * The bulk actions sheet: what the ⋯ opens while rows are selected. Every
+ * The bulk actions drawer: what the ⋯ opens while rows are selected. Every
  * action ends the selection, the same way the Downloads bar always did.
+ *
+ * Drawn on the app's liquid glass, in the drawer a held dial tile opens, so
+ * it wears the same material as every other menu rather than a solid slab.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListSelectionSheetHost(
+    backdrop: LayerBackdrop?,
+    hazeState: HazeState,
     onPlay: (List<Song>) -> Unit,
     onPlayNext: (List<Song>) -> Unit,
     onAddToQueue: (List<Song>) -> Unit,
+    onAddToPlaylist: (List<Song>) -> Unit,
     onDownload: (List<Song>) -> Unit,
 ) {
     if (!ListSelection.menuOpen) return
@@ -159,11 +165,12 @@ fun ListSelectionSheetHost(
             action(chosen)
         }
     }
-    SlideDownBottomSheet(
-        onDismissRequest = { ListSelection.menuOpen = false },
-        containerColor = MaterialTheme.colorScheme.background,
+    GlassMenuDrawer(
+        backdrop = backdrop,
+        hazeState = hazeState,
+        onDismiss = { ListSelection.menuOpen = false },
     ) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 8.dp)) {
+        Column(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
             Text(
                 text = "${songs.size} ${stringResource(R.string.selected)}",
                 style = MaterialTheme.typography.titleMedium,
@@ -181,6 +188,11 @@ fun ListSelectionSheetHost(
                 Icons.AutoMirrored.Rounded.QueueMusic,
                 stringResource(R.string.add_to_queue),
                 onClick = finish(onAddToQueue),
+            )
+            ActionRow(
+                Icons.AutoMirrored.Rounded.PlaylistAdd,
+                stringResource(R.string.add_to_playlist),
+                onClick = finish(onAddToPlaylist),
             )
             if (ListSelection.offersDownload) {
                 ActionRow(Icons.Rounded.Download, stringResource(R.string.download), onClick = finish(onDownload))
