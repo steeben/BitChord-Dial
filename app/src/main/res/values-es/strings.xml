@@ -105,10 +105,10 @@
     <string name="dolby_atmos_open_failed">No se pudieron abrir los ajustes de Dolby Atmos</string>
     <string name="update_available">Actualización disponible: v%1$s</string>
     <string name="software_update">Actualización de software</string>
-    <string name="update_available_body">bitchord %1$s está disponible para descargar.</string>
-    <string name="update_downloading_body">Descargando bitchord %1$s…</string>
-    <string name="update_ready_body">bitchord %1$s está listo para instalar.</string>
-    <string name="update_failed_body">No se pudo descargar bitchord %1$s.</string>
+    <string name="update_available_body">Dial %1$s está disponible para descargar.</string>
+    <string name="update_downloading_body">Descargando Dial %1$s…</string>
+    <string name="update_ready_body">Dial %1$s está listo para instalar.</string>
+    <string name="update_failed_body">No se pudo descargar Dial %1$s.</string>
     <string name="download_now">Descargar ahora</string>
     <string name="install_now">Instalar ahora</string>
     <string name="later">Más tarde</string>

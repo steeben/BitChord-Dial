@@ -103,10 +103,10 @@
     <string name="dolby_atmos_open_failed">เปิดการตั้งค่า Dolby Atmos ไม่ได้</string>
     <string name="update_available">มีอัปเดต: v%1$s</string>
     <string name="software_update">การอัปเดตซอฟต์แวร์</string>
-    <string name="update_available_body">bitchord %1$s พร้อมให้ดาวน์โหลดแล้ว</string>
-    <string name="update_downloading_body">กำลังดาวน์โหลด bitchord %1$s…</string>
-    <string name="update_ready_body">bitchord %1$s พร้อมติดตั้งแล้ว</string>
-    <string name="update_failed_body">ดาวน์โหลด bitchord %1$s ไม่สำเร็จ</string>
+    <string name="update_available_body">Dial %1$s พร้อมให้ดาวน์โหลดแล้ว</string>
+    <string name="update_downloading_body">กำลังดาวน์โหลด Dial %1$s…</string>
+    <string name="update_ready_body">Dial %1$s พร้อมติดตั้งแล้ว</string>
+    <string name="update_failed_body">ดาวน์โหลด Dial %1$s ไม่สำเร็จ</string>
     <string name="download_now">ดาวน์โหลดตอนนี้</string>
     <string name="install_now">ติดตั้งตอนนี้</string>
     <string name="later">ภายหลัง</string>

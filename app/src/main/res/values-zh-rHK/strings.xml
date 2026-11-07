@@ -99,10 +99,10 @@
     <string name="dolby_atmos_open_failed">無法開啟杜比全景聲設定</string>
     <string name="update_available">有可用更新：v%1$s</string>
     <string name="software_update">軟體更新</string>
-    <string name="update_available_body">bitchord %1$s 現已可供下載。</string>
-    <string name="update_downloading_body">正在下載 bitchord %1$s…</string>
-    <string name="update_ready_body">bitchord %1$s 已準備好安裝。</string>
-    <string name="update_failed_body">無法下載 bitchord %1$s。</string>
+    <string name="update_available_body">Dial %1$s 現已可供下載。</string>
+    <string name="update_downloading_body">正在下載 Dial %1$s…</string>
+    <string name="update_ready_body">Dial %1$s 已準備好安裝。</string>
+    <string name="update_failed_body">無法下載 Dial %1$s。</string>
     <string name="download_now">立即下載</string>
     <string name="install_now">立即安裝</string>
     <string name="later">以後再說</string>

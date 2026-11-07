@@ -37,10 +37,7 @@ import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.material3.RichText
 import com.music.bitchord.R
 import com.music.bitchord.data.AppUpdateChecker
-import com.music.bitchord.data.settings.AppSettings
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
-import dev.chrisbanes.haze.materials.HazeMaterials
 
 /** UIAlertController's own metrics: fixed narrow width, 14pt corner, 44pt rows. */
 internal val ALERT_WIDTH = 270.dp
@@ -78,7 +75,6 @@ private val NOTES_MAX_HEIGHT = 220.dp
  * so its glass can sample the same [HazeState] the rest of the app's frosted
  * surfaces use, the way [FrostedTopBar] and [MiniPlayer] already do.
  */
-@OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
 fun UpdateAvailableDialog(
     version: String,
@@ -91,7 +87,6 @@ fun UpdateAvailableDialog(
     onOpenReleasePage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     val state by AppUpdateChecker.download.collectAsStateWithLifecycle()
     val shape = RoundedCornerShape(ALERT_CORNER)
 
@@ -110,20 +105,17 @@ fun UpdateAvailableDialog(
             ),
         contentAlignment = Alignment.Center,
     ) {
+        // The scrim is not in the backdrop the glass samples, so it is laid
+        // under the glass's own fill; see [LocalGlassUnderlay].
+        CompositionLocalProvider(LocalGlassUnderlay provides SCRIM_COLOR) {
+        val contentColor = popupContentColor()
         Column(
             modifier = Modifier
                 .width(ALERT_WIDTH)
-                .clip(shape)
-                .then(
-                    if (reduceDynamicBlur) {
-                        Modifier.background(MaterialTheme.colorScheme.surface)
-                    } else {
-                        Modifier.optimizedHazeEffect(
-                            state = hazeState,
-                            style = HazeMaterials.regular(MaterialTheme.colorScheme.surface),
-                        )
-                    },
-                )
+                // Liquid glass when that is on, the frosted blur when it is
+                // not, solid under "reduce dynamic blur" — the same card the
+                // other glass alerts and popups are made of.
+                .popupSurface(shape, hazeState)
                 // Swallows the tap before it reaches the scrim behind, so
                 // touching the card itself never dismisses it.
                 .clickable(
@@ -144,7 +136,7 @@ fun UpdateAvailableDialog(
                         fontSize = 17.sp,
                         fontWeight = FontWeight.W600,
                     ),
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = contentColor,
                     textAlign = TextAlign.Center,
                 )
                 Text(
@@ -163,7 +155,7 @@ fun UpdateAvailableDialog(
                         fontSize = 13.sp,
                         lineHeight = 17.sp,
                     ),
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = contentColor,
                     textAlign = TextAlign.Center,
                 )
 
@@ -178,7 +170,7 @@ fun UpdateAvailableDialog(
                             .fillMaxWidth()
                             .height(DOWNLOAD_ROW_HEIGHT)
                             .clip(RoundedCornerShape(DOWNLOAD_ROW_HEIGHT / 2))
-                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)),
+                            .background(contentColor.copy(alpha = 0.14f)),
                     ) {
                         if (downloading != null && downloading.fraction > 0f) {
                             Box(
@@ -216,7 +208,7 @@ fun UpdateAvailableDialog(
                             fontSize = 12.sp,
                             fontWeight = FontWeight.W600,
                         ),
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        color = contentColor.copy(alpha = 0.6f),
                         textAlign = TextAlign.Start,
                     )
                     Box(
@@ -230,7 +222,7 @@ fun UpdateAvailableDialog(
                         // Column.background(...), not a Surface, so without
                         // this the notes render at LocalContentColor's black
                         // default regardless of theme.
-                        CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
+                        CompositionLocalProvider(LocalContentColor provides contentColor) {
                             RichText(style = RichTextStyle.Default) {
                                 Markdown(notes)
                             }
@@ -260,6 +252,7 @@ fun UpdateAvailableDialog(
                     AlertAction(label = stringResource(R.string.remind_me_later), emphasised = false, onClick = onDismiss)
                 }
             }
+        }
         }
     }
 }

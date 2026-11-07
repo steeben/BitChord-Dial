@@ -105,10 +105,10 @@
     <string name="dolby_atmos_open_failed">Impossible d\'ouvrir les paramètres Dolby Atmos</string>
     <string name="update_available">Mise à jour disponible : v%1$s</string>
     <string name="software_update">Mise à jour logicielle</string>
-    <string name="update_available_body">BitChord %1$s est disponible au téléchargement.</string>
-    <string name="update_downloading_body">Téléchargement de BitChord %1$s…</string>
-    <string name="update_ready_body">BitChord %1$s est prêt à être installé.</string>
-    <string name="update_failed_body">Impossible de télécharger BitChord %1$s.</string>
+    <string name="update_available_body">Dial %1$s est disponible au téléchargement.</string>
+    <string name="update_downloading_body">Téléchargement de Dial %1$s…</string>
+    <string name="update_ready_body">Dial %1$s est prêt à être installé.</string>
+    <string name="update_failed_body">Impossible de télécharger Dial %1$s.</string>
     <string name="download_now">Télécharger maintenant</string>
     <string name="install_now">Installer maintenant</string>
     <string name="later">Plus tard</string>
