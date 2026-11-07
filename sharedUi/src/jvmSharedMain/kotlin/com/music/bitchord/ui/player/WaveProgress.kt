@@ -105,6 +105,14 @@ class PlayerInkConditions {
      * blurred sleeve, so the whole sleeve decides their ink, not the band at its foot.
      */
     var panelOpen by mutableStateOf(false)
+
+    /**
+     * A Canvas or music video is the picture behind the credits and controls. A clip
+     * moves, so a bright frame now is a dark one a second later, and a frame read off it
+     * can be stale or cropped differently from what is on screen: the ink stays light
+     * over a clip, on the scrim, and only a Song fixes pick turns it dark.
+     */
+    var overClip by mutableStateOf(false)
 }
 
 /**
@@ -168,7 +176,13 @@ fun ProvidePlayerInk(
     val bandWasDark = remember { mutableStateOf(false) }
     val bandDark = band?.let { bandInkIsDark(it, bandWasDark.value) }
     SideEffect { if (bandDark != null) bandWasDark.value = bandDark }
-    val dark = conditions?.forcedDark ?: bandDark ?: playerInkIsDark(artLuminance)
+    val overClip = conditions != null && conditions.overClip && !conditions.panelOpen
+    val dark = playerInkDark(
+        forcedDark = conditions?.forcedDark,
+        overClip = overClip,
+        bandDark = bandDark,
+        artLuminance = artLuminance,
+    )
     val tint = if (dark) PLAYER_INK_TINT_BRIGHT else PLAYER_INK_TINT
     val darken = if (dark) PLAYER_INK_DARKEN else 0f
     val target = remember(accent, tint, darken) {
@@ -202,10 +216,12 @@ fun ProvidePlayerInk(
     // Light ink over a bright band gets a darker floor to stand on instead of
     // giving way to dark ink. None under dark ink, which wants the brightness,
     // and less as the player's own dims (which already darken the backdrop) come in.
-    val scrimTarget = if (dark || band == null) {
+    // Over a clip whose frame hasn't been read yet, a middling scrim rather than none.
+    val scrimBand = band ?: if (overClip) CLIP_UNKNOWN_BAND else null
+    val scrimTarget = if (dark || scrimBand == null) {
         0f
     } else {
-        controlsScrimAlpha(band) * (1f - 2f * (conditions?.dim ?: 0f)).coerceIn(0f, 1f)
+        controlsScrimAlpha(scrimBand) * (1f - 2f * (conditions?.dim ?: 0f)).coerceIn(0f, 1f)
     }
     val scrim by animateFloatAsState(
         targetValue = scrimTarget,
@@ -219,6 +235,23 @@ fun ProvidePlayerInk(
         content = content,
     )
 }
+
+/**
+ * Whether the player's ink is dark. A Song fixes pick ([forcedDark]) wins. Over a playing
+ * clip ([overClip]) it is always light: the clip changes under it faster than a frame read
+ * every few seconds can follow, and dark ink caught over a dark scene is unreadable, where
+ * light ink on the scrim still reads over a white one. Otherwise the band behind the
+ * controls decides ([bandDark]), or the whole sleeve while that is unknown.
+ */
+internal fun playerInkDark(
+    forcedDark: Boolean?,
+    overClip: Boolean,
+    bandDark: Boolean?,
+    artLuminance: Float?,
+): Boolean = forcedDark ?: if (overClip) false else bandDark ?: playerInkIsDark(artLuminance)
+
+/** The band brightness the scrim assumes over a clip before a frame of it has been read. */
+private const val CLIP_UNKNOWN_BAND = 0.45f
 
 /**
  * Whether a controls band of [band] brightness calls for dark ink, given what it called
