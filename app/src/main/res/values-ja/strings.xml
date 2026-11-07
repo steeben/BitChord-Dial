@@ -99,10 +99,10 @@
     <string name="dolby_atmos_open_failed">Dolby Atmosの設定を開けませんでした</string>
     <string name="update_available">アップデートが利用可能です：v%1$s</string>
     <string name="software_update">ソフトウェアアップデート</string>
-    <string name="update_available_body">bitchord %1$s がダウンロード可能です。</string>
-    <string name="update_downloading_body">bitchord %1$s をダウンロード中…</string>
-    <string name="update_ready_body">bitchord %1$s のインストール準備ができました。</string>
-    <string name="update_failed_body">bitchord %1$s をダウンロードできませんでした。</string>
+    <string name="update_available_body">Dial %1$s がダウンロード可能です。</string>
+    <string name="update_downloading_body">Dial %1$s をダウンロード中…</string>
+    <string name="update_ready_body">Dial %1$s のインストール準備ができました。</string>
+    <string name="update_failed_body">Dial %1$s をダウンロードできませんでした。</string>
     <string name="download_now">今すぐダウンロード</string>
     <string name="install_now">今すぐインストール</string>
     <string name="later">後で</string>

@@ -14,6 +14,9 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -99,6 +102,7 @@ import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Usb
 import androidx.compose.material.icons.rounded.VolumeOff
 import androidx.compose.material.icons.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.Flare
 import androidx.compose.material.icons.rounded.Waves
 import androidx.compose.material.icons.rounded.Wifi
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -348,6 +352,7 @@ fun SettingsScreen(
     val keepNavBarExpanded by CustomizationSettings.keepNavBarExpanded.collectAsStateWithLifecycle()
     val miniPlayerNextButton by CustomizationSettings.miniPlayerNextButton.collectAsStateWithLifecycle()
     val wavyProgressBar by CustomizationSettings.wavyProgressBar.collectAsStateWithLifecycle()
+    val glowProgressBar by CustomizationSettings.glowProgressBar.collectAsStateWithLifecycle()
     val cropThumbnails by CustomizationSettings.cropThumbnails.collectAsStateWithLifecycle()
     val speedDials by CustomizationSettings.speedDials.collectAsStateWithLifecycle()
     val artistDial by CustomizationSettings.artistDial.collectAsStateWithLifecycle()
@@ -1250,6 +1255,21 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { CustomizationSettings.setWavyProgressBar(!wavyProgressBar) },
+                )
+            }
+            val glowProgressTitle = stringResource(R.string.glow_progress_bar)
+            row(glowProgressTitle, "player", "progress", "seek", "bar", "glow", "oneplus", "oxygenos") {
+                SettingsRow(
+                    icon = Icons.Rounded.Flare,
+                    title = glowProgressTitle,
+                    subtitle = stringResource(R.string.glow_progress_bar_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = glowProgressBar,
+                            onCheckedChange = CustomizationSettings::setGlowProgressBar,
+                        )
+                    },
+                    onClick = { CustomizationSettings.setGlowProgressBar(!glowProgressBar) },
                 )
             }
             val animatedCoverArtTitle = stringResource(R.string.animated_cover_art)
@@ -3948,6 +3968,17 @@ private fun SettingsColophon(version: String, onShowUpdate: () -> Unit) {
                         }
                     }
                 }
+                // Grows and shrinks to each new label (Checking…, You're on the
+                // latest version…) instead of snapping to it in one frame. Sits
+                // inside the glass and the tap target so both follow the
+                // animated size; centred, so the pill widens evenly both ways.
+                .animateContentSize(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessMediumLow,
+                    ),
+                    alignment = Alignment.Center,
+                )
                 .padding(horizontal = 22.dp, vertical = 11.dp),
         ) {
             Text(

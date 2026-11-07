@@ -14,6 +14,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -55,6 +56,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -194,6 +196,12 @@ fun FrostedTopBar(
      * to the bar's edge, with no gap kept for an empty actions pill.
      */
     actionsShown: Boolean = true,
+    /**
+     * The [accessory] springs in from nothing as the back button does, and
+     * shrinks away when it goes — a library folder's Songs / Artists / Albums
+     * tabs, which arrive with the page they belong to.
+     */
+    accessoryPopsIn: Boolean = false,
     actions: @Composable () -> Unit = {},
 ) {
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
@@ -336,7 +344,24 @@ fun FrostedTopBar(
                     }
                 }
             }
-            if (inlineTitle != null && accessory == null) {
+            // A popping accessory is kept, like the back button's handler, so
+            // it can still shrink away once the page that gave it is gone.
+            var poppedAccessory by remember { mutableStateOf<(@Composable () -> Unit)?>(null) }
+            if (accessory != null && accessoryPopsIn) poppedAccessory = accessory
+            // A plain accessory taking the place over drops the popping one at
+            // once, and starts the next one from nothing again.
+            var popGeneration by remember { mutableIntStateOf(0) }
+            if (accessory != null && !accessoryPopsIn && poppedAccessory != null) {
+                poppedAccessory = null
+                popGeneration++
+            }
+            val accessoryPop = remember(popGeneration) { MutableTransitionState(false) }
+            accessoryPop.targetState = accessory != null && accessoryPopsIn
+            val popSlot = !(accessory != null && !accessoryPopsIn) &&
+                (accessoryPop.currentState || accessoryPop.targetState) &&
+                poppedAccessory != null
+            val slot: (@Composable () -> Unit)? = if (popSlot) poppedAccessory else accessory
+            if (inlineTitle != null && slot == null) {
                 Text(
                     text = inlineTitle,
                     style = MaterialTheme.typography.titleLarge,
@@ -360,21 +385,37 @@ fun FrostedTopBar(
             // Beside the back button when there is one (a library folder's
             // search field), rather than over it.
             val accessoryStart = when {
-                onBack == null -> edge
+                // Leaving with the back button, it shrinks where it stood.
+                onBack == null && !popSlot -> edge
                 useFloatingChrome -> BAR_GUTTER + 44.dp + ACCESSORY_GAP
                 else -> 4.dp + 48.dp + ACCESSORY_GAP
             }
             Row(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .then(if (accessory != null) Modifier.fillMaxWidth().padding(start = accessoryStart) else Modifier)
+                    .then(if (slot != null) Modifier.fillMaxWidth().padding(start = accessoryStart) else Modifier)
                     // Same outer edge as the navbar; PILL_INSET below is
                     // internal padding around the icons, not extra margin.
                     .padding(end = edge),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (accessory != null) {
-                    Box(Modifier.weight(1f)) { accessory() }
+                if (slot != null) {
+                    Box(Modifier.weight(1f)) {
+                        if (popSlot) {
+                            androidx.compose.animation.AnimatedVisibility(
+                                visibleState = accessoryPop,
+                                enter = scaleIn(
+                                    animationSpec = spring(
+                                        dampingRatio = BACK_BOUNCE_DAMPING,
+                                        stiffness = Spring.StiffnessMediumLow,
+                                    ),
+                                ) + fadeIn(tween(120)),
+                                exit = scaleOut(animationSpec = tween(180), targetScale = 0f) + fadeOut(tween(160)),
+                            ) { slot() }
+                        } else {
+                            slot()
+                        }
+                    }
                     if (actionsShown) Spacer(Modifier.width(ACCESSORY_GAP))
                 }
                 if (actionsShown) {

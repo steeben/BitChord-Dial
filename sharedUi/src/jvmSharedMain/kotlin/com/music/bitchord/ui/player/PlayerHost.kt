@@ -218,6 +218,8 @@ interface PlayerSettingsSource {
     val compactCanvasControls: StateFlow<Boolean> get() = CompactCanvasControlsOff
     /** One UI 9's wave progress on the player's seek bar; off, the plain bar. */
     val wavyProgressBar: StateFlow<Boolean> get() = WavyProgressBarOn
+    /** The OnePlus-style glow progress bar on the player's seek bar; wins over [wavyProgressBar]. */
+    val glowProgressBar: StateFlow<Boolean> get() = GlowProgressBarOff
     val lastPlayerScreen: StateFlow<LastPlayerScreen>
     val legacyMeshGradient: StateFlow<Boolean>
     val lyricsBlur: StateFlow<Boolean>
@@ -450,4 +452,5 @@ private val DefaultAnimatedArt: StateFlow<com.music.bitchord.data.canvas.Animate
     kotlinx.coroutines.flow.MutableStateFlow(com.music.bitchord.data.canvas.AnimatedArtPrefs())
 
 private val WavyProgressBarOn: StateFlow<Boolean> = kotlinx.coroutines.flow.MutableStateFlow(true)
+private val GlowProgressBarOff: StateFlow<Boolean> = kotlinx.coroutines.flow.MutableStateFlow(false)
 private val NoPreferredLyricsSource: StateFlow<LyricsSource?> = kotlinx.coroutines.flow.MutableStateFlow(null)

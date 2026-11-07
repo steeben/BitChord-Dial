@@ -77,9 +77,10 @@ import java.util.Locale
  * carries the track with it instead of leaving a new empty playlist behind
  * for the user to add to a second time.
  *
- * [song] is null when the flow started from the Library tab rather than from a
- * track, which is the one case where the header has no track to draw and
- * "New playlist" is the whole point of the sheet.
+ * [songs] is empty when the flow started from the Library tab rather than
+ * from a track, which is the one case where the header has no track to draw
+ * and "New playlist" is the whole point of the sheet. More than one is a
+ * multi-selection: the header counts them instead of drawing one.
  *
  * Playlists are ticked rather than picked: one track often belongs in more
  * than one list, and a sheet that closed on the first tap meant opening it
@@ -96,7 +97,7 @@ fun PlaylistPickerSheet(
     onAdd: (List<UserPlaylist>) -> Unit,
     onCreate: (String, PlaylistPrivacy) -> Unit,
     modifier: Modifier = Modifier,
-    song: Song? = null,
+    songs: List<Song> = emptyList(),
     startCreating: Boolean = false,
     /** Offered under Create on the new-playlist form: a playlist brought over from Spotify instead. */
     onImportSpotify: (() -> Unit)? = null,
@@ -121,12 +122,21 @@ fun PlaylistPickerSheet(
     }
 
     Column(modifier.fillMaxWidth()) {
-        if (song != null) {
-            SheetTrackHeader(song)
+        when (songs.size) {
+            0 -> Unit
+            1 -> SheetTrackHeader(songs.single())
+            else -> Text(
+                text = "${songs.size} ${stringResource(R.string.selected)}",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
+            )
+        }
+        if (songs.isNotEmpty()) {
             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
         }
         SheetHeading(
-            stringResource(if (song != null) R.string.add_to_playlist else R.string.your_playlists)
+            stringResource(if (songs.isNotEmpty()) R.string.add_to_playlist else R.string.your_playlists)
                 .uppercase(Locale.getDefault()),
         )
 

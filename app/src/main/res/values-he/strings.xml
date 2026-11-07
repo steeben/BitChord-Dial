@@ -106,10 +106,10 @@
     <string name="dolby_atmos_open_failed">לא ניתן לפתוח את הגדרות Dolby Atmos</string>
     <string name="update_available">עדכון זמין: גרסה %1$s</string>
     <string name="software_update">עדכון תוכנה</string>
-    <string name="update_available_body">bitchord %1$s זמין להורדה.</string>
-    <string name="update_downloading_body">מוריד את bitchord %1$s…</string>
-    <string name="update_ready_body">bitchord %1$s מוכן להתקנה.</string>
-    <string name="update_failed_body">לא ניתן היה להוריד את bitchord %1$s.</string>
+    <string name="update_available_body">Dial %1$s זמין להורדה.</string>
+    <string name="update_downloading_body">מוריד את Dial %1$s…</string>
+    <string name="update_ready_body">Dial %1$s מוכן להתקנה.</string>
+    <string name="update_failed_body">לא ניתן היה להוריד את Dial %1$s.</string>
     <string name="download_now">הורדה עכשיו</string>
     <string name="install_now">התקנה עכשיו</string>
     <string name="later">מאוחר יותר</string>

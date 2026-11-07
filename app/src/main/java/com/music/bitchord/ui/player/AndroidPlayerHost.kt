@@ -65,6 +65,8 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
             get() = com.music.bitchord.data.settings.CustomizationSettings.compactCanvasControls
         override val wavyProgressBar
             get() = com.music.bitchord.data.settings.CustomizationSettings.wavyProgressBar
+        override val glowProgressBar
+            get() = com.music.bitchord.data.settings.CustomizationSettings.glowProgressBar
         override val lastPlayerScreen get() = AppSettings.lastPlayerScreen
         override val outputIcons
             get() = com.music.bitchord.data.settings.CustomizationSettings.outputIcons

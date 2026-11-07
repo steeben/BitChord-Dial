@@ -972,16 +972,17 @@ private fun BitChordApp(
     // is still in flight — read by the long-press sheet so it can show a
     // loading row instead of the two just being absent while it waits.
     var linksLoading by remember { mutableStateOf(false) }
-    // Which track the playlist picker is adding, or null when it's closed.
+    // Which tracks the playlist picker is adding — one from a track's menu,
+    // several from a multi-selection — or null when it's closed.
     // Separate from [songActions] so the menu can close behind it — the picker
     // is the next step, not a second sheet stacked on the first.
-    var playlistTarget by remember { mutableStateOf<Song?>(null) }
+    var playlistTarget by remember { mutableStateOf<List<Song>?>(null) }
     // The picker opened from the Library tab, where there is no track and
     // creating the playlist is the whole errand.
     var creatingPlaylist by remember { mutableStateOf(false) }
     // The same two, over the device's own playlists — for a track that is a
     // file on it, and for "New playlist" on Local Music's Playlists tab.
-    var offlinePlaylistTarget by remember { mutableStateOf<Song?>(null) }
+    var offlinePlaylistTarget by remember { mutableStateOf<List<Song>?>(null) }
     var creatingOfflinePlaylist by remember { mutableStateOf(false) }
     var showSpotifyImportDialog by remember { mutableStateOf(false) }
     // Which album or playlist the collection menu is open on, or null when it
@@ -4630,7 +4631,7 @@ private fun BitChordApp(
                                     entityType = EntityType.TRACK,
                                 ))
                                 viewModel.loadPlaylists()
-                                playlistTarget = song
+                                playlistTarget = listOf(song)
                             },
                             onBrowseClick = { item ->
                                 viewModel.recordEntity(SearchHistoryEntity(
@@ -4824,6 +4825,9 @@ private fun BitChordApp(
                                     ),
                                 )
                             }
+                            // Its Songs / Artists / Albums page, listed while the
+                            // Library is up, so the first tap slides in a full page.
+                            LaunchedEffect(librarySource) { viewModel.warmLibrary(librarySource.browseId) }
                             LibraryHomeScreen(
                                 source = librarySource,
                                 signedIn = signedIn,
@@ -5337,6 +5341,8 @@ private fun BitChordApp(
                     } else {
                         folderSearch ?: duplicatesSearch ?: settingsSearch
                     },
+                    // A folder's tabs pop in with its back button.
+                    accessoryPopsIn = folderSearchId != null,
                     actions = {
                         // This is intentionally scoped to Listen together: the
                         // round-trip time is meaningful while coordinating a
@@ -6247,10 +6253,10 @@ private fun BitChordApp(
                 onAddToPlaylist = {
                     songActions = null
                     if (song.localUri != null) {
-                        offlinePlaylistTarget = song
+                        offlinePlaylistTarget = listOf(song)
                     } else {
                         viewModel.loadPlaylists()
-                        playlistTarget = song
+                        playlistTarget = listOf(song)
                     }
                 },
                 onRemoveFromPlaylist = editable?.let {
@@ -6703,7 +6709,7 @@ private fun BitChordApp(
                 PlaylistPickerSheet(
                     playlists = playlists,
                     loading = playlistsLoading,
-                    song = target,
+                    songs = target.orEmpty(),
                     startCreating = target == null,
                     // Bringing a playlist over from Spotify is the other way to
                     // start one, so it is offered beside Create.
@@ -6716,8 +6722,8 @@ private fun BitChordApp(
                         null
                     },
                     onAdd = { picked ->
-                        target?.let { song ->
-                            viewModel.addToPlaylists(picked, song) { added, alreadyThere, failed ->
+                        target?.let { songs ->
+                            viewModel.addToPlaylists(picked, songs) { added, alreadyThere, failed ->
                                 // One line for the whole batch, saying the
                                 // outcome that matters most: what went in, else
                                 // that it was all there already, else that it
@@ -6738,7 +6744,7 @@ private fun BitChordApp(
                         dismiss()
                     },
                     onCreate = { title, privacy ->
-                        viewModel.createPlaylist(title, privacy, target)
+                        viewModel.createPlaylist(title, privacy, target.orEmpty())
                         dismiss()
                     },
                 )
@@ -6777,12 +6783,12 @@ private fun BitChordApp(
                 PlaylistPickerSheet(
                     playlists = choices,
                     loading = false,
-                    song = target,
+                    songs = target.orEmpty(),
                     startCreating = target == null,
                     offline = true,
                     onAdd = { picked ->
-                        target?.let { song ->
-                            val result = OfflinePlaylists.add(picked.mapTo(HashSet()) { it.playlistId }, listOf(song))
+                        target?.let { songs ->
+                            val result = OfflinePlaylists.add(picked.mapTo(HashSet()) { it.playlistId }, songs)
                             showQueueNotice(
                                 when {
                                     result.added > 1 -> context.resources.getQuantityString(
@@ -6797,8 +6803,8 @@ private fun BitChordApp(
                         dismiss()
                     },
                     onCreate = { title, _ ->
-                        OfflinePlaylists.create(title, listOfNotNull(target))
-                        if (target != null) showQueueNotice(context.getString(R.string.song_added_to_playlist))
+                        OfflinePlaylists.create(title, target.orEmpty())
+                        if (!target.isNullOrEmpty()) showQueueNotice(context.getString(R.string.song_added_to_playlist))
                         dismiss()
                     },
                 )
@@ -6837,9 +6843,21 @@ private fun BitChordApp(
         // What the ⋯ opens while rows are ticked on a release page or a
         // library folder — see [ListSelection].
         ListSelectionSheetHost(
+            backdrop = appBackdrop.takeIf { glassSamplesBackdrop },
+            hazeState = hazeState,
             onPlay = { songs -> play(songs, 0) },
             onPlayNext = playSongsNext,
             onAddToQueue = addSongsToQueue,
+            // Files on this device go to the device's own playlists, as a
+            // single file's menu sends them; anything else to the account's.
+            onAddToPlaylist = { songs ->
+                if (songs.all { it.localUri != null }) {
+                    offlinePlaylistTarget = songs
+                } else {
+                    viewModel.loadPlaylists()
+                    playlistTarget = songs.filter { it.localUri == null }
+                }
+            },
             onDownload = { songs -> startDownload(songs, null) },
         )
 

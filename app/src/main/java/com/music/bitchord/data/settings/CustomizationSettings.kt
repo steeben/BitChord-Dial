@@ -110,6 +110,13 @@ object CustomizationSettings {
     val wavyProgressBar = MutableStateFlow(true)
 
     /**
+     * The OnePlus-style glow bar on the player's seek bar: a slim line with a light at the
+     * playhead, dragged relative to where it is. The alternative to [wavyProgressBar]; turning
+     * either on turns the other off.
+     */
+    val glowProgressBar = MutableStateFlow(false)
+
+    /**
      * Icons the listener gave audio outputs from the player's output button, by the
      * player's output key ("BLUETOOTH:Pixel Buds Pro"), each an AudioOutputIcon name.
      */
@@ -208,6 +215,7 @@ object CustomizationSettings {
             .firstOrNull { it.name == p.getString(KEY_MINI_PLAYER_SHAPE, null) } ?: MiniPlayerShape.CIRCULAR
         compactCanvasControls.value = p.getBoolean(KEY_COMPACT_CANVAS_CONTROLS, true)
         wavyProgressBar.value = p.getBoolean(KEY_WAVY_PROGRESS_BAR, true)
+        glowProgressBar.value = p.getBoolean(KEY_GLOW_PROGRESS_BAR, false)
         outputIcons.value = readOutputIcons(p.getString(KEY_OUTPUT_ICONS, null))
         libraryTabViews.value = p.getString(KEY_LIBRARY_TAB_VIEWS, null)
             ?.split(",")
@@ -681,7 +689,22 @@ object CustomizationSettings {
 
     fun setWavyProgressBar(value: Boolean) {
         wavyProgressBar.value = value
-        prefs?.edit()?.putBoolean(KEY_WAVY_PROGRESS_BAR, value)?.apply()
+        if (value) glowProgressBar.value = false
+        prefs?.edit()?.let { editor ->
+            editor.putBoolean(KEY_WAVY_PROGRESS_BAR, value)
+            if (value) editor.putBoolean(KEY_GLOW_PROGRESS_BAR, false)
+            editor.apply()
+        }
+    }
+
+    fun setGlowProgressBar(value: Boolean) {
+        glowProgressBar.value = value
+        if (value) wavyProgressBar.value = false
+        prefs?.edit()?.let { editor ->
+            editor.putBoolean(KEY_GLOW_PROGRESS_BAR, value)
+            if (value) editor.putBoolean(KEY_WAVY_PROGRESS_BAR, false)
+            editor.apply()
+        }
     }
 
     fun setOutputIcon(key: String, icon: String?) {
@@ -784,6 +807,7 @@ object CustomizationSettings {
     private const val KEY_OUTPUT_ICONS = "output_icons"
     private const val KEY_COMPACT_CANVAS_CONTROLS = "custom_compact_canvas_controls"
     private const val KEY_WAVY_PROGRESS_BAR = "custom_wavy_progress_bar"
+    private const val KEY_GLOW_PROGRESS_BAR = "custom_glow_progress_bar"
     private const val KEY_AMBIENT_BACKGROUND = "custom_ambient_background"
     private const val KEY_LIBRARY_TAB_VIEWS = "custom_library_tab_views"
     private const val KEY_AMBIENT_FOLLOWS_ARTWORK = "custom_ambient_follows_artwork"

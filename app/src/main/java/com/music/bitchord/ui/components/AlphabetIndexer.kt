@@ -87,6 +87,21 @@ fun indexSortKey(title: String): String {
 }
 
 /**
+ * Sorted by the [indexSortKey] of each item's [title], each key worked out once.
+ * A plain `sortedBy { indexSortKey(..) }` works it out on every comparison —
+ * a normalise and a regex, twice, some hundred thousand times for a large
+ * library — on the frame a library page opens, which stalled its slide in.
+ */
+inline fun <T> Iterable<T>.sortedByIndexKey(
+    descending: Boolean = false,
+    crossinline title: (T) -> String,
+): List<T> {
+    val keyed = map { indexSortKey(title(it)) to it }
+    val sorted = if (descending) keyed.sortedByDescending { it.first } else keyed.sortedBy { it.first }
+    return sorted.map { it.second }
+}
+
+/**
  * A strip of letters down the right-hand edge of a library list: touch or drag
  * along it and the list jumps to the first item filed under that letter, with
  * the letter shown large beside the finger.
