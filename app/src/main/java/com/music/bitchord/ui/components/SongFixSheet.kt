@@ -164,7 +164,6 @@ fun rememberSongFixChoices(song: Song, onClose: () -> Unit): List<SongMenuChoice
                 SongMenuChoice(
                     icon = Icons.Rounded.LibraryMusic,
                     label = context.getString(R.string.song_fix_find_song),
-                    description = context.getString(R.string.song_fix_find_song_detail),
                 ) {
                     close()
                     SongFixRequests.open(SongFixRequests.Kind.SONG, song)

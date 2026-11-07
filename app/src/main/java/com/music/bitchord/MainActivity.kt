@@ -6055,7 +6055,6 @@ private fun BitChordApp(
                                 SongMenuChoice(
                                     icon = Icons.Rounded.HideImage,
                                     label = context.getString(R.string.canvas_fix_wrong_canvas),
-                                    description = context.getString(R.string.canvas_fix_wrong_canvas_detail),
                                 ) {
                                     songActions = null
                                     CanvasAudioFixes.hideCanvas(song.videoId)

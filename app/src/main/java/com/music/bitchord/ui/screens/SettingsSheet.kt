@@ -1242,6 +1242,36 @@ fun SettingsScreen(
                     onClick = { AppSettings.setLegacyMeshGradient(!legacyMeshGradient) },
                 )
             }
+            val wavyProgressTitle = stringResource(R.string.wavy_progress_bar)
+            row(wavyProgressTitle, "player", "progress", "seek", "bar", "wave", "one ui", "samsung") {
+                SettingsRow(
+                    icon = Icons.Rounded.Waves,
+                    title = wavyProgressTitle,
+                    subtitle = stringResource(R.string.wavy_progress_bar_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = wavyProgressBar,
+                            onCheckedChange = CustomizationSettings::setWavyProgressBar,
+                        )
+                    },
+                    onClick = { CustomizationSettings.setWavyProgressBar(!wavyProgressBar) },
+                )
+            }
+            val glowProgressTitle = stringResource(R.string.glow_progress_bar)
+            row(glowProgressTitle, "player", "progress", "seek", "bar", "glow", "oneplus", "oxygenos") {
+                SettingsRow(
+                    icon = Icons.Rounded.Flare,
+                    title = glowProgressTitle,
+                    subtitle = stringResource(R.string.glow_progress_bar_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = glowProgressBar,
+                            onCheckedChange = CustomizationSettings::setGlowProgressBar,
+                        )
+                    },
+                    onClick = { CustomizationSettings.setGlowProgressBar(!glowProgressBar) },
+                )
+            }
             val animatedCoverArtTitle = stringResource(R.string.animated_cover_art)
             // Carries the keywords of the rows that only appear once it is on,
             // so searching "spotify" with animated covers switched off turns up
@@ -1526,36 +1556,6 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { CustomizationSettings.setMiniPlayerNextButton(!miniPlayerNextButton) },
-                )
-            }
-            val wavyProgressTitle = stringResource(R.string.wavy_progress_bar)
-            row(wavyProgressTitle, "player", "progress", "seek", "bar", "wave", "one ui", "samsung") {
-                SettingsRow(
-                    icon = Icons.Rounded.Waves,
-                    title = wavyProgressTitle,
-                    subtitle = stringResource(R.string.wavy_progress_bar_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = wavyProgressBar,
-                            onCheckedChange = CustomizationSettings::setWavyProgressBar,
-                        )
-                    },
-                    onClick = { CustomizationSettings.setWavyProgressBar(!wavyProgressBar) },
-                )
-            }
-            val glowProgressTitle = stringResource(R.string.glow_progress_bar)
-            row(glowProgressTitle, "player", "progress", "seek", "bar", "glow", "oneplus", "oxygenos") {
-                SettingsRow(
-                    icon = Icons.Rounded.Flare,
-                    title = glowProgressTitle,
-                    subtitle = stringResource(R.string.glow_progress_bar_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = glowProgressBar,
-                            onCheckedChange = CustomizationSettings::setGlowProgressBar,
-                        )
-                    },
-                    onClick = { CustomizationSettings.setGlowProgressBar(!glowProgressBar) },
                 )
             }
             val cropThumbnailsTitle = stringResource(R.string.crop_thumbnails)
