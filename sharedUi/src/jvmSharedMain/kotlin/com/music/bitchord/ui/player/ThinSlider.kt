@@ -116,7 +116,7 @@ fun ThinSlider(
     /**
      * Draws the OnePlus-style glow bar instead — see [GlowTrack] — coloured off these accents.
      * Its drag is relative: the playhead moves by however far the finger travels, from wherever
-     * it was, rather than jumping to the touch. A tap alone doesn't seek.
+     * it was, rather than jumping to the touch. A tap seeks to where it lands.
      */
     glow: WaveAccents? = null,
     /** The glow style's row lean, which this bar drives while dragging — see [GlowLean]. */
@@ -187,11 +187,18 @@ fun ThinSlider(
                     val follow = GLOW_LEAN_FOLLOW_MAX.toPx()
                     val stretch = GLOW_STRETCH_MAX.toPx()
                     var scrubbing = false
+                    var tapped = false
+                    var tapX = down.position.x
                     while (true) {
                         val event = awaitPointerEvent()
                         val pointer = event.changes.firstOrNull { it.id == down.id } ?: break
                         if (!pointer.pressed) {
-                            if (scrubbing) pointer.consume()
+                            // Lifted without dragging: a tap, which seeks to where it landed.
+                            if (!scrubbing && !pointer.isConsumed) {
+                                tapped = true
+                                tapX = pointer.position.x
+                            }
+                            pointer.consume()
                             break
                         }
                         val moved = pointer.position.x - down.position.x
@@ -209,9 +216,10 @@ fun ThinSlider(
                             pointer.consume()
                         }
                     }
+                    if (tapped) onValueChange((tapX / width).coerceIn(0f, 1f))
                     dragging = false
                     currentLean.value?.let { lean -> scope.launch { lean.release() } }
-                    if (scrubbing) onValueChangeFinished?.invoke()
+                    if (scrubbing || tapped) onValueChangeFinished?.invoke()
                 } else awaitEachGesture {
                     // The wave style's line is inset for its bead; map the finger onto it.
                     val inset = if (waveStyle.value) THUMB_INSET.toPx() else 0f

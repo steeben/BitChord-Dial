@@ -102,7 +102,7 @@ import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Usb
 import androidx.compose.material.icons.rounded.VolumeOff
 import androidx.compose.material.icons.rounded.VolumeUp
-import androidx.compose.material.icons.rounded.Flare
+import androidx.compose.material.icons.rounded.LinearScale
 import androidx.compose.material.icons.rounded.Waves
 import androidx.compose.material.icons.rounded.Wifi
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -351,8 +351,7 @@ fun SettingsScreen(
     val navTabs by CustomizationSettings.navTabs.collectAsStateWithLifecycle()
     val keepNavBarExpanded by CustomizationSettings.keepNavBarExpanded.collectAsStateWithLifecycle()
     val miniPlayerNextButton by CustomizationSettings.miniPlayerNextButton.collectAsStateWithLifecycle()
-    val wavyProgressBar by CustomizationSettings.wavyProgressBar.collectAsStateWithLifecycle()
-    val glowProgressBar by CustomizationSettings.glowProgressBar.collectAsStateWithLifecycle()
+    val progressBarStyle by CustomizationSettings.progressBarStyle.collectAsStateWithLifecycle()
     val cropThumbnails by CustomizationSettings.cropThumbnails.collectAsStateWithLifecycle()
     val speedDials by CustomizationSettings.speedDials.collectAsStateWithLifecycle()
     val artistDial by CustomizationSettings.artistDial.collectAsStateWithLifecycle()
@@ -1242,34 +1241,16 @@ fun SettingsScreen(
                     onClick = { AppSettings.setLegacyMeshGradient(!legacyMeshGradient) },
                 )
             }
-            val wavyProgressTitle = stringResource(R.string.wavy_progress_bar)
-            row(wavyProgressTitle, "player", "progress", "seek", "bar", "wave", "one ui", "samsung") {
-                SettingsRow(
-                    icon = Icons.Rounded.Waves,
-                    title = wavyProgressTitle,
-                    subtitle = stringResource(R.string.wavy_progress_bar_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = wavyProgressBar,
-                            onCheckedChange = CustomizationSettings::setWavyProgressBar,
-                        )
-                    },
-                    onClick = { CustomizationSettings.setWavyProgressBar(!wavyProgressBar) },
-                )
-            }
-            val glowProgressTitle = stringResource(R.string.glow_progress_bar)
-            row(glowProgressTitle, "player", "progress", "seek", "bar", "glow", "oneplus", "oxygenos") {
-                SettingsRow(
-                    icon = Icons.Rounded.Flare,
-                    title = glowProgressTitle,
-                    subtitle = stringResource(R.string.glow_progress_bar_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = glowProgressBar,
-                            onCheckedChange = CustomizationSettings::setGlowProgressBar,
-                        )
-                    },
-                    onClick = { CustomizationSettings.setGlowProgressBar(!glowProgressBar) },
+            val progressBarTitle = stringResource(R.string.progress_bar_style)
+            row(
+                progressBarTitle, "player", "progress", "seek", "bar", "wave", "glow", "plain",
+                "one ui", "samsung", "oneplus", "oxygenos",
+            ) {
+                SettingsRow(icon = Icons.Rounded.LinearScale, title = progressBarTitle)
+                ProgressBarStylePicker(
+                    selected = progressBarStyle,
+                    onSelect = CustomizationSettings::setProgressBarStyle,
+                    modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, bottom = 14.dp),
                 )
             }
             val animatedCoverArtTitle = stringResource(R.string.animated_cover_art)

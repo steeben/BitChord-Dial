@@ -49,10 +49,6 @@
     <string name="speed_dial_grid">Speed dial grid</string>
     <string name="mini_player_next_button">Show next button on miniplayer</string>
     <string name="mini_player_next_button_subtitle">Swiping the miniplayer sideways skips either way</string>
-    <string name="wavy_progress_bar">Wave progress bar</string>
-    <string name="wavy_progress_bar_subtitle">Waves in the accent colours rise from the player\'s seek bar as the song plays</string>
-    <string name="glow_progress_bar">Glow progress bar</string>
-    <string name="glow_progress_bar_subtitle">A slim bar with a soft light trailing the playhead, like OnePlus. Drag anywhere on it to nudge the song from where it is</string>
     <string name="crop_thumbnails">Crop thumbnails</string>
     <string name="crop_thumbnails_subtitle">Fill artwork that isn\'t square instead of showing bars</string>
     <string name="dial_page_artists">Artists</string>
@@ -213,4 +209,8 @@
     <string name="auto_backup_now">Back up now</string>
     <string name="auto_backup_now_subtitle">Keeps the newest %1$d automatic backups in the folder</string>
     <string name="auto_backup_started">Backing up…</string>
+    <string name="progress_bar_style">Progress bar</string>
+    <string name="progress_bar_glow">Glow</string>
+    <string name="progress_bar_wave">Wave</string>
+    <string name="progress_bar_plain">Plain</string>
 </resources>

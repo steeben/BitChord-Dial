@@ -106,15 +106,14 @@ object CustomizationSettings {
      */
     val compactCanvasControls = MutableStateFlow(true)
 
-    /** One UI 9's wave progress on the player's seek bar. Off, the plain thin bar. */
-    val wavyProgressBar = MutableStateFlow(true)
+    /** How the player's seek bar is drawn: Glow (the default), Wave or Plain. */
+    val progressBarStyle = MutableStateFlow(ProgressBarStyle.GLOW)
 
-    /**
-     * The OnePlus-style glow bar on the player's seek bar: a slim line with a light at the
-     * playhead, dragged relative to where it is. The alternative to [wavyProgressBar]; turning
-     * either on turns the other off.
-     */
-    val glowProgressBar = MutableStateFlow(false)
+    /** One UI 9's wave progress on the player's seek bar; follows [progressBarStyle]. */
+    val wavyProgressBar = MutableStateFlow(false)
+
+    /** The OnePlus-style glow bar on the player's seek bar; follows [progressBarStyle]. */
+    val glowProgressBar = MutableStateFlow(true)
 
     /**
      * Icons the listener gave audio outputs from the player's output button, by the
@@ -214,8 +213,13 @@ object CustomizationSettings {
         miniPlayerShape.value = MiniPlayerShape.entries
             .firstOrNull { it.name == p.getString(KEY_MINI_PLAYER_SHAPE, null) } ?: MiniPlayerShape.CIRCULAR
         compactCanvasControls.value = p.getBoolean(KEY_COMPACT_CANVAS_CONTROLS, true)
-        wavyProgressBar.value = p.getBoolean(KEY_WAVY_PROGRESS_BAR, true)
-        glowProgressBar.value = p.getBoolean(KEY_GLOW_PROGRESS_BAR, false)
+        // Before the picker there were two switches. Only a deliberate "both off" carries over
+        // (as Plain); everyone else moves to the new default, Glow.
+        val style = ProgressBarStyle.entries.firstOrNull { it.name == p.getString(KEY_PROGRESS_BAR_STYLE, null) }
+            ?: if (p.contains(KEY_WAVY_PROGRESS_BAR) && !p.getBoolean(KEY_WAVY_PROGRESS_BAR, true) &&
+                !p.getBoolean(KEY_GLOW_PROGRESS_BAR, false)
+            ) ProgressBarStyle.PLAIN else ProgressBarStyle.GLOW
+        applyProgressBarStyle(style)
         outputIcons.value = readOutputIcons(p.getString(KEY_OUTPUT_ICONS, null))
         libraryTabViews.value = p.getString(KEY_LIBRARY_TAB_VIEWS, null)
             ?.split(",")
@@ -687,24 +691,15 @@ object CustomizationSettings {
             ?.apply()
     }
 
-    fun setWavyProgressBar(value: Boolean) {
-        wavyProgressBar.value = value
-        if (value) glowProgressBar.value = false
-        prefs?.edit()?.let { editor ->
-            editor.putBoolean(KEY_WAVY_PROGRESS_BAR, value)
-            if (value) editor.putBoolean(KEY_GLOW_PROGRESS_BAR, false)
-            editor.apply()
-        }
+    fun setProgressBarStyle(style: ProgressBarStyle) {
+        applyProgressBarStyle(style)
+        prefs?.edit()?.putString(KEY_PROGRESS_BAR_STYLE, style.name)?.apply()
     }
 
-    fun setGlowProgressBar(value: Boolean) {
-        glowProgressBar.value = value
-        if (value) wavyProgressBar.value = false
-        prefs?.edit()?.let { editor ->
-            editor.putBoolean(KEY_GLOW_PROGRESS_BAR, value)
-            if (value) editor.putBoolean(KEY_WAVY_PROGRESS_BAR, false)
-            editor.apply()
-        }
+    private fun applyProgressBarStyle(style: ProgressBarStyle) {
+        progressBarStyle.value = style
+        wavyProgressBar.value = style == ProgressBarStyle.WAVE
+        glowProgressBar.value = style == ProgressBarStyle.GLOW
     }
 
     fun setOutputIcon(key: String, icon: String?) {
@@ -808,6 +803,7 @@ object CustomizationSettings {
     private const val KEY_COMPACT_CANVAS_CONTROLS = "custom_compact_canvas_controls"
     private const val KEY_WAVY_PROGRESS_BAR = "custom_wavy_progress_bar"
     private const val KEY_GLOW_PROGRESS_BAR = "custom_glow_progress_bar"
+    private const val KEY_PROGRESS_BAR_STYLE = "custom_progress_bar_style"
     private const val KEY_AMBIENT_BACKGROUND = "custom_ambient_background"
     private const val KEY_LIBRARY_TAB_VIEWS = "custom_library_tab_views"
     private const val KEY_AMBIENT_FOLLOWS_ARTWORK = "custom_ambient_follows_artwork"
@@ -877,3 +873,6 @@ object LastPlayed {
     /** Milliseconds since the epoch, or 0 for never. */
     fun at(videoId: String): Long = cache[videoId] ?: 0L
 }
+
+/** The player's seek bar styles, offered in Settings with a preview of each. */
+enum class ProgressBarStyle { GLOW, WAVE, PLAIN }

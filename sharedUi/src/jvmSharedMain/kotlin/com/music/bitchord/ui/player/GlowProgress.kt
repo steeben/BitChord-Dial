@@ -94,8 +94,17 @@ internal fun GlowTrack(
     markerColor: Color,
 ) {
     val flare by animateFloatAsState(
-        targetValue = if (dragging) 0f else 1f,
-        animationSpec = tween(durationMillis = if (dragging) 160 else 420, easing = FastOutSlowInEasing),
+        // Out while a finger holds the bar, and while the song is paused: the light is the
+        // music moving, so it fades away with it and comes back when it plays.
+        targetValue = if (dragging || !playing) 0f else 1f,
+        animationSpec = tween(
+            durationMillis = when {
+                dragging -> 160
+                !playing -> 700
+                else -> 420
+            },
+            easing = FastOutSlowInEasing,
+        ),
         label = "glowFlare",
     )
     val held by animateFloatAsState(

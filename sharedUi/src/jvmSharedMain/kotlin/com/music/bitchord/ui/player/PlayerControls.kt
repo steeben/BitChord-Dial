@@ -257,6 +257,10 @@ internal fun PlayerScrubber(
             animateWaves = !reduceAnimation,
             glow = accents.takeIf { glow },
             glowLean = glowLean.takeIf { glow && !reduceAnimation },
+            // The plain bar wears the player's own ink, like the times and controls around it.
+            activeColor = playerInk(alpha = 0.92f),
+            inactiveColor = playerInk(alpha = 0.26f),
+            markerColor = playerInk(alpha = 0.5f),
         )
         Box(
             modifier = Modifier
