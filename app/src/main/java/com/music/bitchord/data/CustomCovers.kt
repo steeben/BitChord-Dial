@@ -7,6 +7,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.media.ExifInterface
 import android.net.Uri
+import android.util.Base64
 import com.music.bitchord.data.model.DetailPage
 import com.music.bitchord.data.model.HomeShelf
 import com.music.bitchord.data.model.LibraryPage
@@ -123,6 +124,33 @@ object CustomCovers {
         val previous = _covers.value[key] ?: return
         update(_covers.value - key)
         deleteFile(previous)
+    }
+
+    /** Each cover's image, base64, by playlist key: what a backup carries of them. */
+    fun exportImages(): Map<String, String> = _covers.value.mapNotNull { (key, url) ->
+        runCatching { File(Uri.parse(url).path.orEmpty()).readBytes() }.getOrNull()
+            ?.let { key to Base64.encodeToString(it, Base64.NO_WRAP) }
+    }.toMap()
+
+    /**
+     * Replaces every cover with [images] from a backup, written out as new
+     * files so the image loader can't hand back one it cached from before.
+     */
+    fun restoreImages(context: Context, images: Map<String, String>) {
+        val folder = dir ?: File(context.filesDir, DIR).also { dir = it }
+        folder.mkdirs()
+        val now = System.currentTimeMillis()
+        val restored = images.mapNotNull { (key, data) ->
+            runCatching {
+                val file = File(folder, "cover_${key.hashCode().toUInt()}_$now.jpg")
+                file.writeBytes(Base64.decode(data, Base64.NO_WRAP))
+                key to Uri.fromFile(file).toString()
+            }.getOrNull()
+        }.toMap()
+        val previous = _covers.value.values.toSet() - restored.values.toSet()
+        if (prefs == null) prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        update(restored)
+        previous.forEach { deleteFile(it) }
     }
 
     private fun deleteFile(url: String) {

@@ -24,10 +24,12 @@ import java.time.format.DateTimeFormatter
  *
  * ## What is in it
  *
- * Every preference except credentials (see [AppSettings.exportPrefs]), and every
- * month of listening. Not the audio cache, the downloads or the artwork: those
- * are megabytes that re-fetch themselves, and a backup that is mostly cache is
- * one nobody keeps.
+ * Every preference except credentials (see [AppSettings.exportPrefs]), which
+ * covers the speed dial and artist dial pins; every month of listening; the
+ * per-song and playlist stores in [SONG_DATA_FILES]; and the covers picked for
+ * playlists, since those are images nothing else can fetch again. Not the audio
+ * cache, the downloads or other artwork: those are megabytes that re-fetch
+ * themselves, and a backup that is mostly cache is one nobody keeps.
  *
  * ## Typed values rather than a JSON object
  *
@@ -101,8 +103,11 @@ object Backup {
             exportedAt = Instant.now().toString(),
             settings = AppSettings.exportPrefs().toPrefValues(),
             songData = SONG_DATA_FILES.associateWith { name ->
-                context.getSharedPreferences(name, Context.MODE_PRIVATE).all.toPrefValues()
+                context.getSharedPreferences(name, Context.MODE_PRIVATE).all
+                    .filterKeys { it !in SKIPPED_KEYS[name].orEmpty() }
+                    .toPrefValues()
             }.filterValues { it.isNotEmpty() },
+            playlistCovers = com.music.bitchord.data.CustomCovers.exportImages(),
             listening = buckets,
         )
         return json.encodeToString(BackupFile.serializer(), file) to buckets.size
@@ -121,11 +126,13 @@ object Backup {
     const val AUTO_PREFIX = "bitchord-auto-backup-"
 
     /**
-     * Per-song choices kept outside the main settings file: metadata fixes,
-     * canvas and video fixes, source and original-version pins, and imported
-     * playlists. Song metadata and settings, so they travel with a backup.
-     * Album art picks and local file links are left out: they point at images
-     * and files on this device, which a backup does not carry.
+     * Choices and records kept outside the main settings file: metadata fixes,
+     * canvas and video fixes, source and original-version pins, imported
+     * playlists, the Local Music folder's own playlists and likes, and what this
+     * device has played (the speed dial's History, which albums and playlists
+     * tracks were played from, and the "Last played" sort). They travel with a
+     * backup. Album art picks and local file links are left out: they point at
+     * images and files on this device, which a backup does not carry.
      */
     private val SONG_DATA_FILES = listOf(
         "song_metadata_fixes",
@@ -133,14 +140,30 @@ object Backup {
         "bitchord_source_pins",
         "bitchord_original_versions",
         "bitchord_local_playlists",
+        "bitchord_offline_playlists",
+        "bitchord_device_plays",
+        "bitchord_played_collections",
+        "bitchord_last_played",
+    )
+
+    /**
+     * Keys in a [SONG_DATA_FILES] file that belong to something else and stay
+     * out of a backup: the play queue saved for after process death shares the
+     * "Last played" file, and restoring a queue from another day would be odd.
+     * An import leaves them as they are.
+     */
+    private val SKIPPED_KEYS = mapOf(
+        "bitchord_last_played" to setOf("queue", "index", "position"),
     )
 
     /** Replaces each per-song file the backup has, and has its owner read it again. */
     private fun restoreSongData(context: Context, songData: Map<String, Map<String, PrefValue>>) {
         songData.filterKeys { it in SONG_DATA_FILES }.forEach { (name, values) ->
-            context.getSharedPreferences(name, Context.MODE_PRIVATE).edit().apply {
-                clear()
-                values.forEach { (key, pref) ->
+            val skipped = SKIPPED_KEYS[name].orEmpty()
+            val prefs = context.getSharedPreferences(name, Context.MODE_PRIVATE)
+            prefs.edit().apply {
+                prefs.all.keys.filterNot { it in skipped }.forEach { remove(it) }
+                values.filterKeys { it !in skipped }.forEach { (key, pref) ->
                     when (val value = pref.decoded()) {
                         is Boolean -> putBoolean(key, value)
                         is Int -> putInt(key, value)
@@ -159,6 +182,10 @@ object Backup {
         com.music.bitchord.playback.SourcePins.init(context)
         com.music.bitchord.playback.OriginalVersion.init(context)
         com.music.bitchord.data.spotify.LocalPlaylistStore.init(context)
+        com.music.bitchord.data.OfflinePlaylists.reload()
+        com.music.bitchord.data.settings.DevicePlays.init(context)
+        com.music.bitchord.data.settings.PlayedCollections.init(context)
+        com.music.bitchord.data.settings.LastPlayed.init(context)
     }
 
     /**
@@ -184,6 +211,9 @@ object Backup {
             ListeningStats.importAll(file.listening)
             AppSettings.importPrefs(file.settings.mapValues { it.value.decoded() })
             restoreSongData(context, file.songData)
+            // Absent from backups written before covers were carried, and
+            // those must not wipe the covers this device already has.
+            file.playlistCovers?.let { com.music.bitchord.data.CustomCovers.restoreImages(context, it) }
             // Shares AppSettings' preference file, so it has already been
             // overwritten by the line above — it just doesn't know yet.
             SearchHistory.reload()
@@ -223,6 +253,8 @@ object Backup {
         val settings: Map<String, PrefValue> = emptyMap(),
         /** Per-song preference files by name; see [SONG_DATA_FILES]. */
         val songData: Map<String, Map<String, PrefValue>> = emptyMap(),
+        /** Playlist covers' images, base64, by playlist key; null in older backups. */
+        val playlistCovers: Map<String, String>? = null,
         val listening: List<StoredBucket> = emptyList(),
     )
 

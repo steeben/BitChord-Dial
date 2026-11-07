@@ -1316,13 +1316,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * Adds [song] to every playlist in [playlists] — the picker's ticked rows —
+     * Adds [songs] to every playlist in [playlists] — the picker's ticked rows —
      * and reports how each went, once, when they all have.
      *
      * Not optimistic, unlike a rating: the picker closes on the tap and there is
      * nothing left of it to update, and a playlist that shows a track it turned
      * out not to have taken is worse than one that shows it a moment late. The
-     * playlist's own page is the exception — see [addOne].
+     * playlist's own page is the exception — see [addTo].
      *
      * YouTube itself has no objection to a duplicate row, so whether the track
      * is already there is checked here, against the playlist's open page or a
@@ -1335,14 +1335,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun addToPlaylists(
         playlists: List<UserPlaylist>,
-        song: Song,
+        songs: List<Song>,
         onResult: (added: Int, alreadyThere: Int, failed: Int) -> Unit = { _, _, _ -> },
     ) {
-        if (!requireSignIn() || playlists.isEmpty()) return
+        if (!requireSignIn() || playlists.isEmpty() || songs.isEmpty()) return
         // Their pages in memory no longer match the account.
         detailLoadedAt.clear()
         viewModelScope.launch {
-            val outcomes = playlists.map { addOne(it, song) }
+            val outcomes = playlists.map { addTo(it, songs) }
             onResult(
                 outcomes.count { it == AddOutcome.ADDED },
                 outcomes.count { it == AddOutcome.ALREADY_THERE },
@@ -1353,19 +1353,26 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private enum class AddOutcome { ADDED, ALREADY_THERE, FAILED }
 
-    private suspend fun addOne(playlist: UserPlaylist, song: Song): AddOutcome {
+    /**
+     * Adds whichever of [songs] [playlist] doesn't already have, in one edit:
+     * a multi-selection goes in as a single request per playlist rather than
+     * a request per track. ADDED when anything went in.
+     */
+    private suspend fun addTo(playlist: UserPlaylist, songs: List<Song>): AddOutcome {
         val openSongs = (_detailStack.value.firstOrNull { it.browseId == playlist.browseId }
             ?.songs as? UiState.Success<List<Song>>)?.data
-        val known = openSongs
-            ?: YtMusicRepository.allSongs(playlist.browseId).getOrNull()
-        if (known?.any { it.videoId == song.videoId } == true) return AddOutcome.ALREADY_THERE
-        return YtMusicRepository.addToPlaylist(playlist.playlistId, listOf(song.videoId)).fold(
+        val known = (openSongs ?: YtMusicRepository.allSongs(playlist.browseId).getOrNull())
+            ?.mapTo(HashSet()) { it.videoId }
+            .orEmpty()
+        val fresh = songs.distinctBy { it.videoId }.filterNot { it.videoId in known }
+        if (fresh.isEmpty()) return AddOutcome.ALREADY_THERE
+        return YtMusicRepository.addToPlaylist(playlist.playlistId, fresh.map { it.videoId }).fold(
             onSuccess = { added ->
                 libraryStale = true
                 // The playlist's page may be open behind the picker — it is
-                // reachable from a row's own menu on it — so the track goes
+                // reachable from a row's own menu on it — so the tracks go
                 // into it for the same reason [addSuggestedSong] does.
-                appendToOpenPlaylist(playlist.browseId, song, added[song.videoId])
+                fresh.forEach { appendToOpenPlaylist(playlist.browseId, it, added[it.videoId]) }
                 AddOutcome.ADDED
             },
             onFailure = { AddOutcome.FAILED },
@@ -1373,18 +1380,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * Creates a playlist, seeded with [song] when the flow started from a
-     * track's menu — one request, so it can't half-succeed into an empty
-     * playlist the user has to add to again.
+     * Creates a playlist, seeded with [songs] when the flow started from a
+     * track's menu or a multi-selection — one request, so it can't
+     * half-succeed into an empty playlist the user has to add to again.
      */
-    fun createPlaylist(title: String, privacy: PlaylistPrivacy, song: Song? = null) {
+    fun createPlaylist(title: String, privacy: PlaylistPrivacy, songs: List<Song> = emptyList()) {
         if (!requireSignIn()) return
         val name = title.trim().ifBlank { text(R.string.new_playlist) }
         viewModelScope.launch {
             YtMusicRepository.createPlaylist(
                 title = name,
                 privacy = privacy,
-                videoIds = listOfNotNull(song?.videoId),
+                videoIds = songs.map { it.videoId }.distinct(),
             ).fold(
                 onSuccess = { playlistId ->
                     // Nothing to look up for a playlist this account has just
@@ -1400,8 +1407,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                         // surfaces that draw it leave a blank one out, so an
                         // unseeded playlist gets a card of just its name rather
                         // than a guess at what the feed will call it.
-                        subtitle = if (song != null) "1 song" else "",
-                        thumbnailUrl = song?.thumbnailUrl,
+                        subtitle = when (val n = songs.distinctBy { it.videoId }.size) {
+                            0 -> ""
+                            1 -> "1 song"
+                            else -> "$n songs"
+                        },
+                        thumbnailUrl = songs.firstOrNull()?.thumbnailUrl,
                     )
                     // Drawn from what was just sent rather than waited for: the
                     // library feed does not have this playlist yet, and the
