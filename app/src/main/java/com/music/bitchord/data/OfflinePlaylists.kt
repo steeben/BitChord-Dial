@@ -83,6 +83,12 @@ object OfflinePlaylists {
         }
     }
 
+    /** Reads the playlists again, after a backup has replaced the file under them. */
+    fun reload() {
+        if (!this::prefs.isInitialized) return
+        publish(load())
+    }
+
     fun isOfflinePlaylist(browseId: String?): Boolean = browseId?.startsWith(PREFIX) == true
 
     fun isLikedPage(browseId: String?): Boolean = browseId == PREFIX + LIKED_ID

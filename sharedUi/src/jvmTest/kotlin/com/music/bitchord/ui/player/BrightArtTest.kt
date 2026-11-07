@@ -39,6 +39,19 @@ class BrightArtTest {
     }
 
     @Test
+    fun inkStaysLightOverAClipUnlessPicked() {
+        // Over a clip: light, even when the band or the sleeve says dark.
+        assertEquals(false, playerInkDark(null, overClip = true, bandDark = true, artLuminance = 0.9f))
+        assertEquals(false, playerInkDark(null, overClip = true, bandDark = null, artLuminance = 0.9f))
+        // A Song fixes pick still wins.
+        assertEquals(true, playerInkDark(true, overClip = true, bandDark = false, artLuminance = 0.1f))
+        // Over the sleeve the band decides, else the whole sleeve.
+        assertEquals(true, playerInkDark(null, overClip = false, bandDark = true, artLuminance = 0.1f))
+        assertEquals(false, playerInkDark(null, overClip = false, bandDark = false, artLuminance = 0.9f))
+        assertEquals(true, playerInkDark(null, overClip = false, bandDark = null, artLuminance = 0.9f))
+    }
+
+    @Test
     fun controlsScrimRisesWithTheBand() {
         assertEquals(0f, controlsScrimAlpha(0.05f), 0.0001f)
         assertEquals(0f, controlsScrimAlpha(0.20f), 0.0001f)

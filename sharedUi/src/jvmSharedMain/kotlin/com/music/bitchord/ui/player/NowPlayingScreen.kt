@@ -1817,12 +1817,16 @@ fun NowPlayingScreen(
     // it is the picture, else the sleeve. Its bottom band, not the whole of
     // it, since a bright cover with a dark foot (or the reverse) is common.
     val artControlsBand = rememberArtworkControlsBandLuminance(remoteArt, CARD_ART_PX)
-    val inkBand = canvasFrameBand?.takeIf { canvas != null && canvasRendered } ?: artControlsBand
+    // Over the clip only the clip's own frame counts: the sleeve isn't what is
+    // on screen then, so it never stands in for a frame not read yet.
+    val inkOverClip = canvas != null && canvasRendered
+    val inkBand = if (inkOverClip) canvasFrameBand else artControlsBand
     SideEffect {
         inkConditions.dim = inkDim
         inkConditions.forcedDark = inkForcedDark
         inkConditions.band = inkBand
         inkConditions.panelOpen = lyricsOpen || queueOpen
+        inkConditions.overClip = inkOverClip
     }
     val canvasCompact = animateFloatAsState(
         targetValue = if (canvasCompactMode) 1f else 0f,
