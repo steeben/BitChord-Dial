@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -50,7 +51,9 @@ import com.music.bitchord.data.settings.MixBlend
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.sign
 
 /**
  * Apple Music's scrubber: a hairline capsule with no thumb knob, which
@@ -110,11 +113,24 @@ fun ThinSlider(
     wavesPlaying: Boolean = false,
     /** Off under "Reduce animation": the waves stand still. */
     animateWaves: Boolean = true,
+    /**
+     * Draws the OnePlus-style glow bar instead — see [GlowTrack] — coloured off these accents.
+     * Its drag is relative: the playhead moves by however far the finger travels, from wherever
+     * it was, rather than jumping to the touch. A tap alone doesn't seek.
+     */
+    glow: WaveAccents? = null,
+    /** The glow style's row lean, which this bar drives while dragging — see [GlowLean]. */
+    glowLean: GlowLean? = null,
 ) {
     var dragging by remember { mutableStateOf(false) }
     val waveStyle = rememberUpdatedState(waves != null)
+    val glowStyle = glow != null
+    val currentValue = rememberUpdatedState(value)
+    val currentLean = rememberUpdatedState(glowLean)
+    val scope = rememberCoroutineScope()
     val height by animateDpAsState(
         targetValue = when {
+            glow != null -> if (dragging) GLOW_LINE_ACTIVE else GLOW_LINE_IDLE
             waves == null -> if (dragging) activeHeight else idleHeight
             dragging -> WAVE_LINE_ACTIVE
             else -> WAVE_LINE_IDLE
@@ -161,8 +177,42 @@ fun ThinSlider(
             // One gesture loop for both taps and drags. Two separate detectors
             // — a drag one plus a tap one — meant taps never landed: the drag
             // detector took the pointer and a tap has no drag to report.
-            .pointerInput(Unit) {
-                awaitEachGesture {
+            .pointerInput(glowStyle) {
+                if (glowStyle) awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    dragging = true
+                    val start = currentValue.value.coerceIn(0f, 1f)
+                    val width = size.width.toFloat().coerceAtLeast(1f)
+                    val slop = viewConfiguration.touchSlop
+                    val follow = GLOW_LEAN_FOLLOW_MAX.toPx()
+                    val stretch = GLOW_STRETCH_MAX.toPx()
+                    var scrubbing = false
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val pointer = event.changes.firstOrNull { it.id == down.id } ?: break
+                        if (!pointer.pressed) {
+                            if (scrubbing) pointer.consume()
+                            break
+                        }
+                        val moved = pointer.position.x - down.position.x
+                        if (!scrubbing && abs(moved) > slop) scrubbing = true
+                        if (scrubbing && pointer.positionChanged()) {
+                            // Measured from where the drag cleared the slop, so the playhead
+                            // doesn't hop by the slop's width the moment it starts to move.
+                            val dx = moved - sign(moved) * slop
+                            val raw = start + dx / width
+                            onValueChange(raw.coerceIn(0f, 1f))
+                            currentLean.value?.let { lean ->
+                                val px = glowLeanFor(dx, raw, width, follow, stretch)
+                                scope.launch { lean.follow(px) }
+                            }
+                            pointer.consume()
+                        }
+                    }
+                    dragging = false
+                    currentLean.value?.let { lean -> scope.launch { lean.release() } }
+                    if (scrubbing) onValueChangeFinished?.invoke()
+                } else awaitEachGesture {
                     // The wave style's line is inset for its bead; map the finger onto it.
                     val inset = if (waveStyle.value) THUMB_INSET.toPx() else 0f
                     fun at(x: Float) = ((x - inset) / (size.width - inset * 2f)).coerceIn(0f, 1f)
@@ -189,7 +239,21 @@ fun ThinSlider(
             },
         contentAlignment = Alignment.Center,
     ) {
-        if (waves != null) {
+        if (glow != null) {
+            GlowTrack(
+                value = value,
+                lineHeight = height,
+                dragging = dragging,
+                fillFactor = { fillFactor },
+                mixPulse = mixPulse,
+                transitionWindow = transitionWindow,
+                accents = glow,
+                playing = wavesPlaying,
+                animate = animateWaves,
+                inactiveColor = inactiveColor,
+                markerColor = markerColor,
+            )
+        } else if (waves != null) {
             WaveTrack(
                 value = value,
                 lineHeight = height,

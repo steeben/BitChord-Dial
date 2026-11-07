@@ -218,6 +218,8 @@ internal fun PlayerScrubber(
     onScrubFinished: () -> Unit,
     /** One UI 9's wave style instead of the plain bar, coloured off [waveArtwork]. */
     waves: Boolean = false,
+    /** The OnePlus-style glow bar instead of the plain bar, coloured off [waveArtwork]. Wins over [waves]. */
+    glow: Boolean = false,
     waveArtwork: String? = null,
     /** Whether the music is moving, so the waves drift; paused, they settle into the line. */
     playing: Boolean = false,
@@ -233,8 +235,15 @@ internal fun PlayerScrubber(
     // One clock for the bar and the "Mixing" label, so they breathe on the same beat.
     val mixPulse = rememberMixPulse({ mixBlend.value }, enabled = !reduceAnimation)
     // Read here rather than in the player around the bar: the accent crossfades on every skip.
-    val waveAccents = rememberWaveAccents(waveArtwork.takeIf { waves }).takeIf { waves }
-    Column(Modifier.fillMaxWidth()) {
+    val accented = waves || glow
+    val accents = rememberWaveAccents(waveArtwork.takeIf { accented }).takeIf { accented }
+    val glowLean = remember { GlowLean() }
+    Column(
+        Modifier
+            .fillMaxWidth()
+            // The glow style's bar and its times lean with a drag and stretch past either end.
+            .graphicsLayer { translationX = if (glow) glowLean.value else 0f },
+    ) {
         ThinSlider(
             value = shown,
             onValueChange = onScrub,
@@ -243,9 +252,11 @@ internal fun PlayerScrubber(
             mixing = mixing,
             mixPulse = mixPulse,
             transitionWindow = transitionWindow,
-            waves = waveAccents,
+            waves = accents.takeIf { waves && !glow },
             wavesPlaying = playing,
             animateWaves = !reduceAnimation,
+            glow = accents.takeIf { glow },
+            glowLean = glowLean.takeIf { glow && !reduceAnimation },
         )
         Box(
             modifier = Modifier
