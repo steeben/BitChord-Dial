@@ -8122,27 +8122,15 @@ private fun FrostedSortMenu(
     onDismiss: () -> Unit,
 ) {
     val shape = MaterialTheme.shapes.extraLarge
-    // Grows out of the sort button at the top right; see [PopupLayer].
+    // The bar's pill of buttons turns into it; see [PopupLayer].
     PopupLayer(
         visible = visible,
         onDismiss = onDismiss,
-        contentAlignment = Alignment.TopEnd,
-        origin = TransformOrigin(1f, 0f),
+        shape = shape,
+        contentColor = popupContentColor(),
+        surface = { Modifier.popupSurface(shape, hazeState) },
     ) {
-        Surface(
-            color = Color.Transparent,
-            contentColor = popupContentColor(),
-            shape = shape,
-            modifier = Modifier
-                .padding(top = 56.dp, end = 20.dp)
-                .width(IntrinsicSize.Max)
-                .popupSurface(shape, hazeState)
-                .clickable(
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() },
-                    onClick = {},
-                ),
-        ) {
+        run {
             Column(Modifier.padding(vertical = 8.dp)) {
                 // Date added is one row, Spotify-style: the arrow on it shows
                 // the direction — up for newest first, down for oldest — and
@@ -8227,23 +8215,11 @@ private fun FrostedArtistMenu(
     PopupLayer(
         visible = visible,
         onDismiss = onDismiss,
-        contentAlignment = Alignment.TopEnd,
-        origin = TransformOrigin(1f, 0f),
+        shape = shape,
+        contentColor = popupContentColor(),
+        surface = { Modifier.popupSurface(shape, hazeState) },
     ) {
-        Surface(
-            color = Color.Transparent,
-            contentColor = popupContentColor(),
-            shape = shape,
-            modifier = Modifier
-                .padding(top = 56.dp, end = 20.dp)
-                .width(IntrinsicSize.Max)
-                .popupSurface(shape, hazeState)
-                .clickable(
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() },
-                    onClick = {},
-                ),
-        ) {
+        run {
             Column(Modifier.padding(vertical = 8.dp)) {
                 onPinArtist?.let {
                     ArtistMenuRow(

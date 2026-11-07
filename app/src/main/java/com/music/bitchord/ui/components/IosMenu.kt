@@ -1,6 +1,5 @@
 package com.music.bitchord.ui.components
 
-import android.provider.Settings
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -46,6 +45,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
@@ -55,7 +55,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
@@ -116,8 +116,10 @@ private val LightMenu = IosMenuColors(
 fun iosMenuColors(): IosMenuColors =
     if (MaterialTheme.colorScheme.background.luminance() < 0.5f) DarkMenu else LightMenu
 
+private val IOS_MENU_RADIUS = 26.dp
+
 /** The panel's silhouette: a large, rounded corner. */
-val IosMenuShape = RoundedCornerShape(26.dp)
+val IosMenuShape = RoundedCornerShape(IOS_MENU_RADIUS)
 
 /** Wide enough for "Remove from listening history" on one line or two. */
 val IosMenuWidth = 256.dp
@@ -392,32 +394,22 @@ fun <T : Any> IosMenuPopover(
     val (menuItem, menuAnchor) = shown
     val open = item != null
 
-    val context = LocalContext.current
-    val appReduceAnimation by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
-    val systemAnimationsOff = remember(context) {
-        runCatching {
-            Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
-        }.getOrDefault(false)
-    }
-    val reduceMotion = appReduceAnimation || systemAnimationsOff
+    val reduceMotion = menuReduceMotion()
+    val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
+    // Glass draws no shadow of its own; the frosted and solid slabs do, cast
+    // here off the growing window rather than the full panel.
+    val glass = LocalLiquidGlassEnabled.current && isGlassSupported() && !reduceDynamicBlur && backdrop != null
+    val density = LocalDensity.current
+    val cornerRadius = with(density) { IOS_MENU_RADIUS.toPx() }
+    val shadowPx = if (glass) 0f else with(density) { 24.dp.toPx() }
 
     val progress = remember { Animatable(0f) }
+    // The panel turns into the button it hangs off — see [MenuMorph].
     LaunchedEffect(open) {
-        if (open) {
-            progress.animateTo(
-                1f,
-                if (reduceMotion) {
-                    tween(durationMillis = 120, easing = LinearEasing)
-                } else {
-                    // Critically damped: it settles without overshooting.
-                    spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 600f)
-                },
-            )
-        } else {
-            progress.animateTo(0f, tween(durationMillis = if (reduceMotion) 100 else 170, easing = FastOutSlowInEasing))
-            last = null
-        }
+        progress.runMenuMorph(open, menuAnchor, reduceMotion)
+        if (!open) last = null
     }
+    val geometry = remember { MenuMorphGeometry() }
 
     // Composed after whatever it is drawn over, so back closes the menu first
     // — inside the player's sheet too, rather than taking the player down.
@@ -453,10 +445,15 @@ fun <T : Any> IosMenuPopover(
                 Modifier
                     // Taps between rows land on the panel, not the scrim under it.
                     .pointerInput(Unit) {}
-                    .iosMenuPanel(backdrop = backdrop, hazeState = hazeState, underlay = scrim),
+                    .iosMenuPanel(backdrop = backdrop, hazeState = hazeState, castsShadow = false, underlay = scrim)
+                    .menuMorphRim(geometry, { progress.value }, cornerRadius, reduceMotion),
                 propagateMinConstraints = true,
             ) {
-                Column(Modifier.padding(vertical = 8.dp)) {
+                Column(
+                    Modifier
+                        .menuMorphContent({ progress.value }, reduceMotion)
+                        .padding(vertical = 8.dp),
+                ) {
                     content(menuItem)
                 }
             }
@@ -479,32 +476,27 @@ fun <T : Any> IosMenuPopover(
             .coerceIn(margin, (width - margin - panel.width).coerceAtLeast(margin))
         val lowest = (bottom - panel.height).coerceAtLeast(top)
         val hangsDown = anchorBounds != null && anchorBounds.center.y < height / 2f
-        val panelY = if (hangsDown) anchorBounds!!.top.roundToInt().coerceIn(top, lowest) else lowest
-        // Grown out of the button that opened it, wherever that lands against
-        // the panel — the player's ⋯ sits well above the panel's bottom
-        // corner, and growing from that corner read as rising off the screen
-        // edge. Kept within a little of the panel so a far-off anchor can't
-        // fling it in from across the screen.
-        val origin = if (anchorBounds != null && panel.width > 0 && panel.height > 0) {
-            TransformOrigin(
-                ((anchorBounds.center.x - panelX) / panel.width).coerceIn(-0.15f, 1.15f),
-                ((anchorBounds.center.y - panelY) / panel.height).coerceIn(-0.6f, 1.6f),
-            )
+        val preferredY = if (hangsDown) anchorBounds!!.top.roundToInt() else lowest
+        // Over the button wherever the panel settles, so it can grow out of it:
+        // a short panel for the player's ⋯ rises from the button rather than
+        // sitting at the bottom of the screen below it.
+        val panelY = if (anchorBounds != null) {
+            val coverLow = (anchorBounds.bottom.roundToInt() - panel.height)
+            val coverHigh = anchorBounds.top.roundToInt()
+            preferredY.coerceIn(minOf(coverLow, coverHigh), coverHigh).coerceIn(top, lowest)
         } else {
-            TransformOrigin(1f, if (hangsDown) 0f else 1f)
+            preferredY
         }
+        // With no button to grow from, a button-sized nub at its bottom end.
+        val nub = 44.dp.toPx()
+        geometry.source = anchorBounds?.translate(-panelX.toFloat(), -panelY.toFloat())
+            ?: Rect(panel.width - nub, panel.height - nub, panel.width.toFloat(), panel.height.toFloat())
+        val cardSize = Size(panel.width.toFloat(), panel.height.toFloat())
 
         layout(width, height) {
             scrimPlaceable.place(0, 0)
             panel.placeWithLayer(panelX, panelY) {
-                val p = progress.value
-                alpha = (p * 2.5f).coerceIn(0f, 1f)
-                if (!reduceMotion) {
-                    transformOrigin = origin
-                    val scale = lerp(0.3f, 1f, p)
-                    scaleX = scale
-                    scaleY = scale
-                }
+                applyMenuMorph(geometry.source, cardSize, progress.value, cornerRadius, reduceMotion, shadowPx)
             }
         }
     }

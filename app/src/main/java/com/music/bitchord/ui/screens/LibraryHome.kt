@@ -749,35 +749,21 @@ internal fun GlassMenuPanel(
     val shape = MaterialTheme.shapes.extraLarge
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     val glass = isGlassSupported() && !reduceDynamicBlur
-    val statusBar = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    // The bar's pill of buttons turns into the card; see [PopupLayer].
     PopupLayer(
         visible = visible,
         onDismiss = onDismiss,
-        contentAlignment = Alignment.TopEnd,
-        origin = TransformOrigin(1f, 0f),
+        shape = shape,
+        contentColor = if (glass) glassContentColor() else MaterialTheme.colorScheme.onSurface,
+        surface = {
+            if (isGlassSupported()) {
+                Modifier.clip(shape).liquidGlass(shape)
+            } else {
+                Modifier.popupSurface(shape, hazeState)
+            }
+        },
     ) {
-        Surface(
-            color = Color.Transparent,
-            contentColor = if (glass) glassContentColor() else MaterialTheme.colorScheme.onSurface,
-            shape = shape,
-            modifier = Modifier
-                .padding(top = statusBar + TopBarContentHeight, end = PAGE_GUTTER)
-                .width(IntrinsicSize.Max)
-                .then(
-                    if (isGlassSupported()) {
-                        Modifier.clip(shape).liquidGlass(shape)
-                    } else {
-                        Modifier.popupSurface(shape, hazeState)
-                    },
-                )
-                .clickable(
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() },
-                    onClick = {},
-                ),
-        ) {
-            Column(Modifier.padding(vertical = 8.dp), content = content)
-        }
+        Column(Modifier.padding(vertical = 8.dp), content = content)
     }
 }
 

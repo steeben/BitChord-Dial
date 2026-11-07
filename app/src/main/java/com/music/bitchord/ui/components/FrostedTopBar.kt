@@ -422,7 +422,7 @@ fun FrostedTopBar(
                     if (useFloatingChrome) {
                         ArtworkPageActions(hazeState = backButtonHazeState, content = actions)
                     } else {
-                        actions()
+                        Row(Modifier.menuAnchor(), verticalAlignment = Alignment.CenterVertically) { actions() }
                     }
                 }
             }
@@ -472,6 +472,9 @@ private fun ArtworkPageActions(
 ) {
     Row(
         modifier = modifier
+            // The menus its buttons open grow out of the whole pill, which
+            // fades away under them — see [PopupLayer].
+            .menuAnchor()
             .then(artworkPageSurface(shape = CircleShape, hazeState = hazeState))
             // Keep the right edge fixed while a new action opens room to its
             // left. The surface itself therefore grows instead of jumping to

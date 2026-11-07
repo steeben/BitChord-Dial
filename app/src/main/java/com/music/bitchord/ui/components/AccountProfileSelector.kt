@@ -71,27 +71,16 @@ fun AccountProfileSelector(
 ) {
     var managing by remember(visible) { mutableStateOf(false) }
     val shape = MaterialTheme.shapes.extraLarge
+    // Across the page, out of the bar's pill the photo sits in.
     PopupLayer(
         visible = visible,
         onDismiss = onDismiss,
-        contentAlignment = Alignment.TopCenter,
-        // The account photo sits near the card's top right corner.
-        origin = TransformOrigin(0.92f, 0f),
+        shape = shape,
+        contentColor = popupContentColor(),
+        surface = { modifier.popupSurface(shape, hazeState) },
+        fullWidth = true,
     ) {
-        Surface(
-            color = Color.Transparent,
-            contentColor = popupContentColor(),
-            shape = shape,
-            modifier = modifier
-                .padding(top = 56.dp, start = 20.dp, end = 20.dp)
-                .fillMaxWidth()
-                .popupSurface(shape, hazeState)
-                .clickable(
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() },
-                    onClick = {},
-                ),
-        ) {
+        run {
             LazyColumn {
                 item { Text(stringResource(R.string.switch_account), style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface,
