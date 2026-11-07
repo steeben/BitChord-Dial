@@ -1289,13 +1289,26 @@ fun NowPlayingScreen(
         // effect gets to run again.
         outgoingFade.snapTo(1f)
     }
-    // A clip loaded ahead of its song is already playing when the song
-    // starts. Over the last song's clip it needs nothing: that one fades out
-    // over it. Over the last song's still sleeve it fades in, as a crossfade,
-    // rather than cutting in at full strength.
+    // A clip that is up from its first frame — loaded ahead of its song, or
+    // standing in from its remembered frame on a skip back — needs nothing
+    // over the last song's clip: that one fades out over it. Over the last
+    // song's still sleeve it fades in, as a crossfade, rather than cutting in
+    // at full strength. The same song's clip coming back (turned upright, the
+    // player reopened) is let straight back in: it never really left.
+    val songAtLastClip = remember { arrayOf(song.videoId) }
     val incomingFade = remember(canvas?.url) {
         val clipHandsOver = lastShownClip[0]?.let { it.url != canvas?.url && it.musicVideoId == null } == true
-        Animatable(if (canvasSeed.preloaded && !clipHandsOver) 0f else 1f)
+        val sameSong = songAtLastClip[0] == song.videoId
+        Animatable(if (canvasSeed.rendered && !clipHandsOver && !sameSong) 0f else 1f)
+    }
+    // The song whose clip was last up, or a mark that the player has since
+    // moved to a song without one yet (whose clip may still be on its way).
+    SideEffect {
+        if (canvas != null) {
+            songAtLastClip[0] = song.videoId
+        } else if (songAtLastClip[0] != song.videoId) {
+            songAtLastClip[0] = ""
+        }
     }
     LaunchedEffect(incomingFade) {
         if (incomingFade.value < 1f) {

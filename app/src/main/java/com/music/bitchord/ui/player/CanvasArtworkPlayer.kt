@@ -305,6 +305,15 @@ internal fun AndroidCanvasArtworkPlayer(
         player.addListener(listener)
         onDispose {
             player.removeListener(listener)
+            // Where the clip had got to, and what it looked like there, for
+            // the player that takes over from this one — the other side of a
+            // turn of the phone, most often — to carry on from rather than
+            // start the loop over from its opening frame.
+            CanvasClipClock.record(canvas, player.currentPosition, player.duration, player.isPlaying)
+            if (clipAspect > 0f && rendered) {
+                textureView?.captureWhole(PLACEHOLDER_PX)
+                    ?.let { CanvasFrameMemory.put(canvas.url, it.asImageBitmap(), clipAspect) }
+            }
             player.release()
         }
     }
@@ -322,8 +331,25 @@ internal fun AndroidCanvasArtworkPlayer(
         mimeTypeOf(url)?.let { item.setMimeType(it) }
         // A saved HLS clip holds one rendition: ask for only that one.
         CanvasDownloads.streamKeysFor(url).takeIf { it.isNotEmpty() }?.let { item.setStreamKeys(it) }
-        player.setMediaItem(item.build())
+        // Picked up where it was left, when it was playing a moment ago.
+        player.setMediaItem(item.build(), CanvasClipClock.resumeAt(canvas))
         player.prepare()
+    }
+
+    // The remembered frame and position kept current while the clip plays,
+    // since a surface can be taken away (a rotation) before anything here
+    // hears it is going. Without it the clip came back on its opening frame
+    // and started its loop over, which read as it loading again.
+    LaunchedEffect(revealed, clipAspect) {
+        if (!revealed || clipAspect <= 0f) return@LaunchedEffect
+        while (isActive) {
+            delay(PLACEHOLDER_REFRESH_MS)
+            if (!player.isPlaying) continue
+            withFrameMillis { }
+            textureView?.captureWhole(PLACEHOLDER_PX)
+                ?.let { CanvasFrameMemory.put(canvas.url, it.asImageBitmap(), clipAspect) }
+            CanvasClipClock.record(canvas, player.currentPosition, player.duration, true)
+        }
     }
 
     // Gated on the app being on screen as well as on the caller's own state.
@@ -665,6 +691,45 @@ private object CanvasFrameMemory {
         frames[url] = Remembered(frame, aspect)
     }
 }
+
+/**
+ * Where each clip had got to when its player last let it go, so the next
+ * player for it — after a rotation, or coming back to the song — carries on
+ * rather than starting the loop over. Kept under both renditions' urls: the
+ * phone held upright plays Apple's tall cut and sideways its square one, and
+ * they run on the same clock.
+ */
+private object CanvasClipClock {
+    private class Mark(val positionMs: Long, val durationMs: Long, val playing: Boolean, val atNanos: Long)
+
+    private val marks = object : LinkedHashMap<String, Mark>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Mark>?): Boolean = size > 12
+    }
+
+    @Synchronized
+    fun record(canvas: CanvasArtwork, positionMs: Long, durationMs: Long, playing: Boolean) {
+        if (positionMs < 0L) return
+        val mark = Mark(positionMs, durationMs, playing, System.nanoTime())
+        marks[canvas.url] = mark
+        canvas.fallbackUrl?.let { marks[it] = mark }
+        canvas.portraitUrl?.let { marks[it] = mark }
+    }
+
+    @Synchronized
+    fun resumeAt(canvas: CanvasArtwork): Long {
+        val mark = listOfNotNull(canvas.url, canvas.fallbackUrl, canvas.portraitUrl)
+            .mapNotNull { marks[it] }
+            .maxByOrNull { it.atNanos } ?: return 0L
+        val elapsedMs = (System.nanoTime() - mark.atNanos) / 1_000_000L
+        // Still running while it was away only if it was playing and has
+        // only just gone; otherwise it waits where it was.
+        val position = if (mark.playing && elapsedMs in 0L..CLOCK_CARRY_MS) mark.positionMs + elapsedMs else mark.positionMs
+        return if (mark.durationMs > 0L) position % mark.durationMs else 0L
+    }
+}
+
+private const val CLOCK_CARRY_MS = 30_000L
+private const val PLACEHOLDER_REFRESH_MS = 3_000L
 
 /** See [PlayerHost.rememberedCanvasAspect]. */
 internal fun rememberedCanvasFrameAspect(url: String): Float? = CanvasFrameMemory.aspect(url)
