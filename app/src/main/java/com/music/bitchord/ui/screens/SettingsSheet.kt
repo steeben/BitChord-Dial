@@ -14,6 +14,9 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -3965,6 +3968,17 @@ private fun SettingsColophon(version: String, onShowUpdate: () -> Unit) {
                         }
                     }
                 }
+                // Grows and shrinks to each new label (Checking…, You're on the
+                // latest version…) instead of snapping to it in one frame. Sits
+                // inside the glass and the tap target so both follow the
+                // animated size; centred, so the pill widens evenly both ways.
+                .animateContentSize(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessMediumLow,
+                    ),
+                    alignment = Alignment.Center,
+                )
                 .padding(horizontal = 22.dp, vertical = 11.dp),
         ) {
             Text(

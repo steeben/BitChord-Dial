@@ -109,10 +109,10 @@
     <string name="dolby_atmos_open_failed">Dolby Atmos ayarları açılamadı</string>
     <string name="update_available">Güncelleme mevcut: v%1$s</string>
     <string name="software_update">Yazılım Güncellemesi</string>
-    <string name="update_available_body">bitchord %1$s indirilmeye hazır.</string>
-    <string name="update_downloading_body">bitchord %1$s indiriliyor…</string>
-    <string name="update_ready_body">bitchord %1$s yüklenmeye hazır.</string>
-    <string name="update_failed_body">bitchord %1$s indirilemedi.</string>
+    <string name="update_available_body">Dial %1$s indirilmeye hazır.</string>
+    <string name="update_downloading_body">Dial %1$s indiriliyor…</string>
+    <string name="update_ready_body">Dial %1$s yüklenmeye hazır.</string>
+    <string name="update_failed_body">Dial %1$s indirilemedi.</string>
     <string name="download_now">Şimdi İndir</string>
     <string name="install_now">Şimdi Yükle</string>
     <string name="later">Daha sonra</string>
