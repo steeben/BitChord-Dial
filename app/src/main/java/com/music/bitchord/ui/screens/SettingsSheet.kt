@@ -102,6 +102,7 @@ import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Usb
 import androidx.compose.material.icons.rounded.VolumeOff
 import androidx.compose.material.icons.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.Flare
 import androidx.compose.material.icons.rounded.Waves
 import androidx.compose.material.icons.rounded.Wifi
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -351,6 +352,7 @@ fun SettingsScreen(
     val keepNavBarExpanded by CustomizationSettings.keepNavBarExpanded.collectAsStateWithLifecycle()
     val miniPlayerNextButton by CustomizationSettings.miniPlayerNextButton.collectAsStateWithLifecycle()
     val wavyProgressBar by CustomizationSettings.wavyProgressBar.collectAsStateWithLifecycle()
+    val glowProgressBar by CustomizationSettings.glowProgressBar.collectAsStateWithLifecycle()
     val cropThumbnails by CustomizationSettings.cropThumbnails.collectAsStateWithLifecycle()
     val speedDials by CustomizationSettings.speedDials.collectAsStateWithLifecycle()
     val artistDial by CustomizationSettings.artistDial.collectAsStateWithLifecycle()
@@ -1539,6 +1541,21 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { CustomizationSettings.setWavyProgressBar(!wavyProgressBar) },
+                )
+            }
+            val glowProgressTitle = stringResource(R.string.glow_progress_bar)
+            row(glowProgressTitle, "player", "progress", "seek", "bar", "glow", "oneplus", "oxygenos") {
+                SettingsRow(
+                    icon = Icons.Rounded.Flare,
+                    title = glowProgressTitle,
+                    subtitle = stringResource(R.string.glow_progress_bar_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = glowProgressBar,
+                            onCheckedChange = CustomizationSettings::setGlowProgressBar,
+                        )
+                    },
+                    onClick = { CustomizationSettings.setGlowProgressBar(!glowProgressBar) },
                 )
             }
             val cropThumbnailsTitle = stringResource(R.string.crop_thumbnails)

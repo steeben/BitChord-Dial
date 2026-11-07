@@ -1253,6 +1253,8 @@ fun NowPlayingScreen(
     val scrub = rememberPlayerScrub(song.videoId, position, durationMs)
     // One UI 9's wave progress, coloured off this sleeve — see [rememberWaveAccents].
     val wavyProgressBar by PlayerSettings.wavyProgressBar.collectAsStateWithLifecycle()
+    // The OnePlus-style glow bar, the wave style's alternative — see [GlowTrack].
+    val glowProgressBar by PlayerSettings.glowProgressBar.collectAsStateWithLifecycle()
     // Read by the scrubber itself — see [PlayerScrubber.shown].
     // AI Mix plays a sample of each track, and the bar and its times describe
     // that sample rather than the whole song.
@@ -2648,6 +2650,7 @@ fun NowPlayingScreen(
                                 onScrub = onScrub,
                                 onScrubFinished = onScrubFinished,
                                 waves = wavyProgressBar,
+                                glow = glowProgressBar,
                                 waveArtwork = remoteArt,
                                 playing = isPlaying && position.advancing,
                             ) {
@@ -4706,6 +4709,7 @@ fun NowPlayingScreen(
                 onScrub = onScrub,
                 onScrubFinished = onScrubFinished,
                 waves = wavyProgressBar,
+                glow = glowProgressBar,
                 waveArtwork = remoteArt,
                 playing = isPlaying && position.advancing,
             ) {
