@@ -35,7 +35,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import com.music.bitchord.ui.components.AlphabetIndexer
-import com.music.bitchord.ui.components.indexSortKey
+import com.music.bitchord.ui.components.sortedByIndexKey
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -462,7 +462,7 @@ fun LocalMusicScreen(
                             .associateTo(LinkedHashMap()) { it }
                             .entries
                             .filter { searchQuery.isBlank() || it.key.contains(searchQuery, ignoreCase = true) }
-                            .sortedBy { indexSortKey(it.key) }
+                            .sortedByIndexKey { it.key }
                     }
                     ArtistsTab(
                         listState = scroll.list(LOCAL_TAB_ARTISTS),
@@ -1218,7 +1218,7 @@ private fun albumEntries(
         }
     // One alphabetical run, saved and tagged together, so the A–Z index can
     // file every album under its letter.
-    return (asked + derived).sortedBy { indexSortKey(it.title) }
+    return (asked + derived).sortedByIndexKey { it.title }
 }
 
 @Composable
@@ -1790,8 +1790,8 @@ internal fun Song.matchesSearch(query: String): Boolean =
 private fun List<Song>.sortedForLibrary(order: LocalMusicSort): List<Song> = when (order) {
     // By the same key the A–Z index files them under, so leading punctuation
     // or an accent can't put a title out of its letter.
-    LocalMusicSort.TITLE_ASC -> sortedBy { indexSortKey(it.title) }
-    LocalMusicSort.TITLE_DESC -> sortedByDescending { indexSortKey(it.title) }
+    LocalMusicSort.TITLE_ASC -> sortedByIndexKey { it.title }
+    LocalMusicSort.TITLE_DESC -> sortedByIndexKey(descending = true) { it.title }
     LocalMusicSort.DATE_ADDED -> sortedWith(
         compareByDescending<Song> { it.localDateAddedSeconds ?: Long.MIN_VALUE }
             .thenBy(String.CASE_INSENSITIVE_ORDER) { it.title },

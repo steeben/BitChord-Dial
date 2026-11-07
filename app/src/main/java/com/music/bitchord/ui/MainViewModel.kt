@@ -1816,6 +1816,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             AppSettings.filterNonMusicAudio.drop(1).collect {
+                librarySongsWarm.clear()
                 listOf("local:all", LOCAL_LIBRARY_BROWSE_ID, ALL_LIBRARY_BROWSE_ID).forEach { id ->
                     if (_detailStack.value.any { page -> page.browseId == id }) reloadLocalDetail(id)
                 }
@@ -1825,6 +1826,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             combine(AppSettings.hideCombinedDuplicates, AppSettings.duplicateChoices) { hide, choices -> hide to choices }
                 .drop(1)
                 .collect {
+                    librarySongsWarm.remove(ALL_LIBRARY_BROWSE_ID)
                     if (_detailStack.value.any { page -> page.browseId == ALL_LIBRARY_BROWSE_ID }) {
                         reloadLocalDetail(ALL_LIBRARY_BROWSE_ID)
                     }
@@ -3258,6 +3260,27 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         val resolved = browseTypeOf(browseId, type)
+        // A library's tabbed page, listed before: it goes up with that listing
+        // in hand, so the page slides in already full rather than sliding in
+        // empty and having every row land at once part way across. The device
+        // and the account are read again once the slide is over, and the rows
+        // only change if something did.
+        librarySongsWarm[browseId]?.let { warm ->
+            if (_detailStack.value.lastOrNull()?.browseId == browseId) return
+            _detailStack.value += DetailPage(
+                browseId = browseId,
+                title = title,
+                subtitle = subtitle,
+                thumbnailUrl = thumbnailUrl,
+                songs = warm,
+                type = resolved,
+            )
+            viewModelScope.launch {
+                delay(LIBRARY_RELIST_DELAY_MS)
+                reloadLocalDetail(browseId)
+            }
+            return
+        }
         // Opened recently: shown straight from memory, without asking again.
         if (cachedDetailFresh(browseId)) {
             detailPageCache[browseId]?.let { cached ->
@@ -4547,6 +4570,38 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
     private val detailLoadedAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
 
+    // The libraries' tabbed pages (Songs / Artists / Albums), as last listed.
+    // Not in [detailPageCache]: those pages are read fresh every time, since
+    // files come and go behind the app's back. What is kept here is only shown
+    // while that read is under way — see [openDetail].
+    private val librarySongsWarm = ConcurrentHashMap<String, UiState.Success<List<Song>>>()
+    private val libraryWarming = ConcurrentHashMap.newKeySet<String>()
+
+    private fun isWarmLibrary(browseId: String): Boolean = browseId in WARM_LIBRARY_IDS
+
+    /**
+     * Lists the library [browseId] ahead of its page being opened, so the
+     * first tap on Songs, Artists or Albums slides a full page in. Called
+     * while the Library is on screen; does nothing once a listing is held.
+     */
+    fun warmLibrary(browseId: String) {
+        if (!isWarmLibrary(browseId) || librarySongsWarm.containsKey(browseId)) return
+        if (!libraryWarming.add(browseId)) return
+        viewModelScope.launch {
+            try {
+                val state = when (browseId) {
+                    YT_MUSIC_LIBRARY_BROWSE_ID -> ytLibraryState()
+                    LOCAL_LIBRARY_BROWSE_ID -> combinedLibraryState(withYouTube = false)
+                    ALL_LIBRARY_BROWSE_ID -> combinedLibraryState(withYouTube = true)
+                    else -> null
+                }
+                if (state is UiState.Success) librarySongsWarm.putIfAbsent(browseId, state)
+            } finally {
+                libraryWarming.remove(browseId)
+            }
+        }
+    }
+
     private fun isCacheableDetail(browseId: String): Boolean =
         !browseId.startsWith("local:") && !browseId.startsWith(SPOTIFY_PAGE_PREFIX) &&
             !browseId.startsWith("app:") &&
@@ -4563,6 +4618,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 pages.forEach { page ->
                     if (page.songs is UiState.Success && isCacheableDetail(page.browseId)) {
                         synchronized(detailPageCache) { detailPageCache[page.browseId] = page }
+                    }
+                    val songs = page.songs
+                    if (songs is UiState.Success && isWarmLibrary(page.browseId)) {
+                        librarySongsWarm[page.browseId] = songs
                     }
                 }
             }
@@ -4592,6 +4651,18 @@ private const val HOME_CACHE_WRITE_DELAY_MS = 2_000L
 
 private const val DETAIL_CACHE_SIZE = 40
 private const val DETAIL_CACHE_TTL_MS = 30 * 60 * 1000L
+
+/** The tabbed library pages that open on their last listing; see MainViewModel.openDetail. */
+private val WARM_LIBRARY_IDS = setOf(
+    YT_MUSIC_LIBRARY_BROWSE_ID,
+    LOCAL_LIBRARY_BROWSE_ID,
+    ALL_LIBRARY_BROWSE_ID,
+    "local:all",
+    "local:downloads",
+)
+
+/** Past the page slide, so the fresh listing never lands while the page is still moving. */
+private const val LIBRARY_RELIST_DELAY_MS = 450L
 
 /**
  * Liked Music's patience at launch — see MainViewModel.likedAwareBrowse:

@@ -4825,6 +4825,9 @@ private fun BitChordApp(
                                     ),
                                 )
                             }
+                            // Its Songs / Artists / Albums page, listed while the
+                            // Library is up, so the first tap slides in a full page.
+                            LaunchedEffect(librarySource) { viewModel.warmLibrary(librarySource.browseId) }
                             LibraryHomeScreen(
                                 source = librarySource,
                                 signedIn = signedIn,
@@ -5338,6 +5341,8 @@ private fun BitChordApp(
                     } else {
                         folderSearch ?: duplicatesSearch ?: settingsSearch
                     },
+                    // A folder's tabs pop in with its back button.
+                    accessoryPopsIn = folderSearchId != null,
                     actions = {
                         // This is intentionally scoped to Listen together: the
                         // round-trip time is meaningful while coordinating a
