@@ -67,9 +67,9 @@ internal fun glowLeanFor(dx: Float, raw: Float, width: Float, follow: Float, max
 
 private const val GLOW_LEAN_FOLLOW = 0.03f
 
-/** The glow style's resting and held line, thinner than the plain capsule like the original. */
-internal val GLOW_LINE_IDLE = 3.dp
-internal val GLOW_LINE_ACTIVE = 6.dp
+/** The glow style's resting and held line: a solid pill, thicker than the hairline styles. */
+internal val GLOW_LINE_IDLE = 4.5.dp
+internal val GLOW_LINE_ACTIVE = 7.dp
 internal val GLOW_LEAN_FOLLOW_MAX = 4.dp
 internal val GLOW_STRETCH_MAX = 14.dp
 
@@ -126,7 +126,7 @@ internal fun GlowTrack(
         val radius = CornerRadius(line / 2f)
         val width = size.width
         drawRoundRect(
-            color = inactiveColor,
+            color = inactiveColor.copy(alpha = inactiveColor.alpha * 0.65f),
             topLeft = Offset(0f, top),
             size = Size(width, line),
             cornerRadius = radius,
@@ -152,16 +152,27 @@ internal fun GlowTrack(
         if (played <= 0f) return@Canvas
         val alpha = if (dragging) 1f else mixPulse?.alpha(1f) ?: 1f
 
-        // Pale accent at the start, white for the last stretch before the playhead. Held, the
-        // whole fill lifts toward white.
-        val tint = lerp(accents.light, Color.White, 0.15f + 0.35f * held)
+        // The song's colour along the played part, turning to white over the last stretch
+        // before the playhead. Held, the whole fill lifts a little toward white.
+        val tint = lerp(lerp(accents.accent, accents.light, 0.4f), Color.White, 0.25f * held)
         val whiteRun = GLOW_WHITE_RUN.toPx()
+        val solidWhite = GLOW_WHITE_HEAD.toPx()
         val whiteFrom = (1f - whiteRun / played).coerceIn(0f, 1f)
+        val whiteTo = (1f - solidWhite / played).coerceIn(whiteFrom, 1f)
+        // A faint dark rim, as on the original, so the fill holds its edge inside its own light.
+        val rim = GLOW_RIM.toPx()
+        drawRoundRect(
+            color = Color.Black.copy(alpha = 0.22f * alpha),
+            topLeft = Offset(-rim, top - rim),
+            size = Size(played + rim * 2f, line + rim * 2f),
+            cornerRadius = CornerRadius(line / 2f + rim),
+        )
         drawRoundRect(
             brush = Brush.horizontalGradient(
                 colorStops = arrayOf(
                     0f to tint.copy(alpha = alpha),
                     whiteFrom to tint.copy(alpha = alpha),
+                    whiteTo to Color.White.copy(alpha = alpha),
                     1f to Color.White.copy(alpha = alpha),
                 ),
                 startX = 0f,
@@ -172,71 +183,77 @@ internal fun GlowTrack(
             cornerRadius = radius,
         )
 
-        // The comet: a long faint tail and a bright core, both stopping at the playhead and
-        // sitting a little above the line, faded in over the first few dp of the song so it
-        // never hangs off the bar's start.
-        val strength = flare * breath.value * factor * alpha *
-            (played / GLOW_FADE_IN.toPx()).coerceIn(0f, 1f)
+        // The light: a soft cone of white lying along the line, pointed at the playhead and
+        // widening back over the played part, above and below alike. Built from a run of
+        // teardrops that all reach the playhead, each centred further back, taller and fainter
+        // than the last, so the light gathers brightest by the playhead, fans out behind it
+        // and has no edge anywhere. Early in the song it shrinks with the fill so it never
+        // spills past the bar's start.
+        val strength = flare * breath.value * factor * alpha
         if (strength > 0f) {
-            clipRect(left = 0f, top = 0f, right = played + line / 2f, bottom = size.height) {
-                glowBlob(
-                    center = Offset(played - GLOW_TAIL_BACK.toPx(), cy - GLOW_TAIL_LIFT.toPx()),
-                    rx = GLOW_TAIL_RX.toPx(),
-                    ry = GLOW_TAIL_RY.toPx(),
-                    color = lerp(accents.light, Color.White, 0.45f),
-                    alpha = 0.5f * strength,
-                )
-                glowBlob(
-                    center = Offset(played - GLOW_CORE_BACK.toPx(), cy - GLOW_CORE_LIFT.toPx()),
-                    rx = GLOW_CORE_RX.toPx(),
-                    ry = GLOW_CORE_RY.toPx(),
-                    color = Color.White,
-                    alpha = 0.8f * strength,
+            val step = GLOW_STEP.toPx()
+            val reach = (played / (step * GLOW_LAYERS)).coerceIn(0f, 1f)
+            val glowColor = lerp(tint, Color.White, 0.75f)
+            val base = GLOW_SPREAD_BASE.toPx()
+            for (i in 0 until GLOW_LAYERS) {
+                val back = step * (i + 1) * reach
+                teardrop(
+                    center = Offset(played - back, cy),
+                    front = back,
+                    back = back * 0.5f,
+                    ry = base + back * GLOW_SPREAD_SLOPE,
+                    color = glowColor,
+                    alpha = GLOW_LAYER_ALPHA * (1f - 0.65f * i / (GLOW_LAYERS - 1)) * strength,
                 )
             }
-            // A small bloom on the playhead itself, where the light is brightest.
-            glowBlob(
-                center = Offset(played - line / 2f, cy),
-                rx = GLOW_HEAD_R.toPx(),
-                ry = GLOW_HEAD_R.toPx(),
-                color = Color.White,
-                alpha = 0.45f * strength,
-            )
         }
     }
 }
 
-/** A soft elliptical light: a radial falloff drawn as a circle and stretched sideways. */
-private fun DrawScope.glowBlob(center: Offset, rx: Float, ry: Float, color: Color, alpha: Float) {
-    if (rx <= 0f || ry <= 0f) return
-    scale(scaleX = rx / ry, scaleY = 1f, pivot = center) {
-        drawCircle(
-            brush = Brush.radialGradient(
-                colorStops = arrayOf(
-                    0f to color.copy(alpha = alpha),
-                    0.4f to color.copy(alpha = alpha * 0.45f),
-                    1f to color.copy(alpha = 0f),
-                ),
-                center = center,
-                radius = ry,
-            ),
-            radius = ry,
-            center = center,
-        )
+/**
+ * A soft light shaped like a teardrop lying on its side: a radial falloff around [center],
+ * stretched to [front] px ahead of it and [back] px behind it, [ry] px tall either side. The
+ * two halves meet on the centre line with the same vertical profile, so there's no seam.
+ */
+private fun DrawScope.teardrop(center: Offset, front: Float, back: Float, ry: Float, color: Color, alpha: Float) {
+    if (ry <= 0f) return
+    val brush = Brush.radialGradient(
+        colorStops = arrayOf(
+            0f to color.copy(alpha = alpha),
+            0.3f to color.copy(alpha = alpha * 0.55f),
+            0.65f to color.copy(alpha = alpha * 0.15f),
+            1f to color.copy(alpha = 0f),
+        ),
+        center = center,
+        radius = ry,
+    )
+    if (back > 0f) {
+        clipRect(left = center.x - back - 1f, top = center.y - ry, right = center.x, bottom = center.y + ry) {
+            scale(scaleX = back / ry, scaleY = 1f, pivot = center) {
+                drawCircle(brush = brush, radius = ry, center = center)
+            }
+        }
+    }
+    if (front > 0f) {
+        clipRect(left = center.x, top = center.y - ry, right = center.x + front + 1f, bottom = center.y + ry) {
+            scale(scaleX = front / ry, scaleY = 1f, pivot = center) {
+                drawCircle(brush = brush, radius = ry, center = center)
+            }
+        }
     }
 }
 
 private val GLOW_CANVAS_HEIGHT = 30.dp
-private val GLOW_WHITE_RUN = 72.dp
-private val GLOW_FADE_IN = 24.dp
-private val GLOW_TAIL_BACK = 40.dp
-private val GLOW_TAIL_LIFT = 5.dp
-private val GLOW_TAIL_RX = 52.dp
-private val GLOW_TAIL_RY = 9.dp
-private val GLOW_CORE_BACK = 12.dp
-private val GLOW_CORE_LIFT = 2.5.dp
-private val GLOW_CORE_RX = 20.dp
-private val GLOW_CORE_RY = 4.dp
-private val GLOW_HEAD_R = 5.dp
-private const val GLOW_BREATH_LOW = 0.72f
+private val GLOW_RIM = 0.75.dp
+/** How far back from the playhead the fill starts turning white, and how much is pure white. */
+private val GLOW_WHITE_RUN = 52.dp
+private val GLOW_WHITE_HEAD = 12.dp
+/** The light is [GLOW_LAYERS] teardrops, centred every [GLOW_STEP] back from the playhead. */
+private const val GLOW_LAYERS = 7
+private val GLOW_STEP = 10.dp
+/** Each teardrop's half-height: a base plus this share of its distance behind the playhead. */
+private val GLOW_SPREAD_BASE = 2.dp
+private const val GLOW_SPREAD_SLOPE = 0.22f
+private const val GLOW_LAYER_ALPHA = 0.34f
+private const val GLOW_BREATH_LOW = 0.82f
 private const val GLOW_BREATH_MS = 1600
