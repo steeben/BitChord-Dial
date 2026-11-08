@@ -734,7 +734,7 @@ fun SettingsScreen(
                     title = exportDownloadsTitle,
                     checked = exportDownloads,
                     onCheckedChange = AppSettings::setExportDownloads,
-                    subtitle = "Music/BitChord".takeIf { exportDownloads },
+                    subtitle = "Music/Dial".takeIf { exportDownloads },
                 )
             }
             val syncPlaylistsTitle = stringResource(R.string.sync_downloaded_playlists)
@@ -3875,7 +3875,7 @@ internal fun SegmentedControl(
 }
 
 /** This app's own repository, linked from the foot of the page. */
-private const val REPO_URL = "https://github.com/steeben/BitChord-Dial"
+private const val REPO_URL = "https://github.com/steeben/Dial"
 
 /** The least time the logo spins for, so a quick check still reads as one: a lap. */
 private const val MIN_CHECK_SPIN_MS = 1_100L

@@ -430,6 +430,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.boundsInRoot
 import com.music.bitchord.ui.player.LocalPlayerDock
 import com.music.bitchord.ui.player.PlayerDock
+import com.music.bitchord.ui.player.playerMorph
 import com.music.bitchord.ui.screens.DetailScreen
 import com.music.bitchord.ui.screens.ExploreScreen
 import com.music.bitchord.ui.screens.LocalMusicScreen
@@ -487,6 +488,9 @@ private const val LIBRARY_DUPLICATES_SCREEN = "library_duplicates"
 
 /** The page key of a Settings category's page, before the category's name. */
 private const val SETTINGS_SECTION_KEY_PREFIX = "settings:"
+
+// Settings' own pages that slide in off its main page as a category does.
+private val SETTINGS_PAGE_KEYS = setOf("sources", "account_scrobbling", "listen_together")
 
 /**
  * Where the iOS menus hang from, and which Settings category is open. Kept
@@ -3580,8 +3584,11 @@ private fun BitChordApp(
                     // Sources is the exception: a page of its own in the
                     // transition, so it slides in from Settings' main page as a
                     // category does, over the ambient colour rather than an
-                    // opaque sheet, and swipes back the same way.
+                    // opaque sheet, and swipes back the same way. Account &
+                    // integrations and Listen together are pages the same way.
                     settingsSubScreen == "sources" && showSources -> "sources"
+                    settingsSubScreen == "account_scrobbling" && showAccountScrobbling -> "account_scrobbling"
+                    settingsSubScreen == "listen_together" && showListenTogether -> "listen_together"
                     settingsSubScreen != null -> MenuNav.settingsPageKey
                     showAccountScrobbling -> "account_scrobbling"
                     showSources -> "sources"
@@ -3637,10 +3644,27 @@ private fun BitChordApp(
                 val sourcesBack = !reduceAnimationSetting && showSettings && !showReplay &&
                     pageKey == "sources" && MenuNav.settingsSection == null &&
                     editingSource == null && !showWebDavEditor && !showSmbEditor && !confirmJioSaavn
+                // Account & integrations and Listen together, the same, unless
+                // one of their own sign-ins, pickers or editors is up.
+                val accountBack = !reduceAnimationSetting && showSettings && !showReplay &&
+                    pageKey == "account_scrobbling" && settingsSubScreen == "account_scrobbling" &&
+                    MenuNav.settingsSection == null && !showListenBrainzLogin && !showLastfmLogin &&
+                    !showAccountSelector
+                val listenTogetherBack = !reduceAnimationSetting && showSettings && !showReplay &&
+                    pageKey == "listen_together" && settingsSubScreen == "listen_together" &&
+                    MenuNav.settingsSection == null && !listenTogetherFromPlayer && !editingPartyServer
                 val libraryBack: Pair<String, () -> Unit>? = when {
                     settingsCategoryBack -> "settings" to { MenuNav.settingsSection = null }
                     sourcesBack -> "settings" to {
                         showSources = false
+                        settingsSubScreen = null
+                    }
+                    accountBack -> "settings" to {
+                        showAccountScrobbling = false
+                        settingsSubScreen = null
+                    }
+                    listenTogetherBack -> "settings" to {
+                        showListenTogether = false
                         settingsSubScreen = null
                     }
                     dialBack -> HOME_PAGE_KEY to { viewModel.closeDetail(); Unit }
@@ -3686,7 +3710,7 @@ private fun BitChordApp(
                 // A dial tile's page shrinks toward its tile the same way.
                 PredictiveBackHandler(
                     enabled = libraryBack != null && (
-                        settingsCategoryBack || sourcesBack ||
+                        settingsCategoryBack || sourcesBack || accountBack || listenTogetherBack ||
                             !showSettings && !showAccountScrobbling && !showSources &&
                             !showListenTogether && !showEqualizer && !showReplay && !showStats && !showDiscord
                         ),
@@ -3770,8 +3794,8 @@ private fun BitChordApp(
                         val settingsStep =
                             (initialState == "settings" && targetState.startsWith(SETTINGS_SECTION_KEY_PREFIX)) ||
                                 (targetState == "settings" && initialState.startsWith(SETTINGS_SECTION_KEY_PREFIX)) ||
-                                (initialState == "settings" && targetState == "sources") ||
-                                (targetState == "settings" && initialState == "sources")
+                                (initialState == "settings" && targetState in SETTINGS_PAGE_KEYS) ||
+                                (targetState == "settings" && initialState in SETTINGS_PAGE_KEYS)
                         val dialZoom = !reduceAnimationSetting && DialLaunch.zooms(initialState, targetState, HOME_PAGE_KEY)
                         when {
                             // A dial tile's page opening, as an app does from a
@@ -3791,7 +3815,7 @@ private fun BitChordApp(
                                     ) togetherWith ExitTransition.None
                                 ).apply { targetContentZIndex = -1f }
                             settingsStep && !reduceAnimationSetting -> {
-                                val forward = targetState.startsWith(SETTINGS_SECTION_KEY_PREFIX) || targetState == "sources"
+                                val forward = targetState.startsWith(SETTINGS_SECTION_KEY_PREFIX) || targetState in SETTINGS_PAGE_KEYS
                                 val slide = tween<IntOffset>(PAGE_SLIDE_MS, easing = FastOutSlowInEasing)
                                 slideInHorizontally(slide) { if (forward) it else -it } togetherWith
                                     slideOutHorizontally(slide) { if (forward) -it else it }
@@ -4057,6 +4081,7 @@ private fun BitChordApp(
                             channelName = selectedChannelName,
                             onSignIn = {
                                 showAccountScrobbling = false
+                                if (settingsSubScreen == "account_scrobbling") settingsSubScreen = null
                                 showSettings = false
                                 webSession = WebSessionMode.SIGN_IN
                             },
@@ -4090,6 +4115,7 @@ private fun BitChordApp(
                             },
                             onSignIn = {
                                 showListenTogether = false
+                                if (settingsSubScreen == "listen_together") settingsSubScreen = null
                                 showSettings = false
                                 webSession = WebSessionMode.SIGN_IN
                             },
@@ -4970,57 +4996,8 @@ private fun BitChordApp(
                 // expanded on Account & integrations and the rest.
                 val subPageBarScroll = if (glassActive) Modifier.nestedScroll(navBarScroll) else Modifier
                 when (settingsSubScreen.takeUnless { showDiscord || showSpotify }) {
-                    "account_scrobbling" -> {
-                        Surface(
-                            modifier = Modifier.fillMaxSize().then(subPageBarScroll),
-                            color = MaterialTheme.colorScheme.background,
-                        ) {
-                            AccountAndScrobblingScreen(
-                                signedIn = signedIn,
-                                account = account,
-                                channelName = selectedChannelName,
-                                onSignIn = {
-                                    settingsSubScreen = null
-                                    showSettings = false
-                                    webSession = WebSessionMode.SIGN_IN
-                                },
-                                onSwitchChannel = {
-                                    viewModel.loadChannels()
-                                    showAccountSelector = true
-                                },
-                                onSignOut = { viewModel.signOut() },
-                                onOpenListenBrainzLogin = { showListenBrainzLogin = true },
-                                onOpenLastfmLogin = { showLastfmLogin = true },
-                                onOpenDiscord = { showDiscord = true },
-                                onOpenSpotify = { showSpotify = true },
-                                contentPadding = listPadding,
-                            )
-                        }
-                    }
-                    // "sources" is a page in the transition above, not an overlay.
-                    "listen_together" -> {
-                        Surface(
-                            modifier = Modifier.fillMaxSize().then(subPageBarScroll),
-                            color = MaterialTheme.colorScheme.background,
-                        ) {
-                            ListenTogetherScreen(
-                                signedIn = signedIn,
-                                inviteCode = activeJamInviteCode,
-                                inviteServer = activeJamInviteServer,
-                                onInviteHandled = {
-                                    activeJamInviteCode = null
-                                    activeJamInviteServer = null
-                                },
-                                onSignIn = {
-                                    settingsSubScreen = null
-                                    showSettings = false
-                                    webSession = WebSessionMode.SIGN_IN
-                                },
-                                contentPadding = listPadding,
-                                onEditServer = { editingPartyServer = true },
-                            )
-                        }
-                    }
+                    // "account_scrobbling", "sources" and "listen_together" are
+                    // pages in the transition above, not overlays.
                     "equalizer" -> {
                         Surface(
                             modifier = Modifier.fillMaxSize().then(subPageBarScroll),
@@ -5207,7 +5184,7 @@ private fun BitChordApp(
                     val target = if (settingsRoot) 1f else 0f
                     val stepping = showSettings && (
                         pageTransitionState.currentState == "settings" ||
-                            pageTransitionState.currentState == "sources" ||
+                            pageTransitionState.currentState in SETTINGS_PAGE_KEYS ||
                             pageTransitionState.currentState.startsWith(SETTINGS_SECTION_KEY_PREFIX)
                         )
                     if (reduceAnimationSetting || !stepping) {
@@ -5329,7 +5306,10 @@ private fun BitChordApp(
                         showDiscord -> ({ showDiscord = false })
                         showHistory -> ({ showHistory = false })
                         libraryShowAll != null && detail == null -> ({ libraryShowAll = null })
-                        showAccountScrobbling -> ({ showAccountScrobbling = false })
+                        showAccountScrobbling -> ({
+                            showAccountScrobbling = false
+                            if (settingsSubScreen == "account_scrobbling") settingsSubScreen = null
+                        })
                         showSources -> ({
                             showSources = false
                             if (settingsSubScreen == "sources") settingsSubScreen = null
@@ -5370,6 +5350,12 @@ private fun BitChordApp(
                                 onQueryChange = viewModel::onQueryChange,
                                 onSubmit = viewModel::submitSearch,
                                 focusRequester = searchFieldFocus,
+                                // The bar's own glass, as Settings' search wears,
+                                // rather than a flat tint over the page.
+                                containerColor = Color.Transparent,
+                                shape = CircleShape,
+                                height = 44.dp,
+                                modifier = artworkPageSurface(shape = CircleShape, hazeState = hazeState),
                                 placeholder = if (searchSource == SearchSource.ADDONS) {
                                     stringResource(R.string.search_addons_hint)
                                 } else if (searchSource == SearchSource.SPOTIFY) {
@@ -6492,6 +6478,7 @@ private fun BitChordApp(
                 playerDock.sheetOffset = playerSheetMotion::position
                 onDispose {
                     playerDock.sheetOffset = null
+                    playerDock.forgetWindow()
                     playerSheetMotion.onSheetGone()
                 }
             }
@@ -6595,7 +6582,15 @@ private fun BitChordApp(
                     // so without a Canvas the menu bent a blurred wash of
                     // the background and read as solid.
                     val playerMenuBackdrop = rememberLayerBackdrop()
-                    Box(if (glassSamplesBackdrop) Modifier.layerBackdrop(playerMenuBackdrop) else Modifier) {
+                    // Grown out of the mini player's pill and shrunk back into
+                    // it, one surface, as the player opens and closes — see
+                    // [playerMorph]. Ahead of the backdrop, so the menu's glass
+                    // samples the player as it is drawn, not the clip.
+                    Box(
+                        Modifier
+                            .playerMorph(activeDock)
+                            .then(if (glassSamplesBackdrop) Modifier.layerBackdrop(playerMenuBackdrop) else Modifier),
+                    ) {
                         CompositionLocalProvider(
                             LocalPlayerDock provides activeDock,
                             com.music.bitchord.ui.player.LocalPlayerGlass provides playerGlass.takeIf { glassSamplesBackdrop },

@@ -232,7 +232,7 @@ object AppSettings {
     val wifiOnlyDownloads = MutableStateFlow(true)
 
     /**
-     * Keep ordinary downloads in Music/BitChord where other music apps can see
+     * Keep ordinary downloads in Music/Dial where other music apps can see
      * them. Off (the default) keeps downloads in this app's private storage.
      * HLS downloads always stay private because they are a playlist package,
      * not one portable audio file.

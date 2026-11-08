@@ -2569,7 +2569,7 @@ fun NowPlayingScreen(
             val host = dockFrame.host?.takeIf { it.isAttached } ?: return null
             val sleeve = dockFrame.landscapeArt?.takeIf { it.isAttached } ?: return null
             val offset = (dock.offset() ?: return null).toInt().toFloat()
-            val travel = dock.sheetTravel.takeIf { it > 0f } ?: return null
+            val travel = dock.travel().takeIf { it > 0f } ?: return null
             if (sleeve.size.width <= 0) return null
             val open = Rect(
                 offset = anchor + host.localPositionOf(sleeve, Offset.Zero),
@@ -3847,7 +3847,7 @@ fun NowPlayingScreen(
                 // Worked out off the sleeve, once a frame, and shared with the
                 // tile inside it so the two travel together.
                 fun dockRide(sleeve: Rect, mini: Rect): Float {
-                    val travel = dock?.sheetTravel ?: return 0f
+                    val travel = dock?.travel() ?: return 0f
                     if (travel <= 0f) return 0f
                     // The cover's distance below where the sleeve sits with the
                     // sheet fully open, as a share of the sheet's travel.
