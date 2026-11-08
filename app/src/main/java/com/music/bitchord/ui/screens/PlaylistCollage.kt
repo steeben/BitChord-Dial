@@ -52,6 +52,7 @@ import com.music.bitchord.data.YtMusicRepository
 import com.music.bitchord.data.model.BrowseType
 import com.music.bitchord.data.model.DetailPage
 import com.music.bitchord.data.model.Song
+import com.music.bitchord.data.model.UiState
 import com.music.bitchord.data.model.artworkAt
 import com.music.bitchord.data.settings.CustomizationSettings
 import com.music.bitchord.ui.graphics.forPixelAccess
@@ -78,16 +79,20 @@ private fun DetailPage.isLiked(): Boolean =
     browseId == YtMusicRepository.LIKED_MUSIC || browseId == "LM" || OfflinePlaylists.isLikedPage(browseId)
 
 /**
- * The covers to draw for this page, or null to show its own artwork. Null
- * while the default-grid check is still out, so the page opens on its own
- * cover and only changes if the check says so.
+ * The covers to draw for this page, or null to show its own artwork.
+ *
+ * Settled once and then held: worked out only from a fully loaded list (no
+ * continuation still to follow), kept while the page reloads, and replaced
+ * only if the reloaded list gives a different set — so a refresh or the
+ * later pages of a long playlist arriving never make the header flicker.
+ * Kept by page for the life of the process, so reopening one starts on it.
  */
 @Composable
 internal fun rememberGeneratedCollage(page: DetailPage, songs: List<Song>): List<String>? {
     val enabled by CustomizationSettings.generatePlaylistImages.collectAsStateWithLifecycle()
     val liked = page.isLiked()
-    val candidate = enabled && page.type == BrowseType.PLAYLIST && songs.isNotEmpty() &&
-        (liked || page.browseId.startsWith("VL"))
+    val eligible = enabled && page.type == BrowseType.PLAYLIST && (liked || page.browseId.startsWith("VL"))
+    val settled = page.songs is UiState.Success && page.continuation == null && songs.isNotEmpty()
     val context = LocalContext.current.applicationContext
     val thumb = page.thumbnailUrl
     // The rows that could be the grid's four: YouTube builds it from the
@@ -95,14 +100,29 @@ internal fun rememberGeneratedCollage(page: DetailPage, songs: List<Song>): List
     val gridSources = remember(songs) { songs.take(GRID_SOURCE_ROWS).mapNotNull { it.thumbnailUrl } }
     val isDefault by produceState<Boolean?>(
         initialValue = if (liked) true else DefaultGridCheck.cached(thumb),
-        candidate, thumb, gridSources,
+        eligible && settled, thumb, gridSources,
     ) {
-        if (!candidate || liked) return@produceState
+        if (!eligible || !settled || liked) return@produceState
         value = DefaultGridCheck.check(context, thumb, gridSources)
     }
-    val covers = remember(songs, liked) { collageCovers(songs, newestFirst = liked) }
-    return covers.takeIf { candidate && isDefault == true && it.isNotEmpty() }
+    var shown by remember(page.browseId) { mutableStateOf(heldCollages[page.browseId]) }
+    LaunchedEffect(page.browseId, eligible, settled, isDefault, songs) {
+        if (!eligible || !settled) return@LaunchedEffect
+        val next = when (isDefault) {
+            true -> collageCovers(songs, newestFirst = liked).takeIf { it.isNotEmpty() }
+            false -> null
+            null -> return@LaunchedEffect
+        }
+        if (next != shown) {
+            shown = next
+            if (next == null) heldCollages.remove(page.browseId) else heldCollages[page.browseId] = next
+        }
+    }
+    return shown.takeIf { eligible }
 }
+
+/** The collage each playlist page settled on, by page. */
+private val heldCollages = HashMap<String, List<String>>()
 
 private const val GRID_SOURCE_ROWS = 16
 
@@ -201,11 +221,15 @@ private object DefaultGridCheck {
 // frame is a redraw of one Spacer with no recomposition and no new bitmaps.
 // ---------------------------------------------------------------------------
 
-private const val THUMB_PX = 192
+private const val THUMB_PX = 360
 private const val MAIN_PX = 600
-private const val SOFT_PX = 32
-private const val SOFT_BELOW = 0.85f
 private const val MAIN_SHAPE = 4
+
+/**
+ * How far down the picture the front cover's centre sits: the middle of
+ * what shows between the top bar and the title laid over the picture's foot.
+ */
+private const val MAIN_CENTRE_Y = 0.40f
 
 /** Corner radii (top-left, top-right, bottom-right, bottom-left) as shares of a side, per shape. */
 private val RADII = arrayOf(
@@ -265,7 +289,7 @@ private class CollageGeometry {
             sides[i] = evenPx(width * SLOTS[i].size)
             paths[i] = shapePath(SLOTS[i].shape, sides[i])
         }
-        mainSide = evenPx(min(width * 0.64f, height * 0.62f))
+        mainSide = evenPx(min(width * 0.60f, height * 0.56f))
         mainPath = shapePath(MAIN_SHAPE, mainSide)
     }
 }
@@ -307,11 +331,10 @@ internal fun PlaylistCollageArt(covers: List<String>, modifier: Modifier = Modif
         val urls = covers.drop(1).take(SLOTS.size)
         state.tiles = withContext(Dispatchers.Default) {
             coroutineScope {
-                urls.mapIndexed { i, url ->
-                    async {
-                        val sharp = loadCover(context, url, THUMB_PX)
-                        if (sharp != null && SLOTS[i].depth < SOFT_BELOW) softCopy(sharp) ?: sharp else sharp
-                    }
+                urls.map { url ->
+                    // Sharp at every depth: distance is shown by size and
+                    // dimming alone, never by a smeared low-res copy.
+                    async { loadCover(context, url, THUMB_PX) }
                 }.awaitAll()
             }
         }
@@ -336,14 +359,6 @@ private suspend fun loadSoftwareBitmap(context: Context, url: String, px: Int): 
     val request = ImageRequest.Builder(context).data(url).size(px).forPixelAccess().build()
     val bitmap = (SingletonImageLoader.get(context).execute(request) as? SuccessResult)?.image?.toBitmap()
     if (bitmap?.config == Bitmap.Config.HARDWARE) bitmap.copy(Bitmap.Config.ARGB_8888, false) else bitmap
-}.getOrNull()
-
-/** Distant covers look out of focus: shrunk once to a few pixels and drawn smoothed, never blurred per frame. */
-private fun softCopy(src: ImageBitmap): ImageBitmap? = runCatching {
-    val b = src.asAndroidBitmap()
-    val m = min(b.width, b.height)
-    val square = Bitmap.createBitmap(b, (b.width - m) / 2, (b.height - m) / 2, m, m)
-    Bitmap.createScaledBitmap(square, SOFT_PX, SOFT_PX, true).asImageBitmap()
 }.getOrNull()
 
 /**
@@ -396,7 +411,7 @@ private fun DrawScope.drawCollage(state: CollageState, geo: CollageGeometry, ent
     val om = 2.0 * PI / 26.0
     val rot = -7f + (1.6 * sin(om * t)).toFloat()
     val cx = w / 2f + (0.012 * w * sin(om * 0.7 * t + 1.0)).toFloat()
-    val cy = h * 0.48f + (0.012 * w * sin(om * 0.9 * t + 2.0)).toFloat()
+    val cy = h * MAIN_CENTRE_Y + (0.012 * w * sin(om * 0.9 * t + 2.0)).toFloat()
     val sc = (0.94f + 0.06f * enter) * (1f + 0.012f * sin(om * 1.3 * t).toFloat())
     // A soft shadow under the front cover.
     withTransform({
@@ -437,7 +452,7 @@ private fun DrawScope.drawTile(
             dstOffset = IntOffset(-sideI / 2, -sideI / 2),
             dstSize = IntSize(sideI, sideI),
             alpha = alpha,
-            filterQuality = FilterQuality.Low,
+            filterQuality = FilterQuality.Medium,
         )
         if (dim > 0f) drawPath(path, Color.Black.copy(alpha = dim * alpha))
         if (borderPx > 0f) drawPath(path, Color.White.copy(alpha = 0.22f * alpha), style = Stroke(borderPx * 2f))

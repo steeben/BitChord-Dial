@@ -1,5 +1,11 @@
 package com.music.bitchord.ui.screens
 
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
 import com.music.bitchord.data.canvas.kind
 import com.music.bitchord.ui.components.menuAnchor
 import com.music.bitchord.ui.components.trackArtSize
@@ -520,19 +526,31 @@ fun DetailScreen(
     // is disposed, and a field that asks for focus every time it is composed
     // would throw the keyboard back up each time it scrolled into view.
     var focusSearch by remember(page.browseId) { mutableStateOf(false) }
+    // Play and Shuffle fold away while the search is open, and stay folded
+    // after it closes, so the page never moves under the listener; they come
+    // back once the page is scrolled up again.
+    var playRowFolded by rememberSaveable(page.browseId) { mutableStateOf(false) }
+    var searchFocused by remember(page.browseId) { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
     val closeSearch = {
+        focusManager.clearFocus()
         searching = false
         query = ""
     }
     // Back closes the search first — this handler is registered after the one
     // that pops the page, so it is the one that answers while it's enabled.
-    BackHandler(enabled = searching) { closeSearch() }
+    // With something typed, the first back only leaves the typing, keeping
+    // the filter; the next one closes the search.
+    BackHandler(enabled = searching) {
+        if (searchFocused && query.isNotEmpty()) focusManager.clearFocus() else closeSearch()
+    }
     val toggleSearch: () -> Unit = {
         if (searching) {
             closeSearch()
         } else {
             searching = true
             focusSearch = true
+            playRowFolded = true
         }
     }
 
@@ -691,7 +709,7 @@ fun DetailScreen(
     }
     // While the search is open its field is what holds at the top, on its
     // own (see below), so the header copy stands down.
-    val searchOpen by rememberUpdatedState(searching)
+    val searchOpen by rememberUpdatedState(searching || playRowFolded)
     val controlsPinned by remember(controlsOvershoot) {
         derivedStateOf { !searchOpen && (controlsOvershoot() ?: -1f) >= 0f }
     }
@@ -759,7 +777,29 @@ fun DetailScreen(
         maxOf(inList, searchStop)
     }
     LaunchedEffect(searching) {
-        if (searching && !isArtist) listState.animateScrollToItem(0, (searchPillTop - searchStop).coerceAtLeast(0))
+        // With Play and Shuffle folded the pill sits where the controls start,
+        // so that is the place carried up to the bar.
+        if (searching && !isArtist) listState.animateScrollToItem(0, (controlsOffset - searchStop).coerceAtLeast(0))
+    }
+    // Scrolling back up the page, with the search closed, unfolds Play and
+    // Shuffle again.
+    LaunchedEffect(page.browseId, isArtist) {
+        if (isArtist) return@LaunchedEffect
+        var lastIndex = listState.firstVisibleItemIndex
+        var lastOffset = listState.firstVisibleItemScrollOffset
+        var climbed = 0
+        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
+            .collect { (index, offset) ->
+                val up = when {
+                    index < lastIndex -> UNFOLD_CLIMB_PX
+                    index == lastIndex -> lastOffset - offset
+                    else -> 0
+                }
+                climbed = if (up > 0 && listState.isScrollInProgress) climbed + up else 0
+                if (climbed >= UNFOLD_CLIMB_PX && playRowFolded && !searching) playRowFolded = false
+                lastIndex = index
+                lastOffset = offset
+            }
     }
 
     // When the track list lands while the page is up (rather than being in
@@ -926,6 +966,7 @@ fun DetailScreen(
                         onPlay = { onSongClick(songs, 0) },
                         onShuffle = { onShuffle(songs) },
                         searching = searching,
+                        playRowShown = !playRowFolded,
                         onSearch = toggleSearch,
                         onArtistClick = onArtistClick,
                         onControlsPlaced = { top, height, lead ->
@@ -1214,7 +1255,7 @@ fun DetailScreen(
             if (isArtist) aboutItem()
             // Room under a short list, so opening the search can still carry
             // its field all the way up under the bar.
-            if (searching && !isArtist) {
+            if ((searching || playRowFolded) && !isArtist) {
                 item(key = "search-room") { Spacer(Modifier.height(this@BoxWithConstraints.maxHeight)) }
             }
         }
@@ -1233,6 +1274,7 @@ fun DetailScreen(
                         autoFocus = focusSearch,
                         onFocused = { focusSearch = false },
                         palette = palette,
+                        onFocusChanged = { searchFocused = it },
                         modifier = Modifier.offset { IntOffset(0, searchFieldTop()) },
                     )
                 }
@@ -1271,6 +1313,7 @@ fun DetailScreen(
                                 onPlay = { onSongClick(songs, 0) },
                                 onShuffle = { onShuffle(songs) },
                                 searching = searching,
+                                playRowShown = !playRowFolded,
                                 onSearch = toggleSearch,
                                 onArtistClick = onArtistClick,
                             )
@@ -1311,6 +1354,8 @@ private fun ReleaseHeader(
     searching: Boolean,
     onSearch: () -> Unit,
     onArtistClick: (String, String) -> Unit,
+    /** False while Play and Shuffle are folded away (see [DetailScreen]). */
+    playRowShown: Boolean = true,
     /**
      * Where the controls row sits inside this header, how tall it is, and how
      * far above it the title starts, in px.
@@ -1405,6 +1450,7 @@ private fun ReleaseHeader(
                     onPlay = onPlay,
                     onShuffle = onShuffle,
                     searching = searching,
+                    playRowShown = playRowShown,
                     onSearch = onSearch,
                     onSearchPlaced = { pill ->
                         val header = headerCoords[0]?.takeIf { it.isAttached } ?: return@ReleaseActions
@@ -1444,6 +1490,7 @@ private fun ReleaseActions(
     searching: Boolean,
     onSearch: () -> Unit,
     modifier: Modifier = Modifier,
+    playRowShown: Boolean = true,
     onSearchPlaced: (LayoutCoordinates) -> Unit = {},
 ) {
     AnimatedContent(
@@ -1460,34 +1507,49 @@ private fun ReleaseActions(
                 .fillMaxWidth()
                 .padding(horizontal = HEADER_GUTTER)
                 .then(if (ready) Modifier else Modifier.graphicsLayer { alpha = 0.4f }),
-            verticalArrangement = Arrangement.spacedBy(RELEASE_PILL_GAP),
         ) {
             if (!ready) {
                 Row(horizontalArrangement = Arrangement.spacedBy(RELEASE_PILL_GAP)) {
                     ShimmerBox(Modifier.weight(1f).height(RELEASE_PILL_HEIGHT), CircleShape)
                     ShimmerBox(Modifier.weight(1f).height(RELEASE_PILL_HEIGHT), CircleShape)
                 }
+                Spacer(Modifier.height(RELEASE_PILL_GAP))
                 ShimmerBox(Modifier.fillMaxWidth().height(RELEASE_PILL_HEIGHT), CircleShape)
                 return@Column
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(RELEASE_PILL_GAP)) {
-                PlayPill(
-                    onClick = onPlay,
-                    size = RELEASE_PILL_HEIGHT,
-                    horizontalPadding = 12.dp,
-                    // The artwork's own colour, as on the artist page, a touch
-                    // more see-through than the artist page's circle.
-                    containerColor = palette.accent,
-                    fillAlpha = RELEASE_PLAY_FILL_ALPHA,
-                    modifier = Modifier.weight(1f),
-                )
-                GlassPill(
-                    icon = BitChordIcons.Shuffle,
-                    label = stringResource(R.string.shuffle),
-                    onClick = onShuffle,
-                    haptic = Haptic.Resume,
-                    modifier = Modifier.weight(1f),
-                )
+            // Shuffle, then Play on the right. Folded away while searching:
+            // they shrink into the Search pill's top edge rather than vanish.
+            androidx.compose.animation.AnimatedVisibility(
+                visible = playRowShown,
+                enter = expandVertically(tween(PLAY_ROW_FOLD_MS, easing = FastOutSlowInEasing), Alignment.Bottom) +
+                    scaleIn(tween(PLAY_ROW_FOLD_MS, easing = FastOutSlowInEasing), initialScale = 0.6f) +
+                    fadeIn(tween(PLAY_ROW_FOLD_MS)),
+                exit = shrinkVertically(tween(PLAY_ROW_FOLD_MS, easing = FastOutSlowInEasing), Alignment.Bottom) +
+                    scaleOut(tween(PLAY_ROW_FOLD_MS, easing = FastOutSlowInEasing), targetScale = 0.6f) +
+                    fadeOut(tween(PLAY_ROW_FOLD_MS * 2 / 3)),
+            ) {
+                Column {
+                    Row(horizontalArrangement = Arrangement.spacedBy(RELEASE_PILL_GAP)) {
+                        GlassPill(
+                            icon = BitChordIcons.Shuffle,
+                            label = stringResource(R.string.shuffle),
+                            onClick = onShuffle,
+                            haptic = Haptic.Resume,
+                            modifier = Modifier.weight(1f),
+                        )
+                        PlayPill(
+                            onClick = onPlay,
+                            size = RELEASE_PILL_HEIGHT,
+                            horizontalPadding = 12.dp,
+                            // The artwork's own colour, as on the artist page, a
+                            // touch more see-through than the artist page's circle.
+                            containerColor = palette.accent,
+                            fillAlpha = RELEASE_PLAY_FILL_ALPHA,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    Spacer(Modifier.height(RELEASE_PILL_GAP))
+                }
             }
             // Finding a track on a long playlist is a thing done while reading
             // the page, so it earns the wide button. While the search is open
@@ -1510,6 +1572,12 @@ private fun ReleaseActions(
 /** The release header's pills: Play, Shuffle and Search. */
 private val RELEASE_PILL_HEIGHT = 50.dp
 private val RELEASE_PILL_GAP = 12.dp
+
+/** How long Play and Shuffle take to fold away, or back. */
+private const val PLAY_ROW_FOLD_MS = 280
+
+/** How far the page has to be scrolled back up to unfold Play and Shuffle, in px. */
+private const val UNFOLD_CLIMB_PX = 24
 
 /**
  * The release Play pill's fill: 15 points more see-through than the artist
@@ -1599,6 +1667,7 @@ private fun DetailSearchField(
     onFocused: () -> Unit,
     palette: ArtworkPalette,
     modifier: Modifier = Modifier,
+    onFocusChanged: (Boolean) -> Unit = {},
 ) {
     // Opened by a tap on a button, which is as clear a statement of intent as
     // the keyboard is going to get — so it comes up with the field rather than
@@ -1654,7 +1723,8 @@ private fun DetailSearchField(
                 cursorBrush = SolidColor(palette.accent),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .focusRequester(focus),
+                    .focusRequester(focus)
+                    .onFocusChanged { onFocusChanged(it.isFocused) },
             )
         }
         Box(
@@ -2015,13 +2085,7 @@ private fun PageBackground(
                             ),
                         ),
                 ) {
-                    // Lower than the picture's top, which sits under the bar.
-                    PlaylistCollageArt(
-                        covers = collage,
-                        modifier = Modifier
-                            .matchParentSize()
-                            .padding(top = topBarContentPadding() * 0.5f),
-                    )
+                    PlaylistCollageArt(covers = collage, modifier = Modifier.matchParentSize())
                 }
             }
             if (heroArt != null) {
