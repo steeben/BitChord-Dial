@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">BitChord Dial</string>
+    <string name="app_name">Dial</string>
     <string name="playback_channel_name">Сейчас играет</string>
     <string name="download_channel_name">Загрузки</string>
     <string name="download_channel_description">Песни сохраняются в папку «Музыка»</string>
@@ -145,7 +145,7 @@
     <string name="widget_previous">Назад</string>
     <string name="widget_artwork">Обложка альбома</string>
     <string name="widget_nothing_played">Пока ничего не воспроизводилось</string>
-    <string name="widget_open_bitchord">Открыть BitChord</string>
+    <string name="widget_open_bitchord">Открыть Dial</string>
     <string name="widget_preview_title">Название песни</string>
     <string name="widget_preview_artist">Исполнитель</string>
     <string name="widget_pill_label">Сейчас играет 4×1</string>
@@ -750,7 +750,7 @@
     <string name="listen_together_code">Код вечеринки</string>
     <string name="listen_together_code_footer">Продиктуйте или отправьте его. Буквы O и I не используются, поэтому «о» — это всегда ноль.</string>
     <string name="copy_code">Копировать код</string>
-    <string name="listen_together_share_text">Слушай со мной в BitChord — код вечеринки %1$s</string>
+    <string name="listen_together_share_text">Слушай со мной в Dial — код вечеринки %1$s</string>
     <string name="listen_together_now_playing">Сейчас играет</string>
     <string name="listen_together_nothing_playing">Пока ничего не играет</string>
     <string name="listen_together_listening">Слушают · %1$d из %2$d</string>
@@ -787,7 +787,7 @@
     <string name="listen_together_custom_server_dialog_message">Эта вечеринка размещена на внешнем сервере:\n\n%1$s\n\nСменить сервер вечеринок и присоединиться к вечеринке %2$s?</string>
     <string name="listen_together_custom_server_switch_and_join">Сменить и войти</string>
     <string name="listen_together_official_server_dialog_title">Перейти на официальный сервер?</string>
-    <string name="listen_together_official_server_dialog_message">Эта вечеринка размещена на официальном сервере BitChord.\n\nВернуться на официальный сервер и присоединиться к вечеринке %1$s?</string>
+    <string name="listen_together_official_server_dialog_message">Эта вечеринка размещена на официальном сервере Dial.\n\nВернуться на официальный сервер и присоединиться к вечеринке %1$s?</string>
     <string name="listen_together_switch_failed_stayed_in_party">Не удалось присоединиться: %1$s. Вы остаётесь на вечеринке %2$s.</string>
     <string name="listen_together_switch_failed">Не удалось присоединиться: %1$s.</string>
     <string name="listen_together_ping">%1$d ms</string>
@@ -1084,7 +1084,7 @@
 
     <string name="auto_login_title">Sign in to YouTube on your phone</string>
 
-    <string name="auto_login_subtitle">Open BitChord on your phone to sign in</string>
+    <string name="auto_login_subtitle">Open Dial on your phone to sign in</string>
 
     <string name="auto_empty_recents_title">No recent songs</string>
 

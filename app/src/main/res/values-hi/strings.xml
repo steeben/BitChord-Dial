@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">BitChord Dial</string>
+    <string name="app_name">Dial</string>
     <string name="playback_channel_name">अभी चल रहा है</string>
     <string name="download_channel_name">डाउनलोड</string>
     <string name="download_channel_description">आपके संगीत फ़ोल्डर में सेव हो रहे गाने</string>
@@ -135,7 +135,7 @@
     <string name="widget_previous">पिछला</string>
     <string name="widget_artwork">एल्बम आर्ट</string>
     <string name="widget_nothing_played">अभी तक कुछ नहीं चलाया गया</string>
-    <string name="widget_open_bitchord">BitChord खोलें</string>
+    <string name="widget_open_bitchord">Dial खोलें</string>
     <string name="widget_preview_title">गाने का शीर्षक</string>
     <string name="widget_preview_artist">कलाकार</string>
     <string name="widget_pill_label">अभी चल रहा है 4×1</string>
@@ -724,7 +724,7 @@
     <string name="listen_together_code">पार्टी कोड</string>
     <string name="listen_together_code_footer">इसे बोलकर बताएँ या भेज दें। O और I इस्तेमाल नहीं होते, इसलिए “ओ” हमेशा शून्य है।</string>
     <string name="copy_code">कोड कॉपी करें</string>
-    <string name="listen_together_share_text">BitChord पर मेरे साथ सुनो — पार्टी कोड %1$s</string>
+    <string name="listen_together_share_text">Dial पर मेरे साथ सुनो — पार्टी कोड %1$s</string>
     <string name="listen_together_now_playing">अभी चल रहा है</string>
     <string name="listen_together_nothing_playing">अभी कुछ नहीं चल रहा</string>
     <string name="listen_together_listening">सुन रहे हैं · %2$d में से %1$d</string>
@@ -761,7 +761,7 @@
     <string name="listen_together_custom_server_dialog_message">यह पार्टी एक बाहरी सर्वर पर चल रही है:\n\n%1$s\n\nक्या आप अपना पार्टी सर्वर बदलकर पार्टी %2$s में शामिल होना चाहते हैं?</string>
     <string name="listen_together_custom_server_switch_and_join">बदलें और शामिल हों</string>
     <string name="listen_together_official_server_dialog_title">आधिकारिक सर्वर पर जाएँ?</string>
-    <string name="listen_together_official_server_dialog_message">यह पार्टी BitChord के आधिकारिक सर्वर पर चल रही है।\n\nक्या आप आधिकारिक सर्वर पर लौटकर पार्टी %1$s में शामिल होना चाहते हैं?</string>
+    <string name="listen_together_official_server_dialog_message">यह पार्टी Dial के आधिकारिक सर्वर पर चल रही है।\n\nक्या आप आधिकारिक सर्वर पर लौटकर पार्टी %1$s में शामिल होना चाहते हैं?</string>
     <string name="listen_together_switch_failed_stayed_in_party">पार्टी में शामिल नहीं हो सके: %1$s। आप पार्टी %2$s में बने रहेंगे।</string>
     <string name="listen_together_switch_failed">पार्टी में शामिल नहीं हो सके: %1$s।</string>
     <string name="listen_together_ping">%1$d ms</string>
@@ -1056,7 +1056,7 @@
 
     <string name="auto_login_title">Sign in to YouTube on your phone</string>
 
-    <string name="auto_login_subtitle">Open BitChord on your phone to sign in</string>
+    <string name="auto_login_subtitle">Open Dial on your phone to sign in</string>
 
     <string name="auto_empty_recents_title">No recent songs</string>
 

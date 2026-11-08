@@ -59,7 +59,7 @@ val SFProDisplay = FontFamily(
     Font(R.font.sf_pro_display_heavy, FontWeight.W800),
 )
 
-/** Metropolis ExtraBold, the face of the "BitChord Dial" title beside the Home logo. */
+/** Metropolis ExtraBold, the face of the "Dial" title beside the Home logo. */
 val Metropolis = FontFamily(
     Font(R.font.metropolis_extrabold, FontWeight.W800),
 )

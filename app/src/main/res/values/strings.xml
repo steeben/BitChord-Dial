@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">BitChord Dial</string>
+    <string name="app_name">Dial</string>
     <string name="playback_channel_name">Now playing</string>
     <string name="download_channel_name">Downloads</string>
     <string name="download_channel_description">Songs being saved to your Music folder</string>
@@ -52,7 +52,7 @@
     <string name="auto_recents">Recent</string>
     <string name="auto_liked">Liked songs</string>
     <string name="auto_login_title">Sign in to YouTube on your phone</string>
-    <string name="auto_login_subtitle">Open BitChord on your phone to sign in</string>
+    <string name="auto_login_subtitle">Open Dial on your phone to sign in</string>
     <string name="auto_empty_recents_title">No recent songs</string>
     <string name="auto_empty_recents_subtitle">Songs you play will appear here</string>
     <string name="auto_empty_quick_picks_title">No suggestions</string>
@@ -185,7 +185,7 @@
     <string name="widget_previous">Previous</string>
     <string name="widget_artwork">Album art</string>
     <string name="widget_nothing_played">Nothing played yet</string>
-    <string name="widget_open_bitchord">Open BitChord</string>
+    <string name="widget_open_bitchord">Open Dial</string>
     <string name="widget_preview_title">Song title</string>
     <string name="widget_preview_artist">Artist</string>
     <string name="widget_pill_label">Now playing 4×1</string>
@@ -1002,7 +1002,7 @@
     <string name="listen_together_code">Party code</string>
     <string name="listen_together_code_footer">Read it out or send it. O and I aren’t used, so an “oh” is always a zero.</string>
     <string name="copy_code">Copy code</string>
-    <string name="listen_together_share_text">Listen with me on BitChord — party code %1$s</string>
+    <string name="listen_together_share_text">Listen with me on Dial — party code %1$s</string>
     <string name="listen_together_now_playing">Now playing</string>
     <string name="listen_together_nothing_playing">Nothing playing yet</string>
     <string name="listen_together_listening">Listening · %1$d of %2$d</string>
@@ -1039,7 +1039,7 @@
     <string name="listen_together_custom_server_dialog_message">This party is hosted on an external server:\n\n%1$s\n\nDo you want to switch your party server and join party %2$s?</string>
     <string name="listen_together_custom_server_switch_and_join">Switch &amp; Join</string>
     <string name="listen_together_official_server_dialog_title">Switch to official server?</string>
-    <string name="listen_together_official_server_dialog_message">This party is hosted on the official BitChord server.\n\nDo you want to switch back to the official server and join party %1$s?</string>
+    <string name="listen_together_official_server_dialog_message">This party is hosted on the official Dial server.\n\nDo you want to switch back to the official server and join party %1$s?</string>
     <string name="listen_together_switch_failed_stayed_in_party">Couldn’t join party: %1$s. Remaining in party %2$s.</string>
     <string name="listen_together_switch_failed">Couldn’t join party: %1$s.</string>
     <string name="listen_together_ping">%1$d ms</string>

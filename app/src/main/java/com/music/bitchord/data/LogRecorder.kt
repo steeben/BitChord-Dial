@@ -41,7 +41,7 @@ object LogRecorder {
         TrackLog.startSession(
             file,
             header = listOf(
-                "BitChord Dial log",
+                "Dial log",
                 "build: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}, ${BuildConfig.BUILD_TYPE})",
                 "device: ${Build.MANUFACTURER} ${Build.MODEL}, Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
             ),

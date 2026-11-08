@@ -95,12 +95,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           APK=$(ls app/build/outputs/apk/dev/benchmark/*.apk | head -n1)
-          cp "$APK" "BitChord-${TAG}.apk"
+          cp "$APK" "Dial-${TAG}.apk"
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "BitChord-${TAG}.apk" --clobber
+            gh release upload "$TAG" "Dial-${TAG}.apk" --clobber
           else
-            gh release create "$TAG" "BitChord-${TAG}.apk" \
+            gh release create "$TAG" "Dial-${TAG}.apk" \
               --target "$GITHUB_SHA" \
-              --title "BitChord Dial ${TAG#v}" \
+              --title "Dial ${TAG#v}" \
               --notes-file RELEASE_NOTES.md
           fi

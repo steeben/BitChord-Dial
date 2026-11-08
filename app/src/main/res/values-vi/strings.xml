@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">BitChord Dial</string>
+    <string name="app_name">Dial</string>
     <string name="playback_channel_name">Đang phát</string>
     <string name="download_channel_name">Tải xuống</string>
     <string name="download_channel_description">Các bài hát đang được lưu vào thư mục Nhạc của bạn</string>
@@ -144,7 +144,7 @@
     <string name="widget_previous">Trước</string>
     <string name="widget_artwork">Ảnh bìa album</string>
     <string name="widget_nothing_played">Chưa phát bài nào</string>
-    <string name="widget_open_bitchord">Mở BitChord</string>
+    <string name="widget_open_bitchord">Mở Dial</string>
     <string name="widget_preview_title">Tên bài hát</string>
     <string name="widget_preview_artist">Nghệ sĩ</string>
     <string name="widget_pill_label">Đang phát 4×1</string>
@@ -615,7 +615,7 @@
     <string name="your_biggest_day">Ngày nghe nhiều nhất: %1$s</string>
     <string name="your_listening_experience">Trải nghiệm nghe nhạc của bạn</string>
     <string name="your_lyrics_card">Thẻ lời bài hát của bạn</string>
-    <string name="your_replay">BitChord Replay của bạn</string>
+    <string name="your_replay">Dial Replay của bạn</string>
     <plurals name="replay_artist_count">
         <item quantity="other">%1$s nghệ sĩ</item>
     </plurals>
@@ -805,7 +805,7 @@
 
     <string name="auto_login_title">Sign in to YouTube on your phone</string>
 
-    <string name="auto_login_subtitle">Open BitChord on your phone to sign in</string>
+    <string name="auto_login_subtitle">Open Dial on your phone to sign in</string>
 
     <string name="auto_empty_recents_title">No recent songs</string>
 
@@ -1074,7 +1074,7 @@
 
     <string name="copy_code">Copy code</string>
 
-    <string name="listen_together_share_text">Listen with me on BitChord — party code %1$s</string>
+    <string name="listen_together_share_text">Listen with me on Dial — party code %1$s</string>
 
     <string name="listen_together_now_playing">Now playing</string>
 
@@ -1149,7 +1149,7 @@
     <string name="listen_together_custom_server_dialog_message">This party is hosted on an external server:\n\n%1$s\n\nDo you want to switch your party server and join party %2$s?</string>
     <string name="listen_together_custom_server_switch_and_join">Switch &amp; Join</string>
     <string name="listen_together_official_server_dialog_title">Switch to official server?</string>
-    <string name="listen_together_official_server_dialog_message">This party is hosted on the official BitChord server.\n\nDo you want to switch back to the official server and join party %1$s?</string>
+    <string name="listen_together_official_server_dialog_message">This party is hosted on the official Dial server.\n\nDo you want to switch back to the official server and join party %1$s?</string>
     <string name="listen_together_switch_failed_stayed_in_party">Couldn’t join party: %1$s. Remaining in party %2$s.</string>
     <string name="listen_together_switch_failed">Couldn’t join party: %1$s.</string>
     <string name="cast_dialog_title">Cast</string>

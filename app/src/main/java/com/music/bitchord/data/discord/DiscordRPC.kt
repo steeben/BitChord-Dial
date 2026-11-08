@@ -27,7 +27,7 @@ import java.util.Locale
  *   └────┘  Hi-Res Lossless · FLAC · 4608 kbps · 24-bit · 96 kHz
  *           ▁▁▁▁▁▁ 1:04 / 3:47     <- from the timestamps
  *   [ Listen on YouTube Music ]    <- button 1
- *   [ Visit BitChord           ]   <- button 2
+ *   [ Visit Dial               ]   <- button 2
  * ```
  */
 class DiscordRPC(
@@ -149,10 +149,10 @@ class DiscordRPC(
         context.getString(R.string.app_name).removeSuffix(" Dev")
 
     companion object {
-        const val PROJECT_URL = "https://github.com/kushagrasinghx/BitChord"
+        const val PROJECT_URL = "https://github.com/steeben/BitChord-Dial"
 
         const val DEFAULT_BUTTON_1 = "Listen on YouTube Music"
-        const val DEFAULT_BUTTON_2 = "Visit BitChord"
+        const val DEFAULT_BUTTON_2 = "Visit Dial"
 
         /** Discord draws the sleeve at roughly 96dp; 480px covers it on any density. */
         private const val ART_PX = 480

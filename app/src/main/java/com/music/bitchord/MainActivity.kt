@@ -3270,7 +3270,7 @@ private fun BitChordApp(
                     HomePage.ARTISTS
                 // Judged by the dial itself rather than by index: with the
                 // artists' dial off, index 1 is Explore's first shelf, and the
-                // title stayed "BitChord Dial" over it.
+                // title stayed "Dial" over it.
                 dial != null -> if (dial.offset + dial.size > middle) HomePage.DIAL else HomePage.EXPLORE
                 // Read here rather than collected: turning the dials off changes
                 // the list, which runs this again.

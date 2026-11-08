@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">BitChord Dial</string>
+    <string name="app_name">Dial</string>
     <string name="playback_channel_name">Reproduciendo</string>
     <string name="download_channel_name">Descargas</string>
     <string name="download_channel_description">Canciones guardadas en tu carpeta Música</string>
@@ -136,7 +136,7 @@
     <string name="widget_previous">Anterior</string>
     <string name="widget_artwork">Portada del álbum</string>
     <string name="widget_nothing_played">Aún no se ha reproducido nada</string>
-    <string name="widget_open_bitchord">Abrir BitChord</string>
+    <string name="widget_open_bitchord">Abrir Dial</string>
     <string name="widget_preview_title">Título de la canción</string>
     <string name="widget_preview_artist">Artista</string>
     <string name="widget_pill_label">Reproduciendo 4×1</string>
@@ -769,7 +769,7 @@
     <string name="listen_together_code">Código de la fiesta</string>
     <string name="listen_together_code_footer">Dilo en voz alta o envíalo. La O y la I no se usan, así que una «o» siempre es un cero.</string>
     <string name="copy_code">Copiar código</string>
-    <string name="listen_together_share_text">Escucha conmigo en BitChord — código de fiesta %1$s</string>
+    <string name="listen_together_share_text">Escucha conmigo en Dial — código de fiesta %1$s</string>
     <string name="listen_together_now_playing">Reproduciendo</string>
     <string name="listen_together_nothing_playing">Todavía no suena nada</string>
     <string name="listen_together_listening">Escuchando · %1$d de %2$d</string>
@@ -806,7 +806,7 @@
     <string name="listen_together_custom_server_dialog_message">Esta fiesta está alojada en un servidor externo:\n\n%1$s\n\n¿Quieres cambiar tu servidor de fiestas y unirte a la fiesta %2$s?</string>
     <string name="listen_together_custom_server_switch_and_join">Cambiar y unirse</string>
     <string name="listen_together_official_server_dialog_title">¿Cambiar al servidor oficial?</string>
-    <string name="listen_together_official_server_dialog_message">Esta fiesta está alojada en el servidor oficial de BitChord.\n\n¿Quieres volver al servidor oficial y unirte a la fiesta %1$s?</string>
+    <string name="listen_together_official_server_dialog_message">Esta fiesta está alojada en el servidor oficial de Dial.\n\n¿Quieres volver al servidor oficial y unirte a la fiesta %1$s?</string>
     <string name="listen_together_switch_failed_stayed_in_party">No se pudo unir a la fiesta: %1$s. Sigues en la fiesta %2$s.</string>
     <string name="listen_together_switch_failed">No se pudo unir a la fiesta: %1$s.</string>
     <string name="listen_together_ping">%1$d ms</string>
@@ -1028,7 +1028,7 @@
 
     <string name="auto_login_title">Sign in to YouTube on your phone</string>
 
-    <string name="auto_login_subtitle">Open BitChord on your phone to sign in</string>
+    <string name="auto_login_subtitle">Open Dial on your phone to sign in</string>
 
     <string name="auto_empty_recents_title">No recent songs</string>
 

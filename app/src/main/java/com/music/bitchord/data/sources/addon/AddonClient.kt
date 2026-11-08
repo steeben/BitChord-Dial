@@ -96,7 +96,7 @@ class AddonClient(rawBaseUrl: String) {
             }
             if (!manifest.isPlayable) {
                 val declared = manifest.resources.joinToString(", ")
-                throw AddonException("This addon declares $declared — BitChord needs search")
+                throw AddonException("This addon declares $declared — Dial needs search")
             }
             manifest
         }.recoverCatching { failure ->
@@ -363,7 +363,7 @@ class AddonClient(rawBaseUrl: String) {
                     // sends people to re-paste a URL that was always correct.
                     response.code >= 500 -> throw AddonUnavailable("HTTP ${response.code}")
                     response.code != 429 -> throw AddonException("HTTP ${response.code}")
-                    attempt >= MAX_RETRIES -> throw AddonUnavailable("This addon is rate limiting BitChord")
+                    attempt >= MAX_RETRIES -> throw AddonUnavailable("This addon is rate limiting Dial")
                     else -> retryAfterMs(response.header("Retry-After"), attempt)
                 }
             }

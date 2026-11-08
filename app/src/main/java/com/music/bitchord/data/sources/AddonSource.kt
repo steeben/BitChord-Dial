@@ -316,7 +316,7 @@ class AddonSource(
         if (answer.isEncrypted) {
             TrackLog.w(
                 TAG,
-                "${config.displayName}: $trackId came back encrypted, which BitChord never asked for — passing",
+                "${config.displayName}: $trackId came back encrypted, which Dial never asked for — passing",
             )
             return null
         }

@@ -775,7 +775,6 @@ object CustomizationSettings {
     const val SPEED_DIAL_SIZE = 36
     private const val SPEED_DIAL_COLUMNS = 3
     const val DEFAULT_SPEED_DIAL_ROWS = 4
-    const val DEFAULT_HOME_TITLE = "BitChord Dial"
 
     /** The glass's own look: a 40% fill and an 8dp blur. */
     const val DEFAULT_GLASS_TRANSPARENCY = 0.6f

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">BitChord Dial</string>
+    <string name="app_name">Dial</string>
     <string name="playback_channel_name">Sedang diputar</string>
     <string name="download_channel_name">Unduhan</string>
     <string name="download_channel_description">Lagu yang sedang disimpan ke folder Musik Anda</string>
@@ -130,7 +130,7 @@
     <string name="widget_previous">Sebelumnya</string>
     <string name="widget_artwork">Sampul album</string>
     <string name="widget_nothing_played">Belum ada yang diputar</string>
-    <string name="widget_open_bitchord">Buka BitChord</string>
+    <string name="widget_open_bitchord">Buka Dial</string>
     <string name="widget_preview_title">Judul lagu</string>
     <string name="widget_preview_artist">Artis</string>
     <string name="widget_pill_label">Sedang diputar 4×1</string>
@@ -704,7 +704,7 @@
     <string name="listen_together_code">Kode pesta</string>
     <string name="listen_together_code_footer">Bacakan atau kirimkan. Huruf O dan I tidak dipakai, jadi “o” selalu berarti nol.</string>
     <string name="copy_code">Salin kode</string>
-    <string name="listen_together_share_text">Dengarkan bareng aku di BitChord — kode pesta %1$s</string>
+    <string name="listen_together_share_text">Dengarkan bareng aku di Dial — kode pesta %1$s</string>
     <string name="listen_together_now_playing">Sedang diputar</string>
     <string name="listen_together_nothing_playing">Belum ada yang diputar</string>
     <string name="listen_together_listening">Mendengarkan · %1$d dari %2$d</string>
@@ -741,7 +741,7 @@
     <string name="listen_together_custom_server_dialog_message">Pesta ini di-host di server eksternal:\n\n%1$s\n\nMau mengganti server pesta dan ikut pesta %2$s?</string>
     <string name="listen_together_custom_server_switch_and_join">Ganti &amp; Ikut</string>
     <string name="listen_together_official_server_dialog_title">Beralih ke server resmi?</string>
-    <string name="listen_together_official_server_dialog_message">Pesta ini di-host di server resmi BitChord.\n\nMau kembali ke server resmi dan ikut pesta %1$s?</string>
+    <string name="listen_together_official_server_dialog_message">Pesta ini di-host di server resmi Dial.\n\nMau kembali ke server resmi dan ikut pesta %1$s?</string>
     <string name="listen_together_switch_failed_stayed_in_party">Gagal ikut pesta: %1$s. Tetap di pesta %2$s.</string>
     <string name="listen_together_switch_failed">Gagal ikut pesta: %1$s.</string>
     <string name="listen_together_ping">%1$d ms</string>
@@ -1035,7 +1035,7 @@
 
     <string name="auto_login_title">Sign in to YouTube on your phone</string>
 
-    <string name="auto_login_subtitle">Open BitChord on your phone to sign in</string>
+    <string name="auto_login_subtitle">Open Dial on your phone to sign in</string>
 
     <string name="auto_empty_recents_title">No recent songs</string>
 

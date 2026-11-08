@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">BitChord Dial</string>
+    <string name="app_name">Dial</string>
     <string name="playback_channel_name">Şu an çalıyor</string>
     <string name="download_channel_name">İndirmeler</string>
     <string name="download_channel_description">Müzik klasörüne kaydedilen şarkılar</string>
@@ -144,7 +144,7 @@
     <string name="widget_previous">Önceki</string>
     <string name="widget_artwork">Albüm kapağı</string>
     <string name="widget_nothing_played">Henüz bir şey çalınmadı</string>
-    <string name="widget_open_bitchord">BitChord\'u Aç</string>
+    <string name="widget_open_bitchord">Dial\'u Aç</string>
     <string name="widget_preview_title">Şarkı adı</string>
     <string name="widget_preview_artist">Sanatçı</string>
     <string name="widget_pill_label">Şu an çalıyor 4×1</string>
@@ -786,7 +786,7 @@
     <string name="listen_together_code">Parti kodu</string>
     <string name="listen_together_code_footer">Yüksek sesle oku ya da gönder. O ve I harfleri kullanılmaz, yani bir “o” her zaman sıfırdır.</string>
     <string name="copy_code">Kodu kopyala</string>
-    <string name="listen_together_share_text">BitChord’da benimle dinle — parti kodu %1$s</string>
+    <string name="listen_together_share_text">Dial’da benimle dinle — parti kodu %1$s</string>
     <string name="listen_together_now_playing">Şu an çalıyor</string>
     <string name="listen_together_nothing_playing">Henüz bir şey çalmıyor</string>
     <string name="listen_together_listening">Dinliyor · %1$d / %2$d</string>
@@ -823,7 +823,7 @@
     <string name="listen_together_custom_server_dialog_message">Bu parti harici bir sunucuda barındırılıyor:\n\n%1$s\n\nParti sunucunu değiştirip %2$s partisine katılmak istiyor musun?</string>
     <string name="listen_together_custom_server_switch_and_join">Değiştir ve katıl</string>
     <string name="listen_together_official_server_dialog_title">Resmi sunucuya geçilsin mi?</string>
-    <string name="listen_together_official_server_dialog_message">Bu parti resmi BitChord sunucusunda barındırılıyor.\n\nResmi sunucuya geri dönüp %1$s partisine katılmak istiyor musun?</string>
+    <string name="listen_together_official_server_dialog_message">Bu parti resmi Dial sunucusunda barındırılıyor.\n\nResmi sunucuya geri dönüp %1$s partisine katılmak istiyor musun?</string>
     <string name="listen_together_switch_failed_stayed_in_party">Partiye katılınamadı: %1$s. %2$s partisinde kalmaya devam ediyorsun.</string>
     <string name="listen_together_switch_failed">Partiye katılınamadı: %1$s.</string>
     <string name="listen_together_ping">%1$d ms</string>
@@ -1011,7 +1011,7 @@
 
     <string name="auto_login_title">Telefonunuzda YouTube\'a giriş yapın</string>
 
-    <string name="auto_login_subtitle">Giriş yapmak için telefonunuzda BitChord\'u açın</string>
+    <string name="auto_login_subtitle">Giriş yapmak için telefonunuzda Dial\'u açın</string>
 
     <string name="auto_empty_recents_title">Son çalınan şarkı yok</string>
 

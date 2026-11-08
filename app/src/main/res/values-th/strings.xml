@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">BitChord Dial</string>
+    <string name="app_name">Dial</string>
     <string name="playback_channel_name">กำลังเล่น</string>
     <string name="download_channel_name">การดาวน์โหลด</string>
     <string name="download_channel_description">เพลงที่กำลังบันทึกลงในโฟลเดอร์เพลงของคุณ</string>
@@ -138,7 +138,7 @@
     <string name="widget_previous">ก่อนหน้า</string>
     <string name="widget_artwork">ปกอัลบั้ม</string>
     <string name="widget_nothing_played">ยังไม่มีการเล่นเพลง</string>
-    <string name="widget_open_bitchord">เปิด BitChord</string>
+    <string name="widget_open_bitchord">เปิด Dial</string>
     <string name="widget_preview_title">ชื่อเพลง</string>
     <string name="widget_preview_artist">ศิลปิน</string>
     <string name="widget_pill_label">กำลังเล่น 4×1</string>
@@ -765,7 +765,7 @@
     <string name="listen_together_code">รหัสปาร์ตี้</string>
     <string name="listen_together_code_footer">อ่านออกเสียงหรือส่งให้ก็ได้ ไม่ใช้ตัว O และ I ดังนั้น “โอ” คือเลขศูนย์เสมอ</string>
     <string name="copy_code">คัดลอกรหัส</string>
-    <string name="listen_together_share_text">มาฟังกับฉันใน BitChord — รหัสปาร์ตี้ %1$s</string>
+    <string name="listen_together_share_text">มาฟังกับฉันใน Dial — รหัสปาร์ตี้ %1$s</string>
     <string name="listen_together_now_playing">กำลังเล่น</string>
     <string name="listen_together_nothing_playing">ยังไม่มีอะไรเล่น</string>
     <string name="listen_together_listening">กำลังฟัง · %1$d จาก %2$d</string>
@@ -802,7 +802,7 @@
     <string name="listen_together_custom_server_dialog_message">ปาร์ตี้นี้โฮสต์อยู่บนเซิร์ฟเวอร์ภายนอก:\n\n%1$s\n\nต้องการเปลี่ยนเซิร์ฟเวอร์ปาร์ตี้และเข้าร่วมปาร์ตี้ %2$s หรือไม่</string>
     <string name="listen_together_custom_server_switch_and_join">เปลี่ยนและเข้าร่วม</string>
     <string name="listen_together_official_server_dialog_title">เปลี่ยนเป็นเซิร์ฟเวอร์ทางการไหม</string>
-    <string name="listen_together_official_server_dialog_message">ปาร์ตี้นี้โฮสต์อยู่บนเซิร์ฟเวอร์ทางการของ BitChord\n\nต้องการกลับไปใช้เซิร์ฟเวอร์ทางการและเข้าร่วมปาร์ตี้ %1$s หรือไม่</string>
+    <string name="listen_together_official_server_dialog_message">ปาร์ตี้นี้โฮสต์อยู่บนเซิร์ฟเวอร์ทางการของ Dial\n\nต้องการกลับไปใช้เซิร์ฟเวอร์ทางการและเข้าร่วมปาร์ตี้ %1$s หรือไม่</string>
     <string name="listen_together_switch_failed_stayed_in_party">เข้าร่วมปาร์ตี้ไม่ได้: %1$s ยังอยู่ในปาร์ตี้ %2$s</string>
     <string name="listen_together_switch_failed">เข้าร่วมปาร์ตี้ไม่ได้: %1$s</string>
     <string name="listen_together_ping">%1$d ms</string>
@@ -835,7 +835,7 @@
 
     <string name="auto_login_title">Sign in to YouTube on your phone</string>
 
-    <string name="auto_login_subtitle">Open BitChord on your phone to sign in</string>
+    <string name="auto_login_subtitle">Open Dial on your phone to sign in</string>
 
     <string name="auto_empty_recents_title">No recent songs</string>
 

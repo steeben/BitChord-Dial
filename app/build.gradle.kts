@@ -121,7 +121,7 @@ android {
             // This fork's own app: a different package from upstream's, so it
             // installs beside the official BitChord instead of replacing it.
             applicationId = "com.steeben.bitchord"
-            resValue("string", "app_name", "BitChord Dial")
+            resValue("string", "app_name", "Dial")
         }
         create("prod") {
             dimension = "env"
