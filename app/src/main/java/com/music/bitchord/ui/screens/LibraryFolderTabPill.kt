@@ -2,7 +2,6 @@ package com.music.bitchord.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -58,6 +57,10 @@ import dev.chrisbanes.haze.HazeState
 
 /** How much wider the picked segment grows than the others. */
 private const val SELECTED_WEIGHT = 2.4f
+
+/** About a 1% overshoot: a hint of bounce, not a stretch. Was 0.72 (about 4%). */
+private const val WEIGHT_DAMPING = 0.82f
+private const val WEIGHT_STIFFNESS = 480f
 
 private class PillTab(val index: Int, val icon: ImageVector, val label: String)
 
@@ -126,13 +129,14 @@ fun LibraryFolderTabPill(
         tabs.forEach { tab ->
             val selected = tab.index == shown
             val hasOptions = tab.index <= LOCAL_TAB_ALBUMS
-            // A little give at the end, so the segment settles into its width
-            // rather than stopping dead at it.
+            // A soft give at the end, so the segment settles into its width
+            // rather than stopping dead at it. Kept well damped: every segment
+            // springs at once, so a looser spring makes the whole pill wobble.
             val weight by animateFloatAsState(
                 targetValue = if (selected) SELECTED_WEIGHT else 1f,
                 animationSpec = spring(
-                    dampingRatio = 0.72f,
-                    stiffness = Spring.StiffnessMediumLow,
+                    dampingRatio = WEIGHT_DAMPING,
+                    stiffness = WEIGHT_STIFFNESS,
                 ),
                 label = "libraryPillWeight",
             )
