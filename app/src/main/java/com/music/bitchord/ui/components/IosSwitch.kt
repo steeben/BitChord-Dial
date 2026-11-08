@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.data.settings.CustomizationSettings
+import com.music.bitchord.ui.theme.LocalNowPlayingTint
 import com.music.bitchord.ui.haptics.Haptic
 import com.music.bitchord.ui.haptics.rememberHaptics
 
@@ -55,7 +56,7 @@ import com.music.bitchord.ui.haptics.rememberHaptics
  *
  * It takes Material3's `Switch` call shape so a settings row adopts it by name
  * alone. [thumbContent] and [colors] are accepted and ignored: on is iOS green
- * whatever the theme's accent, which is what makes it read as a switch.
+ * whatever the theme's accent, or the playing song's accent while one plays.
  *
  * A null [onCheckedChange] makes it a read-out, the way M3's does: the row
  * around it owns the tap. Interactive, it takes up M3's 48dp touch target
@@ -96,7 +97,7 @@ fun IosSwitch(
     )
     val track by animateColorAsState(
         targetValue = when {
-            checked -> frostedOnTint(dark, density)
+            checked -> frostedOnTint(dark, density, LocalNowPlayingTint.current)
             else -> frostedTrackTint(dark, density)
         },
         label = "iosSwitchTrack",
@@ -214,9 +215,13 @@ internal fun frostedTrackTint(dark: Boolean, density: Float): Color =
     if (dark) Color.White.copy(alpha = (0.16f * density).coerceIn(0f, 1f))
     else Color.Black.copy(alpha = (0.09f * density).coerceIn(0f, 1f))
 
-/** The fill of the switch's track while it is on. */
-internal fun frostedOnTint(dark: Boolean, density: Float): Color =
-    (if (dark) Color(0xFF30D158) else Color(0xFF34C759))
+/**
+ * The fill of the switch's track while it is on: the playing song's accent
+ * ([nowPlaying]), so the switches take on the song as the Home mark and the
+ * selected tab do, and iOS green while nothing plays.
+ */
+internal fun frostedOnTint(dark: Boolean, density: Float, nowPlaying: Color? = null): Color =
+    (nowPlaying ?: if (dark) Color(0xFF30D158) else Color(0xFF34C759))
         .copy(alpha = (ON_TRACK_ALPHA * density).coerceIn(0f, 1f))
 
 /** How opaque a frosted "on" fill is at the shipped glass transparency: enough to read as on, not solid. */
