@@ -76,7 +76,17 @@ class PlayerDock {
      * position plus its laid-out size: the glass bar draws its player scaled,
      * and the artwork landed on a cover a fifth bigger than the one on screen.
      */
-    internal fun miniArtOnScreen(): Rect? = frozenArt ?: liveArt()
+    internal fun miniArtOnScreen(): Rect? {
+        val art = frozenArt ?: return liveArt()
+        // Carried along with the panel's top-left corner: the pill's row rides
+        // there as the panel grows and shrinks, and the cover lands in that
+        // row, not where the pill was left behind. Back on the pill, exactly
+        // where it was, once the panel is.
+        val pill = miniPillInWindow() ?: return art
+        val window = panelWindow.takeIf { it.width > 0f && it.height > 0f } ?: return art
+        val bounds = panelBounds(window)
+        return art.translate(bounds.left - pill.left, bounds.top - pill.top)
+    }
 
     private fun liveArt(): Rect? {
         val coordinates = miniArt?.takeIf { it.isAttached } ?: return null
@@ -99,8 +109,9 @@ class PlayerDock {
     private var miniPill: LayoutCoordinates? = null
     private var miniPillCorner: Dp? = null
 
-    /** Where the panel's window starts on screen. */
+    /** Where the panel's window starts on screen, and its size. */
     private var windowOrigin: Offset = Offset.Zero
+    private var panelWindow: Size = Size.Zero
 
     /**
      * The pill and the cover where they were as the panel came up. Held for
@@ -156,11 +167,22 @@ class PlayerDock {
     /** From the panel's root, once placed: where its window starts on screen. */
     fun panelPlaced(coordinates: LayoutCoordinates) {
         windowOrigin = coordinates.localToScreen(Offset.Zero)
+        panelWindow = coordinates.size.toSize()
         if (!panelShown) {
-            frozenPill = livePill()
-            frozenArt = liveArt()
+            freezeEnds()
             panelShown = true
         }
+    }
+
+    /**
+     * Holds the pill and its cover where they are now, as the two ends of the
+     * movement that is about to start. Called by whoever starts it, before
+     * anything has moved: a pull lifts the bar, and a pill measured a frame
+     * later was measured lifted. A no-op if they are already held.
+     */
+    fun freezeEnds() {
+        if (frozenPill == null) frozenPill = livePill()
+        if (frozenArt == null) frozenArt = liveArt()
     }
 
     /** The pill comes back. Called as the panel goes, not after it has. */

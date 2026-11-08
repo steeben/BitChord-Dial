@@ -190,6 +190,7 @@ class PlayerSheetMotion(
         }
         settle?.cancel()
         closing = false
+        dock.freezeEnds()
         val travel = travel()
         held = travel
         // Raised already open: [held] is what slides it up.
@@ -282,10 +283,15 @@ class PlayerSheetMotion(
             if (delta >= 0f || shown()) return
             settle?.cancel()
             closing = false
+            dock.freezeEnds()
             held = travel()
             pullStartAt = held
             pullStartNanos = System.nanoTime()
             setShown(true)
+            // Starts on the pill, where the pill is, rather than a touch slop
+            // above it: the player is the pill now, and a pill that jumped up
+            // by the slop as the pull began read as a snap.
+            return
         }
         settle?.cancel()
         held = (held + delta).coerceIn(0f, travel())
@@ -359,6 +365,8 @@ class PlayerSheetMotion(
         held = Float.NaN
         laidOut = false
         dismissPull = false
+        // Whatever ended it, the next movement measures its two ends afresh.
+        dock.releasePanel()
         sheet = null
         window = null
     }

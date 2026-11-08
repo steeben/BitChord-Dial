@@ -115,7 +115,7 @@ fun GlassNavBar(
         when (shapeChoice) {
             MiniPlayerShape.CIRCULAR -> RoundedCornerShape(percent = 50)
             // Concentric with the expanded row's artwork (8dp corner, 8dp padding).
-            MiniPlayerShape.SQUARED -> RoundedCornerShape(16.dp)
+            MiniPlayerShape.SQUARED -> RoundedCornerShape(SQUARED_ACCESSORY_CORNER)
         }
     }
     val contentColor = glassContentColor()
@@ -355,7 +355,7 @@ private fun GlassNowPlaying(
         // in, and a pull started in the strip above or below it went nowhere —
         // on a bar only 45dp tall to begin with.
         modifier = Modifier
-            .playerDockPill(dock)
+            .playerDockPill(dock, corner = if (circular) null else SQUARED_ACCESSORY_CORNER)
             // Outside the press scale, which it lifts along with everything else.
             .miniPlayerGestures(
                 pull = pull,
@@ -514,3 +514,6 @@ private fun GlassNowPlaying(
         }
     }
 }
+
+/** The docked player's corner in its squared shape: concentric with its 8dp artwork in 8dp of padding. */
+internal val SQUARED_ACCESSORY_CORNER = 16.dp

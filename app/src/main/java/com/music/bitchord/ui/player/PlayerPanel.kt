@@ -59,6 +59,13 @@ import com.music.bitchord.ui.components.MiniPlayerNextGlyph
 import com.music.bitchord.ui.components.PlayPauseGlyph
 import com.music.bitchord.ui.components.glassContentColor
 import com.music.bitchord.ui.components.liquidGlass
+import com.music.bitchord.ui.components.rememberRemoteArtworkUrl
+import com.music.bitchord.ui.components.thumbnailContentScale
+import com.music.bitchord.data.model.ROW_ART_PX
+import com.music.bitchord.data.model.artworkAt
+import com.music.bitchord.data.settings.MiniPlayerShape
+import coil3.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import kotlin.math.roundToInt
 
 /**
@@ -170,7 +177,18 @@ fun PlayerPanel(
                 )
             }
             Box(Modifier.fillMaxSize().clip(shape)) {
-                Box(Modifier.windowSized(dock) { full[0] }) { content() }
+                Box(
+                    Modifier
+                        .windowSized(dock) { full[0] }
+                        .graphicsLayer {
+                            // Until the player has placed itself it can't fly
+                            // its cover, and its first frame would be the full
+                            // player squeezed into the pill: the pill's own row
+                            // stands in for it. Once it takes part, it fades
+                            // itself and flies its cover outside that fade.
+                            alpha = if (dock.attached) 1f else (dock.openFraction() / pillUntil).coerceIn(0f, 1f)
+                        },
+                ) { content() }
                 if (pillVisible) {
                     val density = LocalDensity.current
                     val windowWidth = LocalWindowInfo.current.containerSize.width
@@ -181,6 +199,7 @@ fun PlayerPanel(
                     // does the same.
                     val inline = glass && pill != null && pill.width < windowWidth * 0.8f
                     PanelMiniRow(
+                        dock = dock,
                         song = song,
                         isPlaying = isPlaying,
                         isLoading = isLoading,
@@ -238,6 +257,7 @@ private fun Modifier.windowSized(dock: PlayerDock, full: () -> IntSize): Modifie
  */
 @Composable
 private fun PanelMiniRow(
+    dock: PlayerDock,
     song: Song,
     isPlaying: Boolean,
     isLoading: Boolean,
@@ -252,6 +272,14 @@ private fun PanelMiniRow(
     val secondary = if (glass) contentColor.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
     val artSize = if (inline) 32.dp else 40.dp
     val artWidth = if (!glass && song.isVideo && song.videoId !in audioOnlyVideos) 71.dp else artSize
+    val shapeChoice by CustomizationSettings.miniPlayerShape.collectAsStateWithLifecycle()
+    val circular = shapeChoice == MiniPlayerShape.CIRCULAR
+    val artCorner = when {
+        circular -> if (glass) artSize / 2 else 20.dp
+        glass && inline -> 6.dp
+        else -> 8.dp
+    }
+    val artUrl = rememberRemoteArtworkUrl(song)
     val glyphSlot = if (inline) 32.dp else 40.dp
     val glyphSize = if (inline) 24.dp else 32.dp
     Box(
@@ -271,8 +299,18 @@ private fun PanelMiniRow(
                     vertical = if (inline) 4.dp else 8.dp,
                 ),
         ) {
-            // Where the pill's cover is: the player's own is flying to or from it.
-            Spacer(Modifier.size(width = artWidth, height = artSize))
+            // The pill's cover, until the player's own takes off from here; it
+            // stands aside for as long as that one is flying.
+            AsyncImage(
+                model = artUrl?.artworkAt(ROW_ART_PX),
+                contentDescription = null,
+                contentScale = if (song.isVideo) ContentScale.Crop else thumbnailContentScale(),
+                modifier = Modifier
+                    .size(width = artWidth, height = artSize)
+                    .graphicsLayer { alpha = if (dock.coversMiniArt) 0f else 1f }
+                    .clip(RoundedCornerShape(artCorner))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+            )
             Spacer(Modifier.width(if (inline) 8.dp else 10.dp))
             if (inline) {
                 Text(
