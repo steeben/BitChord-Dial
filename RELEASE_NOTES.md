@@ -1,36 +1,27 @@
-BitChord Dial 1.4.0
+BitChord Dial 1.4.1
+
+### Replay
+- Replay wears Dial's branding: the story header, the listening card and shared posters carry the Dial mark and "dial." instead of the BitChord logo, and saved posters go to Pictures/Dial
 
 ### Speed dial
-- Choose where unpinned tiles come from: History, Recommends (the new default, shuffling Quick picks, Forgotten favorites, Listen again and Recents) or Mix. Recommends and Mix add one to three new releases on the first page, marked with a star
-- Glass is now the default tile style: the art fills the tile under clear glass with a frosted edge, and every tile style is the same size
-- Tiles lean as you swipe between pages, and the art drifts with the phone's tilt (a "Tilt parallax" switch in the dial menu turns it off)
-- After a pull to refresh, every unpinned tile leaves and the new deal pops in tile by tile; pinned tiles stay put
-- Opening an artist from a dial carries the tile's picture straight into the banner
-
-### Song fixes
-- The player menu's fix row is now "Song fixes", a page of its own that slides up over the menu
-- Songs without their own Canvas use their music video instead, and you can search for the right video, pick the right song when the audio match is wrong, play from another addon, or use the album's animated cover
-- Choose light or dark controls over album art and over Canvas, per song
-- "Find this song's details" gives files on your device and your YouTube Music uploads their proper title, artist, album and cover
-- Canvases can be downloaded with songs so they play offline (Settings › Storage)
+- A new YT Music source keeps YouTube's own picks as they are, leads with YouTube's Speed dial shelf, and is now the default; Recommends and Mix are gone
+- The tilt parallax and its setting are removed
 
 ### Player
-- Player text stays light until the sleeve is mostly white, then switches to a darker ink; ink brightens or darkens with dimmed backdrops so it keeps its contrast
-- Long-press the audio output button to pick an icon for each output device
-- Back with nothing before it restarts the song
-- Firmer seek haptics, with a notch every 2% of the song
+- Progress bar picker in Appearance: Glow (new default, after the OnePlus bar), Wave or Plain, with live previews
+- Canvas or music video plays under the whole landscape player, with a darker tint and a full screen button for the video
+- The next song's Canvas loads 15 seconds early and hands over clip to clip; a Canvas picks up where it was after rotating the phone
+- Player text stays light over a playing Canvas or music video, follows the band behind the controls elsewhere, and lyrics and queue match it
+- Appearance: switches and a priority order for animated covers, Canvases and music videos
+- Song fixes options reworded: Disable canvas, Search for music video, Incorrect song version, Change add-on source
 
-### Library and pages
-- Hold a track to start a multi-select, with Play, Play next, Add to queue, Download and more behind the ⋯
-- Library folders get a glass tab pill in the top bar; tap the picked tab for list/grid and sort, and Shuffle tucks away as you scroll
-- Library accents follow the ambient background's colour
-- Album, playlist and artist headers hold their picture as you scroll, rows slide under glass buttons, and Add to library folds its + into a tick
-- Liked Music keeps trying at launch instead of showing an empty page
+### Library and menus
+- Multi-select gains Add to playlist, on a liquid glass drawer
+- Folder pages slide in full and their tabs pop in
+- Menus morph out of the button that opens them
 
-### Settings and look
-- Dark is the default app icon; the picker offers Dark and Bright, and the app is called Dial throughout Settings
-- Settings search is one glass field that docks beside the back button as you scroll
-- Long-press your account photo to open Settings
-- Automix: a "Mix within the same album" switch, off by default
-- Advanced › Enable logging records a log you can share or save, and Storage shows a usage bar by kind
-- Nav tabs bounce under your finger, and the glass pill magnifies what it passes over
+### Settings and data
+- Settings sheets in liquid glass; switches take on the playing song's accent and selected pills match them
+- Settings search shrinks away into a page, Sources slides like a category, and the Storage bar fills in
+- Automatic backup to a folder you pick, daily, weekly or monthly; backups now carry offline playlists, playlist covers and this device's play history
+- The updater says Dial, with a liquid glass alert
