@@ -2,6 +2,13 @@ package com.music.bitchord.ui.screens
 
 import android.content.Context
 import android.text.format.Formatter
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +37,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -135,6 +143,16 @@ internal fun StorageUsageBar(limitBytes: Long, refreshKey: Any? = null) {
     val unlimited = limitBytes == AppSettings.UNLIMITED_CACHE_LIMIT_BYTES
     val format = { bytes: Long -> Formatter.formatShortFileSize(context, bytes) }
     val track = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
+    val reduceAnimation by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
+    val measured = usage != null
+    // The first measurement fills the bar in from the left, and the legend
+    // under it opens, rather than both popping in at once; later ones glide
+    // each kind's share to its new size.
+    val reveal = remember { Animatable(0f) }
+    LaunchedEffect(measured) {
+        if (!measured) return@LaunchedEffect
+        if (reduceAnimation) reveal.snapTo(1f) else reveal.animateTo(1f, tween(BAR_FILL_MS, easing = FastOutSlowInEasing))
+    }
 
     Column(
         modifier = Modifier
@@ -156,7 +174,15 @@ internal fun StorageUsageBar(limitBytes: Long, refreshKey: Any? = null) {
         }
         Spacer(Modifier.height(10.dp))
         val current = usage
-        val fractions = current?.let { storageBarFractions(it, storageBarScale(it, limitBytes)) }
+        val targets = current?.let { storageBarFractions(it, storageBarScale(it, limitBytes)) }
+        val fractions = List(4) { index ->
+            animateFloatAsState(
+                targetValue = targets?.getOrNull(index) ?: 0f,
+                // Snapped on the first measurement: the reveal draws that one in.
+                animationSpec = if (reveal.value < 1f || reduceAnimation) tween(0) else tween(BAR_FILL_MS, easing = FastOutSlowInEasing),
+                label = "storageShare",
+            ).value
+        }
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
@@ -164,10 +190,11 @@ internal fun StorageUsageBar(limitBytes: Long, refreshKey: Any? = null) {
                 .clip(RoundedCornerShape(6.dp))
                 .background(track),
         ) {
-            if (fractions == null) return@Canvas
+            if (targets == null) return@Canvas
+            val drawn = size.width * reveal.value
             var x = 0f
             listOf(AudioColor, ArtworkColor, CanvasColor, OtherColor).zip(fractions).forEach { (color, fraction) ->
-                val width = (size.width * fraction).coerceAtMost(size.width - x)
+                val width = (size.width * fraction).coerceAtMost(drawn - x)
                 if (width <= 0f) return@forEach
                 drawRect(color, topLeft = Offset(x, 0f), size = Size(width, size.height))
                 x += width
@@ -183,44 +210,56 @@ internal fun StorageUsageBar(limitBytes: Long, refreshKey: Any? = null) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        if (current != null) {
-            Spacer(Modifier.height(10.dp))
-            val entries = listOf(
-                Triple(AudioColor, stringResource(R.string.storage_audio), current.audio),
-                Triple(ArtworkColor, stringResource(R.string.storage_artwork), current.artwork),
-                Triple(CanvasColor, stringResource(R.string.storage_canvases), current.canvases),
-                Triple(OtherColor, stringResource(R.string.storage_other), current.other),
-            )
-            entries.chunked(2).forEach { pair ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    pair.forEach { (color, label, bytes) ->
+        AnimatedVisibility(
+            visible = current != null,
+            enter = if (reduceAnimation) {
+                fadeIn(tween(0))
+            } else {
+                expandVertically(tween(BAR_FILL_MS, easing = FastOutSlowInEasing), expandFrom = Alignment.Top) +
+                    fadeIn(tween(BAR_FILL_MS / 2, delayMillis = BAR_FILL_MS / 4))
+            },
+        ) {
+            Column {
+                if (current != null) {
+                    Spacer(Modifier.height(10.dp))
+                    val entries = listOf(
+                        Triple(AudioColor, stringResource(R.string.storage_audio), current.audio),
+                        Triple(ArtworkColor, stringResource(R.string.storage_artwork), current.artwork),
+                        Triple(CanvasColor, stringResource(R.string.storage_canvases), current.canvases),
+                        Triple(OtherColor, stringResource(R.string.storage_other), current.other),
+                    )
+                    entries.chunked(2).forEach { pair ->
                         Row(
-                            modifier = Modifier.weight(1f),
-                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            Spacer(
-                                Modifier
-                                    .size(10.dp)
-                                    .clip(CircleShape)
-                                    .background(color),
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Column {
-                                Text(
-                                    text = label,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onBackground,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                Text(
-                                    text = format(bytes),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                            pair.forEach { (color, label, bytes) ->
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Spacer(
+                                        Modifier
+                                            .size(10.dp)
+                                            .clip(CircleShape)
+                                            .background(color),
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Column {
+                                        Text(
+                                            text = label,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onBackground,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                        Text(
+                                            text = format(bytes),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -231,3 +270,6 @@ internal fun StorageUsageBar(limitBytes: Long, refreshKey: Any? = null) {
 }
 
 private const val REFRESH_MS = 15_000L
+
+/** The bar filling in on its first measurement, and the legend opening under it. */
+private const val BAR_FILL_MS = 600

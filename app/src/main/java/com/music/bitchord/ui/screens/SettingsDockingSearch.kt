@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.stringResource
@@ -54,6 +55,10 @@ class SettingsSearchDockState {
  *
  * [surface] is the field's glass. It is applied inside the resize, so the
  * glass follows the field's width.
+ *
+ * [shown] scales the field about its own centre: 1 in place, 0 gone. It is
+ * how the field shrinks away as a Settings page slides in over the main page,
+ * and grows back on the way out, rather than blinking out of the bar.
  */
 @Composable
 fun SettingsDockingSearchField(
@@ -62,6 +67,7 @@ fun SettingsDockingSearchField(
     onQueryChange: (String) -> Unit,
     surface: Modifier,
     modifier: Modifier = Modifier,
+    shown: () -> Float = { 1f },
 ) {
     SearchField(
         query = query,
@@ -101,6 +107,14 @@ fun SettingsDockingSearchField(
                 layout(slotWidth, placeable.height) {
                     placeable.place((left - slot.left).roundToInt(), drop.roundToInt())
                 }
+            }
+            // After the layout, so the layer is the field itself and it
+            // shrinks toward its own middle wherever it is standing.
+            .graphicsLayer {
+                val s = shown().coerceIn(0f, 1f)
+                scaleX = s
+                scaleY = s
+                alpha = s
             }
             .then(surface),
     )

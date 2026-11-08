@@ -3576,6 +3576,12 @@ private fun BitChordApp(
                     // When a sub-screen overlay is active, keep SettingsSheet
                     // mounted so its scroll position survives.  The overlay is
                     // rendered below the AnimatedContent block.
+                    //
+                    // Sources is the exception: a page of its own in the
+                    // transition, so it slides in from Settings' main page as a
+                    // category does, over the ambient colour rather than an
+                    // opaque sheet, and swipes back the same way.
+                    settingsSubScreen == "sources" && showSources -> "sources"
                     settingsSubScreen != null -> MenuNav.settingsPageKey
                     showAccountScrobbling -> "account_scrobbling"
                     showSources -> "sources"
@@ -3625,8 +3631,18 @@ private fun BitChordApp(
                 // from the left, the reverse of how it was opened.
                 val settingsCategoryBack = !reduceAnimationSetting && showSettings && !showReplay &&
                     settingsSubScreen == null && pageKey.startsWith(SETTINGS_SECTION_KEY_PREFIX)
+                // Sources, opened off Settings' main page, steps back to it the
+                // same way — unless one of its editors is up, whose own back
+                // closes first.
+                val sourcesBack = !reduceAnimationSetting && showSettings && !showReplay &&
+                    pageKey == "sources" && MenuNav.settingsSection == null &&
+                    editingSource == null && !showWebDavEditor && !showSmbEditor && !confirmJioSaavn
                 val libraryBack: Pair<String, () -> Unit>? = when {
                     settingsCategoryBack -> "settings" to { MenuNav.settingsSection = null }
+                    sourcesBack -> "settings" to {
+                        showSources = false
+                        settingsSubScreen = null
+                    }
                     dialBack -> HOME_PAGE_KEY to { viewModel.closeDetail(); Unit }
                     libraryDepth == null || libraryDepth == 0 || detailActiveShelf != null -> null
                     pageKey == "history" -> pageKeyFor(history = false) to { showHistory = false }
@@ -3670,7 +3686,7 @@ private fun BitChordApp(
                 // A dial tile's page shrinks toward its tile the same way.
                 PredictiveBackHandler(
                     enabled = libraryBack != null && (
-                        settingsCategoryBack ||
+                        settingsCategoryBack || sourcesBack ||
                             !showSettings && !showAccountScrobbling && !showSources &&
                             !showListenTogether && !showEqualizer && !showReplay && !showStats && !showDiscord
                         ),
@@ -3750,9 +3766,12 @@ private fun BitChordApp(
                         val tabSwap = initialState.startsWith(TAB_KEY) && targetState.startsWith(TAB_KEY)
                         // Into a Settings category and back out of it: pushed
                         // sideways, as Library's pages are.
+                        // Sources, opened off the main page, pushes the same way.
                         val settingsStep =
                             (initialState == "settings" && targetState.startsWith(SETTINGS_SECTION_KEY_PREFIX)) ||
-                                (targetState == "settings" && initialState.startsWith(SETTINGS_SECTION_KEY_PREFIX))
+                                (targetState == "settings" && initialState.startsWith(SETTINGS_SECTION_KEY_PREFIX)) ||
+                                (initialState == "settings" && targetState == "sources") ||
+                                (targetState == "settings" && initialState == "sources")
                         val dialZoom = !reduceAnimationSetting && DialLaunch.zooms(initialState, targetState, HOME_PAGE_KEY)
                         when {
                             // A dial tile's page opening, as an app does from a
@@ -3772,7 +3791,7 @@ private fun BitChordApp(
                                     ) togetherWith ExitTransition.None
                                 ).apply { targetContentZIndex = -1f }
                             settingsStep && !reduceAnimationSetting -> {
-                                val forward = targetState.startsWith(SETTINGS_SECTION_KEY_PREFIX)
+                                val forward = targetState.startsWith(SETTINGS_SECTION_KEY_PREFIX) || targetState == "sources"
                                 val slide = tween<IntOffset>(PAGE_SLIDE_MS, easing = FastOutSlowInEasing)
                                 slideInHorizontally(slide) { if (forward) it else -it } togetherWith
                                     slideOutHorizontally(slide) { if (forward) -it else it }
@@ -4978,20 +4997,7 @@ private fun BitChordApp(
                             )
                         }
                     }
-                    "sources" -> {
-                        Surface(
-                            modifier = Modifier.fillMaxSize().then(subPageBarScroll),
-                            color = MaterialTheme.colorScheme.background,
-                        ) {
-                            SourcesScreen(
-                                contentPadding = listPadding,
-                                onEditSource = { editingSource = it },
-                                onEditWebDav = { showWebDavEditor = true },
-                                onEditSmb = { showSmbEditor = true },
-                                onConfirmJioSaavn = { confirmJioSaavn = true },
-                            )
-                        }
-                    }
+                    // "sources" is a page in the transition above, not an overlay.
                     "listen_together" -> {
                         Surface(
                             modifier = Modifier.fillMaxSize().then(subPageBarScroll),
@@ -5191,8 +5197,37 @@ private fun BitChordApp(
                 // page and wears the back button's glass, but placed wherever the
                 // page's space for it is: it rises with the page and, as it does,
                 // its left edge draws in until it fits beside the back button.
+                //
+                // Opening one of Settings' pages, it shrinks away as the page
+                // slides in rather than blinking out, and grows back as the
+                // main page returns. Opening or closing Settings itself, it
+                // comes and goes with the page, as before.
+                val settingsSearchShown = remember { Animatable(if (settingsRoot) 1f else 0f) }
+                LaunchedEffect(settingsRoot, showSettings) {
+                    val target = if (settingsRoot) 1f else 0f
+                    val stepping = showSettings && (
+                        pageTransitionState.currentState == "settings" ||
+                            pageTransitionState.currentState == "sources" ||
+                            pageTransitionState.currentState.startsWith(SETTINGS_SECTION_KEY_PREFIX)
+                        )
+                    if (reduceAnimationSetting || !stepping) {
+                        settingsSearchShown.snapTo(target)
+                    } else {
+                        settingsSearchShown.animateTo(
+                            target,
+                            if (settingsRoot) {
+                                tween(260, delayMillis = 80, easing = FastOutSlowInEasing)
+                            } else {
+                                tween(200, easing = FastOutLinearInEasing)
+                            },
+                        )
+                    }
+                }
+                val settingsSearchLingers by remember {
+                    derivedStateOf { settingsSearchShown.value > 0f }
+                }
                 val settingsSearch: (@Composable () -> Unit)? =
-                    if (settingsRoot) {
+                    if (settingsRoot || (showSettings && settingsSearchLingers)) {
                         @Composable {
                             Box(
                                 modifier = Modifier
@@ -5204,6 +5239,7 @@ private fun BitChordApp(
                                     query = settingsQuery,
                                     onQueryChange = { settingsQuery = it },
                                     surface = artworkPageSurface(shape = CircleShape, hazeState = hazeState),
+                                    shown = { settingsSearchShown.value },
                                 )
                             }
                         }
@@ -5294,7 +5330,10 @@ private fun BitChordApp(
                         showHistory -> ({ showHistory = false })
                         libraryShowAll != null && detail == null -> ({ libraryShowAll = null })
                         showAccountScrobbling -> ({ showAccountScrobbling = false })
-                        showSources -> ({ showSources = false })
+                        showSources -> ({
+                            showSources = false
+                            if (settingsSubScreen == "sources") settingsSubScreen = null
+                        })
                         showListenTogether -> closeListenTogether
                         showEqualizer -> ({ showEqualizer = false })
                         settingsSubScreen != null -> ({ settingsSubScreen = null })
