@@ -2,6 +2,7 @@ package com.music.bitchord.ui.player
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -137,6 +138,9 @@ fun rememberFullArtworkBlurImage(
  * remains in place under the same legibility scrim rather than falling back to
  * the reflected mesh this composable exists to avoid.
  */
+/** How much of the lyrics and queue scrim is left under the player's dark ink. */
+private const val DARK_INK_SCRIM_SCALE = 0.35f
+
 @Composable
 fun FullArtworkBlurBackdrop(
     image: ImageBitmap?,
@@ -187,14 +191,22 @@ fun FullArtworkBlurBackdrop(
             )
         }
 
-        // Lyrics and queue are dense white foregrounds. Preserve the cover's
-        // colour and layout, but keep bright sleeves from lowering contrast.
+        // Lyrics and queue are dense foregrounds. Preserve the cover's colour
+        // and layout, but keep bright sleeves from lowering contrast. Under the
+        // player's dark ink the scrim thins to a fraction of itself: dark text
+        // wants the bright sleeve it was picked for, not a grey wash over it.
+        val scrimScale by animateFloatAsState(
+            targetValue = if (LocalPlayerInkDark.current) DARK_INK_SCRIM_SCALE else 1f,
+            animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+            label = "fullArtworkScrim",
+        )
         Canvas(Modifier.fillMaxSize()) {
+            val k = scrimScale
             drawRect(
                 brush = Brush.verticalGradient(
-                    0f to Color.Black.copy(alpha = 0.34f),
-                    0.55f to Color.Black.copy(alpha = 0.48f),
-                    1f to Color.Black.copy(alpha = 0.64f),
+                    0f to Color.Black.copy(alpha = 0.34f * k),
+                    0.55f to Color.Black.copy(alpha = 0.48f * k),
+                    1f to Color.Black.copy(alpha = 0.64f * k),
                 ),
             )
         }

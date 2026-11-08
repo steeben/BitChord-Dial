@@ -101,8 +101,9 @@ class PlayerInkConditions {
     var band by mutableStateOf<Float?>(null)
 
     /**
-     * Lyrics or the queue are up. Their text runs the height of the screen over the
-     * blurred sleeve, so the whole sleeve decides their ink, not the band at its foot.
+     * Lyrics or the queue are up. Their ink is the same light or dark verdict the main
+     * player had, so the text doesn't change brightness on the way in; only the scrim
+     * behind the main player's controls is left out, since those controls aren't shown.
      */
     var panelOpen by mutableStateOf(false)
 
@@ -128,6 +129,12 @@ internal val LocalPlayerControlsScrim = compositionLocalOf { 0f }
  * [PlayerInkConditions.dim].
  */
 internal val LocalPlayerInkLift = compositionLocalOf { 0f }
+
+/**
+ * Whether [ProvidePlayerInk] settled on the dark ink: one verdict for the main player,
+ * the lyrics and the queue. The lyrics and queue backdrop thins its scrim under dark ink.
+ */
+internal val LocalPlayerInkDark = compositionLocalOf { false }
 
 /**
  * [PlayerInk] at [alpha], with the faded tone brought up by the ink's lift: as the backdrop
@@ -156,7 +163,8 @@ internal fun playerInk(alpha: Float): Color {
  * On the main player, once the band behind the credits and controls is known
  * ([PlayerInkConditions.band]), that band decides instead of the whole sleeve: light ink
  * unless it is nearly white ([bandInkIsDark]), stood on a scrim that darkens with it
- * ([LocalPlayerControlsScrim]). Lyrics and the queue keep the whole-sleeve rule.
+ * ([LocalPlayerControlsScrim]). Lyrics and the queue take that same verdict
+ * ([LocalPlayerInkDark]), so their text is dark exactly when the player's is.
  *
  * A dimmed backdrop ([PlayerInkConditions.dim]) pushes the ink by the same amount: the
  * light ink that share of the way to white, the dark ink that share of the way to black,
@@ -170,19 +178,25 @@ fun ProvidePlayerInk(
     content: @Composable () -> Unit,
 ) {
     val accent = LocalNowPlayingTint.current ?: MaterialTheme.colorScheme.primary
-    val band = if (conditions == null || conditions.panelOpen) null else conditions.band
+    // The light or dark verdict reads the main player's band and clip whether or
+    // not lyrics or the queue are up, so those screens share it with the player.
+    val verdictBand = conditions?.band
     // The band's verdict is held between frames, so a clip hovering around the
     // line doesn't flip the ink back and forth (see [bandInkIsDark]).
     val bandWasDark = remember { mutableStateOf(false) }
-    val bandDark = band?.let { bandInkIsDark(it, bandWasDark.value) }
+    val bandDark = verdictBand?.let { bandInkIsDark(it, bandWasDark.value) }
     SideEffect { if (bandDark != null) bandWasDark.value = bandDark }
-    val overClip = conditions != null && conditions.overClip && !conditions.panelOpen
     val dark = playerInkDark(
         forcedDark = conditions?.forcedDark,
-        overClip = overClip,
+        overClip = conditions?.overClip == true,
         bandDark = bandDark,
         artLuminance = artLuminance,
     )
+    // The scrim behind the controls is the main player's alone: with lyrics or
+    // the queue up there are no controls on that band to stand it under.
+    val panelOpen = conditions?.panelOpen == true
+    val band = if (panelOpen) null else verdictBand
+    val overClip = conditions?.overClip == true && !panelOpen
     val tint = if (dark) PLAYER_INK_TINT_BRIGHT else PLAYER_INK_TINT
     val darken = if (dark) PLAYER_INK_DARKEN else 0f
     val target = remember(accent, tint, darken) {
@@ -231,6 +245,7 @@ fun ProvidePlayerInk(
     CompositionLocalProvider(
         LocalPlayerInk provides lerp(ink, pole.copy(alpha = ink.alpha), lift),
         LocalPlayerInkLift provides lift,
+        LocalPlayerInkDark provides dark,
         LocalPlayerControlsScrim provides scrim,
         content = content,
     )
