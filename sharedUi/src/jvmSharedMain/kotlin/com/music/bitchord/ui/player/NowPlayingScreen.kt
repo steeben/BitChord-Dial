@@ -1906,7 +1906,16 @@ fun NowPlayingScreen(
             landscapeCanvasDim(panelOpen = lyricsOpen || queueOpen)
         } else 0f,
     )
-    val inkForcedDark = CanvasAudioFixes.lyricInkOf(canvasFixes, song.videoId, overCanvas = canvas != null && canvasRendered)
+    // Whether the main player has the clip up as its picture. With lyrics or the
+    // queue open the clip is let go (paused and unmounted past the collapse's
+    // half), so [canvasRendered] drops; those screens take the player's own
+    // light-over-a-clip verdict, so the answer from before they opened is held.
+    // A song skipped to while they are up counts as over its clip if it has one.
+    val inkPanelOpen = lyricsOpen || queueOpen
+    val clipOnPlayer = remember(canvas?.url) { mutableStateOf(canvas != null) }
+    val inkOverClip = if (inkPanelOpen) clipOnPlayer.value else canvas != null && canvasRendered
+    SideEffect { if (!inkPanelOpen) clipOnPlayer.value = canvas != null && canvasRendered }
+    val inkForcedDark = CanvasAudioFixes.lyricInkOf(canvasFixes, song.videoId, overCanvas = inkOverClip)
         ?.let { it == CanvasAudioFixes.LyricInk.DARK }
     // What is behind the credits and controls: the clip's latest frame while
     // it is the picture, else the sleeve. Its bottom band, not the whole of
@@ -1914,13 +1923,12 @@ fun NowPlayingScreen(
     val artControlsBand = rememberArtworkControlsBandLuminance(remoteArt, CARD_ART_PX)
     // Over the clip only the clip's own frame counts: the sleeve isn't what is
     // on screen then, so it never stands in for a frame not read yet.
-    val inkOverClip = canvas != null && canvasRendered
     val inkBand = if (inkOverClip) canvasFrameBand else artControlsBand
     SideEffect {
         inkConditions.dim = inkDim
         inkConditions.forcedDark = inkForcedDark
         inkConditions.band = inkBand
-        inkConditions.panelOpen = lyricsOpen || queueOpen
+        inkConditions.panelOpen = inkPanelOpen
         inkConditions.overClip = inkOverClip
     }
     val canvasCompact = animateFloatAsState(
