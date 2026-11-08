@@ -86,6 +86,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.MoreHoriz
+import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.IosShare
 import androidx.compose.material.icons.rounded.Radio
 import androidx.compose.material.icons.rounded.PushPin
@@ -5512,21 +5513,12 @@ private fun BitChordApp(
                                     )
                                 }
                             }
-                            // Left of the account photo, on an artist page: the
-                            // artist's own menu — pin them or their radio to the
-                            // speed dial, or share their channel link. The menu is
-                            // [FrostedArtistMenu], composed with the other frosted
-                            // overlays further down so its glass sees the page.
-                            if (detail != null && !isLocalDetail && detail.type == BrowseType.ARTIST &&
-                                detailActiveShelf == null && detail.browseId.startsWith("UC") && !showStats
-                            ) {
-                                IconButton(onClick = { artistMenuOpen = true }) {
-                                    Icon(
-                                        Icons.Rounded.MoreHoriz,
-                                        contentDescription = stringResource(R.string.more),
-                                        tint = MaterialTheme.colorScheme.onSurface,
-                                    )
-                                }
+                            // An artist page's favourite star, then its radio,
+                            // left of the ⋯ that takes the account photo's
+                            // place (below) — see [ArtistChrome].
+                            if (detail != null && detail.type == BrowseType.ARTIST && detailActiveShelf == null && !showStats) {
+                                com.music.bitchord.ui.components.ArtistFavoriteButton(detail.browseId)
+                                com.music.bitchord.ui.components.ArtistRadioButton(detail.browseId)
                             }
                             // Left of the account photo, on Home itself: the
                             // dial's settings. The menu is [HomeDialMenu],
@@ -5552,6 +5544,16 @@ private fun BitChordApp(
                                 com.music.bitchord.ui.components.ReleaseChrome.hasMore
                             ) {
                                 com.music.bitchord.ui.components.ReleaseMoreButton()
+                            } else if (detail != null && detailActiveShelf == null && !showStats &&
+                                detail.type == BrowseType.ARTIST && com.music.bitchord.ui.components.ArtistChrome.menuOffered(detail.browseId)
+                            ) {
+                                // An artist page's ⋯: pin them or their radio to
+                                // the speed dial, share their channel, or show
+                                // only what is on this device. The menu is
+                                // [FrostedArtistMenu], composed with the other
+                                // frosted overlays further down so its glass sees
+                                // the page.
+                                com.music.bitchord.ui.components.ArtistMoreButton(onClick = { artistMenuOpen = true })
                             } else TopBarAccountButton(
                                 account = account,
                                 onClick = {
@@ -7634,7 +7636,8 @@ private fun BitChordApp(
 
         run {
             BackHandler(enabled = artistMenuOpen) { artistMenuOpen = false }
-            val artist = detail?.takeIf { it.type == BrowseType.ARTIST && it.browseId.startsWith("UC") }
+            val artistPage = detail?.takeIf { it.type == BrowseType.ARTIST && com.music.bitchord.ui.components.ArtistChrome.menuOffered(it.browseId) }
+            val artist = artistPage?.takeIf { it.browseId.startsWith("UC") }
             // The radio pin plays a radio off the artist's top song, the same one
             // the page's own radio circle starts from.
             val topSong = (artist?.songs as? com.music.bitchord.data.model.UiState.Success)?.data?.firstOrNull()
@@ -7663,8 +7666,17 @@ private fun BitChordApp(
                     context.getString(if (pinned) R.string.added_to_speed_dial else R.string.removed_from_speed_dial),
                 )
             }
+            val localOnly = com.music.bitchord.ui.components.ArtistChrome
+                .takeIf { artistPage != null && it.owns(artistPage.browseId) }?.localOnly
             FrostedArtistMenu(
-                visible = artistMenuOpen && artist != null,
+                visible = artistMenuOpen && artistPage != null,
+                localOnly = localOnly,
+                onToggleLocal = localOnly?.let {
+                    {
+                        artistMenuOpen = false
+                        com.music.bitchord.ui.components.ArtistChrome.toggleLocalOnly()
+                    }
+                },
                 hazeState = hazeState,
                 artistPinned = artist != null &&
                     (artist.browseId in artistDialPinnedIds || artist.browseId in speedDialPinnedIds),
@@ -8274,6 +8286,9 @@ private fun FrostedArtistMenu(
     onPinRadio: (() -> Unit)?,
     onShare: (() -> Unit)?,
     onDismiss: () -> Unit,
+    /** Whether the page shows only what is on this device; null leaves the row off. */
+    localOnly: Boolean? = null,
+    onToggleLocal: (() -> Unit)? = null,
 ) {
     val shape = MaterialTheme.shapes.extraLarge
     PopupLayer(
@@ -8300,6 +8315,13 @@ private fun FrostedArtistMenu(
                     )
                 }
                 onShare?.let { ArtistMenuRow(Icons.Rounded.IosShare, stringResource(R.string.share), it) }
+                if (localOnly != null && onToggleLocal != null) {
+                    ArtistMenuRow(
+                        Icons.Rounded.PhoneAndroid,
+                        stringResource(if (localOnly) R.string.artist_show_all_files else R.string.artist_local_files_only),
+                        onToggleLocal,
+                    )
+                }
             }
         }
     }

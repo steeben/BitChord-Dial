@@ -201,6 +201,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import com.music.bitchord.ui.components.LibraryCheck
 import com.music.bitchord.ui.components.liquidGlass
 import com.music.bitchord.ui.components.PublishReleaseChrome
+import com.music.bitchord.ui.components.PublishArtistChrome
 import com.music.bitchord.ui.components.rememberLikeAnimation
 import com.music.bitchord.ui.components.backdrop.backdrops.LayerBackdrop
 import com.music.bitchord.ui.components.backdrop.backdrops.layerBackdrop
@@ -299,16 +300,6 @@ private const val ROW_REVEAL_WINDOW_MS = 800L
 
 /** How far the artist name/logo and everything under it sit above the usual [HEADER_DROP]. */
 private val ARTIST_HEADER_LIFT = 64.dp
-
-/** The artist action row: a large Play flanked by smaller glass circles. */
-private val ARTIST_PLAY_BUTTON = 70.dp
-
-/** A larger share of a smaller circle than the release headers' 0.44. */
-private const val ARTIST_PLAY_ICON_SCALE = 0.56f
-
-/** Radio and Shuffle, then the star and the pin: five across. */
-private val ARTIST_SIDE_BUTTON_CROWDED = 46.dp
-private val ARTIST_ACTION_GAP_CROWDED = 12.dp
 
 /** The title logo's widest share of the page, and tallest share of the photo. */
 private const val ARTIST_LOGO_WIDTH = 0.82f
@@ -558,6 +549,9 @@ fun DetailScreen(
     // an album's track numbers stay the album's rather than becoming positions
     // in the filtered list.
     val matches = remember(songs, query) { songs.matching(query) }
+    // An artist page's search reads its songs (only the local ones while the
+    // page is narrowed to this device).
+    val artistMatches = remember(artistSongs, query) { artistSongs.matching(query).map { it.value } }
     // What a tap plays: the filtered set of tracks currently standing in the
     // list. When no filter is active, matches contains the full running order
     // and plays the complete release/playlist from the tapped position.
@@ -746,45 +740,77 @@ fun DetailScreen(
     // its own copy has faded the logo in.
     var shownLogoUrl by remember(page.browseId) { mutableStateOf<String?>(null) }
 
-    // The artist page's row, in the list and again in the held header.
-    val artistActions: @Composable (Modifier, Dp) -> Unit = { rowModifier, bottomSpace ->
-        ActionRow(
-            palette = palette,
-            onPlay = { if (artistSongs.isNotEmpty()) onSongClick(artistSongs, 0) },
-            onShuffle = { if (artistSongs.isNotEmpty()) onShuffle(artistSongs) },
-            subscription = page.subscription?.takeIf { onToggleSubscription != null },
-            onToggleSubscription = onToggleSubscription,
-            onStartRadio = onStartRadio?.let { radio -> artistSongs.firstOrNull()?.let { first -> { radio(first) } } },
-            localOnly = localOnly,
-            onToggleLocal = { localOnly = !localOnly },
-            // A library artist is a grouping of tracks rather than a channel:
-            // its row is laid out like an album's.
-            compact = page.browseId.startsWith("local:"),
-            bottomSpace = bottomSpace,
-            modifier = rowModifier,
-        )
-    }
-
-    // Where the release header's Search pill sits inside the header, and how
-    // tall it is, in px. Opening the search turns the pill into the field and
-    // pushes the page up until it sits just under the top bar, where it holds
-    // while the rows scroll under it.
+    // Where the Search pill sits inside the controls' list item (the release
+    // header, or the artist's actions item), and how tall it is, in px.
+    // Opening the search turns the pill into the field and pushes the page up
+    // until it sits just under the top bar, where it holds while the rows
+    // scroll under it.
     var searchPillTop by remember(page.browseId) { mutableIntStateOf(0) }
     var searchPillHeight by remember(page.browseId) { mutableIntStateOf(0) }
     val searchFieldTop: () -> Int = {
-        val header = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == 0 }
+        val header = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == controlsIndex }
         val inList = header?.let { it.offset + searchPillTop } ?: Int.MIN_VALUE
         maxOf(inList, searchStop)
     }
+
+    // The artist page's controls, laid out as a release's — Shuffle and Play
+    // side by side, Search under them — in the list and again in the held
+    // header. The star, the radio and the "only local files" switch are up in
+    // the top bar's pill (see [ArtistChrome]).
+    val artistActionsCoords = remember { arrayOfNulls<LayoutCoordinates>(1) }
+    val artistActions: @Composable (Modifier, Dp, Boolean) -> Unit = { rowModifier, bottomSpace, inList ->
+        Column(
+            rowModifier.then(if (inList) Modifier.onPlaced { artistActionsCoords[0] = it } else Modifier),
+        ) {
+            ReleaseActions(
+                palette = palette,
+                songs = songs,
+                onPlay = { if (artistSongs.isNotEmpty()) onSongClick(artistSongs, 0) },
+                onShuffle = { if (artistSongs.isNotEmpty()) onShuffle(artistSongs) },
+                searching = searching,
+                playRowShown = !playRowFolded,
+                onSearch = toggleSearch,
+                onSearchPlaced = { pill ->
+                    if (inList) {
+                        val item = artistActionsCoords[0]?.takeIf { it.isAttached }
+                        if (item != null) {
+                            searchPillTop = item.localPositionOf(pill, Offset.Zero).y.roundToInt()
+                            searchPillHeight = pill.size.height
+                        }
+                    }
+                },
+            )
+            Spacer(Modifier.height(bottomSpace))
+        }
+    }
+    if (isArtist) {
+        // A library artist is already only what is on this device.
+        val offersLocal = !page.browseId.startsWith("local:")
+        PublishArtistChrome(
+            browseId = page.browseId,
+            subscribed = page.subscription?.takeIf { onToggleSubscription != null }?.subscribed,
+            onToggleSubscription = onToggleSubscription,
+            onStartRadio = onStartRadio?.let { radio -> artistSongs.firstOrNull()?.let { first -> { radio(first) } } },
+            localOnly = localOnly.takeIf { offersLocal },
+            onToggleLocal = if (offersLocal) ({ localOnly = !localOnly }) else null,
+        )
+    }
+
     LaunchedEffect(searching) {
         // With Play and Shuffle folded the pill sits where the controls start,
-        // so that is the place carried up to the bar.
-        if (searching && !isArtist) listState.animateScrollToItem(0, (controlsOffset - searchStop).coerceAtLeast(0))
+        // so that is the place carried up to the bar. On an artist page the
+        // controls are an item of their own, starting at its top.
+        if (searching) {
+            if (isArtist) {
+                listState.animateScrollToItem(controlsIndex, -searchStop)
+            } else {
+                listState.animateScrollToItem(0, (controlsOffset - searchStop).coerceAtLeast(0))
+            }
+        }
     }
     // Scrolling back up the page, with the search closed, unfolds Play and
     // Shuffle again.
-    LaunchedEffect(page.browseId, isArtist) {
-        if (isArtist) return@LaunchedEffect
+    LaunchedEffect(page.browseId) {
         var lastIndex = listState.firstVisibleItemIndex
         var lastOffset = listState.firstVisibleItemScrollOffset
         var climbed = 0
@@ -910,9 +936,9 @@ fun DetailScreen(
                             // The open search field, once it is holding under
                             // the bar: the rows go under it and are gone above.
                             val fieldTop = searchFieldTop()
-                            val fieldHeld = searching && !isArtist && searchPillHeight > 0 &&
+                            val fieldHeld = searching && searchPillHeight > 0 &&
                                 listState.layoutInfo.visibleItemsInfo.none {
-                                    it.index == 0 && it.offset + searchPillTop > searchStop
+                                    it.index == controlsIndex && it.offset + searchPillTop > searchStop
                                 }
                             if (!controlsPinned && !fieldHeld) return@drawWithContent
                             val cut = if (fieldHeld) {
@@ -996,12 +1022,16 @@ fun DetailScreen(
                             }
                             .graphicsLayer { alpha = if (controlsPinned) 0f else 1f },
                         22.dp,
+                        true,
                     )
                 }
             }
 
             // The first release on the shelves below, pulled out as a card of its own.
-            val topRelease = if (isArtist) shownSections.topRelease() else null
+            // While the artist page is being searched, its matching songs stand
+            // in for everything under the controls.
+            val artistSearch = isArtist && searching
+            val topRelease = if (isArtist && !artistSearch) shownSections.topRelease() else null
             if (topRelease != null) {
                 item(key = "top-release") {
                     TopReleaseCard(
@@ -1073,7 +1103,30 @@ fun DetailScreen(
             when (val state = page.songs) {
                 is UiState.Loading -> detailSkeleton(isArtist)
                 is UiState.Error -> item { MessageState(state.message) }
-                is UiState.Success -> if (isArtist) {
+                is UiState.Success -> if (artistSearch) {
+                    // The artist's songs that match, one under another.
+                    if (artistMatches.isEmpty() && artistSongs.isNotEmpty()) {
+                        item(key = "no-matches") {
+                            MessageState(stringResource(R.string.nothing_matches, query))
+                        }
+                    }
+                    itemsIndexed(
+                        items = artistMatches,
+                        key = { _, song -> "match_${song.videoId}" },
+                    ) { index, song ->
+                        Box(Modifier.padding(horizontal = ARTIST_CONTENT_GUTTER)) {
+                            CompactSongRow(
+                                song = song,
+                                palette = palette,
+                                onClick = { onSongClick(artistMatches, index) },
+                                onLongPress = { onSongLongPress(song) },
+                                downloadedTint = downloadedTint,
+                                isCurrent = song.isSameTrackAs(currentSong),
+                                isPlaying = song.isSameTrackAs(currentSong) && isPlaying,
+                            )
+                        }
+                    }
+                } else if (isArtist) {
                     // Said only once the device has been looked through, not while it is.
                     val deviceLooked = deviceArtist != null || onLoadDeviceArtist == null
                     if (localOnly && deviceLooked && artistSongs.isEmpty() && shownSections.isEmpty()) {
@@ -1221,7 +1274,7 @@ fun DetailScreen(
             }
 
             // Albums / Singles & EPs carousels (artist pages).
-            items(shownSections) { shelf ->
+            items(if (artistSearch) emptyList() else shownSections) { shelf ->
                 val canShowAll = shelf.items.size > ARTIST_ROW_MAX_ITEMS
                 val displayItems = remember(shelf.items) {
                     if (canShowAll) shelf.items.take(ARTIST_ROW_MAX_ITEMS) else shelf.items
@@ -1252,10 +1305,10 @@ fun DetailScreen(
                     }
                 }
             }
-            if (isArtist) aboutItem()
+            if (isArtist && !artistSearch) aboutItem()
             // Room under a short list, so opening the search can still carry
             // its field all the way up under the bar.
-            if ((searching || playRowFolded) && !isArtist) {
+            if (searching || playRowFolded) {
                 item(key = "search-room") { Spacer(Modifier.height(this@BoxWithConstraints.maxHeight)) }
             }
         }
@@ -1266,7 +1319,7 @@ fun DetailScreen(
                 // with the pill's place in the header until that reaches the
                 // bar, then holds there. Kept out of the list so scrolling the
                 // header away never takes the field (and the keyboard) with it.
-                if (searching && !isArtist) CompositionLocalProvider(LocalDetailGlass provides pageBackdrop.takeIf { realGlass }) {
+                if (searching) CompositionLocalProvider(LocalDetailGlass provides pageBackdrop.takeIf { realGlass }) {
                     DetailSearchField(
                         query = query,
                         onQueryChange = { query = it },
@@ -1301,7 +1354,7 @@ fun DetailScreen(
                                     signature = signature,
                                     shownLogoUrl = shownLogoUrl,
                                 )
-                                artistActions(Modifier, 0.dp)
+                                artistActions(Modifier, 0.dp, false)
                             }
                         } else {
                             ReleaseHeader(
@@ -2252,129 +2305,6 @@ private val SOFT_FOOT_MASK = Brush.verticalGradient(
  * blurred photograph next to a flat colour is still two surfaces.
  */
 private val SOFT_FOOT_BLUR = 48.dp
-
-/**
- * Radio • Shuffle • Play • Star • Local — the artist page's action row, as
- * Apple Music lays it out: a large Play circle with small circles either side.
- *
- * The star is the page's existing subscribe toggle. Any of the four small
- * circles the page can't offer (no radio, a guest's star) stays, greyed out,
- * so every page's row is five across.
- *
- * [compact] is the album pages' look instead — dark glass circles, a solid
- * Play — for an artist that is a grouping of library tracks.
- */
-@Composable
-private fun ActionRow(
-    palette: ArtworkPalette,
-    onPlay: () -> Unit,
-    onShuffle: () -> Unit,
-    bottomSpace: Dp = 22.dp,
-    /** The artist header's subscribe state, or null where it isn't offered. */
-    subscription: SubscriptionState? = null,
-    onToggleSubscription: (() -> Unit)? = null,
-    /** The Play circle's fill; null takes the artwork's own colour. */
-    playColor: Color? = null,
-    /** Left of Shuffle: a radio built off the artist. */
-    onStartRadio: (() -> Unit)? = null,
-    /** Right of the star: the Local toggle, lit while on. Null greys it out. */
-    localOnly: Boolean = false,
-    onToggleLocal: (() -> Unit)? = null,
-    compact: Boolean = false,
-    modifier: Modifier = Modifier,
-) {
-    val playFill = playColor ?: palette.accent
-    // Always five slots — radio, shuffle, play, star, local — as on a release
-    // page. One this artist can't use stays in place, greyed out.
-    val side = if (compact) 46.dp else ARTIST_SIDE_BUTTON_CROWDED
-    val lightFill = !compact
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = HEADER_GUTTER),
-        horizontalArrangement = Arrangement.spacedBy(
-            if (compact) 8.dp else ARTIST_ACTION_GAP_CROWDED,
-            Alignment.CenterHorizontally,
-        ),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        CircleIconButton(
-            icon = Icons.Rounded.Radio,
-            contentDescription = stringResource(R.string.start_radio),
-            palette = palette,
-            onClick = { onStartRadio?.invoke() },
-            haptic = Haptic.Resume,
-            size = side,
-            lightFill = lightFill,
-            enabled = onStartRadio != null,
-        )
-        CircleIconButton(
-            icon = BitChordIcons.Shuffle,
-            contentDescription = stringResource(R.string.shuffle),
-            palette = palette,
-            onClick = onShuffle,
-            haptic = Haptic.Resume,
-            size = side,
-            lightFill = lightFill,
-        )
-        PlayPill(
-            onClick = onPlay,
-            iconOnly = true,
-            size = ARTIST_PLAY_BUTTON,
-            iconScale = ARTIST_PLAY_ICON_SCALE,
-            containerColor = playFill,
-            cutout = !compact,
-        )
-        val subscribed = subscription?.subscribed == true
-        CircleIconButton(
-            icon = if (subscribed) Icons.Rounded.Star else Icons.Rounded.StarBorder,
-            contentDescription = stringResource(
-                if (subscribed) R.string.unsubscribe else R.string.subscribe,
-            ),
-            palette = palette,
-            onClick = { onToggleSubscription?.invoke() },
-            haptic = if (subscribed) Haptic.ToggleOff else Haptic.ToggleOn,
-            size = side,
-            lightFill = lightFill,
-            enabled = subscription != null,
-        )
-        if (onToggleLocal != null) {
-            LocalToggle(localOnly, onToggleLocal, palette, side, lightFill = lightFill)
-        } else {
-            CircleIconButton(
-                icon = Icons.Rounded.PhoneAndroid,
-                contentDescription = stringResource(R.string.local_only),
-                palette = palette,
-                onClick = {},
-                size = side,
-                lightFill = lightFill,
-                enabled = false,
-            )
-        }
-    }
-    Spacer(Modifier.height(bottomSpace))
-}
-
-/** The artist page's Local circle: lit (a solid white fill) while it narrows the page. */
-@Composable
-private fun LocalToggle(
-    on: Boolean,
-    onToggle: () -> Unit,
-    palette: ArtworkPalette,
-    size: Dp,
-    lightFill: Boolean,
-) {
-    CircleIconButton(
-        icon = Icons.Rounded.PhoneAndroid,
-        contentDescription = stringResource(R.string.local_only),
-        palette = palette,
-        onClick = onToggle,
-        haptic = if (on) Haptic.ToggleOff else Haptic.ToggleOn,
-        size = size,
-        lightFill = lightFill,
-        lit = on,
-    )
-}
 
 /**
  * The prominent Play control that anchors the action row. Releases and the

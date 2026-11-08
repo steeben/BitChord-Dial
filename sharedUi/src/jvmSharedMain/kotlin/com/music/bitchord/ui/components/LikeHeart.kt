@@ -133,11 +133,14 @@ fun LikeHeart(
     contentDescription: String? = null,
     filledIcon: ImageVector = BitChordIcons.HeartFilled,
     outlineIcon: ImageVector = BitChordIcons.Heart,
+    /** The colour it flashes while the burst plays, and its brightest tone. */
+    flash: Color = LikeRed,
+    flashBright: Color = LikeRedBright,
 ) {
     Box(
         modifier = modifier
             .size(size)
-            .drawBehind { drawLikeBurst(animation.progress.value, LikeRed, LikeRedBright) },
+            .drawBehind { drawLikeBurst(animation.progress.value, flash, flashBright) },
         contentAlignment = Alignment.Center,
     ) {
         val p = animation.progress.value
@@ -149,7 +152,7 @@ fun LikeHeart(
             // Red as it pops in, brightest as it lands, then back to the
             // ordinary ink over the last stretch.
             val bright = if (p < 0.5f) segment(p, 0.2f, 0.5f) else 1f - segment(p, 0.5f, 0.65f)
-            val red = lerp(LikeRed, LikeRedBright, bright * 0.6f)
+            val red = lerp(flash, flashBright, bright * 0.6f)
             lerp(red, tint, FastOutSlowInEasing.transform(segment(p, 0.62f, 1f)))
         }
         Icon(
@@ -167,3 +170,7 @@ fun LikeHeart(
         )
     }
 }
+
+/** The yellow the favourite star flashes as an artist is starred. */
+val FavoriteYellow = Color(0xFFFFCC00)
+val FavoriteYellowBright = Color(0xFFFFE680)
