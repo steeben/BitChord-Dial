@@ -430,6 +430,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.boundsInRoot
 import com.music.bitchord.ui.player.LocalPlayerDock
 import com.music.bitchord.ui.player.PlayerDock
+import com.music.bitchord.ui.player.playerMorph
 import com.music.bitchord.ui.screens.DetailScreen
 import com.music.bitchord.ui.screens.ExploreScreen
 import com.music.bitchord.ui.screens.LocalMusicScreen
@@ -6465,6 +6466,7 @@ private fun BitChordApp(
                 playerDock.sheetOffset = playerSheetMotion::position
                 onDispose {
                     playerDock.sheetOffset = null
+                    playerDock.forgetWindow()
                     playerSheetMotion.onSheetGone()
                 }
             }
@@ -6568,7 +6570,15 @@ private fun BitChordApp(
                     // so without a Canvas the menu bent a blurred wash of
                     // the background and read as solid.
                     val playerMenuBackdrop = rememberLayerBackdrop()
-                    Box(if (glassSamplesBackdrop) Modifier.layerBackdrop(playerMenuBackdrop) else Modifier) {
+                    // Grown out of the mini player's pill and shrunk back into
+                    // it, one surface, as the player opens and closes — see
+                    // [playerMorph]. Ahead of the backdrop, so the menu's glass
+                    // samples the player as it is drawn, not the clip.
+                    Box(
+                        Modifier
+                            .playerMorph(activeDock)
+                            .then(if (glassSamplesBackdrop) Modifier.layerBackdrop(playerMenuBackdrop) else Modifier),
+                    ) {
                         CompositionLocalProvider(
                             LocalPlayerDock provides activeDock,
                             com.music.bitchord.ui.player.LocalPlayerGlass provides playerGlass.takeIf { glassSamplesBackdrop },

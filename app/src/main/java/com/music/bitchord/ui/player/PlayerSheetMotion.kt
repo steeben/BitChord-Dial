@@ -125,7 +125,7 @@ class PlayerSheetMotion(
     private var closing = false
 
     private fun travel(): Float =
-        dock.sheetTravel.takeIf { it > 0f } ?: (windowInfo?.containerSize?.height ?: 0).toFloat()
+        dock.travel().takeIf { it > 0f } ?: (windowInfo?.containerSize?.height ?: 0).toFloat()
 
     private fun sheetOffset(): Float = try {
         sheet?.requireOffset() ?: Float.NaN
