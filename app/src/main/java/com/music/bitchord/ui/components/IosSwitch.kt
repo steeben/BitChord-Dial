@@ -96,8 +96,7 @@ fun IosSwitch(
     )
     val track by animateColorAsState(
         targetValue = when {
-            checked -> (if (dark) Color(0xFF30D158) else Color(0xFF34C759))
-                .copy(alpha = (ON_TRACK_ALPHA * density).coerceIn(0f, 1f))
+            checked -> frostedOnTint(dark, density)
             else -> frostedTrackTint(dark, density)
         },
         label = "iosSwitchTrack",
@@ -195,6 +194,15 @@ internal fun Modifier.frostedGlassFill(tint: Color, shape: Shape, dark: Boolean)
 internal fun frostedTrackTint(dark: Boolean, density: Float): Color =
     if (dark) Color.White.copy(alpha = (0.16f * density).coerceIn(0f, 1f))
     else Color.Black.copy(alpha = (0.09f * density).coerceIn(0f, 1f))
+
+/**
+ * The fill of a frosted control that is on: this switch's track, and the
+ * selected pill of the settings' segmented selectors, so a chosen option reads
+ * exactly as strongly as a switch that is on beside it.
+ */
+internal fun frostedOnTint(dark: Boolean, density: Float): Color =
+    (if (dark) Color(0xFF30D158) else Color(0xFF34C759))
+        .copy(alpha = (ON_TRACK_ALPHA * density).coerceIn(0f, 1f))
 
 /** How opaque a frosted "on" fill is at the shipped glass transparency: enough to read as on, not solid. */
 internal const val ON_TRACK_ALPHA = 0.78f

@@ -6643,6 +6643,8 @@ private fun BitChordApp(
                     // need a drag to reach.
                     sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
                     containerColor = MaterialTheme.colorScheme.background,
+                    // Over the Replay story, which the glass can't see.
+                    glass = false,
                 ) {
                     ReplayShareSheet(
                         summary = summary,
@@ -6734,6 +6736,8 @@ private fun BitChordApp(
             SlideDownBottomSheet(
                 onDismissRequest = closeDownloadManager,
                 containerColor = MaterialTheme.colorScheme.background,
+                // Glass samples the pages, which the player covers while it is up.
+                glass = !showNowPlaying,
             ) {
                 DownloadManagerSheet(onDismiss = closeDownloadManager)
             }
@@ -6752,6 +6756,8 @@ private fun BitChordApp(
             SlideDownBottomSheet(
                 onDismissRequest = dismiss,
                 containerColor = MaterialTheme.colorScheme.background,
+                // Glass samples the pages, which the player covers while it is up.
+                glass = !showNowPlaying,
             ) {
                 PlaylistPickerSheet(
                     playlists = playlists,
@@ -6826,6 +6832,8 @@ private fun BitChordApp(
             SlideDownBottomSheet(
                 onDismissRequest = dismiss,
                 containerColor = MaterialTheme.colorScheme.background,
+                // Glass samples the pages, which the player covers while it is up.
+                glass = !showNowPlaying,
             ) {
                 PlaylistPickerSheet(
                     playlists = choices,
@@ -7229,6 +7237,8 @@ private fun BitChordApp(
             SlideDownBottomSheet(
                 onDismissRequest = { songArtPick = null },
                 containerColor = MaterialTheme.colorScheme.background,
+                // Glass samples the pages, which the player covers while it is up.
+                glass = !showNowPlaying,
             ) {
                 com.music.bitchord.ui.components.AlbumArtPickerSheet(
                     target = album,
@@ -7252,6 +7262,8 @@ private fun BitChordApp(
             SlideDownBottomSheet(
                 onDismissRequest = { albumArtPick = null },
                 containerColor = MaterialTheme.colorScheme.background,
+                // Glass samples the pages, which the player covers while it is up.
+                glass = !showNowPlaying,
             ) {
                 com.music.bitchord.ui.components.AlbumArtPickerSheet(
                     target = target,
@@ -7288,6 +7300,8 @@ private fun BitChordApp(
             SlideDownBottomSheet(
                 onDismissRequest = { browseActions = null },
                 containerColor = MaterialTheme.colorScheme.background,
+                // Glass samples the pages, which the player covers while it is up.
+                glass = !showNowPlaying,
             ) {
                 browseMenuBody(target, SongActionsPresentation.Sheet)
             }
@@ -7352,6 +7366,8 @@ private fun BitChordApp(
                 onDismissRequest = close,
                 sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
                 containerColor = MaterialTheme.colorScheme.background,
+                // Glass samples the pages, which the player covers while it is up.
+                glass = !showNowPlaying,
             ) {
                 ReorderPlaylistSheet(
                     modifier = Modifier.nestedScroll(keepSheetStill),
@@ -7502,6 +7518,8 @@ private fun BitChordApp(
             SlideDownBottomSheet(
                 onDismissRequest = { linkingFile = null },
                 containerColor = MaterialTheme.colorScheme.background,
+                // Glass samples the pages, which the player covers while it is up.
+                glass = !showNowPlaying,
             ) {
                 LinkToYouTubeSheet(file = file, onDone = { linkingFile = null })
             }

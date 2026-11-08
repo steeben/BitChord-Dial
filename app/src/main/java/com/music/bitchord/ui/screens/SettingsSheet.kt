@@ -203,7 +203,7 @@ import com.music.bitchord.playback.AudioOutputStatus
 import com.music.bitchord.playback.audio.bitperfect.BitPerfectOutput
 import com.music.bitchord.data.settings.AutomixPerformanceMode
 import com.music.bitchord.R
-import com.music.bitchord.ui.components.ON_TRACK_ALPHA
+import com.music.bitchord.ui.components.frostedOnTint
 import com.music.bitchord.ui.components.frostedGlassFill
 import com.music.bitchord.ui.components.frostedTrackTint
 import com.music.bitchord.ui.components.lightweightLiquidGlass
@@ -3796,8 +3796,10 @@ internal fun SegmentedControl(
     // solid grey slab with a solid accent block in it.
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val glassDensity = rememberFrostedGlassDensity()
-    val pillTint = MaterialTheme.colorScheme.primary
-        .copy(alpha = (ON_TRACK_ALPHA * glassDensity).coerceIn(0f, 1f))
+    // The same green, at the same strength, as a switch that is on: in the
+    // theme's accent at that strength the chosen option read dimmer and more
+    // see-through than the switches in the rows around it.
+    val pillTint = frostedOnTint(dark, glassDensity)
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -3827,7 +3829,7 @@ internal fun SegmentedControl(
             )
             val labelColor by animateColorAsState(
                 targetValue = if (chosen) {
-                    MaterialTheme.colorScheme.onPrimary
+                    Color.White
                 } else {
                     MaterialTheme.colorScheme.onSurfaceVariant
                 },

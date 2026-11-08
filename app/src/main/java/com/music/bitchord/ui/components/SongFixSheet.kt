@@ -262,6 +262,9 @@ fun SongFixHost(
     SlideDownBottomSheet(
         onDismissRequest = dismiss,
         containerColor = MaterialTheme.colorScheme.background,
+        // Opened from the player's menu as often as from a page: glass would
+        // show the page behind the player rather than the player.
+        glass = false,
     ) {
         when (open.kind) {
             SongFixRequests.Kind.VIDEO -> SearchPicker(
