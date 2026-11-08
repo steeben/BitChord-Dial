@@ -17,7 +17,9 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -380,10 +382,17 @@ internal fun LandscapeArtwork(
  * The flat dim over a landscape backdrop clip with the player up: the same
  * darkened tint the portrait Canvas sits under while its controls are up.
  */
-private const val LANDSCAPE_CANVAS_DIM = 0.5f
+private const val LANDSCAPE_CANVAS_DIM = 0.65f
 
 /** The heavier dim over it with the lyrics or the queue open. */
-private const val LANDSCAPE_CANVAS_PANEL_DIM = 0.62f
+private const val LANDSCAPE_CANVAS_PANEL_DIM = 0.75f
+
+/**
+ * The soft blur over the landscape backdrop clip with the player up, so the
+ * video reads as a backdrop rather than competing with the text over it.
+ * Needs RenderEffect (Android 12+); older devices get the dim alone.
+ */
+private val LANDSCAPE_CANVAS_BLUR = 3.dp
 
 /** How long the backdrop's dim takes to follow a pane being turned. */
 private const val LANDSCAPE_CANVAS_DIM_MS = 260
@@ -423,6 +432,12 @@ internal fun LandscapeCanvasBackdrop(
         animationSpec = tween(LANDSCAPE_CANVAS_DIM_MS),
         label = "landscapeCanvasDim",
     )
+    // Off when it is watched full screen, like the dim.
+    val blurRadius by animateDpAsState(
+        targetValue = if (fullscreen) 0.dp else LANDSCAPE_CANVAS_BLUR,
+        animationSpec = tween(LANDSCAPE_CANVAS_DIM_MS),
+        label = "landscapeCanvasBlur",
+    )
     Box(modifier = modifier.fillMaxSize()) {
         CanvasArtworkPlayer(
             canvas = canvas,
@@ -431,7 +446,9 @@ internal fun LandscapeCanvasBackdrop(
             pausedForTransition = pausedForTransition,
             presentationAlpha = presentationAlpha,
             onRenderedChanged = onRenderedChange,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .then(if (blurRadius > 0.dp) Modifier.blur(blurRadius) else Modifier),
         )
         Box(
             Modifier
