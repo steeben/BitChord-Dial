@@ -194,6 +194,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import com.music.bitchord.ui.components.LibraryCheck
 import com.music.bitchord.ui.components.liquidGlass
+import com.music.bitchord.ui.components.PublishReleaseChrome
 import com.music.bitchord.ui.components.rememberLikeAnimation
 import com.music.bitchord.ui.components.backdrop.backdrops.LayerBackdrop
 import com.music.bitchord.ui.components.backdrop.backdrops.layerBackdrop
@@ -215,13 +216,6 @@ private const val SLEEVE_FRACTION = 0.80f
 
 private val SLEEVE_SHAPE = RoundedCornerShape(12.dp)
 private val PILL_SHAPE = RoundedCornerShape(12.dp)
-
-/**
- * Where the search field sits once it is open — directly under the header,
- * which is item zero. The one place that has to know, so that opening the
- * search can carry the page up to it.
- */
-private const val SEARCH_ITEM_INDEX = 1
 
 /**
  * The held header's sizes by page — controls offset, controls height, title
@@ -506,8 +500,11 @@ fun DetailScreen(
             if (signature != null) return@LaunchedEffect
         }
     }
+    // A playlist still on YouTube Music's default grid cover gets a collage
+    // of its newest covers instead, and takes its colours from the front one.
+    val collage = if (isArtist) null else rememberGeneratedCollage(page, rawSongs)
     val palette = rememberArtworkPalette(
-        imageUrl = appleArt?.heroUrl ?: page.thumbnailUrl,
+        imageUrl = appleArt?.heroUrl ?: collage?.firstOrNull() ?: page.thumbnailUrl,
         keyColors = appleArt?.keyColors(),
     )
 
@@ -575,6 +572,17 @@ fun DetailScreen(
     val headerMore: ((List<Song>) -> Unit)? = onMore?.let { more ->
         { list: List<Song> -> if (selecting) ListSelection.openMenu() else more(list) }
     }
+    // An album or playlist keeps its save "+" and its ⋯ up in the top bar's
+    // pill, in place of the account photo — see [ReleaseChrome].
+    if (!isArtist) {
+        val currentSongs by rememberUpdatedState(songs)
+        PublishReleaseChrome(
+            browseId = page.browseId,
+            saved = page.library?.takeIf { onToggleLibrary != null }?.saved,
+            onToggleSave = onToggleLibrary,
+            onMore = headerMore?.let { more -> { more(currentSongs) } },
+        )
+    }
 
     // What marks a row as already downloaded, tinted from the sleeve like the
     // rest of the page. Null on any page that is itself a reading of this
@@ -637,7 +645,6 @@ fun DetailScreen(
     // the tap, so the row it scrolls to is already in the list by the time it
     // runs.
     val searchStop = with(LocalDensity.current) { topBarContentPadding().roundToPx() }
-    val releaseActionsFoot = with(LocalDensity.current) { RELEASE_HEADER_FOOT.roundToPx() }
     val pinBandPx = with(LocalDensity.current) { PIN_FADE_BAND.toPx() }
 
     // The controls row — the release's circles, or the artist's Play row —
@@ -682,8 +689,11 @@ fun DetailScreen(
             }
         }
     }
+    // While the search is open its field is what holds at the top, on its
+    // own (see below), so the header copy stands down.
+    val searchOpen by rememberUpdatedState(searching)
     val controlsPinned by remember(controlsOvershoot) {
-        derivedStateOf { (controlsOvershoot() ?: -1f) >= 0f }
+        derivedStateOf { !searchOpen && (controlsOvershoot() ?: -1f) >= 0f }
     }
     // Where the top of the page — artwork, title and all — sits while the
     // controls are at their stop. The whole header holds there with them, and
@@ -695,7 +705,7 @@ fun DetailScreen(
     // picture behind it stops rising. Null until the sizes are known, or on a
     // page with no controls to hold.
     val headerStopScroll: () -> Float? = {
-        if (!showsControls || controlsHeight <= 0 || controlsLead <= 0 || (isArtist && artistHeaderHeight <= 0)) {
+        if (searchOpen || !showsControls || controlsHeight <= 0 || controlsLead <= 0 || (isArtist && artistHeaderHeight <= 0)) {
             null
         } else {
             (-headerStopTop).toFloat().coerceAtLeast(1f)
@@ -737,11 +747,19 @@ fun DetailScreen(
         )
     }
 
+    // Where the release header's Search pill sits inside the header, and how
+    // tall it is, in px. Opening the search turns the pill into the field and
+    // pushes the page up until it sits just under the top bar, where it holds
+    // while the rows scroll under it.
+    var searchPillTop by remember(page.browseId) { mutableIntStateOf(0) }
+    var searchPillHeight by remember(page.browseId) { mutableIntStateOf(0) }
+    val searchFieldTop: () -> Int = {
+        val header = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == 0 }
+        val inList = header?.let { it.offset + searchPillTop } ?: Int.MIN_VALUE
+        maxOf(inList, searchStop)
+    }
     LaunchedEffect(searching) {
-        // Under the pinned controls rather than behind them: the field is the
-        // next thing down from the row, so the row is carried exactly to its
-        // stop and the field lands just below it.
-        if (searching) listState.animateScrollToItem(SEARCH_ITEM_INDEX, -(pinTop + controlsHeight + releaseActionsFoot))
+        if (searching && !isArtist) listState.animateScrollToItem(0, (searchPillTop - searchStop).coerceAtLeast(0))
     }
 
     // When the track list lands while the page is up (rather than being in
@@ -793,6 +811,7 @@ fun DetailScreen(
                     heroUrl = appleArt?.heroUrl?.takeIf { launchSettled },
                     placeholderUrl = dialArt,
                     stopScroll = headerStopScroll,
+                    collage = collage,
                     modifier = Modifier
                         .matchParentSize()
                         .then(if (realGlass) Modifier.layerBackdrop(artBackdrop) else Modifier),
@@ -823,9 +842,8 @@ fun DetailScreen(
                                 .filter { it.key in HEADER_BLOCK_KEYS }
                             val blockBottom = headerItems.maxOfOrNull { (it.offset + it.size).toFloat() }
                                 ?: if (listState.firstVisibleItemIndex == 0) size.height else 0f
-                            val searchShown = headerItems.any { it.key == "search" }
-                            val fadeTop = if (searchShown) blockBottom else artTop + artPx * ROW_CUT_TOP
-                            val fadeBottom = if (searchShown) blockBottom + pinBandPx else artTop + artPx * ROW_CUT_BOTTOM
+                            val fadeTop = artTop + artPx * ROW_CUT_TOP
+                            val fadeBottom = artTop + artPx * ROW_CUT_BOTTOM
                             val clearTo = minOf(fadeTop, size.height)
                             if (clearTo > blockBottom) {
                                 drawRect(
@@ -849,8 +867,19 @@ fun DetailScreen(
                                     blendMode = BlendMode.DstIn,
                                 )
                             }
-                            if (!controlsPinned) return@drawWithContent
-                            val cut = (pinTop - pinBandPx).coerceAtLeast(0f)
+                            // The open search field, once it is holding under
+                            // the bar: the rows go under it and are gone above.
+                            val fieldTop = searchFieldTop()
+                            val fieldHeld = searching && !isArtist && searchPillHeight > 0 &&
+                                listState.layoutInfo.visibleItemsInfo.none {
+                                    it.index == 0 && it.offset + searchPillTop > searchStop
+                                }
+                            if (!controlsPinned && !fieldHeld) return@drawWithContent
+                            val cut = if (fieldHeld) {
+                                (fieldTop + searchPillHeight).toFloat()
+                            } else {
+                                (pinTop - pinBandPx).coerceAtLeast(0f)
+                            }
                             drawRect(
                                 color = Color.Transparent,
                                 topLeft = Offset.Zero,
@@ -898,32 +927,21 @@ fun DetailScreen(
                         onShuffle = { onShuffle(songs) },
                         searching = searching,
                         onSearch = toggleSearch,
-                        onMore = headerMore,
                         onArtistClick = onArtistClick,
-                        onToggleLibrary = onToggleLibrary,
                         onControlsPlaced = { top, height, lead ->
                             controlsOffset = top
                             controlsHeight = height
                             controlsLead = lead
+                        },
+                        onSearchPlaced = { top, height ->
+                            searchPillTop = top
+                            searchPillHeight = height
                         },
                         controlsPinned = { controlsPinned },
                     )
                 }
             }
 
-            if (searching) {
-                item(key = "search") {
-                    DetailSearchField(
-                        query = query,
-                        onQueryChange = { query = it },
-                        onClose = closeSearch,
-                        autoFocus = focusSearch,
-                        onFocused = { focusSearch = false },
-                        palette = palette,
-                        type = page.type,
-                    )
-                }
-            }
 
             val description = page.description
 
@@ -1194,8 +1212,29 @@ fun DetailScreen(
                 }
             }
             if (isArtist) aboutItem()
+            // Room under a short list, so opening the search can still carry
+            // its field all the way up under the bar.
+            if (searching && !isArtist) {
+                item(key = "search-room") { Spacer(Modifier.height(this@BoxWithConstraints.maxHeight)) }
+            }
         }
                 }
+                }
+
+                // The open search: the Search pill become a field. It rides
+                // with the pill's place in the header until that reaches the
+                // bar, then holds there. Kept out of the list so scrolling the
+                // header away never takes the field (and the keyboard) with it.
+                if (searching && !isArtist) CompositionLocalProvider(LocalDetailGlass provides pageBackdrop.takeIf { realGlass }) {
+                    DetailSearchField(
+                        query = query,
+                        onQueryChange = { query = it },
+                        onClose = closeSearch,
+                        autoFocus = focusSearch,
+                        onFocused = { focusSearch = false },
+                        palette = palette,
+                        modifier = Modifier.offset { IntOffset(0, searchFieldTop()) },
+                    )
                 }
 
                 // The held header: a copy of the page's top — title, credit
@@ -1233,9 +1272,7 @@ fun DetailScreen(
                                 onShuffle = { onShuffle(songs) },
                                 searching = searching,
                                 onSearch = toggleSearch,
-                                onMore = headerMore,
                                 onArtistClick = onArtistClick,
-                                onToggleLibrary = onToggleLibrary,
                             )
                         }
                     }
@@ -1273,14 +1310,14 @@ private fun ReleaseHeader(
     onShuffle: () -> Unit,
     searching: Boolean,
     onSearch: () -> Unit,
-    onMore: ((List<Song>) -> Unit)?,
     onArtistClick: (String, String) -> Unit,
-    onToggleLibrary: (() -> Unit)?,
     /**
      * Where the controls row sits inside this header, how tall it is, and how
      * far above it the title starts, in px.
      */
     onControlsPlaced: (top: Int, height: Int, lead: Int) -> Unit = { _, _, _ -> },
+    /** Where the Search pill sits inside this header, and how tall it is, in px. */
+    onSearchPlaced: (top: Int, height: Int) -> Unit = { _, _ -> },
     /** True while the pinned copy above the list stands in for the row here. */
     controlsPinned: () -> Boolean = { false },
 ) {
@@ -1363,15 +1400,17 @@ private fun ReleaseHeader(
             if (songs.isNotEmpty() || page.songs is UiState.Loading) {
                 Spacer(Modifier.height(14.dp))
                 ReleaseActions(
-                    page = page,
                     palette = palette,
                     songs = songs,
                     onPlay = onPlay,
                     onShuffle = onShuffle,
                     searching = searching,
                     onSearch = onSearch,
-                    onMore = onMore,
-                    onToggleLibrary = onToggleLibrary,
+                    onSearchPlaced = { pill ->
+                        val header = headerCoords[0]?.takeIf { it.isAttached } ?: return@ReleaseActions
+                        val top = header.localPositionOf(pill, Offset.Zero).y.roundToInt()
+                        onSearchPlaced(top, pill.size.height)
+                    },
                     modifier = Modifier
                         .onGloballyPositioned { row ->
                             val header = headerCoords[0]?.takeIf { it.isAttached } ?: return@onGloballyPositioned
@@ -1386,33 +1425,27 @@ private fun ReleaseHeader(
 }
 
 /**
- * A release's controls row — save, shuffle, play, search, more. Drawn in the
- * header, and again pinned under the top bar once the header has scrolled
- * it up there (see [DetailScreen]), so both copies have to be the same thing.
- * While the tracks load, placeholders of the same size hold their place, so
- * nothing above or below moves when the real ones fade in over them.
+ * A release's controls: Play and Shuffle side by side, and under them a wide
+ * Search pill that becomes the search field when pressed (the field itself is
+ * drawn by [DetailScreen], over the pill's place). Saving the release and its
+ * menu live up in the top bar — see [com.music.bitchord.ui.components.ReleaseChrome].
+ *
+ * Drawn in the header, and again pinned under the top bar once the header has
+ * scrolled it up there, so both copies have to be the same thing. While the
+ * tracks load, placeholders of the same size hold their place, so nothing
+ * above or below moves when the real ones fade in over them.
  */
 @Composable
 private fun ReleaseActions(
-    page: DetailPage,
     palette: ArtworkPalette,
     songs: List<Song>,
     onPlay: () -> Unit,
     onShuffle: () -> Unit,
     searching: Boolean,
     onSearch: () -> Unit,
-    onMore: ((List<Song>) -> Unit)?,
-    onToggleLibrary: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    onSearchPlaced: (LayoutCoordinates) -> Unit = {},
 ) {
-    // Only where YouTube said the release can be saved and the
-    // caller is willing to take the write — see [onToggleLibrary].
-    val library = page.library?.takeIf { onToggleLibrary != null }
-    // Always five slots — save, shuffle, play, search, more — so the
-    // loading placeholders match and the row doesn't reflow between
-    // releases. A slot this release can't use stays, greyed out. 46dp
-    // keeps five circles inside the shared header gutter on 360dp.
-    val circleSize = 46.dp
     AnimatedContent(
         targetState = songs.isNotEmpty(),
         transitionSpec = {
@@ -1422,116 +1455,132 @@ private fun ReleaseActions(
         label = "releaseActions",
         modifier = modifier,
     ) { ready ->
-    if (!ready) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = HEADER_GUTTER)
-                .graphicsLayer { alpha = 0.4f },
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                .then(if (ready) Modifier else Modifier.graphicsLayer { alpha = 0.4f }),
+            verticalArrangement = Arrangement.spacedBy(RELEASE_PILL_GAP),
         ) {
-            repeat(5) { index ->
-                ShimmerBox(Modifier.size(if (index == 2) ARTIST_PLAY_BUTTON else circleSize), CircleShape)
+            if (!ready) {
+                Row(horizontalArrangement = Arrangement.spacedBy(RELEASE_PILL_GAP)) {
+                    ShimmerBox(Modifier.weight(1f).height(RELEASE_PILL_HEIGHT), CircleShape)
+                    ShimmerBox(Modifier.weight(1f).height(RELEASE_PILL_HEIGHT), CircleShape)
+                }
+                ShimmerBox(Modifier.fillMaxWidth().height(RELEASE_PILL_HEIGHT), CircleShape)
+                return@Column
             }
+            Row(horizontalArrangement = Arrangement.spacedBy(RELEASE_PILL_GAP)) {
+                PlayPill(
+                    onClick = onPlay,
+                    size = RELEASE_PILL_HEIGHT,
+                    horizontalPadding = 12.dp,
+                    // The artwork's own colour, as on the artist page, a touch
+                    // more see-through than the artist page's circle.
+                    containerColor = palette.accent,
+                    fillAlpha = RELEASE_PLAY_FILL_ALPHA,
+                    modifier = Modifier.weight(1f),
+                )
+                GlassPill(
+                    icon = BitChordIcons.Shuffle,
+                    label = stringResource(R.string.shuffle),
+                    onClick = onShuffle,
+                    haptic = Haptic.Resume,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            // Finding a track on a long playlist is a thing done while reading
+            // the page, so it earns the wide button. While the search is open
+            // the field stands over this spot, so the pill only keeps its place.
+            GlassPill(
+                icon = BitChordIcons.Search,
+                label = stringResource(R.string.search),
+                contentDescription = stringResource(R.string.search_this_list),
+                onClick = onSearch,
+                enabled = !searching,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onGloballyPositioned(onSearchPlaced)
+                    .graphicsLayer { alpha = if (searching) 0f else 1f },
+            )
         }
-        return@AnimatedContent
     }
+}
+
+/** The release header's pills: Play, Shuffle and Search. */
+private val RELEASE_PILL_HEIGHT = 50.dp
+private val RELEASE_PILL_GAP = 12.dp
+
+/**
+ * The release Play pill's fill: 15 points more see-through than the artist
+ * page's [PLAY_FILL_ALPHA].
+ */
+private const val RELEASE_PLAY_FILL_ALPHA = PLAY_FILL_ALPHA - 0.15f
+
+/** The glass the header's buttons are made of, in any [shape]. */
+@Composable
+private fun Modifier.headerGlass(shape: androidx.compose.foundation.shape.CornerBasedShape): Modifier {
+    val glass = LocalDetailGlass.current
+    return if (glass != null) {
+        // The real thing, as on the bars: the page under the button, blurred
+        // and bent at the rim.
+        this.liquidGlass(shape, backdrop = glass, exportedBackdrop = null)
+    } else {
+        this.lightweightLiquidGlass(
+            shape = shape,
+            fallbackColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+        )
+    }
+}
+
+/** A capsule of header glass with an icon and a label: Shuffle, Search. */
+@Composable
+private fun GlassPill(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null,
+    haptic: Haptic = Haptic.Tap,
+    enabled: Boolean = true,
+) {
+    val haptics = rememberHaptics()
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = HEADER_GUTTER),
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        modifier = modifier
+            .height(RELEASE_PILL_HEIGHT)
+            .headerGlass(CircleShape)
+            .clip(CircleShape)
+            .clickable(enabled = enabled) {
+                haptics.play(haptic)
+                onClick()
+            }
+            .then(
+                if (contentDescription != null) {
+                    Modifier.semantics(mergeDescendants = true) { this.contentDescription = contentDescription }
+                } else {
+                    Modifier
+                },
+            )
+            .padding(horizontal = 12.dp),
+        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (library == null) {
-            CircleIconButton(
-                icon = BitChordIcons.Plus,
-                contentDescription = stringResource(R.string.add_to_library),
-                palette = palette,
-                onClick = {},
-                size = circleSize,
-                enabled = false,
-            )
-        } else {
-            // A tick, not a filled-in plus: the pair reads as "not yet / done",
-            // which is what the state is. The plus folds into it, flashing
-            // green with the like heart's burst, and folds back on undo.
-            val saveBurst = rememberLikeAnimation()
-            val description = if (library.saved) {
-                stringResource(R.string.remove_from_library)
-            } else {
-                stringResource(R.string.add_to_library)
-            }
-            CircleIconButton(
-                icon = if (library.saved) BitChordIcons.Check else BitChordIcons.Plus,
-                contentDescription = description,
-                palette = palette,
-                onClick = {
-                    saveBurst.onToggle(wasLiked = library.saved)
-                    onToggleLibrary?.invoke()
-                },
-                haptic = if (library.saved) Haptic.ToggleOff else Haptic.ToggleOn,
-                size = circleSize,
-                glyph = { tint, glyphSize ->
-                    LibraryCheck(
-                        saved = library.saved,
-                        animation = saveBurst,
-                        tint = tint,
-                        size = glyphSize,
-                        contentDescription = description,
-                    )
-                },
-            )
-        }
-        CircleIconButton(
-            icon = BitChordIcons.Shuffle,
-            contentDescription = stringResource(R.string.shuffle),
-            palette = palette,
-            onClick = onShuffle,
-            haptic = Haptic.Resume,
-            size = circleSize,
+        val tint = MaterialTheme.colorScheme.onSurface
+        Icon(imageVector = icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleMedium,
+            color = tint,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
-        PlayPill(
-            onClick = onPlay,
-            iconOnly = true,
-            // The artist page's big Play, so the two headers match.
-            size = ARTIST_PLAY_BUTTON,
-            iconScale = ARTIST_PLAY_ICON_SCALE,
-            // The artwork's own colour, as on the artist page.
-            containerColor = palette.accent,
-        )
-        // Where the download circle used to be. Downloading a
-        // release is a thing done once and then not thought about;
-        // finding a track on a long playlist is a thing done while
-        // reading the page, so it is the one that earns a button and
-        // the download moved to the overflow beside it.
-        CircleIconButton(
-            icon = if (searching) Icons.Rounded.Close else BitChordIcons.Search,
-            contentDescription = stringResource(
-                if (searching) R.string.close_search else R.string.search_this_list,
-            ),
-            palette = palette,
-            onClick = onSearch,
-            size = circleSize,
-        )
-        // The page's menu hangs off this button — see [MenuAnchor].
-        Box(Modifier.menuAnchor()) {
-            CircleIconButton(
-                icon = Icons.Rounded.MoreHoriz,
-                contentDescription = stringResource(R.string.more),
-                palette = palette,
-                onClick = { onMore?.invoke(songs) },
-                size = circleSize,
-                enabled = onMore != null,
-            )
-        }
-    }
     }
 }
 
 /**
- * The filter box, shown under the header while the search circle is lit.
+ * The filter box: the header's Search pill once it has been pressed, the same
+ * size and glass, so the pill reads as having opened into it.
  *
  * Live rather than submit-on-enter, and for the same reason the Local Music
  * one is (see `LocalSearchField`): the list it narrows is already in memory, so
@@ -1549,7 +1598,7 @@ private fun DetailSearchField(
     autoFocus: Boolean,
     onFocused: () -> Unit,
     palette: ArtworkPalette,
-    type: BrowseType,
+    modifier: Modifier = Modifier,
 ) {
     // Opened by a tap on a button, which is as clear a statement of intent as
     // the keyboard is going to get — so it comes up with the field rather than
@@ -1562,16 +1611,22 @@ private fun DetailSearchField(
         }
     }
 
+    // Opening: the field grows out of the pill's own place, from a little
+    // narrower, so the change of content reads as the pill opening up.
+    val open = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { open.animateTo(1f, tween(SEARCH_OPEN_MS, easing = FastOutSlowInEasing)) }
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = HEADER_GUTTER)
-            .padding(bottom = 10.dp)
-            .height(46.dp)
-            .clip(PILL_SHAPE)
-            .background(com.music.bitchord.ui.components.fieldFill(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)))
-            .border(0.5.dp, Color.White.copy(alpha = 0.10f), PILL_SHAPE)
-            .padding(horizontal = 12.dp),
+            .graphicsLayer {
+                alpha = open.value
+                scaleX = 0.96f + 0.04f * open.value
+            }
+            .height(RELEASE_PILL_HEIGHT)
+            .headerGlass(CircleShape)
+            .clip(CircleShape)
+            .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -1623,6 +1678,8 @@ private fun DetailSearchField(
         }
     }
 }
+
+private const val SEARCH_OPEN_MS = 220
 
 private fun List<Song>.sortedForDetail(sort: SongSort): List<Song> = when (sort) {
     SongSort.DEFAULT -> this
@@ -1846,6 +1903,11 @@ private fun PageBackground(
      * climbs over it; from there it stays put. With no stop it follows the list.
      */
     stopScroll: () -> Float? = { null },
+    /**
+     * The covers of a generated playlist image (see [rememberGeneratedCollage]),
+     * drawn in place of the page's own artwork; null shows the artwork.
+     */
+    collage: List<String>? = null,
     modifier: Modifier = Modifier,
 ) {
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
@@ -1917,20 +1979,51 @@ private fun PageBackground(
                     modifier = Modifier.matchParentSize().background(palette.elevated),
                 )
             }
-            HeaderArt(
-                art = baseArt,
-                softenFoot = softenFoot,
-                onLoaded = { baseLoaded = true },
-                modifier = Modifier.matchParentSize().then(
-                    if (placeholderUrl == null) {
-                        Modifier.background(palette.elevated)
-                    } else {
-                        // Over the tile's picture it eases in, in case the
-                        // page's own art is a different shot from the tile's.
-                        Modifier.graphicsLayer { alpha = baseIn }
-                    },
-                ),
+            // The page's own artwork gives way to a generated collage, if
+            // the playlist gets one, once the check for that has answered.
+            val artOut by animateFloatAsState(
+                targetValue = if (collage != null) 0f else 1f,
+                animationSpec = tween(ART_CROSSFADE_MS, easing = FastOutSlowInEasing),
+                label = "artOut",
             )
+            if (artOut > 0f) {
+                HeaderArt(
+                    art = baseArt,
+                    softenFoot = softenFoot,
+                    onLoaded = { baseLoaded = true },
+                    modifier = Modifier.matchParentSize().then(
+                        if (placeholderUrl == null) {
+                            Modifier.background(palette.elevated)
+                        } else {
+                            // Over the tile's picture it eases in, in case the
+                            // page's own art is a different shot from the tile's.
+                            Modifier.graphicsLayer { alpha = baseIn }
+                        },
+                    ).graphicsLayer { alpha = artOut },
+                )
+            }
+            if (collage != null) {
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .graphicsLayer { alpha = 1f - artOut }
+                        .background(
+                            Brush.verticalGradient(
+                                0f to palette.accent.copy(alpha = 0.45f),
+                                0.55f to palette.elevated,
+                                1f to palette.wash,
+                            ),
+                        ),
+                ) {
+                    // Lower than the picture's top, which sits under the bar.
+                    PlaylistCollageArt(
+                        covers = collage,
+                        modifier = Modifier
+                            .matchParentSize()
+                            .padding(top = topBarContentPadding() * 0.5f),
+                    )
+                }
+            }
             if (heroArt != null) {
                 HeaderArt(
                     art = heroArt,
@@ -2236,6 +2329,8 @@ private fun PlayPill(
     containerColor: Color = Color.White,
     /** Punch the triangle out of the circle, so the page shows through it, as Apple's does. */
     cutout: Boolean = false,
+    /** How much of [containerColor] is laid down. */
+    fillAlpha: Float = PLAY_FILL_ALPHA,
 ) {
     // Black on the light fills Apple picks, white on the rare dark one.
     val contentColor = if (containerColor.luminance() > 0.35f) Color.Black else Color.White
@@ -2245,7 +2340,7 @@ private fun PlayPill(
     val glass = LocalDetailGlass.current
     // Slightly see-through, so the page shows faintly through it as it does
     // through the glass circles beside it; on glass, over that glass.
-    val fill = containerColor.copy(alpha = containerColor.alpha * PLAY_FILL_ALPHA)
+    val fill = containerColor.copy(alpha = containerColor.alpha * fillAlpha)
     // Glass under the fill where real glass is on, else the sheen and rim
     // that stand in for it.
     val surface = if (glass != null) {

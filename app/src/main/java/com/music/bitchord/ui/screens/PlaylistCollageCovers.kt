@@ -1,0 +1,66 @@
+package com.music.bitchord.ui.screens
+
+import com.music.bitchord.data.model.Song
+import com.music.bitchord.data.model.artworkAt
+
+/** Covers in a generated playlist image: one in front, the rest floating round it. */
+internal const val COLLAGE_MAX_COVERS = 9
+
+/**
+ * The covers a generated playlist image is made of, newest addition first.
+ *
+ * Which end of a playlist is newest: a dated row (a device track, a download)
+ * says so itself; otherwise a liked list leads with its newest like, and any
+ * other playlist is appended to, so its foot is the newest.
+ *
+ * No artwork, album or artist appears twice: a playlist of one album would
+ * otherwise be the same sleeve nine times. If that leaves too few, artists
+ * are allowed to repeat (with different albums), but artwork never is.
+ */
+internal fun collageCovers(songs: List<Song>, newestFirst: Boolean, max: Int = COLLAGE_MAX_COVERS): List<String> {
+    val withArt = songs.filter { !it.thumbnailUrl.isNullOrBlank() }
+    val ordered = if (withArt.any { it.localDateAddedSeconds != null }) {
+        withArt.withIndex()
+            .sortedWith(
+                compareByDescending<IndexedValue<Song>> { it.value.localDateAddedSeconds ?: Long.MIN_VALUE }
+                    .thenBy { if (newestFirst) it.index else -it.index },
+            )
+            .map { it.value }
+    } else if (newestFirst) {
+        withArt
+    } else {
+        withArt.asReversed()
+    }
+
+    val picked = ArrayList<Song>()
+    val arts = HashSet<String>()
+    val albums = HashSet<String>()
+    val artists = HashSet<String>()
+    fun take(strictArtist: Boolean) {
+        for (song in ordered) {
+            if (picked.size >= max) return
+            val art = song.artKey() ?: continue
+            val album = song.albumKey()
+            val artist = song.artistKey()
+            if (art in arts) continue
+            if (album != null && album in albums) continue
+            if (strictArtist && artist != null && artist in artists) continue
+            picked += song
+            arts += art
+            album?.let { albums += it }
+            artist?.let { artists += it }
+        }
+    }
+    take(strictArtist = true)
+    if (picked.size < max) take(strictArtist = false)
+    return picked.mapNotNull { it.thumbnailUrl }
+}
+
+/** The artwork with its size hint taken out, so two sizes of one picture match. */
+private fun Song.artKey(): String? = thumbnailUrl?.artworkAt(1)?.substringBefore('?')
+
+private fun Song.albumKey(): String? =
+    albumId?.takeIf { it.isNotBlank() } ?: albumName?.takeIf { it.isNotBlank() }?.lowercase()
+
+private fun Song.artistKey(): String? =
+    (artists.firstOrNull()?.name ?: artist).takeIf { it.isNotBlank() }?.trim()?.lowercase()

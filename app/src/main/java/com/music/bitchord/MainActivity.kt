@@ -5508,6 +5508,11 @@ private fun BitChordApp(
                             // list to reorder, and the device folders already
                             // carry this same control themselves (see
                             // `LocalSearchField`).
+                            // An album or playlist page's save "+", first in
+                            // the pill, where the header's circle used to be.
+                            if (detailActiveShelf == null && !showStats) {
+                                com.music.bitchord.ui.components.ReleaseSaveButton(detail?.browseId)
+                            }
                             if (detail != null && !isLocalDetail && detail.type != BrowseType.ARTIST && !showStats) {
                                 // The menu itself is [FrostedSortMenu], composed
                                 // with the app's other frosted overlays further
@@ -5554,7 +5559,14 @@ private fun BitChordApp(
                             // [TopBarDownloadButton], which decides that for
                             // itself rather than being told.
                             TopBarDownloadButton(onClick = { showDownloadManager = true })
-                            TopBarAccountButton(
+                            // An album or playlist page puts its own ⋯ where
+                            // the photo goes: see [ReleaseChrome].
+                            if (detailActiveShelf == null && !showStats &&
+                                com.music.bitchord.ui.components.ReleaseChrome.owns(detail?.browseId) &&
+                                com.music.bitchord.ui.components.ReleaseChrome.hasMore
+                            ) {
+                                com.music.bitchord.ui.components.ReleaseMoreButton()
+                            } else TopBarAccountButton(
                                 account = account,
                                 onClick = {
                                     if (signedIn) {
