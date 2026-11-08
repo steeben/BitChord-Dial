@@ -83,24 +83,33 @@ jobs:
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
         run: |
-          ./gradlew assembleDevBenchmark -x lintVitalDevBenchmark -PnoBenchmarkSuffix \
-            -Pandroid.injected.signing.store.file="$SHARED_KEYSTORE" \
-            -Pandroid.injected.signing.store.password=android \
-            -Pandroid.injected.signing.key.alias=androiddebugkey \
-            -Pandroid.injected.signing.key.password=android
+          SIGN=(-Pandroid.injected.signing.store.file="$SHARED_KEYSTORE"
+            -Pandroid.injected.signing.store.password=android
+            -Pandroid.injected.signing.key.alias=androiddebugkey
+            -Pandroid.injected.signing.key.password=android)
+          # The bridge first: the same app under the old package
+          # (com.steeben.bitchord), so an old install updates in place and
+          # hands its data to the new app. See AppMove and ReleaseAssets.
+          ./gradlew assembleDevBenchmark -x lintVitalDevBenchmark -PnoBenchmarkSuffix -PoldPackage "${SIGN[@]}"
+          cp "$(ls app/build/outputs/apk/dev/benchmark/*.apk | head -n1)" "Dial-${TAG}-bridge.apk"
+          rm -rf app/build/outputs/apk/dev/benchmark
+          ./gradlew assembleDevBenchmark -x lintVitalDevBenchmark -PnoBenchmarkSuffix "${SIGN[@]}"
+          cp "$(ls app/build/outputs/apk/dev/benchmark/*.apk | head -n1)" "Dial-${TAG}.apk"
 
       - name: Publish release
         if: env.SKIP != '1'
         env:
           GH_TOKEN: ${{ github.token }}
+        # The bridge is uploaded first, and its name sorts first too: 1.4.1 and
+        # older take a release's first .apk, and that has to be the bridge.
         run: |
-          APK=$(ls app/build/outputs/apk/dev/benchmark/*.apk | head -n1)
-          cp "$APK" "Dial-${TAG}.apk"
           if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "Dial-${TAG}-bridge.apk" --clobber
             gh release upload "$TAG" "Dial-${TAG}.apk" --clobber
           else
-            gh release create "$TAG" "Dial-${TAG}.apk" \
+            gh release create "$TAG" "Dial-${TAG}-bridge.apk" \
               --target "$GITHUB_SHA" \
               --title "Dial ${TAG#v}" \
               --notes-file RELEASE_NOTES.md
+            gh release upload "$TAG" "Dial-${TAG}.apk"
           fi

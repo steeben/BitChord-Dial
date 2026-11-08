@@ -97,8 +97,13 @@ object Backup {
 
     /** The JSON of a backup, and how many months of listening it holds. */
     private suspend fun encode(context: Context): Pair<String, Int> {
+        val file = buildFile(context)
+        return json.encodeToString(BackupFile.serializer(), file) to file.listening.size
+    }
+
+    private suspend fun buildFile(context: Context): BackupFile {
         val buckets = ListeningStats.exportAll()
-        val file = BackupFile(
+        return BackupFile(
             versionName = BuildConfig.VERSION_NAME,
             exportedAt = Instant.now().toString(),
             settings = AppSettings.exportPrefs().toPrefValues(),
@@ -110,7 +115,6 @@ object Backup {
             playlistCovers = com.music.bitchord.data.CustomCovers.exportImages(),
             listening = buckets,
         )
-        return json.encodeToString(BackupFile.serializer(), file) to buckets.size
     }
 
     private fun Map<String, Any?>.toPrefValues(): Map<String, PrefValue> =
@@ -217,6 +221,84 @@ object Backup {
             // Shares AppSettings' preference file, so it has already been
             // overwritten by the line above — it just doesn't know yet.
             SearchHistory.reload()
+            Summary(
+                months = file.listening.size,
+                settings = file.settings.size,
+                from = file.versionName,
+                at = file.exportedAt,
+            )
+        }
+    }
+
+    /**
+     * Everything the old app (com.steeben.bitchord) hands Dial when it moves:
+     * a whole [BackupFile], plus what a backup deliberately leaves out because
+     * a backup file can end up anywhere. This one only ever travels between two
+     * apps signed with the same key on the same phone (see
+     * [com.music.bitchord.data.migration.HandoverProvider]), so it also carries
+     * the sign-ins and the download records.
+     */
+    @Serializable
+    data class Handover(
+        val backup: BackupFile,
+        /** [AppSettings.exportHandoverExtras]. */
+        val settingsExtras: Map<String, PrefValue> = emptyMap(),
+        /** The encrypted stores' decrypted contents, by store name; see [HANDOVER_STORES]. */
+        val stores: Map<String, Map<String, PrefValue>> = emptyMap(),
+    )
+
+    /** Encrypted stores and their plain fallbacks, as [com.music.bitchord.auth.EncryptedPrefs] opens them. */
+    private val HANDOVER_STORES = mapOf(
+        "bitchord_auth" to "bitchord_auth_plain",
+        "bitchord_sources" to "bitchord_sources_plain",
+    )
+
+    /** The old app's side of a move: its whole state as JSON. */
+    suspend fun encodeHandover(context: Context): String = withContext(Dispatchers.IO) {
+        val handover = Handover(
+            backup = buildFile(context),
+            settingsExtras = AppSettings.exportHandoverExtras().toPrefValues(),
+            stores = HANDOVER_STORES.mapValues { (name, plain) ->
+                com.music.bitchord.auth.EncryptedPrefs.open(context, name, plain).all.toPrefValues()
+            }.filterValues { it.isNotEmpty() },
+        )
+        json.encodeToString(Handover.serializer(), handover)
+    }
+
+    /**
+     * Dial's side of a move: replaces this install's state with the old app's.
+     * The caller restarts the process afterwards, since sign-ins and downloads
+     * are read once at start and nothing re-reads them.
+     */
+    suspend fun importHandover(context: Context, text: String): Result<Summary> = withContext(Dispatchers.IO) {
+        runCatching {
+            val handover = json.decodeFromString(Handover.serializer(), text)
+            val file = handover.backup
+            require(file.app == APP_TAG) { "That isn't data from the old app" }
+            require(file.version <= SCHEMA_VERSION) { "The old app's data is from a newer version" }
+
+            ListeningStats.importAll(file.listening)
+            AppSettings.importPrefs(file.settings.mapValues { it.value.decoded() })
+            AppSettings.importHandoverExtras(handover.settingsExtras.mapValues { it.value.decoded() })
+            restoreSongData(context, file.songData)
+            file.playlistCovers?.let { com.music.bitchord.data.CustomCovers.restoreImages(context, it) }
+            SearchHistory.reload()
+            handover.stores.filterKeys { it in HANDOVER_STORES }.forEach { (name, values) ->
+                val prefs = com.music.bitchord.auth.EncryptedPrefs.open(context, name, HANDOVER_STORES.getValue(name))
+                prefs.edit().apply {
+                    values.forEach { (key, pref) ->
+                        when (val value = pref.decoded()) {
+                            is Boolean -> putBoolean(key, value)
+                            is Int -> putInt(key, value)
+                            is Long -> putLong(key, value)
+                            is Float -> putFloat(key, value)
+                            is String -> putString(key, value)
+                            is Set<*> -> putStringSet(key, value.filterIsInstance<String>().toSet())
+                            else -> Unit
+                        }
+                    }
+                }.commit()
+            }
             Summary(
                 months = file.listening.size,
                 settings = file.settings.size,

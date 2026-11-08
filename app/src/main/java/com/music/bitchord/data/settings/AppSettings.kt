@@ -2197,6 +2197,47 @@ object AppSettings {
     }
 
     /**
+     * What a move from the old app (com.steeben.bitchord) to Dial carries on top
+     * of [exportPrefs]: the credentials, since the hand-over only ever reaches
+     * an app signed with the same key, and the download records, since it is the
+     * same phone and the files are still where the records say. The Local Music
+     * folder stays behind (its grant belongs to the old app) and so does the
+     * last-seen version, so Dial still shows its own What's New.
+     */
+    fun exportHandoverExtras(): Map<String, Any?> {
+        if (!this::prefs.isInitialized) return emptyMap()
+        return prefs.all.filterKeys { it in SECRETS || it in HANDOVER_DEVICE_KEYS }
+    }
+
+    /** Writes [exportHandoverExtras]' values back, after [importPrefs]. */
+    fun importHandoverExtras(values: Map<String, Any?>) {
+        if (!this::prefs.isInitialized) return
+        prefs.edit().apply {
+            values.filterKeys { it in SECRETS || it in HANDOVER_DEVICE_KEYS }.forEach { (key, value) ->
+                when (value) {
+                    is Boolean -> putBoolean(key, value)
+                    is Int -> putInt(key, value)
+                    is Long -> putLong(key, value)
+                    is Float -> putFloat(key, value)
+                    is String -> putString(key, value)
+                    is Set<*> -> putStringSet(key, value.filterIsInstance<String>().toSet())
+                    else -> Unit
+                }
+            }
+        }.commit()
+        reload()
+    }
+
+    private val HANDOVER_DEVICE_KEYS = setOf(
+        "downloaded_tracks",
+        "downloaded_tracks_metadata",
+        "downloaded_collections",
+        KEY_DUPLICATES_KEPT_APART,
+        KEY_DUPLICATES_PLAY_STREAM,
+        KEY_DUPLICATES_FILE_DETAILS,
+    )
+
+    /**
      * Preferences an export must not carry — credentials, not configuration.
      * See [exportPrefs].
      */

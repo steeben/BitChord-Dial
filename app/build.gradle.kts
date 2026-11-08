@@ -121,8 +121,15 @@ android {
             // This fork's own app (com.steeben.dial since 1.5.0, com.steeben.bitchord
             // before): a different package from upstream's, so it
             // installs beside the official BitChord instead of replacing it.
-            applicationId = "com.steeben.dial"
-            resValue("string", "app_name", "Dial")
+            // -PoldPackage builds the bridge: this same app under the old
+            // package, attached to releases so an old install updates in place
+            // and can hand its data to the new app (see AppMove). Labelled apart
+            // so the two can be told apart in the launcher.
+            val bridge = project.hasProperty("oldPackage")
+            applicationId = if (bridge) "com.steeben.bitchord" else "com.steeben.dial"
+            val label = if (bridge) "Dial (old)" else "Dial"
+            resValue("string", "app_name", label)
+            manifestPlaceholders["appLabel"] = label
         }
         create("prod") {
             dimension = "env"
