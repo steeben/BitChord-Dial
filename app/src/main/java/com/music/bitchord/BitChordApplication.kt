@@ -220,7 +220,7 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
                     chain.request().newBuilder()
                         .header(
                             "User-Agent",
-                            "BitChordDial/${BuildConfig.VERSION_NAME} (Android; +https://github.com/steeben/BitChord-Dial)",
+                            "BitChordDial/${BuildConfig.VERSION_NAME} (Android; +https://github.com/steeben/Dial)",
                         )
                         .build(),
                 )

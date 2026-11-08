@@ -6,8 +6,8 @@
 
 ### A personalized fork of the BitChord YouTube Music client
 
-[![Latest release](https://img.shields.io/github/v/release/steeben/BitChord-Dial?style=for-the-badge&labelColor=0d1117)](https://github.com/steeben/BitChord-Dial/releases)
-[![License](https://img.shields.io/github/license/steeben/BitChord-Dial?style=for-the-badge&labelColor=0d1117)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/steeben/Dial?style=for-the-badge&labelColor=0d1117)](https://github.com/steeben/Dial/releases)
+[![License](https://img.shields.io/github/license/steeben/Dial?style=for-the-badge&labelColor=0d1117)](LICENSE)
 
 [**Screenshots**](#screenshots) · [**What's different**](#whats-different-in-this-fork) · [**Install**](#install-and-updates) · [**Credits**](#credits)
 
@@ -87,7 +87,7 @@
 
 ## Install and updates
 
-Download the latest APK from the [Releases](https://github.com/steeben/BitChord-Dial/releases) page. Sideloading requires enabling "Install unknown apps" for whichever app you download it with.
+Download the latest APK from the [Releases](https://github.com/steeben/Dial/releases) page. Sideloading requires enabling "Install unknown apps" for whichever app you download it with.
 
 > [!TIP]
 > I suggest using [ObtainX](https://github.com/bikram-agarwal/ObtainX) ([F-Droid](https://f-droid.org/packages/dev.bikram.obtainx/)) for automatic updates. Add this repository to it and it will pick up new releases as they are published.

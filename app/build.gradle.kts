@@ -118,9 +118,10 @@ android {
     productFlavors {
         create("dev") {
             dimension = "env"
-            // This fork's own app: a different package from upstream's, so it
+            // This fork's own app (com.steeben.dial since 1.5.0, com.steeben.bitchord
+            // before): a different package from upstream's, so it
             // installs beside the official BitChord instead of replacing it.
-            applicationId = "com.steeben.bitchord"
+            applicationId = "com.steeben.dial"
             resValue("string", "app_name", "Dial")
         }
         create("prod") {
@@ -440,10 +441,10 @@ val verifyDevInstall = tasks.register("verifyDevInstall") {
             .drop(1)
             .mapNotNull { line -> line.split('\t').takeIf { it.size == 2 && it[1] == "device" }?.get(0) }
         serials.forEach { serial ->
-            logger.lifecycle("verifyDevInstall: compiling com.steeben.bitchord on $serial")
+            logger.lifecycle("verifyDevInstall: compiling com.steeben.dial on $serial")
             ProcessBuilder(
                 adbPath, "-s", serial, "shell", "cmd", "package", "compile",
-                "-m", "verify", "-f", "com.steeben.bitchord",
+                "-m", "verify", "-f", "com.steeben.dial",
             ).inheritIO().start().waitFor()
         }
     }

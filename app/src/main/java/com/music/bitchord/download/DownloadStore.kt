@@ -18,7 +18,7 @@ import java.util.Locale
 /**
  * Where a downloaded track goes, and how it gets there.
  *
- * The destination is the device's own Music folder, in a `BitChord`
+ * The destination is the device's own Music folder, in a `Dial`
  * subfolder — somewhere the file manager lists, other players can open, and a
  * user can back up or delete without going through this app. That choice is
  * what makes this class necessary at all: an app-private directory would be
@@ -56,7 +56,7 @@ object DownloadStore {
     private const val TAG = "BitChord"
 
     /** The subfolder of Music that everything lands in. */
-    const val FOLDER = "BitChord"
+    const val FOLDER = "Dial"
 
     private val relativePath = "${Environment.DIRECTORY_MUSIC}/$FOLDER"
 
