@@ -168,14 +168,6 @@ internal fun GlowTrack(
         val solidWhite = GLOW_WHITE_HEAD.toPx()
         val whiteFrom = (1f - whiteRun / played).coerceIn(0f, 1f)
         val whiteTo = (1f - solidWhite / played).coerceIn(whiteFrom, 1f)
-        // A faint dark rim, as on the original, so the fill holds its edge inside its own light.
-        val rim = GLOW_RIM.toPx()
-        drawRoundRect(
-            color = Color.Black.copy(alpha = 0.22f * alpha),
-            topLeft = Offset(-rim, top - rim),
-            size = Size(played + rim * 2f, line + rim * 2f),
-            cornerRadius = CornerRadius(line / 2f + rim),
-        )
         drawRoundRect(
             brush = Brush.horizontalGradient(
                 colorStops = arrayOf(
@@ -253,7 +245,6 @@ private fun DrawScope.teardrop(center: Offset, front: Float, back: Float, ry: Fl
 }
 
 private val GLOW_CANVAS_HEIGHT = 30.dp
-private val GLOW_RIM = 0.75.dp
 /** How far back from the playhead the fill starts turning white, and how much is pure white. */
 private val GLOW_WHITE_RUN = 52.dp
 private val GLOW_WHITE_HEAD = 12.dp
