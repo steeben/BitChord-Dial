@@ -112,6 +112,13 @@ internal fun GlowTrack(
         animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing),
         label = "glowHeld",
     )
+    // The white end of the fill is lit by the music too: paused, it fades into the fill's
+    // colour along with the light, and comes back when the song plays (or a finger holds it).
+    val lit by animateFloatAsState(
+        targetValue = if (playing || dragging) 1f else 0f,
+        animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing),
+        label = "glowLit",
+    )
     // A slow swell of the light while the song moves; paused, it settles full and the clock stops.
     val breath = remember { Animatable(1f) }
     LaunchedEffect(playing, animate) {
@@ -164,6 +171,7 @@ internal fun GlowTrack(
         // The song's colour along the played part, turning to white over the last stretch
         // before the playhead. Held, the whole fill lifts a little toward white.
         val tint = lerp(lerp(accents.accent, accents.light, 0.4f), Color.White, 0.25f * held)
+        val head = lerp(tint, Color.White, lit)
         val whiteRun = GLOW_WHITE_RUN.toPx()
         val solidWhite = GLOW_WHITE_HEAD.toPx()
         val whiteFrom = (1f - whiteRun / played).coerceIn(0f, 1f)
@@ -173,8 +181,8 @@ internal fun GlowTrack(
                 colorStops = arrayOf(
                     0f to tint.copy(alpha = alpha),
                     whiteFrom to tint.copy(alpha = alpha),
-                    whiteTo to Color.White.copy(alpha = alpha),
-                    1f to Color.White.copy(alpha = alpha),
+                    whiteTo to head.copy(alpha = alpha),
+                    1f to head.copy(alpha = alpha),
                 ),
                 startX = 0f,
                 endX = played,
