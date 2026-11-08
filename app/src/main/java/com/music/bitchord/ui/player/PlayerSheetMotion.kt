@@ -128,7 +128,9 @@ class PlayerSheetMotion(
         dock.travel().takeIf { it > 0f } ?: (windowInfo?.containerSize?.height ?: 0).toFloat()
 
     private fun sheetOffset(): Float = try {
-        sheet?.requireOffset() ?: Float.NaN
+        // No sheet of M3's under the panel: while the app is not holding the
+        // player, it is simply fully open.
+        sheet?.requireOffset() ?: if (shown() && laidOut) 0f else Float.NaN
     } catch (_: IllegalStateException) {
         Float.NaN
     }
@@ -172,7 +174,20 @@ class PlayerSheetMotion(
 
     /** A tap on the mini player. */
     fun open() {
-        if (shown()) return
+        if (shown()) {
+            // Tapped while still on its way down: back up from where it is.
+            if (closing && holding) {
+                settle?.cancel()
+                closing = false
+                window?.setWindowAnimations(windowAnimations)
+                val from = held
+                settle = scope.launch {
+                    slide(from = from, to = 0f)
+                    held = Float.NaN
+                }
+            }
+            return
+        }
         settle?.cancel()
         closing = false
         val travel = travel()
@@ -302,6 +317,38 @@ class PlayerSheetMotion(
         }
     }
 
+    private var dismissPull = false
+
+    /** Whether a finger is pulling the open player down. */
+    val pulling: Boolean get() = dismissPull
+
+    /**
+     * A finger pulling the open player down by [delta] pixels (negative: back
+     * up). Returns how much of it the player took, for a nested scroll that
+     * has to hand the rest on. Only a downward pull starts one.
+     */
+    fun pullBy(delta: Float): Float {
+        if (!shown() || closing) return 0f
+        if (!dismissPull) {
+            if (delta <= 0f) return 0f
+            settle?.cancel()
+            dismissPull = true
+            if (!holding) held = 0f
+            pullStartAt = held
+            pullStartNanos = System.nanoTime()
+        }
+        val before = held
+        held = (held + delta).coerceIn(0f, travel())
+        return held - before
+    }
+
+    /** The finger lifted off a pull down: it goes home or it goes, as any other pull does. */
+    fun releasePull(velocity: Float) {
+        if (!dismissPull) return
+        dismissPull = false
+        release(velocity)
+    }
+
     /** From the host, once the sheet has left composition. */
     fun onSheetGone() {
         closing = false
@@ -311,6 +358,7 @@ class PlayerSheetMotion(
         windowRestore?.cancel()
         held = Float.NaN
         laidOut = false
+        dismissPull = false
         sheet = null
         window = null
     }

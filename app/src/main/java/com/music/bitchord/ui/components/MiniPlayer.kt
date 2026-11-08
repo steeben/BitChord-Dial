@@ -378,11 +378,30 @@ internal fun Modifier.playerDockPill(dock: PlayerDock?, corner: Dp? = null): Mod
     DisposableEffect(dock) {
         onDispose { placed[0]?.let(dock::releaseMiniPill) }
     }
-    return this.onPlaced { coordinates ->
-        placed[0] = coordinates
-        dock.reportMiniPill(coordinates, corner)
+    return this
+        .onPlaced { coordinates ->
+            placed[0] = coordinates
+            dock.reportMiniPill(coordinates, corner)
+        }
+        // The player's panel is standing where this pill is, as one surface
+        // with it: the pill stands aside rather than show under it.
+        .graphicsLayer { alpha = if (dock.panelShown) 0f else 1f }
+}
+
+/**
+ * The bars at the bottom of the page slide down out of the way as the player
+ * opens, and back up as it closes, in step with it. Read in the graphics layer
+ * only, so a frame of the travel costs no recomposition or layout.
+ */
+fun Modifier.slideAwayUnderPlayer(dock: PlayerDock?): Modifier {
+    if (dock == null) return this
+    return graphicsLayer {
+        translationY = (size.height + SLIDE_AWAY_CLEARANCE.toPx()) * dock.chromeAway()
     }
 }
+
+/** How far past its own height the bar goes, so its shadow leaves with it. */
+private val SLIDE_AWAY_CLEARANCE = 32.dp
 
 /** The mini player's cover for a music video: 16:9 at the cover's 40dp height. */
 private val VIDEO_ART_WIDTH = 71.dp
