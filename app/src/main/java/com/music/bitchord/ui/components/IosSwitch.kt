@@ -102,7 +102,7 @@ fun IosSwitch(
         label = "iosSwitchTrack",
     )
     val trackRim = if (dark) Color.White.copy(alpha = 0.16f) else Color.White.copy(alpha = 0.55f)
-    val thumbFill = Color.White.copy(alpha = (if (dark) 0.84f else 0.9f) * thumbClarity)
+    val thumbFill = Color.White.copy(alpha = thumbAlpha(dark) * thumbClarity)
     val ltr = LocalLayoutDirection.current == LayoutDirection.Ltr
 
     val haptics = rememberHaptics()
@@ -190,16 +190,31 @@ internal fun Modifier.frostedGlassFill(tint: Color, shape: Shape, dark: Boolean)
         .background(TRACK_SHEEN, shape)
         .border(GLASS_EDGE_WIDTH, if (dark) Color.White.copy(alpha = 0.16f) else Color.White.copy(alpha = 0.55f), shape)
 
+/** How milky the thumb is at rest. */
+private fun thumbAlpha(dark: Boolean): Float = if (dark) 0.84f else 0.9f
+
+/**
+ * The switch's thumb on any shape — its milky white fill, the bead-of-glass
+ * sheen and the bright rim, with the same small shadow — so a segmented
+ * selector's chosen option looks like the white part of a switch beside it.
+ * [presence] fades the whole thing in and out (0 draws nothing).
+ */
+internal fun Modifier.frostedThumbFill(shape: Shape, dark: Boolean, presence: Float = 1f): Modifier {
+    if (presence <= 0f) return this.clip(shape)
+    return this
+        .shadow(1.5.dp * presence, shape, clip = false)
+        .clip(shape)
+        .background(Color.White.copy(alpha = thumbAlpha(dark) * presence), shape)
+        .drawBehind { drawRect(THUMB_SHEEN, alpha = presence) }
+        .border(GLASS_EDGE_WIDTH, THUMB_RIM.copy(alpha = THUMB_RIM.alpha * presence), shape)
+}
+
 /** The tint of a frosted track that is off, or empty: a faint film either side of the theme. */
 internal fun frostedTrackTint(dark: Boolean, density: Float): Color =
     if (dark) Color.White.copy(alpha = (0.16f * density).coerceIn(0f, 1f))
     else Color.Black.copy(alpha = (0.09f * density).coerceIn(0f, 1f))
 
-/**
- * The fill of a frosted control that is on: this switch's track, and the
- * selected pill of the settings' segmented selectors, so a chosen option reads
- * exactly as strongly as a switch that is on beside it.
- */
+/** The fill of the switch's track while it is on. */
 internal fun frostedOnTint(dark: Boolean, density: Float): Color =
     (if (dark) Color(0xFF30D158) else Color(0xFF34C759))
         .copy(alpha = (ON_TRACK_ALPHA * density).coerceIn(0f, 1f))

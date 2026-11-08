@@ -203,7 +203,7 @@ import com.music.bitchord.playback.AudioOutputStatus
 import com.music.bitchord.playback.audio.bitperfect.BitPerfectOutput
 import com.music.bitchord.data.settings.AutomixPerformanceMode
 import com.music.bitchord.R
-import com.music.bitchord.ui.components.frostedOnTint
+import com.music.bitchord.ui.components.frostedThumbFill
 import com.music.bitchord.ui.components.frostedGlassFill
 import com.music.bitchord.ui.components.frostedTrackTint
 import com.music.bitchord.ui.components.lightweightLiquidGlass
@@ -3792,14 +3792,11 @@ internal fun SegmentedControl(
     val trackShape = RoundedCornerShape(10.dp)
     val pillShape = RoundedCornerShape(8.dp)
     // Frosted like the settings' switches: a see-through track with a sheen
-    // and a light rim, and a see-through accent pill over it, rather than a
-    // solid grey slab with a solid accent block in it.
+    // and a light rim, and the chosen option on a pill made exactly like the
+    // switches' white thumb, rather than a solid grey slab with a solid
+    // accent block in it.
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val glassDensity = rememberFrostedGlassDensity()
-    // The same green, at the same strength, as a switch that is on: in the
-    // theme's accent at that strength the chosen option read dimmer and more
-    // see-through than the switches in the rows around it.
-    val pillTint = frostedOnTint(dark, glassDensity)
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -3822,14 +3819,15 @@ internal fun SegmentedControl(
     ) {
         options.forEachIndexed { index, label ->
             val chosen = index == selectedIndex
-            val pill by animateColorAsState(
-                targetValue = if (chosen) pillTint else pillTint.copy(alpha = 0f),
+            val pill by animateFloatAsState(
+                targetValue = if (chosen) 1f else 0f,
                 animationSpec = tween(160),
                 label = "segmentPill",
             )
             val labelColor by animateColorAsState(
+                // Dark on the white pill, as the switch's thumb would carry it.
                 targetValue = if (chosen) {
-                    Color.White
+                    Color.Black.copy(alpha = 0.87f)
                 } else {
                     MaterialTheme.colorScheme.onSurfaceVariant
                 },
@@ -3839,13 +3837,7 @@ internal fun SegmentedControl(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .then(
-                        if (pill.alpha > 0f) {
-                            Modifier.frostedGlassFill(pill, pillShape, dark)
-                        } else {
-                            Modifier.clip(pillShape)
-                        },
-                    )
+                    .frostedThumbFill(pillShape, dark, pill)
                     .clickable(enabled = enabled) {
                         if (!chosen) {
                             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
