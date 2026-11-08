@@ -476,7 +476,7 @@
     <string name="biggest_day_note">היום הגדול ביותר שלך היה %1$s עם %2$s של האזנה.</string>
     <string name="close_replay">סגור Replay</string>
     <string name="couldnt_draw_picture">לא ניתן ליצור תמונה</string>
-    <string name="default_replay_holder">מאזין BitChord</string>
+    <string name="default_replay_holder">מאזין Dial</string>
     <string name="different_albums">אלבומים שונים</string>
     <string name="genres_pending">ז\'אנרים יופיעו ככל שהיסטוריית ההאזנה שלך תגדל</string>
     <string name="hour_am">%1$d AM</string>
@@ -506,7 +506,7 @@
     <string name="replay_artist_end"> המשיך לחזור.</string>
     <string name="replay_artist_focus">אמן אחד</string>
     <string name="replay_artist_start">כל החודש, </string>
-    <string name="replay_empty_description">האזן קצת יותר ו-BitChord יהפוך את ההיסטוריה שלך ל-Replay.</string>
+    <string name="replay_empty_description">האזן קצת יותר ו-Dial יהפוך את ההיסטוריה שלך ל-Replay.</string>
     <string name="replay_genre_end"> עיצבו את הצליל שלך.</string>
     <string name="replay_genre_focus">הז\'אנרים שלך</string>
     <string name="replay_genre_start">ביחד, </string>
@@ -621,7 +621,7 @@
     <string name="no_listening_history">אין היסטוריית האזנה</string>
     <string name="no_local_albums">שום דבר כאן לא שייך עדיין לאלבום או רשימת השמעה. הורד אלבום מלא או רשימת השמעה והם יופיעו כאן.</string>
     <string name="play_your_replay">הפעל את ה-Replay שלך</string>
-    <string name="counted_on_device_with_bitchord">נספר במכשיר זה עם BitChord</string>
+    <string name="counted_on_device_with_bitchord">נספר במכשיר זה עם Dial</string>
     <string name="this_month">החודש</string>
     <string name="this_year">השנה</string>
     <string name="all_time">כל הזמן</string>

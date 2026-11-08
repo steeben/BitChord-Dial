@@ -77,6 +77,7 @@ import com.music.bitchord.ui.player.MeshGradientBackground
 import com.music.bitchord.ui.player.MeshPalette
 import com.music.bitchord.ui.player.rememberArtworkColors
 import com.music.bitchord.ui.theme.AccentRed
+import com.music.bitchord.ui.theme.Tiny5Lcd
 import kotlinx.coroutines.launch
 
 /**
@@ -412,18 +413,20 @@ private fun StoryChrome(
                 color = Color.White,
                 modifier = Modifier.weight(1f),
             )
-            // The mark and the word together, the way the card carries it.
+            // Dial's mark and "dial." in the pixel face, as the share cards carry them.
             Icon(
-                painter = painterResource(R.drawable.ic_logo),
+                painter = painterResource(R.drawable.ic_dial_logo),
                 contentDescription = null,
                 tint = Color.White.copy(alpha = 0.9f),
-                modifier = Modifier.size(width = 26.dp, height = 17.dp),
+                modifier = Modifier.size(width = 13.dp, height = 18.dp),
             )
             Spacer(Modifier.width(7.dp))
             Text(
-                text = "BitChord",
+                text = "dial.",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.W700,
+                fontFamily = Tiny5Lcd,
+                fontWeight = FontWeight.W400,
+                fontSize = 20.sp,
                 color = Color.White.copy(alpha = 0.9f),
             )
         }

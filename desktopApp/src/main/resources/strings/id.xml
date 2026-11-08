@@ -478,7 +478,7 @@
     <string name="biggest_day_note">Hari terbesar Anda adalah %1$s dengan %2$s waktu mendengarkan.</string>
     <string name="close_replay">Tutup Replay</string>
     <string name="couldnt_draw_picture">Tidak dapat membuat gambar</string>
-    <string name="default_replay_holder">Pendengar BitChord</string>
+    <string name="default_replay_holder">Pendengar Dial</string>
     <string name="different_albums">Album yang berbeda</string>
     <string name="genres_pending">Genre akan muncul seiring bertambahnya riwayat mendengarkan Anda</string>
     <string name="hour_am">%1$d AM</string>
@@ -504,7 +504,7 @@
     <string name="replay_artist_end"> terus Anda dengarkan.</string>
     <string name="replay_artist_focus">Satu artis</string>
     <string name="replay_artist_start">Sepanjang bulan ini, </string>
-    <string name="replay_empty_description">Dengarkan sedikit lebih banyak dan BitChord akan mengubah riwayat Anda menjadi Replay.</string>
+    <string name="replay_empty_description">Dengarkan sedikit lebih banyak dan Dial akan mengubah riwayat Anda menjadi Replay.</string>
     <string name="replay_genre_end"> membentuk selera musik Anda.</string>
     <string name="replay_genre_focus">Genre Anda</string>
     <string name="replay_genre_start">Bersama-sama, </string>

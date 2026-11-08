@@ -492,7 +492,7 @@
     <string name="biggest_day_note">Dein größter Tag war %1$s mit %2$s Hörzeit.</string>
     <string name="close_replay">Replay schließen</string>
     <string name="couldnt_draw_picture">Das Bild konnte nicht erstellt werden</string>
-    <string name="default_replay_holder">BitChord-Hörer</string>
+    <string name="default_replay_holder">Dial-Hörer</string>
     <string name="different_albums">Verschiedene Alben</string>
     <string name="genres_pending">Genres erscheinen, sobald dein Hörverlauf wächst</string>
     <string name="hour_am">%1$d Uhr vorm.</string>
@@ -518,7 +518,7 @@
     <string name="replay_artist_end"> zurück.</string>
     <string name="replay_artist_focus">Ein Künstler</string>
     <string name="replay_artist_start">Den ganzen Monat kehrtest du immer wieder zu </string>
-    <string name="replay_empty_description">Höre etwas mehr, und BitChord verwandelt deinen Verlauf in ein Replay.</string>
+    <string name="replay_empty_description">Höre etwas mehr, und Dial verwandelt deinen Verlauf in ein Replay.</string>
     <string name="replay_genre_end"> deinen Sound.</string>
     <string name="replay_genre_focus">Deine Genres</string>
     <string name="replay_genre_start">Zusammen prägten </string>

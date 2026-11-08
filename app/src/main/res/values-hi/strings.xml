@@ -512,7 +512,7 @@
     <string name="biggest_day_note">आपका सबसे बड़ा दिन %1$s था, जिसमें %2$s सुना गया।</string>
     <string name="close_replay">Replay बंद करें</string>
     <string name="couldnt_draw_picture">तस्वीर नहीं बन सकी</string>
-    <string name="default_replay_holder">BitChord श्रोता</string>
+    <string name="default_replay_holder">Dial श्रोता</string>
     <string name="different_albums">अलग-अलग एल्बम</string>
     <string name="genres_pending">आपके सुनने का इतिहास बढ़ने पर शैलियां दिखेंगी</string>
     <string name="hour_am">%1$d AM</string>
@@ -542,7 +542,7 @@
     <string name="replay_artist_end"> बार-बार सुना गया।</string>
     <string name="replay_artist_focus">एक कलाकार</string>
     <string name="replay_artist_start">पूरे महीने, </string>
-    <string name="replay_empty_description">थोड़ा और सुनें और BitChord आपके इतिहास को एक Replay में बदल देगा।</string>
+    <string name="replay_empty_description">थोड़ा और सुनें और Dial आपके इतिहास को एक Replay में बदल देगा।</string>
     <string name="replay_genre_end"> ने आपकी पसंद को आकार दिया।</string>
     <string name="replay_genre_focus">आपकी शैलियां</string>
     <string name="replay_genre_start">मिलकर, </string>
@@ -673,7 +673,7 @@
     </plurals>
     <string name="no_local_albums">यहां अभी तक कुछ भी किसी एल्बम या प्लेलिस्ट का हिस्सा नहीं है। पूरा एल्बम या प्लेलिस्ट डाउनलोड करें और यह यहां दिखेगा।</string>
     <string name="play_your_replay">अपना Replay चलाएं</string>
-    <string name="counted_on_device_with_bitchord">इस डिवाइस पर BitChord के साथ गिना गया</string>
+    <string name="counted_on_device_with_bitchord">इस डिवाइस पर Dial के साथ गिना गया</string>
     <string name="this_month">इस महीने</string>
     <string name="this_year">इस साल</string>
     <string name="all_time">अब तक</string>

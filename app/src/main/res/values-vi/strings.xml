@@ -549,7 +549,7 @@
     <string name="biggest_day_note">Ngày bạn nghe nhiều nhất là %1$s với %2$s thời gian nghe.</string>
     <string name="close_replay">Đóng Replay</string>
     <string name="couldnt_draw_picture">Không thể tạo hình ảnh</string>
-    <string name="default_replay_holder">Người nghe BitChord</string>
+    <string name="default_replay_holder">Người nghe Dial</string>
     <string name="different_albums">Album khác nhau</string>
     <string name="genres_pending">Các thể loại sẽ xuất hiện khi lịch sử nghe nhạc của bạn nhiều hơn</string>
     <string name="hour_am">%1$d SA</string>
@@ -579,7 +579,7 @@
     <string name="replay_artist_end"> liên tục quay trở lại.</string>
     <string name="replay_artist_focus">Một nghệ sĩ</string>
     <string name="replay_artist_start">Suốt cả tháng, </string>
-    <string name="replay_empty_description">Hãy nghe thêm một chút và BitChord sẽ biến lịch sử nghe của bạn thành bản tóm tắt Replay.</string>
+    <string name="replay_empty_description">Hãy nghe thêm một chút và Dial sẽ biến lịch sử nghe của bạn thành bản tóm tắt Replay.</string>
     <string name="replay_genre_end"> đã định hình gu âm nhạc của bạn.</string>
     <string name="replay_genre_focus">Thể loại của bạn</string>
     <string name="replay_genre_start">Cùng nhau, </string>
@@ -711,7 +711,7 @@
     </plurals>
     <string name="no_local_albums">Chưa có mục nào ở đây thuộc về một album hoặc danh sách phát. Tải xuống toàn bộ album hoặc danh sách phát và nội dung sẽ xuất hiện ở đây.</string>
     <string name="play_your_replay">Phát Replay của bạn</string>
-    <string name="counted_on_device_with_bitchord">Được thống kê trên thiết bị này bằng BitChord</string>
+    <string name="counted_on_device_with_bitchord">Được thống kê trên thiết bị này bằng Dial</string>
     <string name="this_month">Tháng này</string>
     <string name="this_year">Năm nay</string>
     <string name="all_time">Tất cả thời gian</string>

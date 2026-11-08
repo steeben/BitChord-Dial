@@ -513,7 +513,7 @@
     <string name="biggest_day_note">Votre plus grosse journée était le %1$s, avec %2$s d\'écoute.</string>
     <string name="close_replay">Fermer Replay</string>
     <string name="couldnt_draw_picture">Impossible de créer l\'image</string>
-    <string name="default_replay_holder">Auditeur BitChord</string>
+    <string name="default_replay_holder">Auditeur Dial</string>
     <string name="different_albums">Albums différents</string>
     <string name="genres_pending">Les genres apparaîtront à mesure que votre historique d\'écoute grandit</string>
     <string name="hour_am">%1$d AM</string>
@@ -543,7 +543,7 @@
     <string name="replay_artist_end"> est revenu sans cesse.</string>
     <string name="replay_artist_focus">Un artiste</string>
     <string name="replay_artist_start">Tout au long du mois, </string>
-    <string name="replay_empty_description">Écoutez encore un peu et BitChord transformera votre historique en Replay.</string>
+    <string name="replay_empty_description">Écoutez encore un peu et Dial transformera votre historique en Replay.</string>
     <string name="replay_genre_end"> ont façonné votre style.</string>
     <string name="replay_genre_focus">Vos genres</string>
     <string name="replay_genre_start">Ensemble, </string>
@@ -674,7 +674,7 @@
     </plurals>
     <string name="no_local_albums">Rien ici n\'appartient encore à un album ou à une playlist. Téléchargez un album complet ou une playlist et il apparaîtra ici.</string>
     <string name="play_your_replay">Lire votre Replay</string>
-    <string name="counted_on_device_with_bitchord">Calculé sur cet appareil avec BitChord</string>
+    <string name="counted_on_device_with_bitchord">Calculé sur cet appareil avec Dial</string>
     <string name="this_month">Ce mois-ci</string>
     <string name="this_year">Cette année</string>
     <string name="all_time">Depuis toujours</string>

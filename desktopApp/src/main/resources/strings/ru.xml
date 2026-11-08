@@ -510,7 +510,7 @@
     <string name="biggest_day_note">Ваш самый насыщенный день был %1$s — %2$s прослушивания.</string>
     <string name="close_replay">Закрыть Replay</string>
     <string name="couldnt_draw_picture">Не удалось создать изображение</string>
-    <string name="default_replay_holder">Слушатель BitChord</string>
+    <string name="default_replay_holder">Слушатель Dial</string>
     <string name="different_albums">Разные альбомы</string>
     <string name="genres_pending">Жанры появятся по мере роста вашей истории прослушивания</string>
     <string name="hour_am">%1$d утра</string>
@@ -536,7 +536,7 @@
     <string name="replay_artist_end"> не отпускал вас.</string>
     <string name="replay_artist_focus">Один исполнитель</string>
     <string name="replay_artist_start">Весь месяц </string>
-    <string name="replay_empty_description">Слушайте немного больше, и BitChord превратит вашу историю в Replay.</string>
+    <string name="replay_empty_description">Слушайте немного больше, и Dial превратит вашу историю в Replay.</string>
     <string name="replay_genre_end"> определили ваше звучание.</string>
     <string name="replay_genre_focus">Ваши жанры</string>
     <string name="replay_genre_start">Вместе </string>

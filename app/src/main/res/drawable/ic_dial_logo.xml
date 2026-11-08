@@ -1,0 +1,18 @@
+<!--
+  Dial's mark: the 3x4 grid of squares the Home title sits beside (see
+  SquareLogo). Drawn white and tinted where it is used; the dim squares keep
+  SquareLogo's lower alpha so they read as unlit through the tint.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="12dp"
+    android:height="16.5dp"
+    android:viewportWidth="160"
+    android:viewportHeight="220">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillAlpha="0.2"
+        android:pathData="M8,0H32A8,8 0 0 1 40,8V32A8,8 0 0 1 32,40H8A8,8 0 0 1 0,32V8A8,8 0 0 1 8,0ZM8,60H32A8,8 0 0 1 40,68V92A8,8 0 0 1 32,100H8A8,8 0 0 1 0,92V68A8,8 0 0 1 8,60ZM128,60H152A8,8 0 0 1 160,68V92A8,8 0 0 1 152,100H128A8,8 0 0 1 120,92V68A8,8 0 0 1 128,60ZM128,120H152A8,8 0 0 1 160,128V152A8,8 0 0 1 152,160H128A8,8 0 0 1 120,152V128A8,8 0 0 1 128,120ZM128,180H152A8,8 0 0 1 160,188V212A8,8 0 0 1 152,220H128A8,8 0 0 1 120,212V188A8,8 0 0 1 128,180Z"/>
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M68,0H92A8,8 0 0 1 100,8V32A8,8 0 0 1 92,40H68A8,8 0 0 1 60,32V8A8,8 0 0 1 68,0ZM128,0H152A8,8 0 0 1 160,8V32A8,8 0 0 1 152,40H128A8,8 0 0 1 120,32V8A8,8 0 0 1 128,0ZM68,60H92A8,8 0 0 1 100,68V92A8,8 0 0 1 92,100H68A8,8 0 0 1 60,92V68A8,8 0 0 1 68,60ZM8,120H32A8,8 0 0 1 40,128V152A8,8 0 0 1 32,160H8A8,8 0 0 1 0,152V128A8,8 0 0 1 8,120ZM68,120H92A8,8 0 0 1 100,128V152A8,8 0 0 1 92,160H68A8,8 0 0 1 60,152V128A8,8 0 0 1 68,120ZM8,180H32A8,8 0 0 1 40,188V212A8,8 0 0 1 32,220H8A8,8 0 0 1 0,212V188A8,8 0 0 1 8,180ZM68,180H92A8,8 0 0 1 100,188V212A8,8 0 0 1 92,220H68A8,8 0 0 1 60,212V188A8,8 0 0 1 68,180Z"/>
+</vector>

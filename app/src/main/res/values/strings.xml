@@ -767,7 +767,7 @@
     <string name="biggest_day_note">Your biggest day was %1$s with %2$s of listening.</string>
     <string name="close_replay">Close Replay</string>
     <string name="couldnt_draw_picture">Could not create the picture</string>
-    <string name="default_replay_holder">BitChord listener</string>
+    <string name="default_replay_holder">Dial listener</string>
     <string name="different_albums">Different albums</string>
     <string name="genres_pending">Genres will appear as your listening history grows</string>
     <string name="hour_am">%1$d AM</string>
@@ -797,7 +797,7 @@
     <string name="replay_artist_end"> kept coming back.</string>
     <string name="replay_artist_focus">One artist</string>
     <string name="replay_artist_start">All month, </string>
-    <string name="replay_empty_description">Listen a little more and BitChord will turn your history into a Replay.</string>
+    <string name="replay_empty_description">Listen a little more and Dial will turn your history into a Replay.</string>
     <string name="replay_genre_end"> shaped your sound.</string>
     <string name="replay_genre_focus">Your genres</string>
     <string name="replay_genre_start">Together, </string>
@@ -934,7 +934,7 @@
     </plurals>
     <string name="no_local_albums">Nothing here belongs to an album or playlist yet. Download a complete album or playlist and it will appear here.</string>
     <string name="play_your_replay">Play your Replay</string>
-    <string name="counted_on_device_with_bitchord">Counted on this device with BitChord</string>
+    <string name="counted_on_device_with_bitchord">Counted on this device with Dial</string>
     <string name="this_month">This month</string>
     <string name="this_year">This year</string>
     <string name="all_time">All time</string>

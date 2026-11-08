@@ -693,7 +693,7 @@
     <string name="biggest_day_note">%1$s에 %2$s 동안 가장 오래 들었습니다.</string>
     <string name="close_replay">리플레이 닫기</string>
     <string name="couldnt_draw_picture">사진을 생성할 수 없음</string>
-    <string name="default_replay_holder">BitChord 감상자</string>
+    <string name="default_replay_holder">Dial 감상자</string>
     <string name="different_albums">다른 앨범</string>
     <string name="genres_pending">재생 기록이 쌓이면 장르가 나타납니다</string>
     <string name="hour_am">오전 %1$d시</string>
@@ -723,7 +723,7 @@
     <string name="replay_artist_end">을 꾸준히 들었어요.</string>
     <string name="replay_artist_focus">아티스트 1명</string>
     <string name="replay_artist_start">한 달 동안, </string>
-    <string name="replay_empty_description">조금 더 감상하시면 BitChord에서 기록을 리플레이로 만들어 드립니다.</string>
+    <string name="replay_empty_description">조금 더 감상하시면 Dial에서 기록을 리플레이로 만들어 드립니다.</string>
     <string name="replay_genre_end">가 한데 모여, 취향을 다듬었어요.</string>
     <string name="replay_genre_focus">장르</string>
     <string name="replay_genre_start">내 </string>
@@ -860,7 +860,7 @@
     </plurals>
     <string name="no_local_albums">여기에 앨범이나 재생목록으로 표시할 항목이 없습니다. 앨범이나 재생목록 전체를 다운로드하면 여기에 나타납니다.</string>
     <string name="play_your_replay">내 리플레이 재생</string>
-    <string name="counted_on_device_with_bitchord">BitChord가 이 기기에서 집계</string>
+    <string name="counted_on_device_with_bitchord">Dial가 이 기기에서 집계</string>
     <string name="this_month">이번 달</string>
     <string name="this_year">올해</string>
     <string name="all_time">전체</string>

@@ -477,7 +477,7 @@
     <string name="biggest_day_note">Seu maior dia foi %1$s com %2$s de música.</string>
     <string name="close_replay">Fechar Replay</string>
     <string name="couldnt_draw_picture">Não foi possível criar a imagem</string>
-    <string name="default_replay_holder">Ouvinte BitChord</string>
+    <string name="default_replay_holder">Ouvinte Dial</string>
     <string name="different_albums">Álbuns diferentes</string>
     <string name="genres_pending">Gêneros aparecerão conforme seu histórico cresce</string>
     <string name="hour_am">%1$d AM</string>
@@ -507,7 +507,7 @@
     <string name="replay_artist_end"> continuou voltando.</string>
     <string name="replay_artist_focus">Um artista</string>
     <string name="replay_artist_start">Todo o mês, </string>
-    <string name="replay_empty_description">Ouça um pouco mais e o BitChord criará um Replay.</string>
+    <string name="replay_empty_description">Ouça um pouco mais e o Dial criará um Replay.</string>
     <string name="replay_genre_end"> moldaram seu som.</string>
     <string name="replay_genre_focus">Seus gêneros</string>
     <string name="replay_genre_start">Juntos, </string>
@@ -622,7 +622,7 @@
     <string name="no_listening_history">sem histórico</string>
     <string name="no_local_albums">Nenhum álbum ou playlist ainda. Baixe um álbum e ele aparecerá aqui.</string>
     <string name="play_your_replay">Tocar seu Replay</string>
-    <string name="counted_on_device_with_bitchord">Contabilizado neste dispositivo com BitChord</string>
+    <string name="counted_on_device_with_bitchord">Contabilizado neste dispositivo com Dial</string>
     <string name="this_month">Este mês</string>
     <string name="this_year">Este ano</string>
     <string name="all_time">Todo o tempo</string>

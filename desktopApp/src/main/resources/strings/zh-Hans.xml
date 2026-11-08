@@ -480,7 +480,7 @@
     <string name="biggest_day_note">你收听最多的一天是 %1$s，共收听了 %2$s。</string>
     <string name="close_replay">关闭 Replay</string>
     <string name="couldnt_draw_picture">无法生成图片</string>
-    <string name="default_replay_holder">BitChord 听众</string>
+    <string name="default_replay_holder">Dial 听众</string>
     <string name="different_albums">不同专辑</string>
     <string name="genres_pending">随着收听记录增多，流派信息会逐渐显示</string>
     <string name="hour_am">上午%1$d点</string>
@@ -506,7 +506,7 @@
     <string name="replay_artist_end">让你一听再听。</string>
     <string name="replay_artist_focus">同一位艺人</string>
     <string name="replay_artist_start">整月里，</string>
-    <string name="replay_empty_description">再多听一会儿，BitChord 就会把你的收听记录变成一份 Replay。</string>
+    <string name="replay_empty_description">再多听一会儿，Dial 就会把你的收听记录变成一份 Replay。</string>
     <string name="replay_genre_end">塑造了你的听感。</string>
     <string name="replay_genre_focus">你的流派</string>
     <string name="replay_genre_start">总的来说，</string>

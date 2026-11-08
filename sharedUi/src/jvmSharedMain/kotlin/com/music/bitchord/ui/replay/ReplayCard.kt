@@ -146,10 +146,11 @@ fun ReplayCreditCard(
                 )
                 Spacer(Modifier.width(10.dp))
                 Icon(
-                    painter = painterResource(Res.drawable.ic_logo),
+                    painter = painterResource(Res.drawable.ic_dial_logo),
                     contentDescription = null,
                     tint = Color.White,
-                    modifier = Modifier.size(width = 34.dp, height = 22.dp),
+                    // Dial's 3x4 grid, 160 wide by 220 tall.
+                    modifier = Modifier.size(width = 16.dp, height = 22.dp),
                 )
             }
 

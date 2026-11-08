@@ -497,7 +497,7 @@
     <string name="biggest_day_note">最も聴いた日は%1$sで、%2$sの再生時間でした。</string>
     <string name="close_replay">Replayを閉じる</string>
     <string name="couldnt_draw_picture">画像を作成できませんでした</string>
-    <string name="default_replay_holder">BitChordリスナー</string>
+    <string name="default_replay_holder">Dialリスナー</string>
     <string name="different_albums">さまざまなアルバム</string>
     <string name="genres_pending">再生履歴が増えるとジャンルが表示されます</string>
     <string name="hour_am">午前%1$d時</string>
@@ -527,7 +527,7 @@
     <string name="replay_artist_end">に何度も戻ってきました。</string>
     <string name="replay_artist_focus">1組のアーティスト</string>
     <string name="replay_artist_start">今月はずっと、</string>
-    <string name="replay_empty_description">もう少し聴くと、BitChordがあなたの履歴からReplayを作成します。</string>
+    <string name="replay_empty_description">もう少し聴くと、Dialがあなたの履歴からReplayを作成します。</string>
     <string name="replay_genre_end">があなたのサウンドを形作りました。</string>
     <string name="replay_genre_focus">あなたのジャンル</string>
     <string name="replay_genre_start">合わせて、</string>
@@ -653,7 +653,7 @@
     </plurals>
     <string name="no_local_albums">ここにはまだアルバムやプレイリストに属するものがありません。完全なアルバムやプレイリストをダウンロードするとここに表示されます。</string>
     <string name="play_your_replay">あなたのReplayを再生</string>
-    <string name="counted_on_device_with_bitchord">BitChordでこのデバイス内で集計</string>
+    <string name="counted_on_device_with_bitchord">Dialでこのデバイス内で集計</string>
     <string name="this_month">今月</string>
     <string name="this_year">今年</string>
     <string name="all_time">すべての期間</string>

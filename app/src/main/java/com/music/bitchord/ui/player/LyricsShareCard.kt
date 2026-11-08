@@ -283,7 +283,7 @@ private const val MARK_H = 56f
  * The Dial mark: three columns by four rows of rounded squares, the lit ones
  * tracing the logo's path (A3, A4, B4, B3, B2, B1, C1) and the rest dim.
  * Same geometry as the splash: 40-unit squares on a 60-unit pitch, 8-unit
- * corners, scaled so the grid is [MARK_H] tall with its right edge at [right].
+ * corners, scaled so the grid is [height] tall with its right edge at [right].
  */
 private val MARK_LIT = arrayOf(
     booleanArrayOf(false, true, true),
@@ -292,11 +292,17 @@ private val MARK_LIT = arrayOf(
     booleanArrayOf(true, true, false),
 )
 
-private fun drawDialMark(canvas: Canvas, right: Float, bottom: Float) {
-    val scale = MARK_H / 220f
+internal fun drawDialMark(
+    canvas: Canvas,
+    right: Float,
+    bottom: Float,
+    height: Float = MARK_H,
+    ink: Int = BRAND_INK,
+) {
+    val scale = height / 220f
     val left = right - 160f * scale
-    val top = bottom - MARK_H
-    val lit = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = BRAND_INK }
+    val top = bottom - height
+    val lit = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = ink }
     val dim = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x33FFFFFF }
     val box = RectF()
     val corner = 8f * scale
@@ -311,7 +317,7 @@ private fun drawDialMark(canvas: Canvas, right: Float, bottom: Float) {
 }
 
 /** Tiny5 LCD, the face the Home title sets "Dial" in; the bold sans if it won't load. */
-private fun pixelFont(context: Context): Typeface =
+internal fun pixelFont(context: Context): Typeface =
     runCatching { ResourcesCompat.getFont(context, R.font.tiny5_lcd_regular) }.getOrNull()
         ?: Typeface.DEFAULT_BOLD
 

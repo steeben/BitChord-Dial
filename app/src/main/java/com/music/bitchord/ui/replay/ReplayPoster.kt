@@ -23,6 +23,8 @@ import com.music.bitchord.R
 import com.music.bitchord.data.model.CARD_ART_PX
 import com.music.bitchord.data.model.artworkAt
 import com.music.bitchord.data.stats.ReplaySummary
+import com.music.bitchord.ui.player.drawDialMark
+import com.music.bitchord.ui.player.pixelFont
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -403,15 +405,21 @@ private fun drawHeader(
         "Replay · $label"
     }
     canvas.drawText(title, MARGIN, 132f, type.heading(46f, 0xFFFFFFFF.toInt()))
-    val brand = type.heading(46f, 0xE6FFFFFF.toInt()).apply {
+    // Dial's mark and "dial." in the pixel face, as the lyrics card carries
+    // them: the one artefact of this app that ends up in somebody else's chat.
+    val brand = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = pixelFont(context)
+        textSize = BRAND_SIZE
+        color = 0xE6FFFFFF.toInt()
         textAlign = Paint.Align.RIGHT
     }
-    canvas.drawText("BitChord", POSTER_W - MARGIN, 132f, brand)
-    // The mark, to the left of the word, exactly as the story header and the
-    // card carry it. Without it the one artefact of this app that ends up in
-    // somebody else's chat was the only place the logo didn't appear.
-    val wordWidth = brand.measureText("BitChord")
-    drawLogo(canvas, context, POSTER_W - MARGIN - wordWidth - LOGO_GAP, 132f)
+    canvas.drawText(BRAND, POSTER_W - MARGIN, 132f, brand)
+    drawDialMark(
+        canvas,
+        right = POSTER_W - MARGIN - brand.measureText(BRAND) - LOGO_GAP,
+        bottom = 132f,
+        height = MARK_H,
+    )
 
     val credit = listOfNotNull(
         holder.ifBlank { context.getString(R.string.default_replay_holder) },
@@ -691,25 +699,6 @@ private fun drawRuns(
     return y + 24f
 }
 
-/**
- * The BitChord mark, baseline-aligned with the word beside it.
- *
- * The same vector the app draws everywhere, tinted and given bounds rather than
- * rasterised to a PNG first — a vector drawable renders into an ordinary canvas
- * on every version this app supports, so there is nothing to be gained by
- * keeping a second copy of the logo around at a fixed size.
- */
-internal fun drawLogo(canvas: Canvas, context: Context, right: Float, baseline: Float) {
-    val logo = runCatching {
-        ResourcesCompat.getDrawable(context.resources, R.drawable.ic_logo, null)
-    }.getOrNull() ?: return
-    val left = right - LOGO_W
-    val top = baseline - LOGO_H
-    logo.setTint(0xE6FFFFFF.toInt())
-    logo.setBounds(left.toInt(), top.toInt(), (left + LOGO_W).toInt(), (top + LOGO_H).toInt())
-    logo.draw(canvas)
-}
-
 /** Trims [text] to [width], with an ellipsis, the way a single-line row would. */
 internal fun ellipsised(text: String, paint: Paint, width: Float): String {
     if (paint.measureText(text) <= width) return text
@@ -768,9 +757,12 @@ private const val POSTER_H = 1920
 private const val MARGIN = 72f
 
 /** The mark's drawn size. 730×484 in the vector, so this keeps its proportions. */
-private const val LOGO_W = 66f
-private const val LOGO_H = 44f
 private const val LOGO_GAP = 20f
+private const val BRAND = "dial."
+private const val BRAND_SIZE = 48f
+
+/** Height of the 3×4 Dial squares beside the word; they stand on its baseline. */
+private const val MARK_H = 42f
 
 /** The width type and artwork are laid out in. */
 private const val CONTENT_W = POSTER_W - MARGIN * 2
