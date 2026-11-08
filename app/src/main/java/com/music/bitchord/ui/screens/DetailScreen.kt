@@ -1515,7 +1515,7 @@ private val RELEASE_PILL_GAP = 12.dp
  * The release Play pill's fill: 15 points more see-through than the artist
  * page's [PLAY_FILL_ALPHA].
  */
-private const val RELEASE_PLAY_FILL_ALPHA = PLAY_FILL_ALPHA - 0.15f
+private const val RELEASE_PLAY_FILL_ALPHA = 0.70f
 
 /** The glass the header's buttons are made of, in any [shape]. */
 @Composable
