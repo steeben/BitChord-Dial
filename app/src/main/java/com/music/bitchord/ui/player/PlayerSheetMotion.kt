@@ -242,6 +242,7 @@ class PlayerSheetMotion(
         closing = true
         quietWindow()
         settle?.cancel()
+        dock.refreshArt()
         val from = position().takeUnless { it.isNaN() } ?: run {
             dismissQuietly()
             return
@@ -262,6 +263,7 @@ class PlayerSheetMotion(
     fun backProgress(progress: Float) {
         if (!shown() || closing) return
         settle?.cancel()
+        if (!holding) dock.refreshArt()
         held = travel() * BACK_PEEK_FRACTION * progress.coerceIn(0f, 1f)
     }
 
@@ -312,6 +314,7 @@ class PlayerSheetMotion(
         if (!open) {
             closing = true
             quietWindow()
+            dock.refreshArt()
         }
         val from = held
         settle = scope.launch {
@@ -338,6 +341,7 @@ class PlayerSheetMotion(
         if (!dismissPull) {
             if (delta <= 0f) return 0f
             settle?.cancel()
+            dock.refreshArt()
             dismissPull = true
             if (!holding) held = 0f
             pullStartAt = held

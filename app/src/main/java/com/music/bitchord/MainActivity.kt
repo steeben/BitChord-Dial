@@ -6522,6 +6522,8 @@ private fun BitChordApp(
                     isPlaying = player.isPlaying,
                     isLoading = playPauseBusy,
                     glass = glassActive,
+                    position = player.position,
+                    durationMs = player.durationMs,
                     scrimAlpha = PLAYER_SCRIM_ALPHA,
                     onLaidOut = { size ->
                         playerDock.sheetTravel = size.height.toFloat()

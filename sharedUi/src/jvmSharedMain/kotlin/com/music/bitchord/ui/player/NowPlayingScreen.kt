@@ -618,6 +618,20 @@ private var lastPresentedCanvasUrl: String? = null
  */
 private const val DOCK_FADE_LEAD = 0.15f
 
+/**
+ * Below this much of the way open, a docking sleeve is all card and none of
+ * the full-bleed banner; above it the banner comes back in, eased, until the
+ * player is fully open.
+ */
+private const val DOCK_BANNER_FROM = 0.45f
+
+/** How much of the banner a docking sleeve still is, [t] of the way open. */
+private fun dockBannerShare(t: Float): Float {
+    if (t >= 1f) return 1f
+    val x = ((t - DOCK_BANNER_FROM) / (1f - DOCK_BANNER_FROM)).coerceIn(0f, 1f)
+    return x * x * (3f - 2f * x)
+}
+
 /** The least the faded player is drawn at while docking — see the player's fade. */
 private const val DOCK_FADE_FLOOR = 1f / 255f
 
@@ -3770,8 +3784,14 @@ fun NowPlayingScreen(
                 // How far the expanded sleeve is the banner rather than the
                 // card. Zero until there is a banner to be, which is to say
                 // until [heroHeight] and the player's width have been measured.
+                //
+                // On its way to and from the mini player the sleeve is the card
+                // first: the banner gives way to it over the first part of the
+                // trip down, so the artwork that lands on the mini player's
+                // cover is the same square picture, not a zoomed crop of it
+                // changing into one in the last few frames.
                 fun bannerShare(): Float =
-                    if (heroHeight > 0.dp && playerBounds.width > 0) heroT.value else 0f
+                    if (heroHeight > 0.dp && playerBounds.width > 0) heroT.value * dockBannerShare(dockT()) else 0f
                 // How much of the banner is on screen: its share, given up as
                 // the sleeve collapses — the same movement as the collapse
                 // rather than a fade chained after it.

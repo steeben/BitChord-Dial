@@ -59,6 +59,9 @@ import com.music.bitchord.ui.components.MiniPlayerNextGlyph
 import com.music.bitchord.ui.components.PlayPauseGlyph
 import com.music.bitchord.ui.components.glassContentColor
 import com.music.bitchord.ui.components.liquidGlass
+import com.music.bitchord.ui.components.miniPlayerProgress
+import com.music.bitchord.ui.components.pageAccent
+import com.music.bitchord.playback.PlaybackPosition
 import com.music.bitchord.ui.components.rememberRemoteArtworkUrl
 import com.music.bitchord.ui.components.thumbnailContentScale
 import com.music.bitchord.data.model.ROW_ART_PX
@@ -111,6 +114,9 @@ fun PlayerPanel(
     isLoading: Boolean,
     /** Whether the pill underneath is the glass bar's rather than the plain mini player. */
     glass: Boolean,
+    /** The playhead, drawn along the pill's edge as the pill draws it; read only when drawing. */
+    position: PlaybackPosition?,
+    durationMs: Long,
     scrimAlpha: Float,
     onLaidOut: (IntSize) -> Unit,
     modifier: Modifier = Modifier,
@@ -205,6 +211,8 @@ fun PlayerPanel(
                         isLoading = isLoading,
                         glass = glass,
                         inline = inline,
+                        position = position,
+                        durationMs = durationMs,
                         onTap = motion::open,
                         modifier = Modifier
                             .align(Alignment.TopStart)
@@ -263,6 +271,8 @@ private fun PanelMiniRow(
     isLoading: Boolean,
     glass: Boolean,
     inline: Boolean,
+    position: PlaybackPosition?,
+    durationMs: Long,
     onTap: () -> Unit,
     modifier: Modifier,
 ) {
@@ -282,9 +292,29 @@ private fun PanelMiniRow(
     val artUrl = rememberRemoteArtworkUrl(song)
     val glyphSlot = if (inline) 32.dp else 40.dp
     val glyphSize = if (inline) 24.dp else 32.dp
+    // The pill's own shape, for its playhead: the glow follows its edge.
+    val pillShape = remember(circular) {
+        if (circular) RoundedCornerShape(percent = 50) else RoundedCornerShape(16.dp)
+    }
+    val density = LocalDensity.current
     Box(
         contentAlignment = Alignment.Center,
-        modifier = modifier.clickable(
+        modifier = modifier
+            .miniPlayerProgress(
+                position = position,
+                durationMs = durationMs,
+                color = pageAccent(),
+                glow = glass,
+                shape = pillShape,
+                corner = { size ->
+                    when {
+                        !glass -> 0f
+                        circular -> size.height / 2f
+                        else -> with(density) { 16.dp.toPx() }
+                    }
+                },
+            )
+            .clickable(
             interactionSource = remember { MutableInteractionSource() },
             indication = null,
             onClick = onTap,

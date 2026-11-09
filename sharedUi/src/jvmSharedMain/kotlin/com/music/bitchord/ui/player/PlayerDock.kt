@@ -180,6 +180,20 @@ class PlayerDock {
      * anything has moved: a pull lifts the bar, and a pill measured a frame
      * later was measured lifted. A no-op if they are already held.
      */
+    /**
+     * Measures the cover again, as the player starts back down to it: a tap
+     * on the pill swells it for a moment, and a cover measured during that
+     * swell was a few pixels off where the pill's own comes back.
+     */
+    fun refreshArt() {
+        val held = frozenPill ?: return
+        val pill = livePill() ?: return
+        val art = liveArt() ?: return
+        // The bar may have slid away since; the pill moves with it, so the
+        // cover is put back by however far the pill has gone.
+        frozenArt = art.translate(held.left - pill.left, held.top - pill.top)
+    }
+
     fun freezeEnds() {
         if (frozenPill == null) frozenPill = livePill()
         if (frozenArt == null) frozenArt = liveArt()
