@@ -320,19 +320,12 @@ internal fun Modifier.miniPlayerGestures(
             target.release(
                 if (finished) tracker.calculateVelocity().y.coerceIn(-maxVelocity, maxVelocity) else 0f,
             )
-            // Let go, the bar springs home: under the player on its way up, or
-            // in full view if the pull fell short and the player went back.
-            val from = lift.floatValue
-            settle[0] = scope.launch {
-                animate(
-                    initialValue = from,
-                    targetValue = 0f,
-                    animationSpec = spring(
-                        dampingRatio = 0.65f,
-                        stiffness = Spring.StiffnessMediumLow,
-                    ),
-                ) { value, _ -> lift.floatValue = value }
-            }
+            // Let go, the bar is home at once. The player's panel has been
+            // standing in for it since the pull began, so the lift was never
+            // seen; left to spring back, the bar came out from under a pull
+            // that fell short still lifted, and dropped into place after the
+            // player's cover had already landed where it belongs.
+            lift.floatValue = 0f
         }
     }.graphicsLayer { translationY = -lift.floatValue }
 }
