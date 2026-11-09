@@ -20,9 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import kotlin.math.PI
@@ -51,18 +49,17 @@ private fun ambientTone(target: Color): Color {
 
 /**
  * Three soft, semi-large colour blobs behind the app's pages that drift around
- * and through each other, all in the one [primary] colour: one as it is, one
- * [AMBIENT_SHADE] brighter and one as much darker. Drawn at [AMBIENT_ALPHA] in
- * screen blending, so where they cross they add up to something brighter.
- * Plain radial gradients straight onto the page's background — no blur pass
+ * and through each other: [primary], a dimmer [primary], and [secondary]. Drawn
+ * as plain radial gradients straight onto the page's background — no blur pass
  * — so the motion costs three gradient draws a frame.
  *
- * The colour crossfades when it changes. With [animate] off (reduce
- * animation), the blobs hold still.
+ * Colours crossfade when they change. With [animate] off (reduce animation),
+ * the blobs hold still.
  */
 @Composable
-fun rememberAmbientBlobs(primary: Color, animate: Boolean): AmbientBlobs {
+fun rememberAmbientBlobs(primary: Color, secondary: Color, animate: Boolean): AmbientBlobs {
     val first by animateColorAsState(ambientTone(primary), tween(AMBIENT_COLOR_FADE_MS), label = "ambientFirst")
+    val second by animateColorAsState(ambientTone(secondary), tween(AMBIENT_COLOR_FADE_MS), label = "ambientSecond")
     // Stepped a few times a second rather than every frame. The blobs sit
     // behind every page, inside the layer the frosted bars and glass sample,
     // so each step redraws those blurs too; at 60 a second that was a steady
@@ -79,7 +76,7 @@ fun rememberAmbientBlobs(primary: Color, animate: Boolean): AmbientBlobs {
             }
         }
     }
-    return AmbientBlobs({ first }, phase)
+    return AmbientBlobs({ first }, { second }, phase)
 }
 
 /**
@@ -117,18 +114,18 @@ fun rememberAmbientAccent(primary: Color, on: Boolean): Color? {
 fun pageAccent(fallback: Color = MaterialTheme.colorScheme.primary): Color =
     LocalAmbientAccent.current ?: LocalNowPlayingTint.current ?: fallback
 
-/** [color] [AMBIENT_SHADE] brighter: that much of the way to white. */
-private fun brighter(color: Color): Color = lerp(color, Color.White, AMBIENT_SHADE)
-
-/** [color] [AMBIENT_SHADE] darker: each channel scaled down by that much. */
-private fun darker(color: Color): Color = color.copy(
-    red = color.red * (1f - AMBIENT_SHADE),
-    green = color.green * (1f - AMBIENT_SHADE),
-    blue = color.blue * (1f - AMBIENT_SHADE),
-)
+/** A second colour for a single brand colour: the same hue turned a little and darkened. */
+fun ambientCompanion(color: Color): Color {
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(color.toArgb(), hsv)
+    hsv[0] = (hsv[0] + 28f) % 360f
+    hsv[2] = hsv[2] * 0.8f
+    return Color(android.graphics.Color.HSVToColor(hsv))
+}
 
 class AmbientBlobs internal constructor(
     internal val primary: () -> Color,
+    internal val secondary: () -> Color,
     internal val phase: State<Float>,
 )
 
@@ -147,12 +144,23 @@ fun Modifier.ambientBlobs(blobs: AmbientBlobs?): Modifier =
             val radius = max(w, h) * AMBIENT_RADIUS_FRACTION
             val main = blobs.primary()
             val blobs3 = listOf(
-                Offset(w * (0.5f + 0.38f * sin(t)), h * (0.35f + 0.28f * sin(2f * t + 0.6f))) to main,
-                Offset(w * (0.5f + 0.38f * cos(2f * t + 1.3f)), h * (0.6f + 0.3f * sin(t + 2.2f))) to brighter(main),
-                Offset(w * (0.5f + 0.4f * sin(3f * t + 2.4f)), h * (0.5f + 0.34f * cos(t + 0.9f))) to darker(main),
+                Triple(
+                    Offset(w * (0.5f + 0.38f * sin(t)), h * (0.35f + 0.28f * sin(2f * t + 0.6f))),
+                    main,
+                    AMBIENT_ALPHA,
+                ),
+                Triple(
+                    Offset(w * (0.5f + 0.38f * cos(2f * t + 1.3f)), h * (0.6f + 0.3f * sin(t + 2.2f))),
+                    main.copy(red = main.red * 0.7f, green = main.green * 0.7f, blue = main.blue * 0.7f),
+                    AMBIENT_ALPHA * 0.9f,
+                ),
+                Triple(
+                    Offset(w * (0.5f + 0.4f * sin(3f * t + 2.4f)), h * (0.5f + 0.34f * cos(t + 0.9f))),
+                    blobs.secondary(),
+                    AMBIENT_ALPHA * 0.95f,
+                ),
             )
-            val strength = AMBIENT_ALPHA
-            blobs3.forEach { (centre, colour) ->
+            blobs3.forEach { (centre, colour, strength) ->
                 drawCircle(
                     brush = Brush.radialGradient(
                         colors = listOf(
@@ -165,9 +173,6 @@ fun Modifier.ambientBlobs(blobs: AmbientBlobs?): Modifier =
                     ),
                     radius = radius,
                     center = centre,
-                    // Screen rather than plain over: two blobs crossing come
-                    // out brighter than either, not just more opaque.
-                    blendMode = BlendMode.Screen,
                 )
             }
         }
@@ -179,11 +184,8 @@ private const val AMBIENT_MAX_VALUE = 0.85f
 /** The darkest it may be: a dark cover is lifted to this, keeping its hue. */
 private const val AMBIENT_MIN_VALUE = 0.6f
 
-/** How strongly each blob tints the page at its centre: the accent at 75%. */
-private const val AMBIENT_ALPHA = 0.75f
-
-/** How much brighter one blob is than the accent, and how much darker another. */
-private const val AMBIENT_SHADE = 0.15f
+/** How strongly the nearest blob tints the page at its centre. */
+private const val AMBIENT_ALPHA = 0.30f
 
 /** Each blob's reach, as a share of the page's longer side. */
 private const val AMBIENT_RADIUS_FRACTION = 0.48f

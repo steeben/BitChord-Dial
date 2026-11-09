@@ -254,6 +254,7 @@ import com.music.bitchord.ui.components.rememberAmbientBlobs
 import com.music.bitchord.ui.components.rememberAmbientAccent
 import com.music.bitchord.ui.components.LocalAmbientAccent
 import com.music.bitchord.ui.components.pageAccent
+import com.music.bitchord.ui.components.ambientCompanion
 import com.music.bitchord.ui.screens.libraryExtraLinks
 import com.music.bitchord.ui.screens.LibraryHomeScreen
 import com.music.bitchord.ui.screens.LibraryMenu
@@ -3251,20 +3252,31 @@ private fun BitChordApp(
     val nowPlayingTint = rememberNowPlayingTint(player.song?.thumbnailUrl)
     // The colour blobs behind the pages: the app's red, Spotify's green in the
     // Spotify library, YouTube's red in the YouTube Music one, or the playing
-    // song's accent when Settings asks for that. One colour, never a second
-    // one read off the artwork, so the blobs match the logo and progress bars.
+    // song's accent when Settings asks for that. The main blob is that one
+    // accent, so it matches the logo and progress bars; the second colour is
+    // the artwork's most common one.
     val ambientOn by CustomizationSettings.ambientBackground.collectAsStateWithLifecycle()
     val ambientFollowsArtwork by CustomizationSettings.ambientFollowsArtwork.collectAsStateWithLifecycle()
     val ambientSongTint = nowPlayingTint.takeIf { ambientOn && ambientFollowsArtwork && player.song != null }
+    val ambientArtColors = if (ambientSongTint != null) {
+        com.music.bitchord.ui.player.rememberArtworkColors(player.song?.thumbnailUrl).colors
+    } else {
+        null
+    }
     val ambientPrimary = when {
         showSpotify -> AmbientSpotifyColor
         detail?.browseId == YT_MUSIC_LIBRARY_BROWSE_ID -> AmbientYouTubeColor
         ambientSongTint != null -> ambientSongTint
         else -> AmbientAppColor
     }
+    val ambientSecondary = if (ambientPrimary == ambientSongTint && !ambientArtColors.isNullOrEmpty()) {
+        ambientArtColors[0]
+    } else {
+        ambientCompanion(ambientPrimary)
+    }
     val reduceAnimationSetting by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
     val ambientBlobs = if (ambientOn) {
-        rememberAmbientBlobs(ambientPrimary, animate = !reduceAnimationSetting)
+        rememberAmbientBlobs(ambientPrimary, ambientSecondary, animate = !reduceAnimationSetting)
     } else {
         null
     }
