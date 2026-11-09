@@ -211,8 +211,6 @@ fun PlayerPanel(
                         isLoading = isLoading,
                         glass = glass,
                         inline = inline,
-                        position = position,
-                        durationMs = durationMs,
                         onTap = motion::open,
                         modifier = Modifier
                             .align(Alignment.TopStart)
@@ -223,6 +221,29 @@ fun PlayerPanel(
                             },
                     )
                 }
+            }
+            if (pillVisible) {
+                // The pill's playhead, along the panel's own bottom edge and
+                // round its corners as they grow, fading with the pill's row.
+                val playhead = pageAccent()
+                val px = LocalDensity.current.density
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .graphicsLayer {
+                            alpha = (1f - dock.openFraction() / pillUntil).coerceIn(0f, 1f)
+                        }
+                        .miniPlayerProgress(
+                            position = position,
+                            durationMs = durationMs,
+                            color = playhead,
+                            glow = glass,
+                            shape = shape,
+                            corner = { _ ->
+                                if (glass) dock.panelCornerPx(SHEET_CORNER.value * px, px) else 0f
+                            },
+                        ),
+                )
             }
         }
         overlay()
@@ -271,8 +292,6 @@ private fun PanelMiniRow(
     isLoading: Boolean,
     glass: Boolean,
     inline: Boolean,
-    position: PlaybackPosition?,
-    durationMs: Long,
     onTap: () -> Unit,
     modifier: Modifier,
 ) {
@@ -292,28 +311,9 @@ private fun PanelMiniRow(
     val artUrl = rememberRemoteArtworkUrl(song)
     val glyphSlot = if (inline) 32.dp else 40.dp
     val glyphSize = if (inline) 24.dp else 32.dp
-    // The pill's own shape, for its playhead: the glow follows its edge.
-    val pillShape = remember(circular) {
-        if (circular) RoundedCornerShape(percent = 50) else RoundedCornerShape(16.dp)
-    }
-    val density = LocalDensity.current
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
-            .miniPlayerProgress(
-                position = position,
-                durationMs = durationMs,
-                color = pageAccent(),
-                glow = glass,
-                shape = pillShape,
-                corner = { size ->
-                    when {
-                        !glass -> 0f
-                        circular -> size.height / 2f
-                        else -> with(density) { 16.dp.toPx() }
-                    }
-                },
-            )
             .clickable(
             interactionSource = remember { MutableInteractionSource() },
             indication = null,
