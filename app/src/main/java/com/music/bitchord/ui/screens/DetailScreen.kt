@@ -1,5 +1,7 @@
 package com.music.bitchord.ui.screens
 
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.foundation.gestures.animateScrollBy
@@ -523,16 +525,21 @@ fun DetailScreen(
     // is disposed, and a field that asks for focus every time it is composed
     // would throw the keyboard back up each time it scrolled into view.
     var focusSearch by remember(page.browseId) { mutableStateOf(false) }
-    // Play and Shuffle fold away while the search is open, and stay folded
-    // after it closes, so the page never moves under the listener; they come
-    // back once the page is scrolled up again.
+    // Play and Shuffle (and the title and details) fold away while the
+    // search is open, and unfold again as it closes.
     var playRowFolded by rememberSaveable(page.browseId) { mutableStateOf(false) }
     var searchFocused by remember(page.browseId) { mutableStateOf(false) }
+    // Closing: the page is carried back down to where it was when the search
+    // opened, the field riding down with the pill and fading back into it.
+    var searchClosing by remember(page.browseId) { mutableStateOf(false) }
+    val preSearchScroll = remember(page.browseId) { intArrayOf(0, 0) }
     val focusManager = LocalFocusManager.current
     val closeSearch = {
         focusManager.clearFocus()
         searching = false
         query = ""
+        playRowFolded = false
+        searchClosing = true
     }
     // Back closes the search first — this handler is registered after the one
     // that pops the page, so it is the one that answers while it's enabled.
@@ -545,9 +552,22 @@ fun DetailScreen(
         if (searching) {
             closeSearch()
         } else {
+            preSearchScroll[0] = listState.firstVisibleItemIndex
+            preSearchScroll[1] = listState.firstVisibleItemScrollOffset
+            searchClosing = false
             searching = true
             focusSearch = true
             playRowFolded = true
+        }
+    }
+    // Putting the keyboard away with nothing typed is leaving the search.
+    val imeShown = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    var imeSeen by remember(page.browseId) { mutableStateOf(false) }
+    LaunchedEffect(imeShown, searching) {
+        when {
+            !searching -> imeSeen = false
+            imeShown -> imeSeen = true
+            imeSeen && query.isEmpty() -> closeSearch()
         }
     }
 
@@ -709,7 +729,7 @@ fun DetailScreen(
     }
     // While the search is open its field is what holds at the top, on its
     // own (see below), so the header copy stands down.
-    val searchOpen by rememberUpdatedState(searching || playRowFolded)
+    val searchOpen by rememberUpdatedState(searching || playRowFolded || searchClosing)
     val controlsPinned by remember(controlsOvershoot) {
         derivedStateOf { !searchOpen && (controlsOvershoot() ?: -1f) >= 0f }
     }
@@ -828,6 +848,25 @@ fun DetailScreen(
                 listState.animateScrollBy(delta, tween(PLAY_ROW_FOLD_MS + 60, easing = FastOutSlowInEasing))
             }
         }
+    }
+    LaunchedEffect(searchClosing) {
+        if (!searchClosing) return@LaunchedEffect
+        // Back down to where the page was, re-measured as Play and Shuffle
+        // unfold above the pill, so it ends exactly there.
+        withFrameNanos { }
+        val (index, offset) = preSearchScroll[0] to preSearchScroll[1]
+        repeat(3) {
+            val item = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
+            if (item == null) {
+                listState.animateScrollToItem(index, offset)
+            } else {
+                val delta = (item.offset + offset).toFloat()
+                if (kotlin.math.abs(delta) >= 2f) {
+                    listState.animateScrollBy(delta, tween(PLAY_ROW_FOLD_MS + 60, easing = FastOutSlowInEasing))
+                }
+            }
+        }
+        searchClosing = false
     }
     // Scrolling back up the page, with the search closed, unfolds Play and
     // Shuffle again.
@@ -957,7 +996,7 @@ fun DetailScreen(
                             // The open search field, once it is holding under
                             // the bar: the rows go under it and are gone above.
                             val fieldTop = searchFieldTop()
-                            val fieldHeld = searching && searchPillHeight > 0 &&
+                            val fieldHeld = (searching || searchClosing) && searchPillHeight > 0 &&
                                 listState.layoutInfo.visibleItemsInfo.none {
                                     it.index == controlsIndex && it.offset + searchPillTop > searchStop
                                 }
@@ -1333,7 +1372,7 @@ fun DetailScreen(
             if (isArtist && !artistSearch) aboutItem()
             // Room under a short list, so opening the search can still carry
             // its field all the way up under the bar.
-            if (searching || playRowFolded) {
+            if (searching || playRowFolded || searchClosing) {
                 item(key = "search-room") { Spacer(Modifier.height(this@BoxWithConstraints.maxHeight)) }
             }
         }
@@ -1344,7 +1383,12 @@ fun DetailScreen(
                 // with the pill's place in the header until that reaches the
                 // bar, then holds there. Kept out of the list so scrolling the
                 // header away never takes the field (and the keyboard) with it.
-                if (searching) CompositionLocalProvider(LocalDetailGlass provides pageBackdrop.takeIf { realGlass }) {
+                val searchFieldAlpha by animateFloatAsState(
+                    targetValue = if (searching) 1f else 0f,
+                    animationSpec = tween(SEARCH_OPEN_MS + 60, easing = FastOutSlowInEasing),
+                    label = "searchField",
+                )
+                if (searching || searchFieldAlpha > 0f) CompositionLocalProvider(LocalDetailGlass provides pageBackdrop.takeIf { realGlass }) {
                     DetailSearchField(
                         query = query,
                         onQueryChange = { query = it },
@@ -1353,7 +1397,9 @@ fun DetailScreen(
                         onFocused = { focusSearch = false },
                         palette = palette,
                         onFocusChanged = { searchFocused = it },
-                        modifier = Modifier.offset { IntOffset(0, searchFieldTop()) },
+                        modifier = Modifier
+                            .offset { IntOffset(0, searchFieldTop()) }
+                            .graphicsLayer { alpha = searchFieldAlpha },
                     )
                 }
 
@@ -1582,6 +1628,12 @@ private fun ReleaseActions(
     playRowShown: Boolean = true,
     onSearchPlaced: (LayoutCoordinates) -> Unit = {},
 ) {
+    // The pill hands over to the field (and back) with a crossfade.
+    val pillAlpha by animateFloatAsState(
+        targetValue = if (searching) 0f else 1f,
+        animationSpec = tween(SEARCH_OPEN_MS + 60, easing = FastOutSlowInEasing),
+        label = "searchPill",
+    )
     AnimatedContent(
         targetState = songs.isNotEmpty(),
         transitionSpec = {
@@ -1652,7 +1704,7 @@ private fun ReleaseActions(
                 modifier = Modifier
                     .fillMaxWidth()
                     .onGloballyPositioned(onSearchPlaced)
-                    .graphicsLayer { alpha = if (searching) 0f else 1f },
+                    .graphicsLayer { alpha = pillAlpha },
             )
         }
     }
