@@ -807,9 +807,11 @@ fun DetailScreen(
     // scroll under it.
     var searchPillTop by remember(page.browseId) { mutableIntStateOf(0) }
     var searchPillHeight by remember(page.browseId) { mutableIntStateOf(0) }
+    var searchPillLeft by remember(page.browseId) { mutableIntStateOf(0) }
+    var searchPillWidth by remember(page.browseId) { mutableIntStateOf(0) }
     // The pill's place: in the list until the controls reach their stop,
     // then in the held controls. [searchPillTop] is measured from the top of
-    // the controls, so it follows Play and Shuffle folding away above it.
+    // the controls; the circle shares Play and Shuffle's row.
     val searchFieldTop: () -> Int = {
         val item = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == controlsIndex }
         val held = pinTop + searchPillTop
@@ -817,7 +819,7 @@ fun DetailScreen(
     }
 
     // The artist page's controls, laid out as a release's — Shuffle and Play
-    // side by side, Search under them — in the list and again in the held
+    // with the round Search between them — in the list and again in the held
     // header. The star, the radio and the "only local files" switch are up in
     // the top bar's pill (see [ArtistChrome]).
     val artistActionsCoords = remember { arrayOfNulls<LayoutCoordinates>(1) }
@@ -833,9 +835,11 @@ fun DetailScreen(
                 searching = searching,
                 playRowShown = !playRowFolded,
                 onSearch = toggleSearch,
-                onSearchPlaced = { top, height ->
+                onSearchPlaced = { top, height, left, width ->
                     searchPillTop = top
                     searchPillHeight = height
+                    searchPillLeft = left
+                    searchPillWidth = width
                 },
             )
             Spacer(Modifier.height(bottomSpace))
@@ -1063,9 +1067,11 @@ fun DetailScreen(
                             controlsHeight = height
                             controlsLead = lead
                         },
-                        onSearchPlaced = { top, height ->
+                        onSearchPlaced = { top, height, left, width ->
                             searchPillTop = top
                             searchPillHeight = height
+                            searchPillLeft = left
+                            searchPillWidth = width
                         },
                         controlsPinned = { controlsPinned },
                         dock = titleDock,
@@ -1386,30 +1392,6 @@ fun DetailScreen(
                 }
                 }
 
-                // The open search: the Search pill become a field. It rides
-                // with the pill's place in the header until that reaches the
-                // bar, then holds there. Kept out of the list so scrolling the
-                // header away never takes the field (and the keyboard) with it.
-                val searchFieldAlpha by animateFloatAsState(
-                    targetValue = if (searching) 1f else 0f,
-                    animationSpec = tween(SEARCH_OPEN_MS + 60, easing = FastOutSlowInEasing),
-                    label = "searchField",
-                )
-                if (searching || searchFieldAlpha > 0f) CompositionLocalProvider(LocalDetailGlass provides pageBackdrop.takeIf { realGlass }) {
-                    DetailSearchField(
-                        query = query,
-                        onQueryChange = { query = it },
-                        onClose = closeSearch,
-                        autoFocus = focusSearch,
-                        onFocused = { focusSearch = false },
-                        palette = palette,
-                        onFocusChanged = { searchFocused = it },
-                        modifier = Modifier
-                            .offset { IntOffset(0, searchFieldTop()) }
-                            .graphicsLayer { alpha = searchFieldAlpha },
-                    )
-                }
-
                 // The held header: a copy of the page's top — title, credit
                 // and controls — at the place it stopped. The artwork behind it
                 // holds at the same place (see [PageBackground]'s floor), and
@@ -1448,14 +1430,44 @@ fun DetailScreen(
                                 playRowShown = !playRowFolded,
                                 onSearch = toggleSearch,
                                 onArtistClick = onArtistClick,
-                                onSearchPlaced = { top, height ->
+                                onSearchPlaced = { top, height, left, width ->
                                     searchPillTop = top
                                     searchPillHeight = height
+                                    searchPillLeft = left
+                                    searchPillWidth = width
                                 },
                                 dock = titleDock,
                             )
                         }
                     }
+                }
+
+                // The open search: the Search circle opened out into a field,
+                // left and right to the full width, and folded back into it on
+                // closing. It rides with the circle's place in the header until
+                // that reaches the bar, then holds there. Kept out of the list
+                // so scrolling the header away never takes the field (and the
+                // keyboard) with it, and over the held controls, so it is what
+                // a touch there lands on.
+                val searchOpen by animateFloatAsState(
+                    targetValue = if (searching) 1f else 0f,
+                    animationSpec = tween(SEARCH_OPEN_MS + 60, easing = FastOutSlowInEasing),
+                    label = "searchField",
+                )
+                if (searching || searchOpen > 0f) CompositionLocalProvider(LocalDetailGlass provides pageBackdrop.takeIf { realGlass }) {
+                    DetailSearchField(
+                        query = query,
+                        onQueryChange = { query = it },
+                        onClose = closeSearch,
+                        autoFocus = focusSearch,
+                        onFocused = { focusSearch = false },
+                        palette = palette,
+                        onFocusChanged = { searchFocused = it },
+                        open = { searchOpen },
+                        circleLeft = { searchPillLeft },
+                        circleWidth = { searchPillWidth },
+                        modifier = Modifier.offset { IntOffset(0, searchFieldTop()) },
+                    )
                 }
 
                 // The name in the bar: drawn over the header's own copy the
@@ -1516,8 +1528,8 @@ private fun ReleaseHeader(
      * far above it the title starts, in px.
      */
     onControlsPlaced: (top: Int, height: Int, lead: Int) -> Unit = { _, _, _ -> },
-    /** Where the Search pill sits below the top of the controls, and how tall it is, in px. */
-    onSearchPlaced: (top: Int, height: Int) -> Unit = { _, _ -> },
+    /** Where the Search circle sits in the controls: top, height, left and width, in px. */
+    onSearchPlaced: (top: Int, height: Int, left: Int, width: Int) -> Unit = { _, _, _, _ -> },
     /** True while the pinned copy above the list stands in for the row here. */
     controlsPinned: () -> Boolean = { false },
     /** The name on its way into the top bar; null where it stays put. */
@@ -1660,16 +1672,33 @@ private fun ReleaseActions(
     onSearch: () -> Unit,
     modifier: Modifier = Modifier,
     playRowShown: Boolean = true,
-    /** Where the Search pill sits below the top of these controls, and how tall it is, in px. */
-    onSearchPlaced: (top: Int, height: Int) -> Unit = { _, _ -> },
+    /**
+     * Where the Search circle sits inside these controls, in px: its top and
+     * height, and its left edge and width (the field opens out of it).
+     */
+    onSearchPlaced: (top: Int, height: Int, left: Int, width: Int) -> Unit = { _, _, _, _ -> },
 ) {
     val rootCoords = remember { arrayOfNulls<LayoutCoordinates>(1) }
-    // The pill hands over to the field (and back) with a crossfade.
-    val pillAlpha by animateFloatAsState(
+    // The circle hands over to the field (and back) as the field opens out
+    // of it and folds back into it.
+    val circleAlpha by animateFloatAsState(
         targetValue = if (searching) 0f else 1f,
-        animationSpec = tween(SEARCH_OPEN_MS + 60, easing = FastOutSlowInEasing),
-        label = "searchPill",
+        animationSpec = tween(SEARCH_OPEN_MS, easing = FastOutSlowInEasing),
+        label = "searchCircle",
     )
+    // Shuffle and Play shrink away while the search is open, and pop back
+    // as it closes; the row keeps its height, the field takes it over.
+    val rowFold by animateFloatAsState(
+        targetValue = if (playRowShown) 0f else 1f,
+        animationSpec = tween(PLAY_ROW_FOLD_MS, easing = FastOutSlowInEasing),
+        label = "playRowFold",
+    )
+    val folding = Modifier.graphicsLayer {
+        val k = 1f - 0.4f * rowFold
+        scaleX = k
+        scaleY = k
+        alpha = 1f - rowFold
+    }
     AnimatedContent(
         targetState = songs.isNotEmpty(),
         transitionSpec = {
@@ -1679,73 +1708,120 @@ private fun ReleaseActions(
         label = "releaseActions",
         modifier = modifier.onPlaced { rootCoords[0] = it },
     ) { ready ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = HEADER_GUTTER)
                 .then(if (ready) Modifier else Modifier.graphicsLayer { alpha = 0.4f }),
         ) {
             if (!ready) {
-                Row(horizontalArrangement = Arrangement.spacedBy(RELEASE_PILL_GAP)) {
-                    ShimmerBox(Modifier.weight(1f).height(RELEASE_PILL_HEIGHT), CircleShape)
-                    ShimmerBox(Modifier.weight(1f).height(RELEASE_PILL_HEIGHT), CircleShape)
-                }
-                Spacer(Modifier.height(RELEASE_PILL_GAP))
-                ShimmerBox(Modifier.fillMaxWidth().height(RELEASE_PILL_HEIGHT), CircleShape)
-                return@Column
+                ReleaseActionsRow(
+                    shuffle = { ShimmerBox(it, CircleShape) },
+                    search = { ShimmerBox(it, CircleShape) },
+                    play = { ShimmerBox(it, CircleShape) },
+                )
+                return@Box
             }
-            // Shuffle, then Play on the right. Folded away while searching:
-            // they shrink into the Search pill's top edge rather than vanish.
-            androidx.compose.animation.AnimatedVisibility(
-                visible = playRowShown,
-                enter = expandVertically(tween(PLAY_ROW_FOLD_MS, easing = FastOutSlowInEasing), Alignment.Bottom) +
-                    scaleIn(tween(PLAY_ROW_FOLD_MS, easing = FastOutSlowInEasing), initialScale = 0.6f) +
-                    fadeIn(tween(PLAY_ROW_FOLD_MS)),
-                exit = shrinkVertically(tween(PLAY_ROW_FOLD_MS, easing = FastOutSlowInEasing), Alignment.Bottom) +
-                    scaleOut(tween(PLAY_ROW_FOLD_MS, easing = FastOutSlowInEasing), targetScale = 0.6f) +
-                    fadeOut(tween(PLAY_ROW_FOLD_MS * 2 / 3)),
-            ) {
-                Column {
-                    Row(horizontalArrangement = Arrangement.spacedBy(RELEASE_PILL_GAP)) {
-                        GlassPill(
-                            icon = BitChordIcons.Shuffle,
-                            label = stringResource(R.string.shuffle),
-                            onClick = onShuffle,
-                            haptic = Haptic.Resume,
-                            modifier = Modifier.weight(1f),
-                        )
-                        PlayPill(
-                            onClick = onPlay,
-                            size = RELEASE_PILL_HEIGHT,
-                            horizontalPadding = 12.dp,
-                            // The artwork's own colour, as on the artist page, a
-                            // touch more see-through than the artist page's circle.
-                            containerColor = palette.accent,
-                            fillAlpha = RELEASE_PLAY_FILL_ALPHA,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                    Spacer(Modifier.height(RELEASE_PILL_GAP))
-                }
-            }
-            // Finding a track on a long playlist is a thing done while reading
-            // the page, so it earns the wide button. While the search is open
-            // the field stands over this spot, so the pill only keeps its place.
-            GlassPill(
-                icon = BitChordIcons.Search,
-                label = stringResource(R.string.search),
-                contentDescription = stringResource(R.string.search_this_list),
-                onClick = onSearch,
-                enabled = !searching,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .onGloballyPositioned { pill ->
-                        val root = rootCoords[0]?.takeIf { it.isAttached } ?: return@onGloballyPositioned
-                        onSearchPlaced(root.localPositionOf(pill, Offset.Zero).y.roundToInt(), pill.size.height)
-                    }
-                    .graphicsLayer { alpha = pillAlpha },
+            // Shuffle, the round Search, then Play on the right. Shuffle gives
+            // up the room the circle takes, so Play keeps half the row.
+            ReleaseActionsRow(
+                shuffle = {
+                    GlassPill(
+                        icon = BitChordIcons.Shuffle,
+                        label = stringResource(R.string.shuffle),
+                        onClick = onShuffle,
+                        haptic = Haptic.Resume,
+                        enabled = !searching,
+                        modifier = it.then(folding),
+                    )
+                },
+                search = {
+                    SearchCircle(
+                        onClick = onSearch,
+                        enabled = !searching,
+                        modifier = it
+                            .onGloballyPositioned { circle ->
+                                val root = rootCoords[0]?.takeIf { r -> r.isAttached } ?: return@onGloballyPositioned
+                                val at = root.localPositionOf(circle, Offset.Zero)
+                                onSearchPlaced(at.y.roundToInt(), circle.size.height, at.x.roundToInt(), circle.size.width)
+                            }
+                            .graphicsLayer { alpha = circleAlpha },
+                    )
+                },
+                play = {
+                    PlayPill(
+                        onClick = { if (!searching) onPlay() },
+                        size = RELEASE_PILL_HEIGHT,
+                        horizontalPadding = 12.dp,
+                        // The artwork's own colour, as on the artist page, a
+                        // touch more see-through than the artist page's circle.
+                        containerColor = palette.accent,
+                        fillAlpha = RELEASE_PLAY_FILL_ALPHA,
+                        modifier = it.then(folding),
+                    )
+                },
             )
         }
+    }
+}
+
+/**
+ * The release controls' one row: Shuffle, the Search circle, and Play, which
+ * keeps half the row; Shuffle takes what is left. Each slot is handed the
+ * modifier that sizes it.
+ */
+@Composable
+private fun ReleaseActionsRow(
+    shuffle: @Composable (Modifier) -> Unit,
+    search: @Composable (Modifier) -> Unit,
+    play: @Composable (Modifier) -> Unit,
+) {
+    androidx.compose.ui.layout.Layout(
+        content = {
+            shuffle(Modifier.height(RELEASE_PILL_HEIGHT))
+            search(Modifier.size(RELEASE_PILL_HEIGHT))
+            play(Modifier.height(RELEASE_PILL_HEIGHT))
+        },
+        modifier = Modifier.fillMaxWidth(),
+    ) { measurables, constraints ->
+        val width = constraints.maxWidth
+        val gap = RELEASE_PILL_GAP.roundToPx()
+        val circle = RELEASE_PILL_HEIGHT.roundToPx()
+        val playWidth = ((width - gap) / 2).coerceAtLeast(0)
+        val shuffleWidth = (width - playWidth - circle - 2 * gap).coerceAtLeast(0)
+        val shuffle = measurables[0].measure(Constraints.fixed(shuffleWidth, circle))
+        val search = measurables[1].measure(Constraints.fixed(circle, circle))
+        val play = measurables[2].measure(Constraints.fixed(playWidth, circle))
+        layout(width, circle) {
+            shuffle.place(0, 0)
+            search.place(shuffleWidth + gap, 0)
+            play.place(width - playWidth, 0)
+        }
+    }
+}
+
+/** The round, icon-only Search on the release row; the field opens out of it. */
+@Composable
+private fun SearchCircle(onClick: () -> Unit, enabled: Boolean, modifier: Modifier = Modifier) {
+    val haptics = rememberHaptics()
+    val description = stringResource(R.string.search_this_list)
+    Box(
+        modifier = modifier
+            .headerGlass(CircleShape)
+            .clip(CircleShape)
+            .clickable(enabled = enabled) {
+                haptics.play(Haptic.Tap)
+                onClick()
+            }
+            .semantics { contentDescription = description },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = BitChordIcons.Search,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.size(20.dp),
+        )
     }
 }
 
@@ -1862,6 +1938,11 @@ private fun DetailSearchField(
     palette: ArtworkPalette,
     modifier: Modifier = Modifier,
     onFocusChanged: (Boolean) -> Unit = {},
+    /** 0 as the Search circle, 1 opened out to the full width. */
+    open: () -> Float = { 1f },
+    /** The circle's left edge and width, in px, in the field's own frame. */
+    circleLeft: () -> Int = { 0 },
+    circleWidth: () -> Int = { 0 },
 ) {
     // Opened by a tap on a button, which is as clear a statement of intent as
     // the keyboard is going to get — so it comes up with the field rather than
@@ -1874,22 +1955,26 @@ private fun DetailSearchField(
         }
     }
 
-    // Opening: the field grows out of the pill's own place, from a little
-    // narrower, so the change of content reads as the pill opening up.
-    val open = remember { Animatable(0f) }
-    LaunchedEffect(Unit) { open.animateTo(1f, tween(SEARCH_OPEN_MS, easing = FastOutSlowInEasing)) }
+    // The field is the circle stretched: its edges run out from the circle's
+    // to the page's gutters, and what it holds fades in once there is room.
     Row(
         modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = HEADER_GUTTER)
-            .graphicsLayer {
-                alpha = open.value
-                scaleX = 0.96f + 0.04f * open.value
+            .layout { measurable, constraints ->
+                val e = open().coerceIn(0f, 1f)
+                val gutter = HEADER_GUTTER.roundToPx()
+                val full = (constraints.maxWidth - 2 * gutter).coerceAtLeast(0)
+                val fromWidth = circleWidth().takeIf { it > 0 } ?: full
+                val fromLeft = if (circleWidth() > 0) circleLeft() else gutter
+                val width = (fromWidth + (full - fromWidth) * e).roundToInt()
+                val left = (fromLeft + (gutter - fromLeft) * e).roundToInt()
+                val placeable = measurable.measure(Constraints.fixed(width, RELEASE_PILL_HEIGHT.roundToPx()))
+                layout(constraints.maxWidth, placeable.height) { placeable.place(left, 0) }
             }
-            .height(RELEASE_PILL_HEIGHT)
+            .graphicsLayer { alpha = (open() / SEARCH_FIELD_SHOWN).coerceIn(0f, 1f) }
             .headerGlass(CircleShape)
             .clip(CircleShape)
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 16.dp)
+            .graphicsLayer { alpha = ((open() - SEARCH_CONTENT_FROM) / (1f - SEARCH_CONTENT_FROM)).coerceIn(0f, 1f) },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -1944,6 +2029,12 @@ private fun DetailSearchField(
 }
 
 private const val SEARCH_OPEN_MS = 220
+
+/** How far open the field is before it fully covers the circle it grows from. */
+private const val SEARCH_FIELD_SHOWN = 0.15f
+
+/** How far open the field is before its text and buttons start to show. */
+private const val SEARCH_CONTENT_FROM = 0.45f
 
 private fun List<Song>.sortedForDetail(sort: SongSort): List<Song> = when (sort) {
     SongSort.DEFAULT -> this
