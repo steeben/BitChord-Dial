@@ -1,10 +1,11 @@
 <div align="center">
 
-<img src="Logo.png" alt="BitChord app icon" width="140" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/dial-logo-dark.png" />
+  <img src="docs/dial-logo-light.png" alt="Dial" width="320" />
+</picture>
 
-# BitChord, customized
-
-### A personalized fork of the BitChord YouTube Music client
+### Your music is calling
 
 [![Latest release](https://img.shields.io/github/v/release/steeben/Dial?style=for-the-badge&labelColor=0d1117)](https://github.com/steeben/Dial/releases)
 [![License](https://img.shields.io/github/license/steeben/Dial?style=for-the-badge&labelColor=0d1117)](LICENSE)
