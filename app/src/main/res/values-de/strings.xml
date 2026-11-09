@@ -1459,23 +1459,8 @@
     <string name="song_fix_search_hint">Suchen</string>
     <string name="song_fix_search_failed">Suche gerade nicht möglich</string>
     <string name="song_fix_search_none">Nichts gefunden</string>
-    <string name="app_move_import_title">Deine Daten mitnehmen</string>
-    <string name="app_move_import_body">Deine alte Dial-App ist noch installiert. Einstellungen, Mediathek, Dial-Pins, Downloads, Hörverlauf und Anmeldungen in diese App übernehmen?</string>
-    <string name="app_move_import_action">Daten übernehmen</string>
-    <string name="app_move_update_old_title">Deine Daten mitnehmen</string>
-    <string name="app_move_update_old_body">Deine alte Dial-App ist zu alt, um ihre Daten zu übergeben. Aktualisiere sie einmal, dann wird alles hierher übernommen.</string>
-    <string name="app_move_update_old_action">Alte App aktualisieren</string>
-    <string name="app_move_uninstall_title">Umzug abgeschlossen</string>
-    <string name="app_move_uninstall_body">Alles aus deiner alten Dial-App ist jetzt hier. Du kannst die alte App deinstallieren.</string>
-    <string name="app_move_uninstall_action">Alte App deinstallieren</string>
-    <string name="app_move_keep_old">Behalten</string>
-    <string name="app_move_get_dial_title">Dial hat ein neues Zuhause</string>
-    <string name="app_move_get_dial_body">Dial ist jetzt eine eigene App, und diese hier bekommt keine Updates mehr. Installiere die neue, und Einstellungen, Mediathek, Hörverlauf und Anmeldungen ziehen mit um.</string>
-    <string name="app_move_get_dial_action">Neue App holen</string>
-    <string name="app_move_open_dial_title">Dial hat ein neues Zuhause</string>
-    <string name="app_move_open_dial_body">Die neue Dial-App ist installiert. Öffne sie, um alles zu übernehmen, danach kannst du diese deinstallieren.</string>
-    <string name="app_move_open_dial_action">Dial öffnen</string>
-    <string name="app_move_not_now">Nicht jetzt</string>
-    <string name="app_move_moving">Daten werden übernommen…</string>
-    <string name="app_move_downloading">Wird heruntergeladen…</string>
+    <string name="old_app_notice_title">Von der alten App umziehen?</string>
+    <string name="old_app_notice_body">Einstellungen, Mediathek, Hörverlauf und Anmeldungen aus der alten App kommen nicht von selbst mit. Öffne in der alten App Einstellungen, dann Deine Daten, und tippe auf Daten exportieren. Tippe dann hier auf Daten importieren und wähle diese Datei. Danach musst du dich erneut anmelden.</string>
+    <string name="old_app_notice_take_me_there">Dorthin</string>
+    <string name="old_app_notice_got_it">Verstanden</string>
 </resources>

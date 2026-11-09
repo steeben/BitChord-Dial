@@ -194,8 +194,6 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         // The public "apps open right now" count; see Presence.
         com.music.bitchord.data.presence.AndroidPresence.install(this)
         backgroundInit.join()
-        // Everything a hand-over to the new app reads is open now.
-        com.music.bitchord.data.migration.HandoverProvider.markReady()
     }
 
     /**

@@ -1464,23 +1464,8 @@
     <string name="song_fix_search_hint">Pesquisar</string>
     <string name="song_fix_search_failed">Não foi possível pesquisar agora</string>
     <string name="song_fix_search_none">Nada encontrado</string>
-    <string name="app_move_import_title">Traga suas coisas</string>
-    <string name="app_move_import_body">Seu app Dial antigo ainda está instalado. Mover configurações, biblioteca, fixados do dial, downloads, histórico de audição e logins para este?</string>
-    <string name="app_move_import_action">Mover meus dados</string>
-    <string name="app_move_update_old_title">Traga suas coisas</string>
-    <string name="app_move_update_old_body">Seu app Dial antigo é antigo demais para passar os dados. Atualize-o uma vez e tudo será movido para este.</string>
-    <string name="app_move_update_old_action">Atualizar app antigo</string>
-    <string name="app_move_uninstall_title">Mudança concluída</string>
-    <string name="app_move_uninstall_body">Tudo do seu app Dial antigo já está aqui. Você pode desinstalar o antigo.</string>
-    <string name="app_move_uninstall_action">Desinstalar app antigo</string>
-    <string name="app_move_keep_old">Manter</string>
-    <string name="app_move_get_dial_title">Dial tem uma nova casa</string>
-    <string name="app_move_get_dial_body">O Dial agora é um app separado e este não receberá mais atualizações. Instale o novo e suas configurações, biblioteca, histórico de audição e logins vão junto.</string>
-    <string name="app_move_get_dial_action">Baixar o novo app</string>
-    <string name="app_move_open_dial_title">Dial tem uma nova casa</string>
-    <string name="app_move_open_dial_body">O novo app Dial está instalado. Abra-o para mover tudo e depois você pode desinstalar este.</string>
-    <string name="app_move_open_dial_action">Abrir Dial</string>
-    <string name="app_move_not_now">Agora não</string>
-    <string name="app_move_moving">Movendo seus dados…</string>
-    <string name="app_move_downloading">Baixando…</string>
+    <string name="old_app_notice_title">Vindo do app antigo?</string>
+    <string name="old_app_notice_body">Suas configurações, biblioteca, histórico de audição e logins do app antigo não vêm sozinhos. No app antigo, abra Configurações, depois Seus dados, e toque em Exportar dados. Depois toque em Importar dados aqui e escolha esse arquivo. Você precisará entrar de novo.</string>
+    <string name="old_app_notice_take_me_there">Levar até lá</string>
+    <string name="old_app_notice_got_it">Entendi</string>
 </resources>

@@ -7,7 +7,6 @@ import android.os.Build
 import android.provider.Settings
 import androidx.core.content.FileProvider
 import com.music.bitchord.BuildConfig
-import com.music.bitchord.data.migration.ReleaseAssets
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -107,21 +106,21 @@ object AppUpdateChecker {
     }
 
     /**
-     * The release's own APK, never the bridge it also carries for old installs
-     * (see [ReleaseAssets]). A release without one (source-only draft, renamed
-     * asset) leaves [UpdateInfo.apkUrl] null and the UI falls back to opening
-     * the releases page as before.
+     * The release usually carries exactly one `.apk`; take its direct download
+     * URL. A release without one (source-only draft, renamed asset) leaves
+     * [UpdateInfo.apkUrl] null and the UI falls back to opening the releases
+     * page as before.
      */
     private fun apkAssetUrl(release: JsonObject): String? = runCatching {
-        val assets = release["assets"]?.jsonArray.orEmpty().mapNotNull { element ->
-            val asset = element as? JsonObject ?: return@mapNotNull null
-            ReleaseAssets.Asset(
-                name = asset["name"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null,
-                url = asset["browser_download_url"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null,
-                uploaded = asset["state"]?.jsonPrimitive?.contentOrNull == "uploaded",
-            )
-        }
-        ReleaseAssets.pick(assets, bridge = false)?.url
+        release["assets"]?.jsonArray
+            ?.mapNotNull { it as? JsonObject }
+            ?.firstOrNull { asset ->
+                asset["name"]?.jsonPrimitive?.contentOrNull?.endsWith(".apk", ignoreCase = true) == true &&
+                    asset["state"]?.jsonPrimitive?.contentOrNull == "uploaded"
+            }
+            ?.get("browser_download_url")
+            ?.jsonPrimitive
+            ?.contentOrNull
     }.getOrNull()
 
     /**

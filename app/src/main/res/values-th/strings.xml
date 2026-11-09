@@ -1442,23 +1442,8 @@
     <string name="song_fix_search_hint">ค้นหา</string>
     <string name="song_fix_search_failed">ค้นหาไม่ได้ในขณะนี้</string>
     <string name="song_fix_search_none">ไม่พบอะไรเลย</string>
-    <string name="app_move_import_title">ย้ายข้อมูลของคุณ</string>
-    <string name="app_move_import_body">แอป Dial เดิมยังติดตั้งอยู่ ย้ายการตั้งค่า คลังเพลง หมุด ดาวน์โหลด ประวัติการฟัง และการลงชื่อเข้าใช้มาที่แอปนี้ไหม</string>
-    <string name="app_move_import_action">ย้ายข้อมูล</string>
-    <string name="app_move_update_old_title">ย้ายข้อมูลของคุณ</string>
-    <string name="app_move_update_old_body">แอป Dial เดิมเก่าเกินกว่าจะส่งต่อข้อมูลได้ อัปเดตครั้งเดียวแล้วทุกอย่างจะย้ายมาที่นี่</string>
-    <string name="app_move_update_old_action">อัปเดตแอปเดิม</string>
-    <string name="app_move_uninstall_title">ย้ายเสร็จแล้ว</string>
-    <string name="app_move_uninstall_body">ทุกอย่างจากแอป Dial เดิมอยู่ที่นี่แล้ว คุณถอนการติดตั้งแอปเดิมได้</string>
-    <string name="app_move_uninstall_action">ถอนการติดตั้งแอปเดิม</string>
-    <string name="app_move_keep_old">เก็บไว้</string>
-    <string name="app_move_get_dial_title">Dial ย้ายบ้านใหม่</string>
-    <string name="app_move_get_dial_body">ตอนนี้ Dial เป็นแอปแยก และแอปนี้จะไม่ได้รับอัปเดตอีก ติดตั้งแอปใหม่แล้วการตั้งค่า คลังเพลง ประวัติการฟัง และการลงชื่อเข้าใช้จะย้ายตามไปด้วย</string>
-    <string name="app_move_get_dial_action">รับแอปใหม่</string>
-    <string name="app_move_open_dial_title">Dial ย้ายบ้านใหม่</string>
-    <string name="app_move_open_dial_body">ติดตั้งแอป Dial ใหม่แล้ว เปิดเพื่อย้ายทุกอย่าง จากนั้นถอนการติดตั้งแอปนี้ได้</string>
-    <string name="app_move_open_dial_action">เปิด Dial</string>
-    <string name="app_move_not_now">ไว้ทีหลัง</string>
-    <string name="app_move_moving">กำลังย้ายข้อมูล…</string>
-    <string name="app_move_downloading">กำลังดาวน์โหลด…</string>
+    <string name="old_app_notice_title">ย้ายมาจากแอปเดิมใช่ไหม</string>
+    <string name="old_app_notice_body">การตั้งค่า คลังเพลง ประวัติการฟัง และการลงชื่อเข้าใช้จากแอปเดิมจะไม่ย้ายมาเอง ในแอปเดิม เปิดการตั้งค่า แล้วข้อมูลของคุณ แตะส่งออกข้อมูล จากนั้นแตะนำเข้าข้อมูลที่นี่และเลือกไฟล์นั้น คุณจะต้องลงชื่อเข้าใช้อีกครั้ง</string>
+    <string name="old_app_notice_take_me_there">พาไปที่นั่น</string>
+    <string name="old_app_notice_got_it">เข้าใจแล้ว</string>
 </resources>

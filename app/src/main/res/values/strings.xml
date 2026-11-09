@@ -1303,24 +1303,8 @@
     <string name="glass_style">Style</string>
     <string name="glass_style_classic">Classic</string>
     <string name="glass_style_new">New</string>
-    <!-- Moving from the old app (com.steeben.bitchord) to the new Dial app -->
-    <string name="app_move_import_title">Bring your stuff over</string>
-    <string name="app_move_import_body">Your old Dial app is still installed. Move its settings, library, dial pins, downloads, listening history and sign-ins into this one?</string>
-    <string name="app_move_import_action">Move My Data</string>
-    <string name="app_move_update_old_title">Bring your stuff over</string>
-    <string name="app_move_update_old_body">Your old Dial app is too old to hand over its data. Update it once and everything moves into this one.</string>
-    <string name="app_move_update_old_action">Update Old App</string>
-    <string name="app_move_uninstall_title">You\'re all moved</string>
-    <string name="app_move_uninstall_body">Everything from your old Dial app is here now. You can uninstall the old one.</string>
-    <string name="app_move_uninstall_action">Uninstall Old App</string>
-    <string name="app_move_keep_old">Keep It</string>
-    <string name="app_move_get_dial_title">Dial has a new home</string>
-    <string name="app_move_get_dial_body">Dial is now a separate app, and this one won\'t get updates any more. Install the new one and your settings, library, listening history and sign-ins move over with you.</string>
-    <string name="app_move_get_dial_action">Get the New App</string>
-    <string name="app_move_open_dial_title">Dial has a new home</string>
-    <string name="app_move_open_dial_body">The new Dial app is installed. Open it to move everything over, then you can uninstall this one.</string>
-    <string name="app_move_open_dial_action">Open Dial</string>
-    <string name="app_move_not_now">Not Now</string>
-    <string name="app_move_moving">Moving your data…</string>
-    <string name="app_move_downloading">Downloading…</string>
+    <string name="old_app_notice_title">Moving from the old app?</string>
+    <string name="old_app_notice_body">Your settings, library, listening history and sign-ins from the old app don\'t come over on their own. In the old app, open Settings, then Your data, and tap Export data. Then tap Import data here and pick that file. You\'ll need to sign in again.</string>
+    <string name="old_app_notice_take_me_there">Take Me There</string>
+    <string name="old_app_notice_got_it">Got It</string>
 </resources>

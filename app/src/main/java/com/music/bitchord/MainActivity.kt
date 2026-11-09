@@ -7519,12 +7519,14 @@ private fun BitChordApp(
             }
         }
 
-        // ---- Moving from the old app to Dial ----
-        com.music.bitchord.ui.components.AppMoveHost(hazeState)
+        // ---- Coming from the old app: its data doesn't move on its own ----
+        com.music.bitchord.ui.components.OldAppNoticeHost(hazeState) {
+            showSettings = true
+            MenuNav.settingsSection = com.music.bitchord.ui.screens.SettingsCategory.YOUR_DATA
+        }
 
         // ---- Update available (once per launch) ----
-        // Not in the old app: its own prompt is to move to Dial.
-        if (showUpdateDialog && context.packageName != com.music.bitchord.data.migration.AppMove.OLD_PACKAGE) {
+        if (showUpdateDialog) {
             updateNotice?.let { update ->
                 UpdateAvailableDialog(
                     version = update.version,

@@ -1376,23 +1376,8 @@
     <string name="song_fix_search_hint">Tìm kiếm</string>
     <string name="song_fix_search_failed">Không thể tìm kiếm lúc này</string>
     <string name="song_fix_search_none">Không tìm thấy gì</string>
-    <string name="app_move_import_title">Mang dữ liệu theo</string>
-    <string name="app_move_import_body">Ứng dụng Dial cũ vẫn còn cài. Chuyển cài đặt, thư viện, ghim, bản tải xuống, lịch sử nghe và đăng nhập sang ứng dụng này?</string>
-    <string name="app_move_import_action">Chuyển dữ liệu</string>
-    <string name="app_move_update_old_title">Mang dữ liệu theo</string>
-    <string name="app_move_update_old_body">Ứng dụng Dial cũ quá cũ để chuyển dữ liệu. Cập nhật một lần là mọi thứ sẽ sang đây.</string>
-    <string name="app_move_update_old_action">Cập nhật ứng dụng cũ</string>
-    <string name="app_move_uninstall_title">Đã chuyển xong</string>
-    <string name="app_move_uninstall_body">Mọi thứ từ ứng dụng Dial cũ giờ đã ở đây. Bạn có thể gỡ ứng dụng cũ.</string>
-    <string name="app_move_uninstall_action">Gỡ ứng dụng cũ</string>
-    <string name="app_move_keep_old">Giữ lại</string>
-    <string name="app_move_get_dial_title">Dial có nhà mới</string>
-    <string name="app_move_get_dial_body">Dial giờ là một ứng dụng riêng và ứng dụng này sẽ không còn được cập nhật. Cài ứng dụng mới, cài đặt, thư viện, lịch sử nghe và đăng nhập sẽ đi theo bạn.</string>
-    <string name="app_move_get_dial_action">Tải ứng dụng mới</string>
-    <string name="app_move_open_dial_title">Dial có nhà mới</string>
-    <string name="app_move_open_dial_body">Ứng dụng Dial mới đã được cài. Mở nó để chuyển mọi thứ, sau đó bạn có thể gỡ ứng dụng này.</string>
-    <string name="app_move_open_dial_action">Mở Dial</string>
-    <string name="app_move_not_now">Để sau</string>
-    <string name="app_move_moving">Đang chuyển dữ liệu…</string>
-    <string name="app_move_downloading">Đang tải xuống…</string>
+    <string name="old_app_notice_title">Chuyển từ ứng dụng cũ?</string>
+    <string name="old_app_notice_body">Cài đặt, thư viện, lịch sử nghe và đăng nhập từ ứng dụng cũ không tự chuyển sang. Trong ứng dụng cũ, mở Cài đặt, rồi Dữ liệu của bạn, và chạm Xuất dữ liệu. Sau đó chạm Nhập dữ liệu ở đây và chọn tệp đó. Bạn sẽ cần đăng nhập lại.</string>
+    <string name="old_app_notice_take_me_there">Đưa tôi đến đó</string>
+    <string name="old_app_notice_got_it">Đã hiểu</string>
 </resources>

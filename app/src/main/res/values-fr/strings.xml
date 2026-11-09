@@ -1460,23 +1460,8 @@
     <string name="song_fix_search_hint">Rechercher</string>
     <string name="song_fix_search_failed">Recherche impossible pour le moment</string>
     <string name="song_fix_search_none">Aucun résultat</string>
-    <string name="app_move_import_title">Récupérez vos données</string>
-    <string name="app_move_import_body">Votre ancienne app Dial est toujours installée. Transférer ses réglages, sa bibliothèque, ses épingles, ses téléchargements, son historique d\'écoute et ses connexions dans celle-ci ?</string>
-    <string name="app_move_import_action">Transférer mes données</string>
-    <string name="app_move_update_old_title">Récupérez vos données</string>
-    <string name="app_move_update_old_body">Votre ancienne app Dial est trop ancienne pour transmettre ses données. Mettez-la à jour une fois et tout sera transféré ici.</string>
-    <string name="app_move_update_old_action">Mettre à jour l\'ancienne app</string>
-    <string name="app_move_uninstall_title">Déménagement terminé</string>
-    <string name="app_move_uninstall_body">Tout ce que contenait votre ancienne app Dial est ici. Vous pouvez désinstaller l\'ancienne.</string>
-    <string name="app_move_uninstall_action">Désinstaller l\'ancienne app</string>
-    <string name="app_move_keep_old">La garder</string>
-    <string name="app_move_get_dial_title">Dial déménage</string>
-    <string name="app_move_get_dial_body">Dial est désormais une app distincte, et celle-ci ne recevra plus de mises à jour. Installez la nouvelle : vos réglages, votre bibliothèque, votre historique d\'écoute et vos connexions vous suivent.</string>
-    <string name="app_move_get_dial_action">Obtenir la nouvelle app</string>
-    <string name="app_move_open_dial_title">Dial déménage</string>
-    <string name="app_move_open_dial_body">La nouvelle app Dial est installée. Ouvrez-la pour tout transférer, puis vous pourrez désinstaller celle-ci.</string>
-    <string name="app_move_open_dial_action">Ouvrir Dial</string>
-    <string name="app_move_not_now">Plus tard</string>
-    <string name="app_move_moving">Transfert de vos données…</string>
-    <string name="app_move_downloading">Téléchargement…</string>
+    <string name="old_app_notice_title">Vous venez de l\'ancienne app ?</string>
+    <string name="old_app_notice_body">Vos réglages, votre bibliothèque, votre historique d\'écoute et vos connexions ne sont pas transférés automatiquement. Dans l\'ancienne app, ouvrez Paramètres, puis Vos données, et touchez Exporter les données. Touchez ensuite Importer des données ici et choisissez ce fichier. Vous devrez vous reconnecter.</string>
+    <string name="old_app_notice_take_me_there">M\'y emmener</string>
+    <string name="old_app_notice_got_it">Compris</string>
 </resources>

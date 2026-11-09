@@ -2,27 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!--
-      Moving from the old app (com.steeben.bitchord) to Dial (com.steeben.dial);
-      see AppMove. Each has to see the other to tell whether it is installed and
-      to reach the old one's hand-over, and Dial offers to uninstall the old one.
-    -->
+    <!-- So Dial can tell the old app (up to 1.4.1) is installed; see OldAppNotice. -->
     <queries>
         <package android:name="com.steeben.bitchord" />
-        <package android:name="com.steeben.dial" />
     </queries>
-    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
 
     <application
-        android:label="${appLabel}"
+        android:label="Dial"
         android:usesCleartextTraffic="true"
-        tools:replace="android:label,android:usesCleartextTraffic">
-
-        <!-- Serves only in the old package, and only to an app signed with the same key. -->
-        <provider
-            android:name="com.music.bitchord.data.migration.HandoverProvider"
-            android:authorities="${applicationId}.handover"
-            android:exported="true"
-            tools:ignore="ExportedContentProvider" />
-    </application>
+        tools:replace="android:label,android:usesCleartextTraffic" />
 </manifest>

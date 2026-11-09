@@ -1464,23 +1464,8 @@
     <string name="song_fix_search_hint">חיפוש</string>
     <string name="song_fix_search_failed">לא ניתן לחפש כרגע</string>
     <string name="song_fix_search_none">לא נמצא דבר</string>
-    <string name="app_move_import_title">העבירו את הנתונים שלכם</string>
-    <string name="app_move_import_body">אפליקציית Dial הישנה עדיין מותקנת. להעביר את ההגדרות, הספרייה, הנעיצות, ההורדות, היסטוריית ההאזנה וההתחברויות לכאן?</string>
-    <string name="app_move_import_action">העבר את הנתונים</string>
-    <string name="app_move_update_old_title">העבירו את הנתונים שלכם</string>
-    <string name="app_move_update_old_body">אפליקציית Dial הישנה ישנה מדי כדי למסור את הנתונים. עדכנו אותה פעם אחת והכול יעבור לכאן.</string>
-    <string name="app_move_update_old_action">עדכן את הישנה</string>
-    <string name="app_move_uninstall_title">המעבר הושלם</string>
-    <string name="app_move_uninstall_body">כל מה שהיה באפליקציית Dial הישנה נמצא כאן עכשיו. אפשר להסיר את הישנה.</string>
-    <string name="app_move_uninstall_action">הסר את הישנה</string>
-    <string name="app_move_keep_old">השאר</string>
-    <string name="app_move_get_dial_title">ל-Dial יש בית חדש</string>
-    <string name="app_move_get_dial_body">Dial היא עכשיו אפליקציה נפרדת, והאפליקציה הזו לא תקבל עוד עדכונים. התקינו את החדשה וההגדרות, הספרייה, היסטוריית ההאזנה וההתחברויות יעברו איתכם.</string>
-    <string name="app_move_get_dial_action">השג את החדשה</string>
-    <string name="app_move_open_dial_title">ל-Dial יש בית חדש</string>
-    <string name="app_move_open_dial_body">אפליקציית Dial החדשה מותקנת. פתחו אותה כדי להעביר הכול, ואז אפשר להסיר את זו.</string>
-    <string name="app_move_open_dial_action">פתח את Dial</string>
-    <string name="app_move_not_now">לא עכשיו</string>
-    <string name="app_move_moving">מעביר את הנתונים…</string>
-    <string name="app_move_downloading">מוריד…</string>
+    <string name="old_app_notice_title">עוברים מהאפליקציה הישנה?</string>
+    <string name="old_app_notice_body">ההגדרות, הספרייה, היסטוריית ההאזנה וההתחברויות מהאפליקציה הישנה לא עוברים מעצמם. באפליקציה הישנה פתחו הגדרות, ואז הנתונים שלך, והקישו על ייצוא נתונים. אחר כך הקישו כאן על ייבוא נתונים ובחרו את הקובץ. תצטרכו להתחבר מחדש.</string>
+    <string name="old_app_notice_take_me_there">קח אותי לשם</string>
+    <string name="old_app_notice_got_it">הבנתי</string>
 </resources>

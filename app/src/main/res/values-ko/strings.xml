@@ -1227,23 +1227,8 @@
     <string name="song_fix_search_hint">검색</string>
     <string name="song_fix_search_failed">지금은 검색할 수 없습니다</string>
     <string name="song_fix_search_none">찾은 항목 없음</string>
-    <string name="app_move_import_title">데이터 가져오기</string>
-    <string name="app_move_import_body">이전 Dial 앱이 아직 설치되어 있어요. 설정, 보관함, 다이얼 고정, 다운로드, 감상 기록, 로그인을 이 앱으로 옮길까요?</string>
-    <string name="app_move_import_action">데이터 옮기기</string>
-    <string name="app_move_update_old_title">데이터 가져오기</string>
-    <string name="app_move_update_old_body">이전 Dial 앱이 너무 오래되어 데이터를 넘겨줄 수 없어요. 한 번만 업데이트하면 모두 이 앱으로 옮겨져요.</string>
-    <string name="app_move_update_old_action">이전 앱 업데이트</string>
-    <string name="app_move_uninstall_title">이사 완료</string>
-    <string name="app_move_uninstall_body">이전 Dial 앱의 모든 것이 이제 여기 있어요. 이전 앱은 삭제해도 돼요.</string>
-    <string name="app_move_uninstall_action">이전 앱 삭제</string>
-    <string name="app_move_keep_old">유지</string>
-    <string name="app_move_get_dial_title">Dial이 새 앱으로 이사했어요</string>
-    <string name="app_move_get_dial_body">Dial은 이제 별도의 앱이며, 이 앱은 더 이상 업데이트되지 않아요. 새 앱을 설치하면 설정, 보관함, 감상 기록, 로그인이 함께 옮겨져요.</string>
-    <string name="app_move_get_dial_action">새 앱 받기</string>
-    <string name="app_move_open_dial_title">Dial이 새 앱으로 이사했어요</string>
-    <string name="app_move_open_dial_body">새 Dial 앱이 설치되어 있어요. 열어서 모두 옮긴 뒤 이 앱은 삭제해도 돼요.</string>
-    <string name="app_move_open_dial_action">Dial 열기</string>
-    <string name="app_move_not_now">나중에</string>
-    <string name="app_move_moving">데이터를 옮기는 중…</string>
-    <string name="app_move_downloading">다운로드 중…</string>
+    <string name="old_app_notice_title">이전 앱에서 옮겨 오시나요?</string>
+    <string name="old_app_notice_body">이전 앱의 설정, 보관함, 감상 기록, 로그인은 자동으로 옮겨지지 않아요. 이전 앱에서 설정 > 내 데이터를 열고 데이터 내보내기를 탭하세요. 그런 다음 여기서 데이터 가져오기를 탭하고 그 파일을 선택하세요. 다시 로그인해야 해요.</string>
+    <string name="old_app_notice_take_me_there">바로 가기</string>
+    <string name="old_app_notice_got_it">확인</string>
 </resources>

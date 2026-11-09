@@ -1416,23 +1416,8 @@
     <string name="song_fix_search_hint">Ara</string>
     <string name="song_fix_search_failed">Şu anda aranamıyor</string>
     <string name="song_fix_search_none">Hiçbir şey bulunamadı</string>
-    <string name="app_move_import_title">Verilerini taşı</string>
-    <string name="app_move_import_body">Eski Dial uygulaman hâlâ yüklü. Ayarları, kitaplığı, dial sabitlemeleri, indirmeleri, dinleme geçmişini ve oturumları buraya taşıyalım mı?</string>
-    <string name="app_move_import_action">Verilerimi Taşı</string>
-    <string name="app_move_update_old_title">Verilerini taşı</string>
-    <string name="app_move_update_old_body">Eski Dial uygulaman verilerini aktaramayacak kadar eski. Bir kez güncelle, her şey buraya taşınsın.</string>
-    <string name="app_move_update_old_action">Eski Uygulamayı Güncelle</string>
-    <string name="app_move_uninstall_title">Taşınma tamam</string>
-    <string name="app_move_uninstall_body">Eski Dial uygulamandaki her şey artık burada. Eskisini kaldırabilirsin.</string>
-    <string name="app_move_uninstall_action">Eski Uygulamayı Kaldır</string>
-    <string name="app_move_keep_old">Kalsın</string>
-    <string name="app_move_get_dial_title">Dial\'ın yeni bir evi var</string>
-    <string name="app_move_get_dial_body">Dial artık ayrı bir uygulama ve bu uygulama artık güncelleme almayacak. Yenisini yükle; ayarların, kitaplığın, dinleme geçmişin ve oturumların seninle gelsin.</string>
-    <string name="app_move_get_dial_action">Yeni Uygulamayı Al</string>
-    <string name="app_move_open_dial_title">Dial\'ın yeni bir evi var</string>
-    <string name="app_move_open_dial_body">Yeni Dial uygulaması yüklü. Her şeyi taşımak için aç, sonra bunu kaldırabilirsin.</string>
-    <string name="app_move_open_dial_action">Dial\'ı Aç</string>
-    <string name="app_move_not_now">Şimdi Değil</string>
-    <string name="app_move_moving">Verilerin taşınıyor…</string>
-    <string name="app_move_downloading">İndiriliyor…</string>
+    <string name="old_app_notice_title">Eski uygulamadan mı geliyorsun?</string>
+    <string name="old_app_notice_body">Eski uygulamadaki ayarlar, kitaplık, dinleme geçmişi ve oturumlar kendiliğinden taşınmaz. Eski uygulamada Ayarlar\'ı, ardından Verileriniz bölümünü aç ve Verileri dışa aktar\'a dokun. Sonra burada Verileri içe aktar\'a dokunup o dosyayı seç. Yeniden oturum açman gerekecek.</string>
+    <string name="old_app_notice_take_me_there">Beni Oraya Götür</string>
+    <string name="old_app_notice_got_it">Anladım</string>
 </resources>

@@ -1436,23 +1436,8 @@
     <string name="song_fix_search_hint">搜索</string>
     <string name="song_fix_search_failed">现在无法搜索</string>
     <string name="song_fix_search_none">未找到任何内容</string>
-    <string name="app_move_import_title">迁移你的数据</string>
-    <string name="app_move_import_body">旧版 Dial 应用仍已安装。要将其设置、资料库、拨盘固定项、下载、收听记录和登录信息迁移到这里吗？</string>
-    <string name="app_move_import_action">迁移我的数据</string>
-    <string name="app_move_update_old_title">迁移你的数据</string>
-    <string name="app_move_update_old_body">旧版 Dial 应用版本太旧，无法交出数据。更新一次后，所有内容都会迁移到这里。</string>
-    <string name="app_move_update_old_action">更新旧应用</string>
-    <string name="app_move_uninstall_title">迁移完成</string>
-    <string name="app_move_uninstall_body">旧版 Dial 应用中的所有内容都已在这里。你可以卸载旧应用。</string>
-    <string name="app_move_uninstall_action">卸载旧应用</string>
-    <string name="app_move_keep_old">保留</string>
-    <string name="app_move_get_dial_title">Dial 有了新家</string>
-    <string name="app_move_get_dial_body">Dial 现在是一个独立的应用，此应用将不再更新。安装新应用后，你的设置、资料库、收听记录和登录信息都会随之迁移。</string>
-    <string name="app_move_get_dial_action">获取新应用</string>
-    <string name="app_move_open_dial_title">Dial 有了新家</string>
-    <string name="app_move_open_dial_body">新版 Dial 已安装。打开它即可迁移所有内容，之后可以卸载此应用。</string>
-    <string name="app_move_open_dial_action">打开 Dial</string>
-    <string name="app_move_not_now">以后再说</string>
-    <string name="app_move_moving">正在迁移数据…</string>
-    <string name="app_move_downloading">正在下载…</string>
+    <string name="old_app_notice_title">从旧应用迁移？</string>
+    <string name="old_app_notice_body">旧应用中的设置、资料库、收听记录和登录信息不会自动迁移。在旧应用中打开“设置”>“你的数据”，点按“导出数据”。然后在这里点按“导入数据”并选择该文件。你需要重新登录。</string>
+    <string name="old_app_notice_take_me_there">带我去</string>
+    <string name="old_app_notice_got_it">知道了</string>
 </resources>

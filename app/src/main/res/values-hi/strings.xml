@@ -1459,23 +1459,8 @@
     <string name="song_fix_search_hint">खोजें</string>
     <string name="song_fix_search_failed">अभी खोज नहीं सके</string>
     <string name="song_fix_search_none">कुछ नहीं मिला</string>
-    <string name="app_move_import_title">अपना डेटा साथ लाएँ</string>
-    <string name="app_move_import_body">आपका पुराना Dial ऐप अभी भी इंस्टॉल है। उसकी सेटिंग्स, लाइब्रेरी, डायल पिन, डाउनलोड, सुनने का इतिहास और साइन-इन इस ऐप में ले आएँ?</string>
-    <string name="app_move_import_action">मेरा डेटा ले आएँ</string>
-    <string name="app_move_update_old_title">अपना डेटा साथ लाएँ</string>
-    <string name="app_move_update_old_body">आपका पुराना Dial ऐप अपना डेटा देने के लिए बहुत पुराना है। उसे एक बार अपडेट करें और सब कुछ यहाँ आ जाएगा।</string>
-    <string name="app_move_update_old_action">पुराना ऐप अपडेट करें</string>
-    <string name="app_move_uninstall_title">सब आ गया</string>
-    <string name="app_move_uninstall_body">आपके पुराने Dial ऐप का सब कुछ अब यहाँ है। आप पुराना ऐप अनइंस्टॉल कर सकते हैं।</string>
-    <string name="app_move_uninstall_action">पुराना ऐप अनइंस्टॉल करें</string>
-    <string name="app_move_keep_old">रहने दें</string>
-    <string name="app_move_get_dial_title">Dial का नया घर</string>
-    <string name="app_move_get_dial_body">Dial अब एक अलग ऐप है, और इस ऐप को अब अपडेट नहीं मिलेंगे। नया ऐप इंस्टॉल करें और आपकी सेटिंग्स, लाइब्रेरी, सुनने का इतिहास और साइन-इन साथ आ जाएँगे।</string>
-    <string name="app_move_get_dial_action">नया ऐप पाएँ</string>
-    <string name="app_move_open_dial_title">Dial का नया घर</string>
-    <string name="app_move_open_dial_body">नया Dial ऐप इंस्टॉल है। सब कुछ ले जाने के लिए उसे खोलें, फिर आप इसे अनइंस्टॉल कर सकते हैं।</string>
-    <string name="app_move_open_dial_action">Dial खोलें</string>
-    <string name="app_move_not_now">अभी नहीं</string>
-    <string name="app_move_moving">आपका डेटा ले जा रहे हैं…</string>
-    <string name="app_move_downloading">डाउनलोड हो रहा है…</string>
+    <string name="old_app_notice_title">पुराने ऐप से आ रहे हैं?</string>
+    <string name="old_app_notice_body">पुराने ऐप की सेटिंग्स, लाइब्रेरी, सुनने का इतिहास और साइन-इन अपने आप नहीं आते। पुराने ऐप में सेटिंग्स, फिर आपका डेटा खोलें और डेटा एक्सपोर्ट करें पर टैप करें। फिर यहाँ डेटा इंपोर्ट करें पर टैप करके वह फ़ाइल चुनें। आपको फिर से साइन इन करना होगा।</string>
+    <string name="old_app_notice_take_me_there">वहाँ ले चलें</string>
+    <string name="old_app_notice_got_it">समझ गया</string>
 </resources>
