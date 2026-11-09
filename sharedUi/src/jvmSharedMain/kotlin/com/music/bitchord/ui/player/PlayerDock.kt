@@ -158,6 +158,14 @@ class PlayerDock {
     }
 
     /**
+     * How much the pill is swollen by the finger pressing it, 1 at rest; read
+     * when drawing. The panel takes over a pill that is still swollen from the
+     * press that started the pull, and wears the same swell as it eases off
+     * rather than dropping straight to the pill's resting size.
+     */
+    var pillPress: () -> Float = { 1f }
+
+    /**
      * True while the panel stands where the mini player's pill is, so the pill
      * itself stands aside instead of showing as a second panel.
      */

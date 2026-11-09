@@ -35,6 +35,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -333,11 +334,21 @@ private fun GlassNowPlaying(
     val density = androidx.compose.ui.platform.LocalDensity.current
     val pressSource = remember { MutableInteractionSource() }
     val isPressed by pressSource.collectIsPressedAsState()
-    val pressScale by animateFloatAsState(
+    val pressScaleState = animateFloatAsState(
         targetValue = if (isPressed) 1.04f else 1f,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
         label = "accessoryPressScale",
     )
+    val pressScale by pressScaleState
+    // The panel that takes over from this pill wears its swell too, so a pull
+    // doesn't open with the pill snapping back to its resting size.
+    if (dock != null) {
+        DisposableEffect(dock, pressScaleState) {
+            val press = { pressScaleState.value }
+            dock.pillPress = press
+            onDispose { if (dock.pillPress === press) dock.pillPress = { 1f } }
+        }
+    }
 
     val artSize = if (isInline) 32.dp else 40.dp
     val glyphSlot = if (isInline) 32.dp else 40.dp

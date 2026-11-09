@@ -150,6 +150,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
 import coil3.request.ImageRequest
 import coil3.compose.LocalPlatformContext
 import coil3.SingletonImageLoader
@@ -179,6 +180,7 @@ import com.music.bitchord.data.settings.LastPlayerScreen
 import com.music.bitchord.data.model.LikeStatus
 import com.music.bitchord.data.model.PlaybackSourceType
 import com.music.bitchord.data.model.CARD_ART_PX
+import com.music.bitchord.data.model.ROW_ART_PX
 import com.music.bitchord.data.model.PLAYER_ART_PX
 import com.music.bitchord.data.model.artworkAt
 import com.music.bitchord.data.model.Song
@@ -4043,6 +4045,8 @@ fun NowPlayingScreen(
                             }
                         },
                 ) {
+                    // Whether the mini player's thumbnail (below) is standing in.
+                    var rowArtLoaded by remember(art) { mutableStateOf(false) }
                     // Empty state lives on this tile, not the AsyncImage: a
                     // background *and* a painter both trying to fill the same
                     // clipped shape is what read as two overlapping squares
@@ -4091,7 +4095,7 @@ fun NowPlayingScreen(
                             .background(Color.Black.copy(alpha = 0.18f)),
                         contentAlignment = Alignment.Center,
                     ) {
-                        if (!art.loaded && !art.previewLoaded && !canvasRendered) {
+                        if (!art.loaded && !art.previewLoaded && !canvasRendered && !rowArtLoaded) {
                             Icon(
                                 imageVector = BitChordIcons.MusicNote,
                                 contentDescription = null,
@@ -4105,6 +4109,21 @@ fun NowPlayingScreen(
                                     },
                             )
                         }
+                    }
+                    // The mini player's own thumbnail, under both of those: the
+                    // pill has it on screen, so it is in memory and draws on the
+                    // first frame. A pull that opens the player composes this
+                    // afresh, and without it the cover that flies out of the pill
+                    // was the music-note placeholder for the few frames the
+                    // larger copies took to come back from the cache.
+                    if (!art.loaded && !art.previewLoaded) {
+                        AsyncImage(
+                            model = art.url.artworkAt(ROW_ART_PX),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            onState = { rowArtLoaded = it is AsyncImagePainter.State.Success },
+                            modifier = Modifier.fillMaxSize(),
+                        )
                     }
                     // The small copy of the cover, under the full-size one. It is the
                     // size every list already holds, so it is usually on the device
