@@ -97,6 +97,7 @@
     <string name="custom_cover_background">Background</string>
     <string name="custom_cover_automatic">Automatic</string>
     <string name="custom_cover_unavailable">Couldn\'t make a cover from this playlist</string>
+    <string name="custom_cover_shuffle">Pick other songs</string>
     <string name="playlist_backdrop">Animated backdrop</string>
     <string name="playlist_backdrop_on">On</string>
     <string name="playlist_backdrop_off">Off</string>
