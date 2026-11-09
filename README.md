@@ -26,14 +26,14 @@
 <div align="center">
 <table>
   <tr>
-    <td align="center"><img src="docs/screenshots/home.jpg" width="220" /><br/><sub>Speed dial and a custom nav bar</sub></td>
-    <td align="center"><img src="docs/screenshots/library.jpg" width="220" /><br/><sub>YouTube Music library</sub></td>
-    <td align="center"><img src="docs/screenshots/player.jpg" width="220" /><br/><sub>Now playing</sub></td>
+    <td align="center"><img src="docs/screenshots/home.jpg" width="220" alt="Home speed dial" /><br/><sub>Speed dial on Home</sub></td>
+    <td align="center"><img src="docs/screenshots/library.jpg" width="220" alt="Library songs list" /><br/><sub>Library songs with A–Z scroller</sub></td>
+    <td align="center"><img src="docs/screenshots/playlist.jpg" width="220" alt="Liked Music playlist" /><br/><sub>Playlist</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/screenshots/canvas.jpg" width="220" /><br/><sub>Compact controls over Spotify Canvas</sub></td>
-    <td align="center"><img src="docs/screenshots/queue.jpg" width="220" /><br/><sub>Queue with compact controls</sub></td>
-    <td align="center"><img src="docs/screenshots/lyrics.jpg" width="220" /><br/><sub>Lyrics</sub></td>
+    <td align="center"><img src="docs/screenshots/artist.jpg" width="220" alt="Artist page" /><br/><sub>Artist page</sub></td>
+    <td align="center"><img src="docs/screenshots/player.jpg" width="220" alt="Now playing screen" /><br/><sub>Now playing</sub></td>
+    <td align="center"><img src="docs/screenshots/video.jpg" width="220" alt="Fullscreen video player" /><br/><sub>Fullscreen video</sub></td>
   </tr>
 </table>
 </div>
