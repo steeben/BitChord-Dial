@@ -134,6 +134,17 @@ object MusicVideoEngine {
     /** Tracks with no picture to show, so a track change back to one doesn't ask again. */
     private val noPicture = HashSet<String>()
 
+    /**
+     * Videos found to be one picture held still — the song uploaded over its
+     * cover — kept for good, so they are skipped from the first frame next
+     * time and the player's own backdrop shows instead. See [StillPicture].
+     */
+    private val stillVideos = HashSet<String>()
+
+    /** Videos already probed this session, still or not. */
+    private val probed = HashSet<String>()
+    private var probeJob: Job? = null
+
     private val _shownVideoId = MutableStateFlow<String?>(null)
 
     /** The video whose frames are on screen now, once its first one has landed. */
@@ -189,6 +200,7 @@ object MusicVideoEngine {
         override fun onRenderedFirstFrame() {
             _frameOn.value = top()
             _shownVideoId.value = loadedId
+            probeStill()
         }
 
         override fun onVideoSizeChanged(videoSize: VideoSize) {
@@ -268,6 +280,7 @@ object MusicVideoEngine {
             prefs = app.getSharedPreferences("music_video", Context.MODE_PRIVATE).also { stored ->
                 val held = stored.getInt(KEY_QUALITY, 0).takeIf { it > 0 }
                 _quality.value = _quality.value.copy(held = held)
+                stillVideos += stored.getStringSet(KEY_STILL, emptySet()).orEmpty()
             }
         }
         val exo = ensurePlayer(app)
@@ -324,12 +337,14 @@ object MusicVideoEngine {
         val song = controller?.currentMediaItem?.toSong() ?: return null
         if (song.isVideo) {
             return (song.videoId to null).takeIf {
-                song.videoId !in noPicture && song.videoId !in AudioOnlyVideos
+                song.videoId !in noPicture && song.videoId !in AudioOnlyVideos && song.videoId !in stillVideos
             }
         }
         val paired = CanvasAudioFixes.pairedVideo(song.videoId)
         val picture = paired ?: VideoCanvases.pictureFor(song.videoId) ?: return null
         if (picture in noPicture) return null
+        // A still picture is no better than the backdrop — unless picked by hand.
+        if (paired == null && picture in stillVideos) return null
         // "Doesn't match" hides a video the app found, never one picked by hand.
         if (paired == null && song.videoId in CanvasAudioFixes.state.value.hiddenVideoCanvas) return null
         // A song that is itself a video shows its own picture: same clock, nothing to line up.
@@ -484,6 +499,8 @@ object MusicVideoEngine {
     private fun unload() {
         loadJob?.cancel()
         loadJob = null
+        probeJob?.cancel()
+        probeJob = null
         syncJob?.cancel()
         syncJob = null
         measureJob?.cancel()
@@ -549,6 +566,58 @@ object MusicVideoEngine {
         }
     }
 
+    /**
+     * Watches the first seconds of a newly shown video for movement: a few
+     * tiny thumbnails read back from the surface it is drawing to, a few
+     * seconds of video apart. One that moved ends it; all of them matching
+     * marks the video still and hands the screen back to the backdrop. Once
+     * per video per session, never for one picked by hand, and only while it
+     * plays on screen — a paused or hidden picture is not sampled.
+     */
+    private fun probeStill() {
+        val id = loadedId ?: return
+        if (id in probed || probeJob?.isActive == true) return
+        val song = controller?.currentMediaItem?.toSong()
+        if (song != null && CanvasAudioFixes.pairedVideo(song.videoId) == id) return
+        probeJob = scope.launch {
+            var last: ByteArray? = null
+            var lastAt = -1L
+            var samples = 0
+            var startAt = player?.currentPosition ?: 0L
+            while (isActive && loadedId == id) {
+                delay(500L)
+                val exo = player ?: return@launch
+                val view = _frameOn.value ?: continue
+                if (!exo.isPlaying || _shownVideoId.value != id) continue
+                val pos = exo.currentPosition
+                // A seek back to before where it started: count from there.
+                if (pos < startAt) startAt = pos
+                val due = if (last == null) startAt + StillPicture.FIRST_AFTER_MS else lastAt + StillPicture.EVERY_MS
+                if (pos < due && pos >= lastAt) continue
+                val bitmap = runCatching { view.getBitmap(StillPicture.WIDTH, StillPicture.HEIGHT) }.getOrNull() ?: continue
+                val pixels = IntArray(StillPicture.WIDTH * StillPicture.HEIGHT)
+                bitmap.getPixels(pixels, 0, StillPicture.WIDTH, 0, 0, StillPicture.WIDTH, StillPicture.HEIGHT)
+                bitmap.recycle()
+                val sample = StillPicture.luma(pixels)
+                val before = last
+                if (before != null && StillPicture.moved(before, sample)) {
+                    probed += id
+                    return@launch
+                }
+                last = sample
+                lastAt = pos
+                if (++samples >= StillPicture.SAMPLES) {
+                    probed += id
+                    TrackLog.d(TAG, "video: one picture held still; showing the backdrop instead", about = id)
+                    stillVideos += id
+                    prefs?.edit()?.putStringSet(KEY_STILL, HashSet(stillVideos))?.apply()
+                    refresh()
+                    return@launch
+                }
+            }
+        }
+    }
+
     /** Narrower than this is a cover held still, not a picture worth showing. */
     private const val MIN_VIDEO_ASPECT = 1.2f
 
@@ -556,6 +625,7 @@ object MusicVideoEngine {
     private const val AUTO_HEIGHT = 1080
     private const val METERED_HEIGHT = 480
     private const val KEY_QUALITY = "quality"
+    private const val KEY_STILL = "still_videos"
 }
 
 /**
