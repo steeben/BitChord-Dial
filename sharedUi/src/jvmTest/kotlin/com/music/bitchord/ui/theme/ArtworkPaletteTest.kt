@@ -34,4 +34,27 @@ class ArtworkPaletteTest {
         assertEquals(0f, bandBrightness(mostlyDark), 0.0001f)
         assertEquals(0f, bandBrightness(IntArray(0)), 0f)
     }
+
+    @Test
+    fun accentPrefersASaturatedColourOverCommonWhiteAndPale() {
+        val white = 0xFFF4F4F4.toInt() to 900
+        val cream = 0xFFF0E6C8.toInt() to 600
+        val green = 0xFF3CC83C.toInt() to 200
+        assertEquals(green.first, pickAccentSwatch(listOf(white, cream, green)))
+    }
+
+    @Test
+    fun accentNeverPicksNearBlack() {
+        val black = 0xFF0A0A12.toInt() to 5000
+        val darkRed = 0xFF3A0508.toInt() to 3000 // lightness ~0.12: near-black
+        val mutedPurple = 0xFF8A70B0.toInt() to 40
+        assertEquals(mutedPurple.first, pickAccentSwatch(listOf(black, darkRed, mutedPurple)))
+    }
+
+    @Test
+    fun allNearBlackFallsBackToTheBrightest() {
+        val a = 0xFF050505.toInt() to 100
+        val b = 0xFF1A1A1A.toInt() to 10
+        assertEquals(b.first, pickAccentSwatch(listOf(a, b)))
+    }
 }

@@ -11,19 +11,20 @@ class BrightArtTest {
         assertEquals(0.28f, playerInkTint(null), 0.0001f)
         assertEquals(0.28f, playerInkTint(0.05f), 0.0001f)
         assertEquals(0.28f, playerInkTint(0.48f), 0.0001f)
-        assertEquals(0.40f, playerInkTint(0.60f), 0.0001f)
+        assertEquals(0.28f, playerInkTint(0.60f), 0.0001f)
+        assertEquals(0.40f, playerInkTint(0.70f), 0.0001f)
         assertEquals(0.40f, playerInkTint(0.95f), 0.0001f)
     }
 
     @Test
-    fun inkDarkensFiftyPercentOnlyOnMostlyWhiteArt() {
+    fun inkDarkensOnlyOnMostlyWhiteArt() {
         assertEquals(0f, playerInkDarken(null), 0.0001f)
         assertEquals(0f, playerInkDarken(0.05f), 0.0001f)
         // Mid-toned art (the old ramp already darkened here) keeps light ink.
         assertEquals(0f, playerInkDarken(0.48f), 0.0001f)
-        assertEquals(0f, playerInkDarken(0.59f), 0.0001f)
-        assertEquals(0.50f, playerInkDarken(0.60f), 0.0001f)
-        assertEquals(0.50f, playerInkDarken(0.95f), 0.0001f)
+        assertEquals(0f, playerInkDarken(0.69f), 0.0001f)
+        assertEquals(0.575f, playerInkDarken(0.70f), 0.0001f)
+        assertEquals(0.575f, playerInkDarken(0.95f), 0.0001f)
     }
 
     @Test
@@ -31,11 +32,13 @@ class BrightArtTest {
         // From light: only a near-white band flips it.
         assertEquals(false, bandInkIsDark(0.30f, wasDark = false))
         assertEquals(false, bandInkIsDark(0.75f, wasDark = false))
-        assertEquals(true, bandInkIsDark(0.80f, wasDark = false))
+        // A bright green sleeve with pale paths (0.8 to 0.89) keeps light ink.
+        assertEquals(false, bandInkIsDark(0.85f, wasDark = false))
+        assertEquals(true, bandInkIsDark(0.90f, wasDark = false))
         // From dark: it stays dark through the gap, so a wobbling clip can't flicker it.
-        assertEquals(true, bandInkIsDark(0.75f, wasDark = true))
-        assertEquals(true, bandInkIsDark(0.68f, wasDark = true))
-        assertEquals(false, bandInkIsDark(0.67f, wasDark = true))
+        assertEquals(true, bandInkIsDark(0.85f, wasDark = true))
+        assertEquals(true, bandInkIsDark(0.80f, wasDark = true))
+        assertEquals(false, bandInkIsDark(0.79f, wasDark = true))
     }
 
     @Test
@@ -57,8 +60,8 @@ class BrightArtTest {
         assertEquals(0f, controlsScrimAlpha(0.20f), 0.0001f)
         val mid = controlsScrimAlpha(0.42f)
         assertTrue("mid was $mid", mid > 0.1f && mid < 0.4f)
-        assertEquals(0.50f, controlsScrimAlpha(0.65f), 0.0001f)
-        assertEquals(0.50f, controlsScrimAlpha(0.95f), 0.0001f)
+        assertEquals(0.56f, controlsScrimAlpha(0.65f), 0.0001f)
+        assertEquals(0.56f, controlsScrimAlpha(0.95f), 0.0001f)
     }
 
     @Test

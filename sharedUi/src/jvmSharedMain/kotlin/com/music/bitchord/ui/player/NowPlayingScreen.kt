@@ -2912,6 +2912,12 @@ fun NowPlayingScreen(
                     )
                 },
                 chromeHidden = landscapeVideoFullscreen,
+                // A tap on empty space does what the full-screen button does.
+                onBackgroundTap = if (landscapeVideoBehind) {
+                    { landscapeVideoFullscreenAsked = true }
+                } else {
+                    null
+                },
             )
             if (landscapeVideoFullscreen) {
                 LandscapeVideoFullscreenOverlay(onExit = { landscapeVideoFullscreenAsked = false })

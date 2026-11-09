@@ -155,7 +155,7 @@ val LocalNowPlayingTint = compositionLocalOf<Color?> { null }
 
 /**
  * The accent [rememberArtworkPalette] would give the artwork at [artworkUrl] —
- * the sleeve's brightest note, made legible on the theme's background — or
+ * the sleeve's one accent ([pickAccentSwatch]), made legible on the theme's background — or
  * null while nothing plays. Until a new sleeve has been read the last song's
  * colour holds, and the change crossfades rather than cuts unless "Reduce
  * animation" is on.
@@ -277,26 +277,61 @@ private fun seedOf(bitmap: ImageBitmap): Seed? {
     // Both cases used to turn into the same maroon page.
     val all = swatches(clearFilters = true)
     if (all.isEmpty()) return null
-    val accentCandidates = swatches(clearFilters = false).ifEmpty { all }
 
     val dominant = all.maxBy { it.population }
-    // The accent has to earn its place twice over: a colour nobody sees enough
-    // of reads as arbitrary, and a grey one isn't an accent at all. Scoring on
-    // saturation against the *square root* of population is what stops a sleeve
-    // that is four-fifths black sky from accenting in black.
-    val vibrant = accentCandidates.maxBy { swatch ->
-        val hsl = FloatArray(3).also { ColorUtils.colorToHSL(swatch.rgb, it) }
-        hsl[1] * sqrt(swatch.population.toFloat())
-    }
+    val vibrant = pickAccentSwatch(all.map { it.rgb to it.population })
     return Seed(
         dominant = Color(dominant.rgb),
-        vibrant = Color(vibrant.rgb),
+        vibrant = Color(vibrant),
         edge = bitmap.bottomEdgeColor(),
         topBandLuminance = bitmap.topBandRelativeLuminance(),
         luminance = bitmap.relativeLuminance(),
         controlsBandLuminance = bitmap.controlsBandLuminance(),
     )
 }
+
+/**
+ * The one accent colour a sleeve gets, out of its quantised swatches
+ * (`rgb to population`): the whole app wears it for the playing song, from the
+ * Home logo and the mini player to the full player and the ambient blobs.
+ *
+ * Scored on HSL chroma (saturation scaled by how far the lightness is from
+ * either pole) against the square root of population: chroma is what makes a
+ * colour read as a colour, so a saturated swatch beats a white or pale one, and
+ * the square root keeps a speck from winning over a colour the sleeve is
+ * actually made of. Near-black swatches are never picked while anything else
+ * is there; a sleeve that is nothing but near-black gets its brightest swatch.
+ */
+internal fun pickAccentSwatch(swatches: List<Pair<Int, Int>>): Int {
+    require(swatches.isNotEmpty())
+    val hsl = FloatArray(3)
+    fun lightness(rgb: Int): Float {
+        ColorUtils.colorToHSL(rgb, hsl)
+        return hsl[2]
+    }
+    val candidates = swatches.filter { (rgb, _) -> lightness(rgb) >= ACCENT_MIN_LIGHTNESS }
+    if (candidates.isEmpty()) return swatches.maxBy { (rgb, _) -> lightness(rgb) }.first
+    return candidates.maxBy { (rgb, population) ->
+        ColorUtils.colorToHSL(rgb, hsl)
+        val chroma = hsl[1] * (1f - kotlin.math.abs(2f * hsl[2] - 1f))
+        // Pale tints (lightness past ACCENT_PALE_FROM) are marked down on top of
+        // chroma's own falloff, so a cream or a pastel loses to a real colour.
+        val pale = if (hsl[2] > ACCENT_PALE_FROM) 0.5f else 1f
+        (chroma * pale + ACCENT_CHROMA_FLOOR) * sqrt(population.toFloat())
+    }.first
+}
+
+/** Below this HSL lightness a swatch is near-black and never the accent. */
+private const val ACCENT_MIN_LIGHTNESS = 0.16f
+
+/** Above this HSL lightness a swatch counts as pale and is marked down. */
+private const val ACCENT_PALE_FROM = 0.80f
+
+/**
+ * A sliver of score every swatch gets, so a sleeve with no colour at all still
+ * picks its most common usable grey instead of an arbitrary one.
+ */
+private const val ACCENT_CHROMA_FLOOR = 0.01f
 
 /**
  * A seed with every note taken from the supplied colours: the page is the

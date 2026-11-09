@@ -290,10 +290,10 @@ internal fun controlsScrimAlpha(band: Float): Float {
 }
 
 /** Band brightness (relative luminance, linear light) where dark ink takes over: near white. */
-private const val BAND_DARK_FROM = 0.80f
+private const val BAND_DARK_FROM = 0.90f
 
 /** ...and where it hands back to light ink, once it has. */
-private const val BAND_LIGHT_BELOW = 0.68f
+private const val BAND_LIGHT_BELOW = 0.80f
 
 /** Band brightness below which light ink needs no scrim at all (an sRGB grey of about 125). */
 private const val SCRIM_FROM = 0.20f
@@ -305,7 +305,7 @@ private const val SCRIM_FULL_AT = 0.65f
  * The darkest the scrim gets. Over a band at [BAND_DARK_FROM] it still leaves white text
  * at about 4.5:1, the contrast body text is asked for.
  */
-private const val CONTROLS_SCRIM_MAX = 0.50f
+private const val CONTROLS_SCRIM_MAX = 0.56f
 
 /** Whether a sleeve of [artLuminance] is white enough to switch the player to dark ink. */
 internal fun playerInkIsDark(artLuminance: Float?): Boolean =
@@ -322,15 +322,18 @@ internal fun playerInkDarken(artLuminance: Float?): Float =
 private const val PLAYER_INK_TINT = 0.28f
 private const val PLAYER_INK_TINT_BRIGHT = 0.40f
 
-/** How much darker the ink is in its dark form: 50% of the way to black. */
-private const val PLAYER_INK_DARKEN = 0.50f
+/**
+ * How much darker the ink is in its dark form: 57.5% of the way to black, which leaves
+ * 85% of what the old 50% left, so dark text sits 15% darker than it used to.
+ */
+private const val PLAYER_INK_DARKEN = 0.575f
 
 /**
  * Mean relative luminance (linear light) a sleeve must reach before the ink goes dark.
- * 0.6 is roughly an sRGB grey of 205/255 across the whole sleeve, i.e. art that is
- * mostly white, not merely mid-toned.
+ * 0.7 is roughly an sRGB grey of 218/255 across the whole sleeve, i.e. art that is
+ * mostly white, not merely bright: a vivid green or yellow sleeve keeps light ink.
  */
-private const val INK_DARK_FROM = 0.60f
+private const val INK_DARK_FROM = 0.70f
 
 /**
  * The waves' clock and swell. [time] runs only while the music does, so a paused bar costs no
