@@ -38,21 +38,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Fullscreen
-import androidx.compose.material.icons.rounded.FullscreenExit
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.displayCutout
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableIntStateOf
 import com.music.bitchord.ui.theme.HideSystemBars
-import kotlinx.coroutines.delay
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -167,13 +164,31 @@ internal fun LandscapePlayerLayout(
      * the way back, so nothing faded out can still be touched.
      */
     chromeHidden: Boolean = false,
+    /**
+     * A tap on the player where nothing else takes it — between the columns,
+     * round the sleeve, around the credits — while the main pane is up. Null
+     * leaves those taps alone.
+     */
+    onBackgroundTap: (() -> Unit)? = null,
 ) {
     val chromeAlpha by animateFloatAsState(
         targetValue = if (chromeHidden) 0f else 1f,
         animationSpec = tween(LANDSCAPE_CANVAS_DIM_MS),
         label = "landscapeChrome",
     )
-    Box(modifier = modifier.fillMaxSize()) {
+    val backgroundTap = if (pane == PlayerPane.Main && !chromeHidden) onBackgroundTap else null
+    val currentBackgroundTap by rememberUpdatedState(backgroundTap)
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            // Run after the player's own buttons, sliders and drags, which
+            // consume what they take, so only an otherwise unclaimed tap lands.
+            .pointerInput(backgroundTap != null) {
+                if (backgroundTap != null) {
+                    detectTapGestures { currentBackgroundTap?.invoke() }
+                }
+            },
+    ) {
         background(Modifier.fillMaxSize())
 
         BoxWithConstraints(
@@ -459,14 +474,10 @@ internal fun LandscapeCanvasBackdrop(
     }
 }
 
-/** How long the exit button stays over a full-screen video untouched. */
-private const val LANDSCAPE_FULLSCREEN_IDLE_MS = 3_000L
-
 /**
  * Laid over the landscape player while its music video is full screen (see
- * [LandscapePlayerLayout]'s chromeHidden): the system bars go away, a tap
- * brings up the exit button in the corner for a few seconds, and back, or
- * that button, puts the player back over the video.
+ * [LandscapePlayerLayout]'s chromeHidden): the system bars go away, and a tap
+ * anywhere on the video, or back, puts the player back over it.
  */
 @Composable
 internal fun LandscapeVideoFullscreenOverlay(
@@ -475,52 +486,16 @@ internal fun LandscapeVideoFullscreenOverlay(
 ) {
     HideSystemBars(true)
     PlayerBackHandler(enabled = true, onBack = onExit)
-    var exitShown by remember { mutableStateOf(true) }
-    // Bumped by each tap that brings the button up, so the timer starts over.
-    var taps by remember { mutableIntStateOf(0) }
-    LaunchedEffect(exitShown, taps) {
-        if (exitShown) {
-            delay(LANDSCAPE_FULLSCREEN_IDLE_MS)
-            exitShown = false
-        }
-    }
     Box(
         modifier = modifier
             .fillMaxSize()
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-            ) {
-                exitShown = !exitShown
-                taps++
-            },
-    ) {
-        AnimatedVisibility(
-            visible = exitShown,
-            enter = fadeIn(tween(200)),
-            exit = fadeOut(tween(300)),
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .windowInsetsPadding(WindowInsets.displayCutout)
-                .padding(horizontal = 24.dp, vertical = 16.dp),
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color.Black.copy(alpha = 0.38f))
-                    .clickable(onClick = onExit),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.FullscreenExit,
-                    contentDescription = stringResource(Res.string.exit_full_screen_video),
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp),
-                )
-            }
-        }
-    }
+                onClickLabel = stringResource(Res.string.exit_full_screen_video),
+                onClick = onExit,
+            ),
+    )
 }
 
 /**
