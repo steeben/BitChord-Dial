@@ -254,7 +254,6 @@ import com.music.bitchord.ui.components.rememberAmbientBlobs
 import com.music.bitchord.ui.components.rememberAmbientAccent
 import com.music.bitchord.ui.components.LocalAmbientAccent
 import com.music.bitchord.ui.components.pageAccent
-import com.music.bitchord.ui.components.ambientCompanion
 import com.music.bitchord.ui.screens.libraryExtraLinks
 import com.music.bitchord.ui.screens.LibraryHomeScreen
 import com.music.bitchord.ui.screens.LibraryMenu
@@ -3227,34 +3226,26 @@ private fun BitChordApp(
         )
     }
 
+    // The playing song's one accent colour, for everything that wears it: see
+    // [LocalNowPlayingTint]. Provided around the whole app rather than handed
+    // down, so the library's own pages can pick it up the same way.
+    val nowPlayingTint = rememberNowPlayingTint(player.song?.thumbnailUrl)
     // The colour blobs behind the pages: the app's red, Spotify's green in the
     // Spotify library, YouTube's red in the YouTube Music one, or the playing
-    // song's artwork colour when Settings asks for that.
+    // song's accent when Settings asks for that. One colour, never a second
+    // one read off the artwork, so the blobs match the logo and progress bars.
     val ambientOn by CustomizationSettings.ambientBackground.collectAsStateWithLifecycle()
     val ambientFollowsArtwork by CustomizationSettings.ambientFollowsArtwork.collectAsStateWithLifecycle()
-    // The artwork's two most common colours, when the background follows it.
-    val ambientArtColors = if (ambientOn && ambientFollowsArtwork && player.song != null) {
-        com.music.bitchord.ui.player.rememberArtworkColors(player.song?.thumbnailUrl).colors
-    } else {
-        null
-    }
+    val ambientSongTint = nowPlayingTint.takeIf { ambientOn && ambientFollowsArtwork && player.song != null }
     val ambientPrimary = when {
         showSpotify -> AmbientSpotifyColor
         detail?.browseId == YT_MUSIC_LIBRARY_BROWSE_ID -> AmbientYouTubeColor
-        !ambientArtColors.isNullOrEmpty() -> ambientArtColors[0]
+        ambientSongTint != null -> ambientSongTint
         else -> AmbientAppColor
-    }
-    val ambientSecondary = if (
-        !showSpotify && detail?.browseId != YT_MUSIC_LIBRARY_BROWSE_ID &&
-        ambientArtColors != null && ambientArtColors.size > 1
-    ) {
-        ambientArtColors[1]
-    } else {
-        ambientCompanion(ambientPrimary)
     }
     val reduceAnimationSetting by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
     val ambientBlobs = if (ambientOn) {
-        rememberAmbientBlobs(ambientPrimary, ambientSecondary, animate = !reduceAnimationSetting)
+        rememberAmbientBlobs(ambientPrimary, animate = !reduceAnimationSetting)
     } else {
         null
     }
@@ -3330,13 +3321,11 @@ private fun BitChordApp(
         LaunchGate.open = true
         SpeedDialIntro.canStart = true
     }
-    // The playing song's colour, for the chrome that wears it — see
-    // [LocalNowPlayingTint]. Provided around the whole app rather than handed
-    // down, so the library's own pages can pick it up the same way.
-    val nowPlayingTint = rememberNowPlayingTint(player.song?.thumbnailUrl)
-    // The page chrome's accent while the ambient background is on: the blobs'
-    // own colour, so the progress bar and buttons match the wash behind them.
-    val ambientAccent = rememberAmbientAccent(ambientPrimary, on = ambientOn)
+    // The page chrome's accent while the ambient background is on in a colour
+    // of its own (the app's or a library's brand): the blobs' colour, so the
+    // progress bar and buttons match the wash behind them. While the blobs
+    // follow the song they already are its accent, so nothing overrides it.
+    val ambientAccent = rememberAmbientAccent(ambientPrimary, on = ambientOn && ambientPrimary != ambientSongTint)
     Box(
         Modifier
             .fillMaxSize()
