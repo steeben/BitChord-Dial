@@ -1491,4 +1491,23 @@
     <string name="song_fix_search_hint">Поиск</string>
     <string name="song_fix_search_failed">Сейчас не удалось выполнить поиск</string>
     <string name="song_fix_search_none">Ничего не найдено</string>
+    <string name="app_move_import_title">Перенесите свои данные</string>
+    <string name="app_move_import_body">Старое приложение Dial всё ещё установлено. Перенести его настройки, медиатеку, закрепления, загрузки, историю прослушивания и входы в аккаунты сюда?</string>
+    <string name="app_move_import_action">Перенести данные</string>
+    <string name="app_move_update_old_title">Перенесите свои данные</string>
+    <string name="app_move_update_old_body">Старое приложение Dial слишком старое, чтобы передать данные. Обновите его один раз, и всё перенесётся сюда.</string>
+    <string name="app_move_update_old_action">Обновить старое</string>
+    <string name="app_move_uninstall_title">Переезд завершён</string>
+    <string name="app_move_uninstall_body">Всё из старого приложения Dial теперь здесь. Старое можно удалить.</string>
+    <string name="app_move_uninstall_action">Удалить старое</string>
+    <string name="app_move_keep_old">Оставить</string>
+    <string name="app_move_get_dial_title">У Dial новый дом</string>
+    <string name="app_move_get_dial_body">Dial теперь отдельное приложение, а это больше не будет обновляться. Установите новое, и настройки, медиатека, история прослушивания и входы перейдут с вами.</string>
+    <string name="app_move_get_dial_action">Установить новое</string>
+    <string name="app_move_open_dial_title">У Dial новый дом</string>
+    <string name="app_move_open_dial_body">Новое приложение Dial установлено. Откройте его, чтобы перенести всё, а затем это можно удалить.</string>
+    <string name="app_move_open_dial_action">Открыть Dial</string>
+    <string name="app_move_not_now">Не сейчас</string>
+    <string name="app_move_moving">Переносим данные…</string>
+    <string name="app_move_downloading">Загрузка…</string>
 </resources>

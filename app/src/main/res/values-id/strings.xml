@@ -1436,4 +1436,23 @@
     <string name="song_fix_search_hint">Cari</string>
     <string name="song_fix_search_failed">Tidak bisa mencari sekarang</string>
     <string name="song_fix_search_none">Tidak ditemukan apa pun</string>
+    <string name="app_move_import_title">Bawa datamu</string>
+    <string name="app_move_import_body">Aplikasi Dial lamamu masih terpasang. Pindahkan pengaturan, pustaka, pin dial, unduhan, riwayat dengar, dan login ke aplikasi ini?</string>
+    <string name="app_move_import_action">Pindahkan Data</string>
+    <string name="app_move_update_old_title">Bawa datamu</string>
+    <string name="app_move_update_old_body">Aplikasi Dial lamamu terlalu lama untuk menyerahkan datanya. Perbarui sekali dan semuanya pindah ke sini.</string>
+    <string name="app_move_update_old_action">Perbarui Aplikasi Lama</string>
+    <string name="app_move_uninstall_title">Pindahan selesai</string>
+    <string name="app_move_uninstall_body">Semua dari aplikasi Dial lamamu sudah di sini. Kamu bisa mencopot yang lama.</string>
+    <string name="app_move_uninstall_action">Copot Aplikasi Lama</string>
+    <string name="app_move_keep_old">Simpan</string>
+    <string name="app_move_get_dial_title">Dial punya rumah baru</string>
+    <string name="app_move_get_dial_body">Dial kini aplikasi terpisah, dan aplikasi ini tidak akan diperbarui lagi. Pasang yang baru dan pengaturan, pustaka, riwayat dengar, serta loginmu ikut pindah.</string>
+    <string name="app_move_get_dial_action">Dapatkan Aplikasi Baru</string>
+    <string name="app_move_open_dial_title">Dial punya rumah baru</string>
+    <string name="app_move_open_dial_body">Aplikasi Dial baru sudah terpasang. Buka untuk memindahkan semuanya, lalu kamu bisa mencopot yang ini.</string>
+    <string name="app_move_open_dial_action">Buka Dial</string>
+    <string name="app_move_not_now">Nanti</string>
+    <string name="app_move_moving">Memindahkan datamu…</string>
+    <string name="app_move_downloading">Mengunduh…</string>
 </resources>

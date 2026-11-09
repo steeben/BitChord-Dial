@@ -1499,4 +1499,23 @@
     <string name="song_fix_search_hint">Szukaj</string>
     <string name="song_fix_search_failed">Nie można teraz wyszukać</string>
     <string name="song_fix_search_none">Nic nie znaleziono</string>
+    <string name="app_move_import_title">Przenieś swoje dane</string>
+    <string name="app_move_import_body">Twoja stara aplikacja Dial jest nadal zainstalowana. Przenieść ustawienia, bibliotekę, przypięcia, pobrane utwory, historię słuchania i logowania do tej?</string>
+    <string name="app_move_import_action">Przenieś moje dane</string>
+    <string name="app_move_update_old_title">Przenieś swoje dane</string>
+    <string name="app_move_update_old_body">Twoja stara aplikacja Dial jest za stara, by przekazać dane. Zaktualizuj ją raz, a wszystko trafi tutaj.</string>
+    <string name="app_move_update_old_action">Zaktualizuj starą aplikację</string>
+    <string name="app_move_uninstall_title">Przeprowadzka zakończona</string>
+    <string name="app_move_uninstall_body">Wszystko ze starej aplikacji Dial jest już tutaj. Możesz odinstalować starą.</string>
+    <string name="app_move_uninstall_action">Odinstaluj starą aplikację</string>
+    <string name="app_move_keep_old">Zostaw</string>
+    <string name="app_move_get_dial_title">Dial ma nowy dom</string>
+    <string name="app_move_get_dial_body">Dial jest teraz osobną aplikacją, a ta nie będzie już aktualizowana. Zainstaluj nową, a ustawienia, biblioteka, historia słuchania i logowania przejdą razem z tobą.</string>
+    <string name="app_move_get_dial_action">Pobierz nową aplikację</string>
+    <string name="app_move_open_dial_title">Dial ma nowy dom</string>
+    <string name="app_move_open_dial_body">Nowa aplikacja Dial jest zainstalowana. Otwórz ją, aby przenieść wszystko, a potem możesz odinstalować tę.</string>
+    <string name="app_move_open_dial_action">Otwórz Dial</string>
+    <string name="app_move_not_now">Nie teraz</string>
+    <string name="app_move_moving">Przenoszenie danych…</string>
+    <string name="app_move_downloading">Pobieranie…</string>
 </resources>

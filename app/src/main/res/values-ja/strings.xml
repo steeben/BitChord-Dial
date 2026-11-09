@@ -1437,4 +1437,23 @@
     <string name="song_fix_search_hint">検索</string>
     <string name="song_fix_search_failed">今は検索できません</string>
     <string name="song_fix_search_none">見つかりませんでした</string>
+    <string name="app_move_import_title">データを引き継ぐ</string>
+    <string name="app_move_import_body">以前の Dial アプリがまだインストールされています。設定、ライブラリ、ダイヤルのピン、ダウンロード、再生履歴、ログイン情報をこのアプリに移しますか？</string>
+    <string name="app_move_import_action">データを移す</string>
+    <string name="app_move_update_old_title">データを引き継ぐ</string>
+    <string name="app_move_update_old_body">以前の Dial アプリは古いため、データを渡せません。一度アップデートすると、すべてこちらに移ります。</string>
+    <string name="app_move_update_old_action">古いアプリをアップデート</string>
+    <string name="app_move_uninstall_title">引っ越し完了</string>
+    <string name="app_move_uninstall_body">以前の Dial アプリのデータはすべてここにあります。古いアプリはアンインストールできます。</string>
+    <string name="app_move_uninstall_action">古いアプリをアンインストール</string>
+    <string name="app_move_keep_old">残す</string>
+    <string name="app_move_get_dial_title">Dial は新しいアプリに</string>
+    <string name="app_move_get_dial_body">Dial は別のアプリになり、このアプリにはもうアップデートが届きません。新しいアプリを入れると、設定、ライブラリ、再生履歴、ログイン情報も一緒に移ります。</string>
+    <string name="app_move_get_dial_action">新しいアプリを入手</string>
+    <string name="app_move_open_dial_title">Dial は新しいアプリに</string>
+    <string name="app_move_open_dial_body">新しい Dial アプリがインストールされています。開くとすべて移り、その後このアプリはアンインストールできます。</string>
+    <string name="app_move_open_dial_action">Dial を開く</string>
+    <string name="app_move_not_now">後で</string>
+    <string name="app_move_moving">データを移しています…</string>
+    <string name="app_move_downloading">ダウンロード中…</string>
 </resources>

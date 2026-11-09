@@ -1398,4 +1398,23 @@
     <string name="song_fix_search_hint">Cerca</string>
     <string name="song_fix_search_failed">Impossibile cercare ora</string>
     <string name="song_fix_search_none">Nessun risultato</string>
+    <string name="app_move_import_title">Porta con te i tuoi dati</string>
+    <string name="app_move_import_body">La tua vecchia app Dial è ancora installata. Spostare impostazioni, libreria, pin del dial, download, cronologia d\'ascolto e accessi in questa?</string>
+    <string name="app_move_import_action">Sposta i miei dati</string>
+    <string name="app_move_update_old_title">Porta con te i tuoi dati</string>
+    <string name="app_move_update_old_body">La tua vecchia app Dial è troppo vecchia per passare i suoi dati. Aggiornala una volta e tutto verrà spostato qui.</string>
+    <string name="app_move_update_old_action">Aggiorna vecchia app</string>
+    <string name="app_move_uninstall_title">Trasloco completato</string>
+    <string name="app_move_uninstall_body">Tutto ciò che era nella vecchia app Dial ora è qui. Puoi disinstallare quella vecchia.</string>
+    <string name="app_move_uninstall_action">Disinstalla vecchia app</string>
+    <string name="app_move_keep_old">Tienila</string>
+    <string name="app_move_get_dial_title">Dial ha una nuova casa</string>
+    <string name="app_move_get_dial_body">Dial ora è un\'app separata e questa non riceverà più aggiornamenti. Installa quella nuova e impostazioni, libreria, cronologia d\'ascolto e accessi verranno con te.</string>
+    <string name="app_move_get_dial_action">Scarica la nuova app</string>
+    <string name="app_move_open_dial_title">Dial ha una nuova casa</string>
+    <string name="app_move_open_dial_body">La nuova app Dial è installata. Aprila per spostare tutto, poi potrai disinstallare questa.</string>
+    <string name="app_move_open_dial_action">Apri Dial</string>
+    <string name="app_move_not_now">Non ora</string>
+    <string name="app_move_moving">Spostamento dei dati…</string>
+    <string name="app_move_downloading">Download in corso…</string>
 </resources>

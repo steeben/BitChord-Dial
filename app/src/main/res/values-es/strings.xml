@@ -1431,4 +1431,23 @@
     <string name="song_fix_search_hint">Buscar</string>
     <string name="song_fix_search_failed">No se pudo buscar ahora</string>
     <string name="song_fix_search_none">No se encontró nada</string>
+    <string name="app_move_import_title">Trae tus datos</string>
+    <string name="app_move_import_body">Tu antigua app Dial sigue instalada. ¿Pasar sus ajustes, biblioteca, pines del dial, descargas, historial de escucha y sesiones a esta?</string>
+    <string name="app_move_import_action">Mover mis datos</string>
+    <string name="app_move_update_old_title">Trae tus datos</string>
+    <string name="app_move_update_old_body">Tu antigua app Dial es demasiado antigua para pasar sus datos. Actualízala una vez y todo se moverá a esta.</string>
+    <string name="app_move_update_old_action">Actualizar app antigua</string>
+    <string name="app_move_uninstall_title">Mudanza completa</string>
+    <string name="app_move_uninstall_body">Todo lo de tu antigua app Dial ya está aquí. Puedes desinstalar la antigua.</string>
+    <string name="app_move_uninstall_action">Desinstalar app antigua</string>
+    <string name="app_move_keep_old">Conservarla</string>
+    <string name="app_move_get_dial_title">Dial tiene un nuevo hogar</string>
+    <string name="app_move_get_dial_body">Dial ahora es una app aparte y esta ya no recibirá actualizaciones. Instala la nueva y tus ajustes, biblioteca, historial de escucha y sesiones se vendrán contigo.</string>
+    <string name="app_move_get_dial_action">Obtener la nueva app</string>
+    <string name="app_move_open_dial_title">Dial tiene un nuevo hogar</string>
+    <string name="app_move_open_dial_body">La nueva app Dial está instalada. Ábrela para pasar todo y luego podrás desinstalar esta.</string>
+    <string name="app_move_open_dial_action">Abrir Dial</string>
+    <string name="app_move_not_now">Ahora no</string>
+    <string name="app_move_moving">Moviendo tus datos…</string>
+    <string name="app_move_downloading">Descargando…</string>
 </resources>
