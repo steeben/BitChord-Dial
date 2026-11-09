@@ -338,6 +338,10 @@ internal fun SpeedDialShelf(
     // then leaves and pops in afresh, rather than the kept ones sliding over.
     val firstDeal = remember { SpeedDialIntro.deal }
     val deal = remember(shelf.items) { SpeedDialIntro.deal }
+    // Each tile's entrance plays once per deal. The pager drops a page once it
+    // is swiped away and builds it afresh on the way back, so without this a
+    // dealt tile would pop in again on every visit to its page.
+    val entered = remember { HashSet<String>() }
 
     // Turn the page while the finger rests at a side.
     LaunchedEffect(edge, dragId) {
@@ -491,7 +495,10 @@ internal fun SpeedDialShelf(
                     Box(Modifier.fillMaxWidth().height(gridHeight)) {
                         display.drop(page * perPage).take(perPage).forEachIndexed { cell, slotItem ->
                             val item = slotItem ?: return@forEachIndexed
-                            val dealt = if (item.dialId() in pinnedIds) firstDeal else deal
+                            // Pins, the die and the history tile stay put
+                            // through a pull; only the dealt tiles are new.
+                            val kept = item.dialId() in pinnedIds || item === LUCKY_TILE || item === HISTORY_TILE
+                            val dealt = if (kept) firstDeal else deal
                             key(item.dialId(), dealt) {
                                 val target = cellOrigin(cell).let { IntOffset(it.x.roundToInt(), it.y.roundToInt()) }
                                 val offset by animateIntOffsetAsState(
@@ -504,10 +511,16 @@ internal fun SpeedDialShelf(
                                 // in the launch's first page, or when it arrives
                                 // later (a pull to refresh dealing the dial again,
                                 // or a fresh dial replacing the saved one).
+                                // Only on the page in view when that happens:
+                                // a page swiped to later shows its tiles as
+                                // they are, and none plays twice.
                                 val entering = remember(id) {
-                                    (intro && page == 0) ||
-                                        (shownIds.isNotEmpty() && id !in shownIds) ||
-                                        dealt != firstDeal
+                                    val first = entered.add("$id#$dealt")
+                                    first && page == pagerState.currentPage && (
+                                        (intro && page == 0) ||
+                                            (shownIds.isNotEmpty() && id !in shownIds) ||
+                                            dealt != firstDeal
+                                        )
                                 }
                                 val appear = remember(id) { Animatable(if (entering) 0f else 1f) }
                                 LaunchedEffect(appear) {
