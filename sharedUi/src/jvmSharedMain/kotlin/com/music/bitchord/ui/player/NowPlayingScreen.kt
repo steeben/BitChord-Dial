@@ -3897,6 +3897,15 @@ fun NowPlayingScreen(
                     return if (dock == null || t >= 1f) corner else lerp(dock.miniArtCorner(), corner, t)
                 }
 
+                // Whether the mini player's thumbnail is standing in for the
+                // cover inside the sleeve, until the larger copies arrive.
+                var rowArtLoaded by remember(art) { mutableStateOf(false) }
+                // Any picture at all in the sleeve: what its shadow and clip
+                // wait on. Not the full-size cover alone, which can arrive from
+                // disk only after the open has finished, and the shadow it
+                // brought with it then appeared under a cover that had been
+                // sitting there for a while already.
+                val hasPicture = { art.loaded || art.previewLoaded || rowArtLoaded }
                 // The sleeve proper — card, banner and thumbnail in turn, see
                 // [sleeveRect]. Separate from the slot below, which keeps the
                 // card's place for the stats line and the gestures: a banner
@@ -4010,14 +4019,14 @@ fun NowPlayingScreen(
                             // collapse, once the dissolve has all but gone. Let
                             // go of on the way to the mini player, whose cover
                             // sits flat in its bar.
-                            shadowElevation = if (art.loaded) {
+                            shadowElevation = if (hasPicture()) {
                                 10.dp.toPx() * (1f - 2f * shown).coerceAtLeast(0f) * dockT()
                             } else {
                                 0f
                             }
                             shape = dockFrame.cornerShape(sleeveCorner())
                             // What `.shadow` did: it clips only when it casts.
-                            clip = art.loaded
+                            clip = hasPicture()
                         }
                         .graphicsLayer {
                             // Clipped a second time, as `.shadow` and then
@@ -4051,8 +4060,6 @@ fun NowPlayingScreen(
                             }
                         },
                 ) {
-                    // Whether the mini player's thumbnail (below) is standing in.
-                    var rowArtLoaded by remember(art) { mutableStateOf(false) }
                     // Empty state lives on this tile, not the AsyncImage: a
                     // background *and* a painter both trying to fill the same
                     // clipped shape is what read as two overlapping squares
