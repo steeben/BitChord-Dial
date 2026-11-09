@@ -562,3 +562,10 @@ private fun Color.withHsl(
 
 /** Perceived brightness, used only to tell a dark theme from a light one. */
 private fun Color.luminance(): Float = ColorUtils.calculateLuminance(toArgb()).toFloat()
+
+/**
+ * The page palette [rememberArtworkPalette] would give artwork already in
+ * hand as [bitmap], for work done off screen (a generated playlist cover).
+ * Null when the picture has no colours to read.
+ */
+fun artworkPaletteOf(bitmap: ImageBitmap, dark: Boolean): ArtworkPalette? = seedOf(bitmap)?.toPalette(dark)

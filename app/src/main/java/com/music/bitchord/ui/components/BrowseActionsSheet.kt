@@ -53,6 +53,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.music.bitchord.R
 import com.music.bitchord.data.model.BrowseType
+import com.music.bitchord.data.settings.CustomizationSettings
 import com.music.bitchord.data.model.ROW_ART_PX
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.model.UserPlaylist
@@ -182,11 +183,6 @@ fun BrowseActionsSheet(
      * or not, since nothing about it touches the account. Null hides the row.
      */
     onSetCustomCover: (() -> Unit)? = null,
-    /**
-     * Makes the playlist a cover like its page's generated backdrop, offered
-     * beside picking an image under "Custom cover". Null hides the choice.
-     */
-    onGenerateCustomCover: (() -> Unit)? = null,
     /** Puts the playlist's own cover back. Null when no custom one is set. */
     onRemoveCustomCover: (() -> Unit)? = null,
     /**
@@ -418,22 +414,22 @@ fun BrowseActionsSheet(
             onReorder?.let {
                 ActionRow(Icons.Rounded.SwapVert, stringResource(R.string.reorder_songs), onClick = it)
             }
-            onSetCustomCover?.let { pick ->
-                val generate = onGenerateCustomCover
-                if (generate == null) {
-                    ActionRow(Icons.Rounded.AddPhotoAlternate, stringResource(R.string.custom_cover), onClick = pick)
-                } else {
-                    // Two ways to a cover: pick an image, or have one made
-                    // from the playlist's songs. Shown once the row is tapped.
-                    var choosingCover by remember { mutableStateOf(false) }
-                    ActionRow(Icons.Rounded.AddPhotoAlternate, stringResource(R.string.custom_cover)) {
-                        choosingCover = !choosingCover
-                    }
-                    if (choosingCover) {
-                        ActionRow(Icons.Rounded.Image, stringResource(R.string.custom_cover_pick), onClick = pick)
-                        ActionRow(Icons.Rounded.AutoAwesome, stringResource(R.string.custom_cover_generate), onClick = generate)
-                    }
-                }
+            onSetCustomCover?.let {
+                ActionRow(Icons.Rounded.AddPhotoAlternate, stringResource(R.string.custom_cover), onClick = it)
+            }
+            // The page's animated backdrop, on or off for this playlist alone.
+            val backdropId = target.browseId?.takeIf {
+                target.type == BrowseType.PLAYLIST && (it.startsWith("VL") || it == "LM")
+            }
+            val backdropsOn by CustomizationSettings.generatePlaylistImages.collectAsStateWithLifecycle()
+            val backdropsOff by CustomizationSettings.playlistBackdropsOff.collectAsStateWithLifecycle()
+            if (backdropId != null && backdropsOn) {
+                val on = CustomizationSettings.playlistBackdropKey(backdropId) !in backdropsOff
+                ActionRow(
+                    Icons.Rounded.AutoAwesome,
+                    stringResource(R.string.playlist_backdrop),
+                    value = stringResource(if (on) R.string.playlist_backdrop_on else R.string.playlist_backdrop_off),
+                ) { CustomizationSettings.setPlaylistBackdrop(backdropId, !on) }
             }
             onRemoveCustomCover?.let {
                 ActionRow(Icons.Rounded.HideImage, stringResource(R.string.remove_custom_cover), onClick = it)

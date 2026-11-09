@@ -1640,6 +1640,25 @@ private fun BitChordApp(
         }
     }
 
+    // "Custom cover" opens a dialog: generate one from the playlist's songs,
+    // or pick an image off the device.
+    var coverDialogFor by rememberSaveable { mutableStateOf<String?>(null) }
+    coverDialogFor?.let { id ->
+        com.music.bitchord.ui.screens.CustomCoverDialog(
+            browseId = id,
+            onChooseFromDevice = {
+                coverDialogFor = null
+                coverPickFor = id
+                coverPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+            },
+            onSaved = { ok ->
+                coverDialogFor = null
+                showQueueNotice(context.getString(if (ok) R.string.custom_cover_set else R.string.custom_cover_failed))
+            },
+            onDismiss = { coverDialogFor = null },
+        )
+    }
+
     // Copies tracks to the WebDAV server, leaving the local files alone.
     // A clash suspends the batch on WebDavUploads.conflict until the dialog
     // above answers it, so this needs nothing more than the summary.
@@ -7198,22 +7217,7 @@ private fun BitChordApp(
                 onSetCustomCover = pinnableId?.takeIf { customCover == null }?.let { id ->
                     {
                         browseActions = null
-                        coverPickFor = id
-                        coverPicker.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
-                        )
-                    }
-                },
-                onGenerateCustomCover = pinnableId?.takeIf { customCover == null }?.let { id ->
-                    {
-                        browseActions = null
-                        showQueueNotice(context.getString(R.string.custom_cover_generating))
-                        scope.launch {
-                            val ok = com.music.bitchord.ui.screens.generateCollageCover(context, id)
-                            showQueueNotice(
-                                context.getString(if (ok) R.string.custom_cover_set else R.string.custom_cover_failed),
-                            )
-                        }
+                        coverDialogFor = id
                     }
                 },
                 onRemoveCustomCover = pinnableId?.takeIf { customCover != null }?.let { id ->
