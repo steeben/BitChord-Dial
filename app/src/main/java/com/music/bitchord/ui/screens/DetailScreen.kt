@@ -1,5 +1,7 @@
 package com.music.bitchord.ui.screens
 
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.foundation.gestures.animateScrollBy
@@ -179,6 +181,15 @@ import com.music.bitchord.ui.components.thumbnailBorder
 import com.music.bitchord.ui.components.detailSkeleton
 import com.music.bitchord.ui.components.ShimmerBox
 import com.music.bitchord.ui.components.topBarContentPadding
+import com.music.bitchord.ui.components.topBarHeight
+import com.music.bitchord.ui.components.TopBarContentHeight
+import com.music.bitchord.ui.components.TopBarActionsEdge
+import com.music.bitchord.ui.components.BAR_GUTTER
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.geometry.isSpecified
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.text.TextLayoutResult
 import com.music.bitchord.ui.components.trackColumnWidth
 import com.music.bitchord.ui.haptics.Haptic
 import com.music.bitchord.ui.haptics.rememberHaptics
@@ -523,16 +534,20 @@ fun DetailScreen(
     // is disposed, and a field that asks for focus every time it is composed
     // would throw the keyboard back up each time it scrolled into view.
     var focusSearch by remember(page.browseId) { mutableStateOf(false) }
-    // Play and Shuffle fold away while the search is open, and stay folded
-    // after it closes, so the page never moves under the listener; they come
-    // back once the page is scrolled up again.
+    // Play and Shuffle (and the title and details) fold away while the
+    // search is open, and unfold again as it closes.
     var playRowFolded by rememberSaveable(page.browseId) { mutableStateOf(false) }
     var searchFocused by remember(page.browseId) { mutableStateOf(false) }
+    // Once the search has been used the list keeps room at its foot, so a
+    // short list can still hold its controls under the bar and closing the
+    // search never has the page snap back down to fit.
+    var searchUsed by rememberSaveable(page.browseId) { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     val closeSearch = {
         focusManager.clearFocus()
         searching = false
         query = ""
+        playRowFolded = false
     }
     // Back closes the search first — this handler is registered after the one
     // that pops the page, so it is the one that answers while it's enabled.
@@ -545,9 +560,20 @@ fun DetailScreen(
         if (searching) {
             closeSearch()
         } else {
+            searchUsed = true
             searching = true
             focusSearch = true
             playRowFolded = true
+        }
+    }
+    // Putting the keyboard away with nothing typed is leaving the search.
+    val imeShown = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    var imeSeen by remember(page.browseId) { mutableStateOf(false) }
+    LaunchedEffect(imeShown, searching) {
+        when {
+            !searching -> imeSeen = false
+            imeShown -> imeSeen = true
+            imeSeen && query.isEmpty() -> closeSearch()
         }
     }
 
@@ -689,7 +715,10 @@ fun DetailScreen(
     val controlsIndex = if (isArtist) ARTIST_ACTIONS_INDEX else 0
     val hasControls = if (isArtist) songs.isNotEmpty() else songs.isNotEmpty() || page.songs is UiState.Loading
     val showsControls by rememberUpdatedState(hasControls)
-    val pinTop by rememberUpdatedState(searchStop + controlsLead)
+    // The controls hold just under the top bar, with the title and details
+    // above them up in the bar, between the back button and the pill.
+    val pinGapPx = with(LocalDensity.current) { CONTROLS_PIN_GAP.roundToPx() }
+    val pinTop by rememberUpdatedState(searchStop + pinGapPx)
     // How far past the stop the row would have scrolled, in px; negative while
     // it is still below it, null where there is no row to pin.
     val controlsOvershoot: () -> Float? = remember(listState, controlsIndex, page.browseId) {
@@ -707,11 +736,8 @@ fun DetailScreen(
             }
         }
     }
-    // While the search is open its field is what holds at the top, on its
-    // own (see below), so the header copy stands down.
-    val searchOpen by rememberUpdatedState(searching || playRowFolded)
     val controlsPinned by remember(controlsOvershoot) {
-        derivedStateOf { !searchOpen && (controlsOvershoot() ?: -1f) >= 0f }
+        derivedStateOf { (controlsOvershoot() ?: -1f) >= 0f }
     }
     // Where the top of the page — artwork, title and all — sits while the
     // controls are at their stop. The whole header holds there with them, and
@@ -723,10 +749,38 @@ fun DetailScreen(
     // picture behind it stops rising. Null until the sizes are known, or on a
     // page with no controls to hold.
     val headerStopScroll: () -> Float? = {
-        if (searchOpen || !showsControls || controlsHeight <= 0 || controlsLead <= 0 || (isArtist && artistHeaderHeight <= 0)) {
+        if (!showsControls || controlsHeight <= 0 || controlsLead <= 0 || (isArtist && artistHeaderHeight <= 0)) {
             null
         } else {
             (-headerStopTop).toFloat().coerceAtLeast(1f)
+        }
+    }
+
+    // The page's name docks in the top bar as the header comes up to its
+    // stop: it leaves its place in the header and travels in beside the back
+    // button, the details under it fading away, and holds there from then on.
+    val titleDock = remember(page.browseId) { TitleDock() }
+    val dockDensity = LocalDensity.current
+    val dockRangePx = with(dockDensity) { DOCK_RANGE.toPx() }
+    val dockLeftPx = with(dockDensity) { (BAR_GUTTER + DOCK_BACK_WIDTH + DOCK_TITLE_GAP).toPx() }
+    val barCentrePx = with(dockDensity) { (topBarHeight() - TopBarContentHeight / 2).toPx() }
+    titleDock.progress = {
+        val overshoot = controlsOvershoot()
+        if (overshoot == null || !titleDock.anchor.isSpecified) {
+            0f
+        } else {
+            ((overshoot + dockRangePx) / dockRangePx).coerceIn(0f, 1f)
+        }
+    }
+    titleDock.shift = {
+        val p = titleDock.progress()
+        if (p <= 0f) {
+            Offset.Zero
+        } else {
+            Offset(
+                (dockLeftPx - titleDock.anchor.x) * p,
+                (barCentrePx - titleDock.dockedHeight / 2f - headerStopTop - titleDock.anchor.y) * p,
+            )
         }
     }
 
@@ -753,10 +807,13 @@ fun DetailScreen(
     // scroll under it.
     var searchPillTop by remember(page.browseId) { mutableIntStateOf(0) }
     var searchPillHeight by remember(page.browseId) { mutableIntStateOf(0) }
+    // The pill's place: in the list until the controls reach their stop,
+    // then in the held controls. [searchPillTop] is measured from the top of
+    // the controls, so it follows Play and Shuffle folding away above it.
     val searchFieldTop: () -> Int = {
-        val header = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == controlsIndex }
-        val inList = header?.let { it.offset + searchPillTop } ?: Int.MIN_VALUE
-        maxOf(inList, searchStop)
+        val item = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == controlsIndex }
+        val held = pinTop + searchPillTop
+        if (item == null) held else maxOf(item.offset + controlsOffset + searchPillTop, held)
     }
 
     // The artist page's controls, laid out as a release's — Shuffle and Play
@@ -776,14 +833,9 @@ fun DetailScreen(
                 searching = searching,
                 playRowShown = !playRowFolded,
                 onSearch = toggleSearch,
-                onSearchPlaced = { pill ->
-                    if (inList) {
-                        val item = artistActionsCoords[0]?.takeIf { it.isAttached }
-                        if (item != null) {
-                            searchPillTop = item.localPositionOf(pill, Offset.Zero).y.roundToInt()
-                            searchPillHeight = pill.size.height
-                        }
-                    }
+                onSearchPlaced = { top, height ->
+                    searchPillTop = top
+                    searchPillHeight = height
                 },
             )
             Spacer(Modifier.height(bottomSpace))
@@ -809,44 +861,33 @@ fun DetailScreen(
         )
     }
 
+    // Only as much room as it takes for the controls to reach their stop
+    // with the list's foot at the bottom of the screen: worked out once the
+    // controls and the room are both in view, which is only on a short list.
+    var searchRoomPx by remember(page.browseId) { mutableIntStateOf(-1) }
+    LaunchedEffect(page.browseId) {
+        snapshotFlow {
+            val info = listState.layoutInfo
+            val room = info.visibleItemsInfo.firstOrNull { it.key == "search-room" }
+            val controls = info.visibleItemsInfo.firstOrNull { it.index == controlsIndex }
+            if (room == null || controls == null) {
+                null
+            } else {
+                val below = room.offset - (controls.offset + controlsOffset)
+                (info.viewportEndOffset - info.afterContentPadding - pinTop - below).coerceAtLeast(0)
+            }
+        }.collect { needed -> if (needed != null) searchRoomPx = needed }
+    }
     LaunchedEffect(searching) {
         if (!searching) return@LaunchedEffect
-        // With Play and Shuffle folded the pill sits where the controls start,
-        // so that is the place carried up to the bar (on an artist page the
-        // controls are an item of their own, starting at its top). Measured
-        // off the list as it stands, once the room under a short list is laid
-        // out, and checked again once the fold has finished, so it always
-        // lands there.
+        // Carried up until the controls reach their stop under the bar, if
+        // they aren't held there already; once held, nothing moves but the
+        // fold, and the field takes the pill's place under the bar.
         withFrameNanos { }
-        repeat(3) {
-            val header = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == controlsIndex }
-            if (header == null) {
-                listState.animateScrollToItem(controlsIndex, controlsOffset - searchStop)
-            } else {
-                val delta = (header.offset + controlsOffset - searchStop).toFloat()
-                if (kotlin.math.abs(delta) < 2f) return@LaunchedEffect
-                listState.animateScrollBy(delta, tween(PLAY_ROW_FOLD_MS + 60, easing = FastOutSlowInEasing))
-            }
+        val short = controlsOvershoot() ?: return@LaunchedEffect
+        if (short < 0f) {
+            listState.animateScrollBy(-short, tween(PLAY_ROW_FOLD_MS + 60, easing = FastOutSlowInEasing))
         }
-    }
-    // Scrolling back up the page, with the search closed, unfolds Play and
-    // Shuffle again.
-    LaunchedEffect(page.browseId) {
-        var lastIndex = listState.firstVisibleItemIndex
-        var lastOffset = listState.firstVisibleItemScrollOffset
-        var climbed = 0
-        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
-            .collect { (index, offset) ->
-                val up = when {
-                    index < lastIndex -> UNFOLD_CLIMB_PX
-                    index == lastIndex -> lastOffset - offset
-                    else -> 0
-                }
-                climbed = if (up > 0 && listState.isScrollInProgress) climbed + up else 0
-                if (climbed >= UNFOLD_CLIMB_PX && playRowFolded && !searching) playRowFolded = false
-                lastIndex = index
-                lastOffset = offset
-            }
     }
 
     // When the track list lands while the page is up (rather than being in
@@ -957,12 +998,8 @@ fun DetailScreen(
                             // The open search field, once it is holding under
                             // the bar: the rows go under it and are gone above.
                             val fieldTop = searchFieldTop()
-                            val fieldHeld = searching && searchPillHeight > 0 &&
-                                listState.layoutInfo.visibleItemsInfo.none {
-                                    it.index == controlsIndex && it.offset + searchPillTop > searchStop
-                                }
-                            if (!controlsPinned && !fieldHeld) return@drawWithContent
-                            val cut = if (fieldHeld) {
+                            if (!controlsPinned) return@drawWithContent
+                            val cut = if (searching && searchPillHeight > 0) {
                                 (fieldTop + searchPillHeight).toFloat()
                             } else {
                                 (pinTop - pinBandPx).coerceAtLeast(0f)
@@ -1005,6 +1042,7 @@ fun DetailScreen(
                             onNamePlaced = { controlsLead = it },
                             shownLogoUrl = shownLogoUrl,
                             onLogoShown = { shownLogoUrl = it },
+                            dock = titleDock,
                         )
                     }
                 } else {
@@ -1030,6 +1068,7 @@ fun DetailScreen(
                             searchPillHeight = height
                         },
                         controlsPinned = { controlsPinned },
+                        dock = titleDock,
                     )
                 }
             }
@@ -1333,8 +1372,15 @@ fun DetailScreen(
             if (isArtist && !artistSearch) aboutItem()
             // Room under a short list, so opening the search can still carry
             // its field all the way up under the bar.
-            if (searching || playRowFolded) {
-                item(key = "search-room") { Spacer(Modifier.height(this@BoxWithConstraints.maxHeight)) }
+            if (searchUsed) {
+                item(key = "search-room") {
+                    val room = searchRoomPx
+                    Spacer(
+                        Modifier.height(
+                            if (room < 0) this@BoxWithConstraints.maxHeight else with(LocalDensity.current) { room.toDp() },
+                        ),
+                    )
+                }
             }
         }
                 }
@@ -1344,7 +1390,12 @@ fun DetailScreen(
                 // with the pill's place in the header until that reaches the
                 // bar, then holds there. Kept out of the list so scrolling the
                 // header away never takes the field (and the keyboard) with it.
-                if (searching) CompositionLocalProvider(LocalDetailGlass provides pageBackdrop.takeIf { realGlass }) {
+                val searchFieldAlpha by animateFloatAsState(
+                    targetValue = if (searching) 1f else 0f,
+                    animationSpec = tween(SEARCH_OPEN_MS + 60, easing = FastOutSlowInEasing),
+                    label = "searchField",
+                )
+                if (searching || searchFieldAlpha > 0f) CompositionLocalProvider(LocalDetailGlass provides pageBackdrop.takeIf { realGlass }) {
                     DetailSearchField(
                         query = query,
                         onQueryChange = { query = it },
@@ -1353,7 +1404,9 @@ fun DetailScreen(
                         onFocused = { focusSearch = false },
                         palette = palette,
                         onFocusChanged = { searchFocused = it },
-                        modifier = Modifier.offset { IntOffset(0, searchFieldTop()) },
+                        modifier = Modifier
+                            .offset { IntOffset(0, searchFieldTop()) }
+                            .graphicsLayer { alpha = searchFieldAlpha },
                     )
                 }
 
@@ -1378,6 +1431,7 @@ fun DetailScreen(
                                     appleArt = appleArt,
                                     signature = signature,
                                     shownLogoUrl = shownLogoUrl,
+                                    dock = titleDock,
                                 )
                                 artistActions(Modifier, 0.dp, false)
                             }
@@ -1394,9 +1448,32 @@ fun DetailScreen(
                                 playRowShown = !playRowFolded,
                                 onSearch = toggleSearch,
                                 onArtistClick = onArtistClick,
+                                onSearchPlaced = { top, height ->
+                                    searchPillTop = top
+                                    searchPillHeight = height
+                                },
+                                dock = titleDock,
                             )
                         }
                     }
+                }
+
+                // The name in the bar: drawn over the header's own copy the
+                // whole way in, and alone once the header holds.
+                if (titleDock.anchor.isSpecified) {
+                    val edgePx = TopBarActionsEdge.startPx
+                    val rightPx = if (edgePx == Int.MAX_VALUE) {
+                        constraints.maxWidth - with(dockDensity) { BAR_GUTTER.toPx() }
+                    } else {
+                        edgePx - with(dockDensity) { DOCK_TITLE_GAP.toPx() }
+                    }
+                    DockedTitle(
+                        title = page.title,
+                        color = palette.onBackground,
+                        dock = titleDock,
+                        slotWidthPx = (rightPx - dockLeftPx).coerceAtLeast(0f),
+                        headerTop = { headerStopTop - (controlsOvershoot() ?: 0f).coerceAtMost(0f) },
+                    )
                 }
     }
 } else {
@@ -1439,10 +1516,12 @@ private fun ReleaseHeader(
      * far above it the title starts, in px.
      */
     onControlsPlaced: (top: Int, height: Int, lead: Int) -> Unit = { _, _, _ -> },
-    /** Where the Search pill sits inside this header, and how tall it is, in px. */
+    /** Where the Search pill sits below the top of the controls, and how tall it is, in px. */
     onSearchPlaced: (top: Int, height: Int) -> Unit = { _, _ -> },
     /** True while the pinned copy above the list stands in for the row here. */
     controlsPinned: () -> Boolean = { false },
+    /** The name on its way into the top bar; null where it stays put. */
+    dock: TitleDock? = null,
 ) {
     val (credit, meta) = page.headerLines(trackCount, songs.playtime())
     // The title, credit and meta line fade away with Play and Shuffle while
@@ -1452,6 +1531,10 @@ private fun ReleaseHeader(
         animationSpec = tween(PLAY_ROW_FOLD_MS, easing = FastOutSlowInEasing),
         label = "releaseInfo",
     )
+    val titleLayout = remember { arrayOfNulls<TextLayoutResult>(1) }
+    // The credit and meta line are gone by the time the name is most of the
+    // way into the bar.
+    val detailsAlpha = { infoAlpha * (1f - ((dock?.let { it.progress() } ?: 0f) / DOCK_DETAILS_FADE).coerceIn(0f, 1f)) }
     // Held outside state: only read when the row reports where it landed.
     val headerCoords = remember { arrayOfNulls<LayoutCoordinates>(1) }
     val titleTop = remember { intArrayOf(0) }
@@ -1481,13 +1564,14 @@ private fun ReleaseHeader(
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                onTextLayout = { titleLayout[0] = it },
                 modifier = Modifier
                     .padding(horizontal = HEADER_GUTTER)
-                    .graphicsLayer { alpha = infoAlpha }
                     .onGloballyPositioned { title ->
                         val header = headerCoords[0]?.takeIf { it.isAttached } ?: return@onGloballyPositioned
                         titleTop[0] = header.localPositionOf(title, Offset.Zero).y.roundToInt()
-                    },
+                    }
+                    .dockingName(dock, headerCoords, titleLayout, startScale = 1f) { infoAlpha },
             )
             // Artist / credit line
             if (credit.isNotBlank()) {
@@ -1501,7 +1585,7 @@ private fun ReleaseHeader(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
                         .padding(horizontal = HEADER_GUTTER)
-                        .graphicsLayer { alpha = infoAlpha }
+                        .graphicsLayer { alpha = detailsAlpha() }
                         .let { m ->
                             val id = artist?.artistId
                             if (id == null) {
@@ -1525,7 +1609,7 @@ private fun ReleaseHeader(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
                         .padding(horizontal = HEADER_GUTTER)
-                        .graphicsLayer { alpha = infoAlpha },
+                        .graphicsLayer { alpha = detailsAlpha() },
                 )
             }
 
@@ -1541,11 +1625,7 @@ private fun ReleaseHeader(
                     searching = searching,
                     playRowShown = playRowShown,
                     onSearch = onSearch,
-                    onSearchPlaced = { pill ->
-                        val header = headerCoords[0]?.takeIf { it.isAttached } ?: return@ReleaseActions
-                        val top = header.localPositionOf(pill, Offset.Zero).y.roundToInt()
-                        onSearchPlaced(top, pill.size.height)
-                    },
+                    onSearchPlaced = onSearchPlaced,
                     modifier = Modifier
                         .onGloballyPositioned { row ->
                             val header = headerCoords[0]?.takeIf { it.isAttached } ?: return@onGloballyPositioned
@@ -1580,8 +1660,16 @@ private fun ReleaseActions(
     onSearch: () -> Unit,
     modifier: Modifier = Modifier,
     playRowShown: Boolean = true,
-    onSearchPlaced: (LayoutCoordinates) -> Unit = {},
+    /** Where the Search pill sits below the top of these controls, and how tall it is, in px. */
+    onSearchPlaced: (top: Int, height: Int) -> Unit = { _, _ -> },
 ) {
+    val rootCoords = remember { arrayOfNulls<LayoutCoordinates>(1) }
+    // The pill hands over to the field (and back) with a crossfade.
+    val pillAlpha by animateFloatAsState(
+        targetValue = if (searching) 0f else 1f,
+        animationSpec = tween(SEARCH_OPEN_MS + 60, easing = FastOutSlowInEasing),
+        label = "searchPill",
+    )
     AnimatedContent(
         targetState = songs.isNotEmpty(),
         transitionSpec = {
@@ -1589,7 +1677,7 @@ private fun ReleaseActions(
         },
         contentAlignment = Alignment.Center,
         label = "releaseActions",
-        modifier = modifier,
+        modifier = modifier.onPlaced { rootCoords[0] = it },
     ) { ready ->
         Column(
             modifier = Modifier
@@ -1651,8 +1739,11 @@ private fun ReleaseActions(
                 enabled = !searching,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .onGloballyPositioned(onSearchPlaced)
-                    .graphicsLayer { alpha = if (searching) 0f else 1f },
+                    .onGloballyPositioned { pill ->
+                        val root = rootCoords[0]?.takeIf { it.isAttached } ?: return@onGloballyPositioned
+                        onSearchPlaced(root.localPositionOf(pill, Offset.Zero).y.roundToInt(), pill.size.height)
+                    }
+                    .graphicsLayer { alpha = pillAlpha },
             )
         }
     }
@@ -1662,11 +1753,25 @@ private fun ReleaseActions(
 private val RELEASE_PILL_HEIGHT = 50.dp
 private val RELEASE_PILL_GAP = 12.dp
 
+/** The gap between the top bar and the controls held under it. */
+private val CONTROLS_PIN_GAP = 6.dp
+
+/** How far the page scrolls while the name travels from the header into the bar. */
+private val DOCK_RANGE = 110.dp
+
+/** The back button the docked name sits beside, and the room either side of the name. */
+private val DOCK_BACK_WIDTH = 44.dp
+private val DOCK_TITLE_GAP = 12.dp
+
+/** Of the name's way into the bar, how much the header's copy takes to hand over to the bar's. */
+private const val DOCK_HANDOVER = 0.25f
+
+/** Of the name's way into the bar, how much the credit and meta line take to fade. */
+private const val DOCK_DETAILS_FADE = 0.6f
+
 /** How long Play and Shuffle take to fold away, or back. */
 private const val PLAY_ROW_FOLD_MS = 280
 
-/** How far the page has to be scrolled back up to unfold Play and Shuffle, in px. */
-private const val UNFOLD_CLIMB_PX = 24
 
 /**
  * The release Play pill's fill: 15 points more see-through than the artist
@@ -1902,8 +2007,13 @@ private fun ArtistHeader(
      */
     shownLogoUrl: String? = null,
     onLogoShown: (String) -> Unit = {},
+    /** The name on its way into the top bar; null where it stays put. */
+    dock: TitleDock? = null,
 ) {
     val headerCoords = remember { arrayOfNulls<LayoutCoordinates>(1) }
+    val nameLayout = remember { arrayOfNulls<TextLayoutResult>(1) }
+    val nameScale = MaterialTheme.typography.displayLarge.fontSize.value /
+        MaterialTheme.typography.headlineMedium.fontSize.value
     fun reportName(name: LayoutCoordinates) {
         val header = headerCoords[0]?.takeIf { it.isAttached } ?: return
         onNamePlaced((header.size.height - header.localPositionOf(name, Offset.Zero).y.roundToInt()).coerceAtLeast(0))
@@ -1967,8 +2077,8 @@ private fun ArtistHeader(
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .graphicsLayer { alpha = logoIn }
-                    .onGloballyPositioned { if (logoShown) reportName(it) },
+                    .onGloballyPositioned { if (logoShown) reportName(it) }
+                    .dockingName(dock?.takeIf { logoShown }, headerCoords, null, startScale = 1f) { logoIn },
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 AsyncImage(
@@ -2014,14 +2124,15 @@ private fun ArtistHeader(
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
+            onTextLayout = { nameLayout[0] = it },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .graphicsLayer { alpha = 1f - logoIn }
                 .onGloballyPositioned { if (!logoShown) reportName(it) }
                 // Bottom is half the top inset — the stats pills (or, absent
                 // those, the action row) sit closer under the name than the
                 // name sits under the artwork.
-                .padding(start = HEADER_GUTTER, end = HEADER_GUTTER, top = 14.dp, bottom = 7.dp),
+                .padding(start = HEADER_GUTTER, end = HEADER_GUTTER, top = 14.dp, bottom = 7.dp)
+                .dockingName(dock?.takeIf { !logoShown }, headerCoords, nameLayout, startScale = nameScale) { 1f - logoIn },
         )
     }
 }
@@ -3256,4 +3367,128 @@ private fun List<Song>.playtime(): String? {
         minutes < 60 -> stringResource(R.string.minutes_short, minutes.toInt())
         else -> stringResource(R.string.hours_minutes_short, (minutes / 60).toInt(), (minutes % 60).toInt())
     }
+}
+
+/**
+ * A page's name on its way into the top bar. As the header scrolls up to its
+ * stop, the name leaves its place there and travels in beside the back
+ * button, where it holds. The header's own copy and the bar's ([DockedTitle])
+ * are drawn over each other the whole way and hand over early on, so a name
+ * that fits on one line is never seen to change.
+ */
+@Stable
+private class TitleDock {
+    /** The top left of the name's first line inside the header, px. */
+    var anchor by mutableStateOf(Offset.Unspecified)
+
+    /** How many times bigger the name is set in the header than in the bar. */
+    var startScale by mutableFloatStateOf(1f)
+
+    /** How wide the name's first line is in the header, at the bar's size, px. */
+    var startWidth by mutableFloatStateOf(0f)
+
+    /** How tall the name is in the bar, px. */
+    var dockedHeight by mutableFloatStateOf(0f)
+
+    /** 0 with the header at rest, 1 once the name is in the bar. Set by the page. */
+    var progress: () -> Float = { 0f }
+
+    /** How far the name has moved off its place in the header, px. Set by the page. */
+    var shift: () -> Offset = { Offset.Zero }
+
+    /** The bar copy's scale, which the header copy matches. */
+    fun scale(p: Float): Float = startScale + (1f - startScale) * p
+
+    /** How far the header's copy has handed over to the bar's. */
+    fun handOver(p: Float): Float = (p / DOCK_HANDOVER).coerceIn(0f, 1f)
+}
+
+/**
+ * The header's own copy of the page's name: says where it rests, and moves,
+ * shrinks and fades with the copy that docks in the bar. [alpha] is the
+ * copy's own fade (the search folding it away, a logo fading in over it).
+ */
+private fun Modifier.dockingName(
+    dock: TitleDock?,
+    header: Array<LayoutCoordinates?>,
+    text: Array<TextLayoutResult?>?,
+    startScale: Float,
+    alpha: () -> Float,
+): Modifier {
+    if (dock == null) return graphicsLayer { this.alpha = alpha() }
+    return onGloballyPositioned { name ->
+        val headerCoords = header[0]?.takeIf { it.isAttached } ?: return@onGloballyPositioned
+        val layout = text?.get(0)
+        val left = layout?.getLineLeft(0) ?: 0f
+        val top = layout?.getLineTop(0) ?: 0f
+        dock.anchor = headerCoords.localPositionOf(name, Offset(left, top))
+        dock.startScale = startScale
+        // One line fits as it is; give the bar's copy some slack so the two
+        // faces' widths differing can't put an ellipsis on it. Two lines are
+        // cut down to the first, with an ellipsis, from the start.
+        val lineWidth = layout?.let { it.getLineRight(0) - it.getLineLeft(0) } ?: name.size.width.toFloat()
+        val oneLine = layout == null || layout.lineCount <= 1
+        dock.startWidth = lineWidth / startScale * (if (oneLine) 1.15f else 1f) + 2f
+    }.graphicsLayer {
+        val p = dock.progress()
+        val shift = dock.shift()
+        translationX = shift.x
+        translationY = shift.y
+        val k = dock.scale(p) / dock.startScale
+        scaleX = k
+        scaleY = k
+        val layout = text?.get(0)
+        transformOrigin = TransformOrigin(
+            if (size.width > 0f) (layout?.getLineLeft(0) ?: 0f) / size.width else 0f,
+            if (size.height > 0f) (layout?.getLineTop(0) ?: 0f) / size.height else 0f,
+        )
+        this.alpha = alpha() * (1f - dock.handOver(p))
+    }
+}
+
+/**
+ * The page's name in the top bar, between the back button and the actions
+ * pill. It starts over the header's copy (at [headerTop], where the header
+ * is now) and travels in with it, narrowing to the room the bar has.
+ */
+@Composable
+private fun DockedTitle(
+    title: String,
+    color: Color,
+    dock: TitleDock,
+    slotWidthPx: Float,
+    headerTop: () -> Float,
+) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.headlineMedium,
+        color = color,
+        maxLines = 1,
+        softWrap = false,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.layout { measurable, constraints ->
+            val p = dock.progress()
+            val start = dock.startWidth.takeIf { it > 0f } ?: slotWidthPx
+            val width = (start + (slotWidthPx - start) * p).roundToInt().coerceIn(0, constraints.maxWidth)
+            val placeable = measurable.measure(Constraints(minWidth = width, maxWidth = width))
+            dock.dockedHeight = placeable.height.toFloat()
+            layout(placeable.width, placeable.height) {
+                placeable.placeWithLayer(0, 0) {
+                    val q = dock.progress()
+                    if (q <= 0f) {
+                        alpha = 0f
+                        return@placeWithLayer
+                    }
+                    val shift = dock.shift()
+                    translationX = dock.anchor.x + shift.x
+                    translationY = headerTop() + dock.anchor.y + shift.y
+                    transformOrigin = TransformOrigin(0f, 0f)
+                    val s = dock.scale(q)
+                    scaleX = s
+                    scaleY = s
+                    alpha = dock.handOver(q)
+                }
+            }
+        },
+    )
 }
