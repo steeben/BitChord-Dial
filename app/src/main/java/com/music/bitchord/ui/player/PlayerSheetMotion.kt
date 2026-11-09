@@ -299,7 +299,13 @@ class PlayerSheetMotion(
         held = (held + delta).coerceIn(0f, travel())
     }
 
-    override fun release(velocity: Float) {
+    override fun release(velocity: Float) = settlePull(velocity, fromPlayer = false)
+
+    /**
+     * Where a pull goes once the finger lifts. [fromPlayer]: a pull down on the
+     * open player, rather than one up from the mini player.
+     */
+    private fun settlePull(velocity: Float, fromPlayer: Boolean) {
         if (!holding) return
         val travel = travel()
         // The finger's speed as it lifted, or across the whole pull if that
@@ -314,7 +320,11 @@ class PlayerSheetMotion(
         if (!open) {
             closing = true
             quietWindow()
-            dock.refreshArt()
+            // Only for a pull on the player: a pull up from the mini player
+            // that fell short let go of a bar still lifted under the finger,
+            // and its cover measured now is the lifted one, where the player's
+            // cover landed before the bar dropped back from under it.
+            if (fromPlayer) dock.refreshArt()
         }
         val from = held
         settle = scope.launch {
@@ -356,7 +366,7 @@ class PlayerSheetMotion(
     fun releasePull(velocity: Float) {
         if (!dismissPull) return
         dismissPull = false
-        release(velocity)
+        settlePull(velocity, fromPlayer = true)
     }
 
     /** From the host, once the sheet has left composition. */

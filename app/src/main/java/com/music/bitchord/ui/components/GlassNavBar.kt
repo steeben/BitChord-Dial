@@ -42,6 +42,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
@@ -371,9 +373,16 @@ private fun GlassNowPlaying(
                 onBlocked = onBlockedControl,
                 swipe = swipe,
             )
-            .graphicsLayer {
-                scaleX = pressScale
-                scaleY = pressScale
+            // Drawn larger rather than laid out larger: the press swells
+            // what is seen and nothing else, so the cover measured as the
+            // player starts to open, under the very finger doing the pressing,
+            // is the one the bar comes back with — not one a few percent
+            // bigger and off to the side, which the player's cover then landed
+            // on and jumped from. None at all while the player's panel stands
+            // in for the pill.
+            .drawWithContent {
+                val factor = if (dock?.panelShown == true) 1f else pressScale
+                scale(factor) { this@drawWithContent.drawContent() }
             }
             .then(modifier)
             // The playhead as light in the glass, in the cover's colour; it may
