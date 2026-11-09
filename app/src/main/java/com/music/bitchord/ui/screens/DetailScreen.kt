@@ -1726,9 +1726,11 @@ private fun ReleaseActions(
             // up the room the circle takes, so Play keeps half the row.
             ReleaseActionsRow(
                 shuffle = {
+                    // Icon only: beside the circle there is no room for the word.
                     GlassPill(
                         icon = BitChordIcons.Shuffle,
-                        label = stringResource(R.string.shuffle),
+                        label = null,
+                        contentDescription = stringResource(R.string.shuffle),
                         onClick = onShuffle,
                         haptic = Haptic.Resume,
                         enabled = !searching,
@@ -1757,6 +1759,7 @@ private fun ReleaseActions(
                         // touch more see-through than the artist page's circle.
                         containerColor = palette.accent,
                         fillAlpha = RELEASE_PLAY_FILL_ALPHA,
+                        lightContent = true,
                         modifier = it.then(folding),
                     )
                 },
@@ -1875,7 +1878,8 @@ private fun Modifier.headerGlass(shape: androidx.compose.foundation.shape.Corner
 @Composable
 private fun GlassPill(
     icon: ImageVector,
-    label: String,
+    /** Null for an icon-only pill, which then needs a [contentDescription]. */
+    label: String?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
@@ -1904,15 +1908,17 @@ private fun GlassPill(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val tint = MaterialTheme.colorScheme.onSurface
-        Icon(imageVector = icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleMedium,
-            color = tint,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Icon(imageVector = icon, contentDescription = null, tint = tint, modifier = Modifier.size(if (label == null) 22.dp else 18.dp))
+        if (label != null) {
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.titleMedium,
+                color = tint,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
@@ -2605,9 +2611,11 @@ private fun PlayPill(
     cutout: Boolean = false,
     /** How much of [containerColor] is laid down. */
     fillAlpha: Float = PLAY_FILL_ALPHA,
+    /** White whatever the fill: the release row's Play, on the page's accent. */
+    lightContent: Boolean = false,
 ) {
     // Black on the light fills Apple picks, white on the rare dark one.
-    val contentColor = if (containerColor.luminance() > 0.35f) Color.Black else Color.White
+    val contentColor = if (!lightContent && containerColor.luminance() > 0.35f) Color.Black else Color.White
     // Resume rather than a flat tap: this button starts a queue, and the rising
     // pair says so.
     val haptics = rememberHaptics()

@@ -322,6 +322,19 @@ fun MediaController.setQueueDragActive(active: Boolean) {
     )
 }
 
+/**
+ * The current track's length: the player's own once its source is prepared,
+ * and until then the length the track was queued with. The queue restored at
+ * launch sits unprepared at its saved position until something is played, and
+ * without this the mini player had no length to draw that position against.
+ */
+private fun Player.knownDurationMs(): Long {
+    val reported = duration
+    if (reported != androidx.media3.common.C.TIME_UNSET && reported > 0L) return reported
+    val text = currentMediaItem?.mediaMetadata?.extras?.getString(EXTRA_DURATION)
+    return TrackMatcher.secondsOf(text)?.let { it * 1000L } ?: 0L
+}
+
 /** Mirrors the controller into Compose state, polling position while playing. */
 @Composable
 fun rememberPlayerState(controller: MediaController?): PlayerState {
@@ -370,7 +383,7 @@ fun rememberPlayerState(controller: MediaController?): PlayerState {
             state = state.copy(
                 song = item?.toSong(),
                 isPlaying = player.isPlaying,
-                durationMs = player.duration.coerceAtLeast(0L),
+                durationMs = player.knownDurationMs(),
                 error = error,
                 isLoading = player.playbackState == Player.STATE_BUFFERING,
                 repeatMode = player.repeatMode,
@@ -448,7 +461,7 @@ fun rememberPlayerState(controller: MediaController?): PlayerState {
     LaunchedEffect(controller, state.isPlaying, foreground) {
         while (controller != null && state.isPlaying && foreground) {
             position.report(controller.currentPosition.coerceAtLeast(0L))
-            val duration = controller.duration.coerceAtLeast(0L)
+            val duration = controller.knownDurationMs()
             if (duration != state.durationMs) state = state.copy(durationMs = duration)
             delay(500)
         }
