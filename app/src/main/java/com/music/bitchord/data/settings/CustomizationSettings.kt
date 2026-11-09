@@ -65,6 +65,9 @@ object CustomizationSettings {
      */
     val generatePlaylistImages = MutableStateFlow(true)
 
+    /** Playlists (keyed without their `VL`) whose page keeps its own artwork. */
+    val playlistBackdropsOff = MutableStateFlow<Set<String>>(emptySet())
+
     /**
      * Whether Home has its dials at all. Off, Home is the plain list of
      * sections, with no dial pages to snap between and nothing to pin to.
@@ -210,6 +213,7 @@ object CustomizationSettings {
         miniPlayerNextButton.value = p.getBoolean(KEY_MINI_PLAYER_NEXT, false)
         cropThumbnails.value = p.getBoolean(KEY_CROP_THUMBNAILS, true)
         generatePlaylistImages.value = p.getBoolean(KEY_GENERATE_PLAYLIST_IMAGES, true)
+        playlistBackdropsOff.value = p.getStringSet(KEY_PLAYLIST_BACKDROPS_OFF, null)?.toSet().orEmpty()
         speedDials.value = p.getBoolean(KEY_SPEED_DIALS, true)
         artistDial.value = p.getBoolean(KEY_ARTIST_DIAL, true)
         feelingLucky.value = p.getBoolean(KEY_FEELING_LUCKY, true)
@@ -562,6 +566,16 @@ object CustomizationSettings {
         prefs?.edit()?.putBoolean(KEY_MINI_PLAYER_NEXT, value)?.apply()
     }
 
+    fun playlistBackdropKey(browseId: String): String = browseId.removePrefix("VL")
+
+    /** Turns the generated backdrop on or off for one playlist's page. */
+    fun setPlaylistBackdrop(browseId: String, on: Boolean) {
+        val key = playlistBackdropKey(browseId)
+        val next = if (on) playlistBackdropsOff.value - key else playlistBackdropsOff.value + key
+        playlistBackdropsOff.value = next
+        prefs?.edit()?.putStringSet(KEY_PLAYLIST_BACKDROPS_OFF, next)?.apply()
+    }
+
     fun setGeneratePlaylistImages(value: Boolean) {
         generatePlaylistImages.value = value
         prefs?.edit()?.putBoolean(KEY_GENERATE_PLAYLIST_IMAGES, value)?.apply()
@@ -836,6 +850,7 @@ object CustomizationSettings {
     private const val KEY_MINI_PLAYER_NEXT = "custom_mini_player_next"
     private const val KEY_CROP_THUMBNAILS = "custom_crop_thumbnails"
     private const val KEY_GENERATE_PLAYLIST_IMAGES = "custom_generate_playlist_images"
+    private const val KEY_PLAYLIST_BACKDROPS_OFF = "custom_playlist_backdrops_off"
     private const val KEY_SPEED_DIALS = "custom_speed_dials"
     private const val KEY_ARTIST_DIAL = "custom_artist_dial"
     private const val KEY_FEELING_LUCKY = "custom_feeling_lucky"

@@ -520,7 +520,7 @@ fun DetailScreen(
     )
     // Under a collage the page is the accent's own colour, top to bottom,
     // rather than whatever the front cover's background happens to be.
-    val palette = if (collage == null) artPalette else remember(artPalette) { artPalette.accentWashed() }
+    val palette = if (collage == null) artPalette else remember(artPalette) { artPalette.collageWashed() }
 
     // Narrowing the running order in place — the release equivalent of the
     // filter box on the Local Music tab, and the one thing a long track list
@@ -2476,7 +2476,7 @@ private fun Color.darkened(by: Float): Color =
  * wash is the accent laid over the theme's own ground, so the accent's text
  * and the Play pill still read on it.
  */
-private fun ArtworkPalette.accentWashed(): ArtworkPalette {
+internal fun ArtworkPalette.collageWashed(): ArtworkPalette {
     val dark = wash.luminance() < 0.5f
     val ground = if (dark) Color.Black else Color.White
     val share = if (dark) 0.42f else 0.30f

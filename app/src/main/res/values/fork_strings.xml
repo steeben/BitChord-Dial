@@ -53,7 +53,7 @@
     <string name="artist_local_files_only">Show only local files</string>
     <string name="artist_show_all_files">Show everything, not just local files</string>
     <string name="generate_playlist_image">Let Dial Generate Playlist Image</string>
-    <string name="generate_playlist_image_subtitle">Playlists with YouTube Music\'s default grid cover get a collage of their most recently added songs</string>
+    <string name="generate_playlist_image_subtitle">Playlist pages get a moving collage of their most recently added songs. Turn it off for one playlist from its ⋯ menu</string>
     <string name="crop_thumbnails_subtitle">Fill artwork that isn\'t square instead of showing bars</string>
     <string name="dial_page_artists">Artists</string>
     <string name="dial_page_explore">For You</string>
@@ -92,9 +92,14 @@
     <string name="dial_history_empty">Nothing played yet</string>
     <string name="custom_cover">Custom cover</string>
     <string name="remove_custom_cover">Remove custom cover</string>
-    <string name="custom_cover_pick">Choose an image</string>
-    <string name="custom_cover_generate">Generate from its songs</string>
-    <string name="custom_cover_generating">Making a cover…</string>
+    <string name="custom_cover_generate">Generate</string>
+    <string name="custom_cover_from_device">Choose from device</string>
+    <string name="custom_cover_background">Background</string>
+    <string name="custom_cover_automatic">Automatic</string>
+    <string name="custom_cover_unavailable">Couldn\'t make a cover from this playlist</string>
+    <string name="playlist_backdrop">Animated backdrop</string>
+    <string name="playlist_backdrop_on">On</string>
+    <string name="playlist_backdrop_off">Off</string>
     <string name="custom_cover_set">Cover updated on this device</string>
     <string name="custom_cover_failed">Couldn\'t use that image</string>
     <string name="choose_album_art">Choose album art</string>
