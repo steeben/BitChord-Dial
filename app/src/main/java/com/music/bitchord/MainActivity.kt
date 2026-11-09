@@ -172,6 +172,7 @@ import com.music.bitchord.ui.screens.SpeedDialLucky
 import com.music.bitchord.ui.screens.RecentArtistsScreen
 import com.music.bitchord.ui.screens.ARTIST_DIAL_PAGE_KEY
 import com.music.bitchord.ui.screens.SPEED_DIAL_PAGE_KEYS
+import com.music.bitchord.ui.screens.HomeReset
 import com.music.bitchord.ui.screens.speedDialArtRequest
 import com.music.bitchord.ui.theme.Metropolis
 import com.music.bitchord.ui.components.HomeDialMenu
@@ -5749,6 +5750,12 @@ private fun BitChordApp(
 
                 // One tab handler, whichever bar is drawing it.
                 val onTabSelected: (Int) -> Unit = { index ->
+                    // Home tapped while already on Home, with nothing open over
+                    // it: back up to the speed dial, on its first page.
+                    if (index == TAB_HOME && homeRoot) {
+                        HomeReset.request()
+                        scope.launch { homeListState.animateScrollToItem(0) }
+                    }
                     // Search opened from the Library looks through the library
                     // first; opened from anywhere else it goes back to YouTube
                     // if the Library was what it was last left on.

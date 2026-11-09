@@ -290,6 +290,16 @@ internal fun SpeedDialShelf(
     // Back from a page a tile here opened, on the page that tile is on, for
     // the page to close back into it.
     val pagerState = rememberPagerState(initialPage = DialLaunch.pageOf(shelf.title)) { latestPageCount }
+    // Home tapped again on Home: back to the first page. Only a request made
+    // after this shelf came up counts, or one coming back into view would undo
+    // the page a closing tile brought it back to.
+    val resetRequests = HomeReset.requests
+    var resetsSeen by remember { mutableIntStateOf(resetRequests) }
+    LaunchedEffect(resetRequests) {
+        if (resetRequests == resetsSeen) return@LaunchedEffect
+        resetsSeen = resetRequests
+        if (pagerState.currentPage != 0) pagerState.animateScrollToPage(0)
+    }
     val swipeTilt = rememberSwipeTilt(pagerState)
     val latestPinned by rememberUpdatedState(pinnedCount)
     val latestOrder by rememberUpdatedState(order)
