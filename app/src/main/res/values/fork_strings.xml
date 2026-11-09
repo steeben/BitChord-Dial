@@ -92,6 +92,9 @@
     <string name="dial_history_empty">Nothing played yet</string>
     <string name="custom_cover">Custom cover</string>
     <string name="remove_custom_cover">Remove custom cover</string>
+    <string name="custom_cover_pick">Choose an image</string>
+    <string name="custom_cover_generate">Generate from its songs</string>
+    <string name="custom_cover_generating">Making a cover…</string>
     <string name="custom_cover_set">Cover updated on this device</string>
     <string name="custom_cover_failed">Couldn\'t use that image</string>
     <string name="choose_album_art">Choose album art</string>

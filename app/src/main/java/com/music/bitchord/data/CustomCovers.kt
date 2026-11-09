@@ -119,6 +119,21 @@ object CustomCovers {
         }.getOrDefault(false)
     }
 
+    /** Saves [bitmap] (already square) as [browseId]'s cover: a generated one. */
+    suspend fun setBitmap(context: Context, browseId: String, bitmap: Bitmap): Boolean = withContext(Dispatchers.IO) {
+        val folder = dir ?: File(context.filesDir, DIR).also { dir = it }
+        runCatching {
+            folder.mkdirs()
+            val key = keyOf(browseId)
+            val file = File(folder, "cover_${key.hashCode().toUInt()}_${System.currentTimeMillis()}.jpg")
+            file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 92, it) }
+            val previous = _covers.value[key]
+            update(_covers.value + (key to Uri.fromFile(file).toString()))
+            previous?.let { deleteFile(it) }
+            true
+        }.getOrDefault(false)
+    }
+
     fun remove(browseId: String) {
         val key = keyOf(browseId)
         val previous = _covers.value[key] ?: return

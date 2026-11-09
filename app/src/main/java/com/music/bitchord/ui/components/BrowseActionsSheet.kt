@@ -17,6 +17,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.AddPhotoAlternate
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.Edit
@@ -180,6 +182,11 @@ fun BrowseActionsSheet(
      * or not, since nothing about it touches the account. Null hides the row.
      */
     onSetCustomCover: (() -> Unit)? = null,
+    /**
+     * Makes the playlist a cover like its page's generated backdrop, offered
+     * beside picking an image under "Custom cover". Null hides the choice.
+     */
+    onGenerateCustomCover: (() -> Unit)? = null,
     /** Puts the playlist's own cover back. Null when no custom one is set. */
     onRemoveCustomCover: (() -> Unit)? = null,
     /**
@@ -411,8 +418,22 @@ fun BrowseActionsSheet(
             onReorder?.let {
                 ActionRow(Icons.Rounded.SwapVert, stringResource(R.string.reorder_songs), onClick = it)
             }
-            onSetCustomCover?.let {
-                ActionRow(Icons.Rounded.AddPhotoAlternate, stringResource(R.string.custom_cover), onClick = it)
+            onSetCustomCover?.let { pick ->
+                val generate = onGenerateCustomCover
+                if (generate == null) {
+                    ActionRow(Icons.Rounded.AddPhotoAlternate, stringResource(R.string.custom_cover), onClick = pick)
+                } else {
+                    // Two ways to a cover: pick an image, or have one made
+                    // from the playlist's songs. Shown once the row is tapped.
+                    var choosingCover by remember { mutableStateOf(false) }
+                    ActionRow(Icons.Rounded.AddPhotoAlternate, stringResource(R.string.custom_cover)) {
+                        choosingCover = !choosingCover
+                    }
+                    if (choosingCover) {
+                        ActionRow(Icons.Rounded.Image, stringResource(R.string.custom_cover_pick), onClick = pick)
+                        ActionRow(Icons.Rounded.AutoAwesome, stringResource(R.string.custom_cover_generate), onClick = generate)
+                    }
+                }
             }
             onRemoveCustomCover?.let {
                 ActionRow(Icons.Rounded.HideImage, stringResource(R.string.remove_custom_cover), onClick = it)
