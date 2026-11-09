@@ -181,6 +181,15 @@ import com.music.bitchord.ui.components.thumbnailBorder
 import com.music.bitchord.ui.components.detailSkeleton
 import com.music.bitchord.ui.components.ShimmerBox
 import com.music.bitchord.ui.components.topBarContentPadding
+import com.music.bitchord.ui.components.topBarHeight
+import com.music.bitchord.ui.components.TopBarContentHeight
+import com.music.bitchord.ui.components.TopBarActionsEdge
+import com.music.bitchord.ui.components.BAR_GUTTER
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.geometry.isSpecified
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.text.TextLayoutResult
 import com.music.bitchord.ui.components.trackColumnWidth
 import com.music.bitchord.ui.haptics.Haptic
 import com.music.bitchord.ui.haptics.rememberHaptics
@@ -747,6 +756,34 @@ fun DetailScreen(
         }
     }
 
+    // The page's name docks in the top bar as the header comes up to its
+    // stop: it leaves its place in the header and travels in beside the back
+    // button, the details under it fading away, and holds there from then on.
+    val titleDock = remember(page.browseId) { TitleDock() }
+    val dockDensity = LocalDensity.current
+    val dockRangePx = with(dockDensity) { DOCK_RANGE.toPx() }
+    val dockLeftPx = with(dockDensity) { (BAR_GUTTER + DOCK_BACK_WIDTH + DOCK_TITLE_GAP).toPx() }
+    val barCentrePx = with(dockDensity) { (topBarHeight() - TopBarContentHeight / 2).toPx() }
+    titleDock.progress = {
+        val overshoot = controlsOvershoot()
+        if (overshoot == null || !titleDock.anchor.isSpecified) {
+            0f
+        } else {
+            ((overshoot + dockRangePx) / dockRangePx).coerceIn(0f, 1f)
+        }
+    }
+    titleDock.shift = {
+        val p = titleDock.progress()
+        if (p <= 0f) {
+            Offset.Zero
+        } else {
+            Offset(
+                (dockLeftPx - titleDock.anchor.x) * p,
+                (barCentrePx - titleDock.dockedHeight / 2f - headerStopTop - titleDock.anchor.y) * p,
+            )
+        }
+    }
+
     // Real liquid glass on the header's buttons: they bend the page under
     // them. Two recordings: the picture alone, for the buttons while they are
     // still in the list (which can't sample a layer they are drawn into), and
@@ -1005,6 +1042,7 @@ fun DetailScreen(
                             onNamePlaced = { controlsLead = it },
                             shownLogoUrl = shownLogoUrl,
                             onLogoShown = { shownLogoUrl = it },
+                            dock = titleDock,
                         )
                     }
                 } else {
@@ -1030,6 +1068,7 @@ fun DetailScreen(
                             searchPillHeight = height
                         },
                         controlsPinned = { controlsPinned },
+                        dock = titleDock,
                     )
                 }
             }
@@ -1392,6 +1431,7 @@ fun DetailScreen(
                                     appleArt = appleArt,
                                     signature = signature,
                                     shownLogoUrl = shownLogoUrl,
+                                    dock = titleDock,
                                 )
                                 artistActions(Modifier, 0.dp, false)
                             }
@@ -1412,9 +1452,28 @@ fun DetailScreen(
                                     searchPillTop = top
                                     searchPillHeight = height
                                 },
+                                dock = titleDock,
                             )
                         }
                     }
+                }
+
+                // The name in the bar: drawn over the header's own copy the
+                // whole way in, and alone once the header holds.
+                if (titleDock.anchor.isSpecified) {
+                    val edgePx = TopBarActionsEdge.startPx
+                    val rightPx = if (edgePx == Int.MAX_VALUE) {
+                        constraints.maxWidth - with(dockDensity) { BAR_GUTTER.toPx() }
+                    } else {
+                        edgePx - with(dockDensity) { DOCK_TITLE_GAP.toPx() }
+                    }
+                    DockedTitle(
+                        title = page.title,
+                        color = palette.onBackground,
+                        dock = titleDock,
+                        slotWidthPx = (rightPx - dockLeftPx).coerceAtLeast(0f),
+                        headerTop = { headerStopTop - (controlsOvershoot() ?: 0f).coerceAtMost(0f) },
+                    )
                 }
     }
 } else {
@@ -1461,6 +1520,8 @@ private fun ReleaseHeader(
     onSearchPlaced: (top: Int, height: Int) -> Unit = { _, _ -> },
     /** True while the pinned copy above the list stands in for the row here. */
     controlsPinned: () -> Boolean = { false },
+    /** The name on its way into the top bar; null where it stays put. */
+    dock: TitleDock? = null,
 ) {
     val (credit, meta) = page.headerLines(trackCount, songs.playtime())
     // The title, credit and meta line fade away with Play and Shuffle while
@@ -1470,6 +1531,10 @@ private fun ReleaseHeader(
         animationSpec = tween(PLAY_ROW_FOLD_MS, easing = FastOutSlowInEasing),
         label = "releaseInfo",
     )
+    val titleLayout = remember { arrayOfNulls<TextLayoutResult>(1) }
+    // The credit and meta line are gone by the time the name is most of the
+    // way into the bar.
+    val detailsAlpha = { infoAlpha * (1f - ((dock?.let { it.progress() } ?: 0f) / DOCK_DETAILS_FADE).coerceIn(0f, 1f)) }
     // Held outside state: only read when the row reports where it landed.
     val headerCoords = remember { arrayOfNulls<LayoutCoordinates>(1) }
     val titleTop = remember { intArrayOf(0) }
@@ -1499,13 +1564,14 @@ private fun ReleaseHeader(
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                onTextLayout = { titleLayout[0] = it },
                 modifier = Modifier
                     .padding(horizontal = HEADER_GUTTER)
-                    .graphicsLayer { alpha = infoAlpha }
                     .onGloballyPositioned { title ->
                         val header = headerCoords[0]?.takeIf { it.isAttached } ?: return@onGloballyPositioned
                         titleTop[0] = header.localPositionOf(title, Offset.Zero).y.roundToInt()
-                    },
+                    }
+                    .dockingName(dock, headerCoords, titleLayout, startScale = 1f) { infoAlpha },
             )
             // Artist / credit line
             if (credit.isNotBlank()) {
@@ -1519,7 +1585,7 @@ private fun ReleaseHeader(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
                         .padding(horizontal = HEADER_GUTTER)
-                        .graphicsLayer { alpha = infoAlpha }
+                        .graphicsLayer { alpha = detailsAlpha() }
                         .let { m ->
                             val id = artist?.artistId
                             if (id == null) {
@@ -1543,7 +1609,7 @@ private fun ReleaseHeader(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
                         .padding(horizontal = HEADER_GUTTER)
-                        .graphicsLayer { alpha = infoAlpha },
+                        .graphicsLayer { alpha = detailsAlpha() },
                 )
             }
 
@@ -1689,6 +1755,19 @@ private val RELEASE_PILL_GAP = 12.dp
 
 /** The gap between the top bar and the controls held under it. */
 private val CONTROLS_PIN_GAP = 6.dp
+
+/** How far the page scrolls while the name travels from the header into the bar. */
+private val DOCK_RANGE = 110.dp
+
+/** The back button the docked name sits beside, and the room either side of the name. */
+private val DOCK_BACK_WIDTH = 44.dp
+private val DOCK_TITLE_GAP = 12.dp
+
+/** Of the name's way into the bar, how much the header's copy takes to hand over to the bar's. */
+private const val DOCK_HANDOVER = 0.25f
+
+/** Of the name's way into the bar, how much the credit and meta line take to fade. */
+private const val DOCK_DETAILS_FADE = 0.6f
 
 /** How long Play and Shuffle take to fold away, or back. */
 private const val PLAY_ROW_FOLD_MS = 280
@@ -1928,8 +2007,13 @@ private fun ArtistHeader(
      */
     shownLogoUrl: String? = null,
     onLogoShown: (String) -> Unit = {},
+    /** The name on its way into the top bar; null where it stays put. */
+    dock: TitleDock? = null,
 ) {
     val headerCoords = remember { arrayOfNulls<LayoutCoordinates>(1) }
+    val nameLayout = remember { arrayOfNulls<TextLayoutResult>(1) }
+    val nameScale = MaterialTheme.typography.displayLarge.fontSize.value /
+        MaterialTheme.typography.headlineMedium.fontSize.value
     fun reportName(name: LayoutCoordinates) {
         val header = headerCoords[0]?.takeIf { it.isAttached } ?: return
         onNamePlaced((header.size.height - header.localPositionOf(name, Offset.Zero).y.roundToInt()).coerceAtLeast(0))
@@ -1993,8 +2077,8 @@ private fun ArtistHeader(
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .graphicsLayer { alpha = logoIn }
-                    .onGloballyPositioned { if (logoShown) reportName(it) },
+                    .onGloballyPositioned { if (logoShown) reportName(it) }
+                    .dockingName(dock?.takeIf { logoShown }, headerCoords, null, startScale = 1f) { logoIn },
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 AsyncImage(
@@ -2040,14 +2124,15 @@ private fun ArtistHeader(
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
+            onTextLayout = { nameLayout[0] = it },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .graphicsLayer { alpha = 1f - logoIn }
                 .onGloballyPositioned { if (!logoShown) reportName(it) }
                 // Bottom is half the top inset — the stats pills (or, absent
                 // those, the action row) sit closer under the name than the
                 // name sits under the artwork.
-                .padding(start = HEADER_GUTTER, end = HEADER_GUTTER, top = 14.dp, bottom = 7.dp),
+                .padding(start = HEADER_GUTTER, end = HEADER_GUTTER, top = 14.dp, bottom = 7.dp)
+                .dockingName(dock?.takeIf { !logoShown }, headerCoords, nameLayout, startScale = nameScale) { 1f - logoIn },
         )
     }
 }
@@ -3282,4 +3367,128 @@ private fun List<Song>.playtime(): String? {
         minutes < 60 -> stringResource(R.string.minutes_short, minutes.toInt())
         else -> stringResource(R.string.hours_minutes_short, (minutes / 60).toInt(), (minutes % 60).toInt())
     }
+}
+
+/**
+ * A page's name on its way into the top bar. As the header scrolls up to its
+ * stop, the name leaves its place there and travels in beside the back
+ * button, where it holds. The header's own copy and the bar's ([DockedTitle])
+ * are drawn over each other the whole way and hand over early on, so a name
+ * that fits on one line is never seen to change.
+ */
+@Stable
+private class TitleDock {
+    /** The top left of the name's first line inside the header, px. */
+    var anchor by mutableStateOf(Offset.Unspecified)
+
+    /** How many times bigger the name is set in the header than in the bar. */
+    var startScale by mutableFloatStateOf(1f)
+
+    /** How wide the name's first line is in the header, at the bar's size, px. */
+    var startWidth by mutableFloatStateOf(0f)
+
+    /** How tall the name is in the bar, px. */
+    var dockedHeight by mutableFloatStateOf(0f)
+
+    /** 0 with the header at rest, 1 once the name is in the bar. Set by the page. */
+    var progress: () -> Float = { 0f }
+
+    /** How far the name has moved off its place in the header, px. Set by the page. */
+    var shift: () -> Offset = { Offset.Zero }
+
+    /** The bar copy's scale, which the header copy matches. */
+    fun scale(p: Float): Float = startScale + (1f - startScale) * p
+
+    /** How far the header's copy has handed over to the bar's. */
+    fun handOver(p: Float): Float = (p / DOCK_HANDOVER).coerceIn(0f, 1f)
+}
+
+/**
+ * The header's own copy of the page's name: says where it rests, and moves,
+ * shrinks and fades with the copy that docks in the bar. [alpha] is the
+ * copy's own fade (the search folding it away, a logo fading in over it).
+ */
+private fun Modifier.dockingName(
+    dock: TitleDock?,
+    header: Array<LayoutCoordinates?>,
+    text: Array<TextLayoutResult?>?,
+    startScale: Float,
+    alpha: () -> Float,
+): Modifier {
+    if (dock == null) return graphicsLayer { this.alpha = alpha() }
+    return onGloballyPositioned { name ->
+        val headerCoords = header[0]?.takeIf { it.isAttached } ?: return@onGloballyPositioned
+        val layout = text?.get(0)
+        val left = layout?.getLineLeft(0) ?: 0f
+        val top = layout?.getLineTop(0) ?: 0f
+        dock.anchor = headerCoords.localPositionOf(name, Offset(left, top))
+        dock.startScale = startScale
+        // One line fits as it is; give the bar's copy some slack so the two
+        // faces' widths differing can't put an ellipsis on it. Two lines are
+        // cut down to the first, with an ellipsis, from the start.
+        val lineWidth = layout?.let { it.getLineRight(0) - it.getLineLeft(0) } ?: name.size.width.toFloat()
+        val oneLine = layout == null || layout.lineCount <= 1
+        dock.startWidth = lineWidth / startScale * (if (oneLine) 1.15f else 1f) + 2f
+    }.graphicsLayer {
+        val p = dock.progress()
+        val shift = dock.shift()
+        translationX = shift.x
+        translationY = shift.y
+        val k = dock.scale(p) / dock.startScale
+        scaleX = k
+        scaleY = k
+        val layout = text?.get(0)
+        transformOrigin = TransformOrigin(
+            if (size.width > 0f) (layout?.getLineLeft(0) ?: 0f) / size.width else 0f,
+            if (size.height > 0f) (layout?.getLineTop(0) ?: 0f) / size.height else 0f,
+        )
+        this.alpha = alpha() * (1f - dock.handOver(p))
+    }
+}
+
+/**
+ * The page's name in the top bar, between the back button and the actions
+ * pill. It starts over the header's copy (at [headerTop], where the header
+ * is now) and travels in with it, narrowing to the room the bar has.
+ */
+@Composable
+private fun DockedTitle(
+    title: String,
+    color: Color,
+    dock: TitleDock,
+    slotWidthPx: Float,
+    headerTop: () -> Float,
+) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.headlineMedium,
+        color = color,
+        maxLines = 1,
+        softWrap = false,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.layout { measurable, constraints ->
+            val p = dock.progress()
+            val start = dock.startWidth.takeIf { it > 0f } ?: slotWidthPx
+            val width = (start + (slotWidthPx - start) * p).roundToInt().coerceIn(0, constraints.maxWidth)
+            val placeable = measurable.measure(Constraints(minWidth = width, maxWidth = width))
+            dock.dockedHeight = placeable.height.toFloat()
+            layout(placeable.width, placeable.height) {
+                placeable.placeWithLayer(0, 0) {
+                    val q = dock.progress()
+                    if (q <= 0f) {
+                        alpha = 0f
+                        return@placeWithLayer
+                    }
+                    val shift = dock.shift()
+                    translationX = dock.anchor.x + shift.x
+                    translationY = headerTop() + dock.anchor.y + shift.y
+                    transformOrigin = TransformOrigin(0f, 0f)
+                    val s = dock.scale(q)
+                    scaleX = s
+                    scaleY = s
+                    alpha = dock.handOver(q)
+                }
+            }
+        },
+    )
 }

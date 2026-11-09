@@ -72,6 +72,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -125,6 +127,16 @@ private val ACCESSORY_GAP = 8.dp
 
 /** Low enough that the back button visibly overshoots before settling. */
 private const val BACK_BOUNCE_DAMPING = 0.42f
+
+/**
+ * Where the bar's actions pill starts, in window px: the right end of the room
+ * a page's name has when it docks in the bar beside the back button (see
+ * DetailScreen). [Int.MAX_VALUE] while nothing is at the trailing end.
+ */
+object TopBarActionsEdge {
+    var startPx by mutableIntStateOf(Int.MAX_VALUE)
+        internal set
+}
 
 /** What the leading end of the bar needs: a back button, or the wordmark. */
 private fun leadingInset(hasBack: Boolean): Dp = if (hasBack) BackInset else WordmarkInset
@@ -394,6 +406,13 @@ fun FrostedTopBar(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .then(if (slot != null) Modifier.fillMaxWidth().padding(start = accessoryStart) else Modifier)
+                    .onGloballyPositioned {
+                        TopBarActionsEdge.startPx = if (slot == null && actionsShown) {
+                            it.positionInWindow().x.roundToInt()
+                        } else {
+                            Int.MAX_VALUE
+                        }
+                    }
                     // Same outer edge as the navbar; PILL_INSET below is
                     // internal padding around the icons, not extra margin.
                     .padding(end = edge),
