@@ -50,6 +50,8 @@
     <string name="mini_player_next_button">Show next button on miniplayer</string>
     <string name="mini_player_next_button_subtitle">Swiping the miniplayer sideways skips either way</string>
     <string name="crop_thumbnails">Crop thumbnails</string>
+    <string name="generate_playlist_image">Let Dial Generate Playlist Image</string>
+    <string name="generate_playlist_image_subtitle">Playlists with YouTube Music\'s default grid cover get a collage of their most recently added songs</string>
     <string name="crop_thumbnails_subtitle">Fill artwork that isn\'t square instead of showing bars</string>
     <string name="dial_page_artists">Artists</string>
     <string name="dial_page_explore">For You</string>

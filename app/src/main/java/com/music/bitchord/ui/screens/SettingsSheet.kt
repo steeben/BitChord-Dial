@@ -353,6 +353,7 @@ fun SettingsScreen(
     val miniPlayerNextButton by CustomizationSettings.miniPlayerNextButton.collectAsStateWithLifecycle()
     val progressBarStyle by CustomizationSettings.progressBarStyle.collectAsStateWithLifecycle()
     val cropThumbnails by CustomizationSettings.cropThumbnails.collectAsStateWithLifecycle()
+    val generatePlaylistImages by CustomizationSettings.generatePlaylistImages.collectAsStateWithLifecycle()
     val speedDials by CustomizationSettings.speedDials.collectAsStateWithLifecycle()
     val artistDial by CustomizationSettings.artistDial.collectAsStateWithLifecycle()
 
@@ -1552,6 +1553,21 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { CustomizationSettings.setCropThumbnails(!cropThumbnails) },
+                )
+            }
+            val playlistImageTitle = stringResource(R.string.generate_playlist_image)
+            row(playlistImageTitle, "playlist", "image", "cover", "artwork", "collage", "grid", "generate") {
+                SettingsRow(
+                    icon = Icons.Rounded.AutoAwesome,
+                    title = playlistImageTitle,
+                    subtitle = stringResource(R.string.generate_playlist_image_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = generatePlaylistImages,
+                            onCheckedChange = CustomizationSettings::setGeneratePlaylistImages,
+                        )
+                    },
+                    onClick = { CustomizationSettings.setGeneratePlaylistImages(!generatePlaylistImages) },
                 )
             }
             val speedDialsTitle = stringResource(R.string.speed_dials_setting)
