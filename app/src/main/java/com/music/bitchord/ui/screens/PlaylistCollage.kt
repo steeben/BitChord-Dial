@@ -92,7 +92,9 @@ internal fun rememberGeneratedCollage(page: DetailPage, songs: List<Song>): List
     val enabled by CustomizationSettings.generatePlaylistImages.collectAsStateWithLifecycle()
     val liked = page.isLiked()
     val eligible = enabled && page.type == BrowseType.PLAYLIST && (liked || page.browseId.startsWith("VL"))
-    val settled = page.songs is UiState.Success && page.continuation == null && songs.isNotEmpty()
+    // The first batch of rows is enough: a long playlist's later pages can
+    // take a while, and the picture shouldn't wait for them.
+    val settled = page.songs is UiState.Success && songs.isNotEmpty()
     val context = LocalContext.current.applicationContext
     val thumb = page.thumbnailUrl
     // The rows that could be the grid's four: YouTube builds it from the
@@ -106,23 +108,27 @@ internal fun rememberGeneratedCollage(page: DetailPage, songs: List<Song>): List
         value = DefaultGridCheck.check(context, thumb, gridSources)
     }
     var shown by remember(page.browseId) { mutableStateOf(heldCollages[page.browseId]) }
-    LaunchedEffect(page.browseId, eligible, settled, isDefault, songs) {
-        if (!eligible || !settled) return@LaunchedEffect
+    LaunchedEffect(page.browseId, eligible, settled, isDefault) {
+        // Decided once, the first time the page is opened: later pages of the
+        // list arriving and pulls to refresh keep the picture it opened with.
+        if (!eligible || !settled || page.browseId in decidedCollages) return@LaunchedEffect
         val next = when (isDefault) {
             true -> collageCovers(songs, newestFirst = liked).takeIf { it.isNotEmpty() }
             false -> null
             null -> return@LaunchedEffect
         }
-        if (next != shown) {
-            shown = next
-            if (next == null) heldCollages.remove(page.browseId) else heldCollages[page.browseId] = next
-        }
+        decidedCollages += page.browseId
+        shown = next
+        if (next == null) heldCollages.remove(page.browseId) else heldCollages[page.browseId] = next
     }
     return shown.takeIf { eligible }
 }
 
 /** The collage each playlist page settled on, by page. */
 private val heldCollages = HashMap<String, List<String>>()
+
+/** Pages whose collage has been decided, so it isn't decided again. */
+private val decidedCollages = HashSet<String>()
 
 private const val GRID_SOURCE_ROWS = 16
 
