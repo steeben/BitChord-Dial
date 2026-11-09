@@ -529,17 +529,16 @@ fun DetailScreen(
     // search is open, and unfold again as it closes.
     var playRowFolded by rememberSaveable(page.browseId) { mutableStateOf(false) }
     var searchFocused by remember(page.browseId) { mutableStateOf(false) }
-    // Closing: the page is carried back down to where it was when the search
-    // opened, the field riding down with the pill and fading back into it.
-    var searchClosing by remember(page.browseId) { mutableStateOf(false) }
-    val preSearchScroll = remember(page.browseId) { intArrayOf(0, 0) }
+    // Once the search has been used the list keeps room at its foot, so a
+    // short list can still hold its controls under the bar and closing the
+    // search never has the page snap back down to fit.
+    var searchUsed by rememberSaveable(page.browseId) { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     val closeSearch = {
         focusManager.clearFocus()
         searching = false
         query = ""
         playRowFolded = false
-        searchClosing = true
     }
     // Back closes the search first — this handler is registered after the one
     // that pops the page, so it is the one that answers while it's enabled.
@@ -552,9 +551,7 @@ fun DetailScreen(
         if (searching) {
             closeSearch()
         } else {
-            preSearchScroll[0] = listState.firstVisibleItemIndex
-            preSearchScroll[1] = listState.firstVisibleItemScrollOffset
-            searchClosing = false
+            searchUsed = true
             searching = true
             focusSearch = true
             playRowFolded = true
@@ -709,7 +706,10 @@ fun DetailScreen(
     val controlsIndex = if (isArtist) ARTIST_ACTIONS_INDEX else 0
     val hasControls = if (isArtist) songs.isNotEmpty() else songs.isNotEmpty() || page.songs is UiState.Loading
     val showsControls by rememberUpdatedState(hasControls)
-    val pinTop by rememberUpdatedState(searchStop + controlsLead)
+    // The controls hold just under the top bar, with the title and details
+    // above them up in the bar, between the back button and the pill.
+    val pinGapPx = with(LocalDensity.current) { CONTROLS_PIN_GAP.roundToPx() }
+    val pinTop by rememberUpdatedState(searchStop + pinGapPx)
     // How far past the stop the row would have scrolled, in px; negative while
     // it is still below it, null where there is no row to pin.
     val controlsOvershoot: () -> Float? = remember(listState, controlsIndex, page.browseId) {
@@ -727,11 +727,8 @@ fun DetailScreen(
             }
         }
     }
-    // While the search is open its field is what holds at the top, on its
-    // own (see below), so the header copy stands down.
-    val searchOpen by rememberUpdatedState(searching || playRowFolded || searchClosing)
     val controlsPinned by remember(controlsOvershoot) {
-        derivedStateOf { !searchOpen && (controlsOvershoot() ?: -1f) >= 0f }
+        derivedStateOf { (controlsOvershoot() ?: -1f) >= 0f }
     }
     // Where the top of the page — artwork, title and all — sits while the
     // controls are at their stop. The whole header holds there with them, and
@@ -743,7 +740,7 @@ fun DetailScreen(
     // picture behind it stops rising. Null until the sizes are known, or on a
     // page with no controls to hold.
     val headerStopScroll: () -> Float? = {
-        if (searchOpen || !showsControls || controlsHeight <= 0 || controlsLead <= 0 || (isArtist && artistHeaderHeight <= 0)) {
+        if (!showsControls || controlsHeight <= 0 || controlsLead <= 0 || (isArtist && artistHeaderHeight <= 0)) {
             null
         } else {
             (-headerStopTop).toFloat().coerceAtLeast(1f)
@@ -773,10 +770,13 @@ fun DetailScreen(
     // scroll under it.
     var searchPillTop by remember(page.browseId) { mutableIntStateOf(0) }
     var searchPillHeight by remember(page.browseId) { mutableIntStateOf(0) }
+    // The pill's place: in the list until the controls reach their stop,
+    // then in the held controls. [searchPillTop] is measured from the top of
+    // the controls, so it follows Play and Shuffle folding away above it.
     val searchFieldTop: () -> Int = {
-        val header = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == controlsIndex }
-        val inList = header?.let { it.offset + searchPillTop } ?: Int.MIN_VALUE
-        maxOf(inList, searchStop)
+        val item = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == controlsIndex }
+        val held = pinTop + searchPillTop
+        if (item == null) held else maxOf(item.offset + controlsOffset + searchPillTop, held)
     }
 
     // The artist page's controls, laid out as a release's — Shuffle and Play
@@ -796,14 +796,9 @@ fun DetailScreen(
                 searching = searching,
                 playRowShown = !playRowFolded,
                 onSearch = toggleSearch,
-                onSearchPlaced = { pill ->
-                    if (inList) {
-                        val item = artistActionsCoords[0]?.takeIf { it.isAttached }
-                        if (item != null) {
-                            searchPillTop = item.localPositionOf(pill, Offset.Zero).y.roundToInt()
-                            searchPillHeight = pill.size.height
-                        }
-                    }
+                onSearchPlaced = { top, height ->
+                    searchPillTop = top
+                    searchPillHeight = height
                 },
             )
             Spacer(Modifier.height(bottomSpace))
@@ -829,63 +824,33 @@ fun DetailScreen(
         )
     }
 
+    // Only as much room as it takes for the controls to reach their stop
+    // with the list's foot at the bottom of the screen: worked out once the
+    // controls and the room are both in view, which is only on a short list.
+    var searchRoomPx by remember(page.browseId) { mutableIntStateOf(-1) }
+    LaunchedEffect(page.browseId) {
+        snapshotFlow {
+            val info = listState.layoutInfo
+            val room = info.visibleItemsInfo.firstOrNull { it.key == "search-room" }
+            val controls = info.visibleItemsInfo.firstOrNull { it.index == controlsIndex }
+            if (room == null || controls == null) {
+                null
+            } else {
+                val below = room.offset - (controls.offset + controlsOffset)
+                (info.viewportEndOffset - info.afterContentPadding - pinTop - below).coerceAtLeast(0)
+            }
+        }.collect { needed -> if (needed != null) searchRoomPx = needed }
+    }
     LaunchedEffect(searching) {
         if (!searching) return@LaunchedEffect
-        // With Play and Shuffle folded the pill sits where the controls start,
-        // so that is the place carried up to the bar (on an artist page the
-        // controls are an item of their own, starting at its top). Measured
-        // off the list as it stands, once the room under a short list is laid
-        // out, and checked again once the fold has finished, so it always
-        // lands there.
+        // Carried up until the controls reach their stop under the bar, if
+        // they aren't held there already; once held, nothing moves but the
+        // fold, and the field takes the pill's place under the bar.
         withFrameNanos { }
-        repeat(3) {
-            val header = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == controlsIndex }
-            if (header == null) {
-                listState.animateScrollToItem(controlsIndex, controlsOffset - searchStop)
-            } else {
-                val delta = (header.offset + controlsOffset - searchStop).toFloat()
-                if (kotlin.math.abs(delta) < 2f) return@LaunchedEffect
-                listState.animateScrollBy(delta, tween(PLAY_ROW_FOLD_MS + 60, easing = FastOutSlowInEasing))
-            }
+        val short = controlsOvershoot() ?: return@LaunchedEffect
+        if (short < 0f) {
+            listState.animateScrollBy(-short, tween(PLAY_ROW_FOLD_MS + 60, easing = FastOutSlowInEasing))
         }
-    }
-    LaunchedEffect(searchClosing) {
-        if (!searchClosing) return@LaunchedEffect
-        // Back down to where the page was, re-measured as Play and Shuffle
-        // unfold above the pill, so it ends exactly there.
-        withFrameNanos { }
-        val (index, offset) = preSearchScroll[0] to preSearchScroll[1]
-        repeat(3) {
-            val item = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
-            if (item == null) {
-                listState.animateScrollToItem(index, offset)
-            } else {
-                val delta = (item.offset + offset).toFloat()
-                if (kotlin.math.abs(delta) >= 2f) {
-                    listState.animateScrollBy(delta, tween(PLAY_ROW_FOLD_MS + 60, easing = FastOutSlowInEasing))
-                }
-            }
-        }
-        searchClosing = false
-    }
-    // Scrolling back up the page, with the search closed, unfolds Play and
-    // Shuffle again.
-    LaunchedEffect(page.browseId) {
-        var lastIndex = listState.firstVisibleItemIndex
-        var lastOffset = listState.firstVisibleItemScrollOffset
-        var climbed = 0
-        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
-            .collect { (index, offset) ->
-                val up = when {
-                    index < lastIndex -> UNFOLD_CLIMB_PX
-                    index == lastIndex -> lastOffset - offset
-                    else -> 0
-                }
-                climbed = if (up > 0 && listState.isScrollInProgress) climbed + up else 0
-                if (climbed >= UNFOLD_CLIMB_PX && playRowFolded && !searching) playRowFolded = false
-                lastIndex = index
-                lastOffset = offset
-            }
     }
 
     // When the track list lands while the page is up (rather than being in
@@ -996,12 +961,8 @@ fun DetailScreen(
                             // The open search field, once it is holding under
                             // the bar: the rows go under it and are gone above.
                             val fieldTop = searchFieldTop()
-                            val fieldHeld = (searching || searchClosing) && searchPillHeight > 0 &&
-                                listState.layoutInfo.visibleItemsInfo.none {
-                                    it.index == controlsIndex && it.offset + searchPillTop > searchStop
-                                }
-                            if (!controlsPinned && !fieldHeld) return@drawWithContent
-                            val cut = if (fieldHeld) {
+                            if (!controlsPinned) return@drawWithContent
+                            val cut = if (searching && searchPillHeight > 0) {
                                 (fieldTop + searchPillHeight).toFloat()
                             } else {
                                 (pinTop - pinBandPx).coerceAtLeast(0f)
@@ -1372,8 +1333,15 @@ fun DetailScreen(
             if (isArtist && !artistSearch) aboutItem()
             // Room under a short list, so opening the search can still carry
             // its field all the way up under the bar.
-            if (searching || playRowFolded || searchClosing) {
-                item(key = "search-room") { Spacer(Modifier.height(this@BoxWithConstraints.maxHeight)) }
+            if (searchUsed) {
+                item(key = "search-room") {
+                    val room = searchRoomPx
+                    Spacer(
+                        Modifier.height(
+                            if (room < 0) this@BoxWithConstraints.maxHeight else with(LocalDensity.current) { room.toDp() },
+                        ),
+                    )
+                }
             }
         }
                 }
@@ -1440,6 +1408,10 @@ fun DetailScreen(
                                 playRowShown = !playRowFolded,
                                 onSearch = toggleSearch,
                                 onArtistClick = onArtistClick,
+                                onSearchPlaced = { top, height ->
+                                    searchPillTop = top
+                                    searchPillHeight = height
+                                },
                             )
                         }
                     }
@@ -1485,7 +1457,7 @@ private fun ReleaseHeader(
      * far above it the title starts, in px.
      */
     onControlsPlaced: (top: Int, height: Int, lead: Int) -> Unit = { _, _, _ -> },
-    /** Where the Search pill sits inside this header, and how tall it is, in px. */
+    /** Where the Search pill sits below the top of the controls, and how tall it is, in px. */
     onSearchPlaced: (top: Int, height: Int) -> Unit = { _, _ -> },
     /** True while the pinned copy above the list stands in for the row here. */
     controlsPinned: () -> Boolean = { false },
@@ -1587,11 +1559,7 @@ private fun ReleaseHeader(
                     searching = searching,
                     playRowShown = playRowShown,
                     onSearch = onSearch,
-                    onSearchPlaced = { pill ->
-                        val header = headerCoords[0]?.takeIf { it.isAttached } ?: return@ReleaseActions
-                        val top = header.localPositionOf(pill, Offset.Zero).y.roundToInt()
-                        onSearchPlaced(top, pill.size.height)
-                    },
+                    onSearchPlaced = onSearchPlaced,
                     modifier = Modifier
                         .onGloballyPositioned { row ->
                             val header = headerCoords[0]?.takeIf { it.isAttached } ?: return@onGloballyPositioned
@@ -1626,8 +1594,10 @@ private fun ReleaseActions(
     onSearch: () -> Unit,
     modifier: Modifier = Modifier,
     playRowShown: Boolean = true,
-    onSearchPlaced: (LayoutCoordinates) -> Unit = {},
+    /** Where the Search pill sits below the top of these controls, and how tall it is, in px. */
+    onSearchPlaced: (top: Int, height: Int) -> Unit = { _, _ -> },
 ) {
+    val rootCoords = remember { arrayOfNulls<LayoutCoordinates>(1) }
     // The pill hands over to the field (and back) with a crossfade.
     val pillAlpha by animateFloatAsState(
         targetValue = if (searching) 0f else 1f,
@@ -1641,7 +1611,7 @@ private fun ReleaseActions(
         },
         contentAlignment = Alignment.Center,
         label = "releaseActions",
-        modifier = modifier,
+        modifier = modifier.onPlaced { rootCoords[0] = it },
     ) { ready ->
         Column(
             modifier = Modifier
@@ -1703,7 +1673,10 @@ private fun ReleaseActions(
                 enabled = !searching,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .onGloballyPositioned(onSearchPlaced)
+                    .onGloballyPositioned { pill ->
+                        val root = rootCoords[0]?.takeIf { it.isAttached } ?: return@onGloballyPositioned
+                        onSearchPlaced(root.localPositionOf(pill, Offset.Zero).y.roundToInt(), pill.size.height)
+                    }
                     .graphicsLayer { alpha = pillAlpha },
             )
         }
@@ -1714,11 +1687,12 @@ private fun ReleaseActions(
 private val RELEASE_PILL_HEIGHT = 50.dp
 private val RELEASE_PILL_GAP = 12.dp
 
+/** The gap between the top bar and the controls held under it. */
+private val CONTROLS_PIN_GAP = 6.dp
+
 /** How long Play and Shuffle take to fold away, or back. */
 private const val PLAY_ROW_FOLD_MS = 280
 
-/** How far the page has to be scrolled back up to unfold Play and Shuffle, in px. */
-private const val UNFOLD_CLIMB_PX = 24
 
 /**
  * The release Play pill's fill: 15 points more see-through than the artist
