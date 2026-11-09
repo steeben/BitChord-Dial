@@ -72,7 +72,8 @@ import kotlinx.coroutines.withContext
  * "Let Dial Generate Playlist Image": every playlist page gets a moving
  * collage behind it, one cover in front and others floating round it, made of
  * its most recently added songs. A playlist's ⋯ menu can turn it off for that
- * one, and a custom cover set on this device is shown instead.
+ * one. A custom cover set on this device doesn't stop it: the cover shows
+ * in lists, and the page keeps its moving collage.
  */
 
 private fun DetailPage.isLiked(): Boolean =
@@ -82,8 +83,8 @@ private fun DetailPage.isLiked(): Boolean =
  * The covers to draw for this page, or null to show its own artwork.
  *
  * Every playlist gets one while the setting is on, unless its "..." menu has
- * turned it off for that playlist or the user gave it a cover of their own on
- * this device. Decided from the first batch of rows the first time the page
+ * turned it off for that playlist; a cover of the user's own doesn't count,
+ * as the collage is drawn from the songs, not the cover. Decided from the first batch of rows the first time the page
  * is opened, and then held: later pages of the list arriving and pulls to
  * refresh keep the picture it opened with. Kept by page for the life of the
  * process, so reopening one starts on it.
@@ -93,8 +94,7 @@ internal fun rememberGeneratedCollage(page: DetailPage, songs: List<Song>): List
     val enabled by CustomizationSettings.generatePlaylistImages.collectAsStateWithLifecycle()
     val turnedOff by CustomizationSettings.playlistBackdropsOff.collectAsStateWithLifecycle()
     val liked = page.isLiked()
-    val ownCover = page.thumbnailUrl?.startsWith("file:") == true
-    val eligible = enabled && !ownCover && page.type == BrowseType.PLAYLIST &&
+    val eligible = enabled && page.type == BrowseType.PLAYLIST &&
         (liked || page.browseId.startsWith("VL")) &&
         CustomizationSettings.playlistBackdropKey(page.browseId) !in turnedOff
     // The first batch of rows is enough: a long playlist's later pages can
@@ -379,18 +379,25 @@ internal class CollageCoverDraft(
 
 /**
  * Fetches [browseId]'s newest songs and their sleeves for a generated cover.
- * Null when the playlist has no songs to make one from, or the front sleeve
- * couldn't be fetched.
+ * With [shuffle], a random pick of its songs instead, from the list already
+ * fetched for it. Null when the playlist has no songs to make one from, or
+ * the front sleeve couldn't be fetched.
  */
-internal suspend fun prepareCollageCover(context: Context, browseId: String, dark: Boolean): CollageCoverDraft? = runCatching {
+internal suspend fun prepareCollageCover(
+    context: Context,
+    browseId: String,
+    dark: Boolean,
+    shuffle: kotlin.random.Random? = null,
+): CollageCoverDraft? = runCatching {
     val liked = browseId == YtMusicRepository.LIKED_MUSIC || browseId == "LM"
     val id = when {
         liked -> YtMusicRepository.LIKED_MUSIC
         browseId.startsWith("VL") -> browseId
         else -> "VL$browseId"
     }
-    val songs = YtMusicRepository.browseSongs(id).getOrNull()?.songs.orEmpty()
-    val covers = collageCovers(songs, newestFirst = liked)
+    val songs = coverSongs[id]?.takeIf { shuffle != null }
+        ?: YtMusicRepository.browseSongs(id).getOrNull()?.songs.orEmpty().also { coverSongs[id] = it }
+    val covers = collageCovers(songs, newestFirst = liked, shuffle = shuffle)
     if (covers.isEmpty()) return@runCatching null
     withContext(Dispatchers.Default) {
         val main = loadSoftwareBitmap(context, covers.first().artworkAt(MAIN_PX) ?: covers.first(), MAIN_PX)
@@ -417,6 +424,9 @@ internal suspend fun prepareCollageCover(context: Context, browseId: String, dar
         CollageCoverDraft(browseId, main, tiles, automatic, choices)
     }
 }.getOrNull()
+
+/** The songs each playlist's cover generator last fetched, so picking again doesn't fetch again. */
+private val coverSongs = java.util.concurrent.ConcurrentHashMap<String, List<Song>>()
 
 private fun Color.closeTo(other: Color): Boolean =
     abs(red - other.red) + abs(green - other.green) + abs(blue - other.blue) < 0.06f

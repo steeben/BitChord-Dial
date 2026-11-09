@@ -1808,11 +1808,14 @@ private fun ReleaseActionsRow(
 private fun SearchCircle(onClick: () -> Unit, enabled: Boolean, modifier: Modifier = Modifier) {
     val haptics = rememberHaptics()
     val description = stringResource(R.string.search_this_list)
+    val dent = rememberPressDent()
     Box(
         modifier = modifier
+            .pressSink(dent)
             .headerGlass(CircleShape)
             .clip(CircleShape)
-            .clickable(enabled = enabled) {
+            .pressShade(dent)
+            .clickable(interactionSource = dent.interactions, indication = null, enabled = enabled) {
                 haptics.play(Haptic.Tap)
                 onClick()
             }
@@ -1887,12 +1890,15 @@ private fun GlassPill(
     enabled: Boolean = true,
 ) {
     val haptics = rememberHaptics()
+    val dent = rememberPressDent()
     Row(
         modifier = modifier
             .height(RELEASE_PILL_HEIGHT)
+            .pressSink(dent)
             .headerGlass(CircleShape)
             .clip(CircleShape)
-            .clickable(enabled = enabled) {
+            .pressShade(dent)
+            .clickable(interactionSource = dent.interactions, indication = null, enabled = enabled) {
                 haptics.play(haptic)
                 onClick()
             }
@@ -2619,6 +2625,7 @@ private fun PlayPill(
     // Resume rather than a flat tap: this button starts a queue, and the rising
     // pair says so.
     val haptics = rememberHaptics()
+    val dent = rememberPressDent()
     val glass = LocalDetailGlass.current
     // Slightly see-through, so the page shows faintly through it as it does
     // through the glass circles beside it; on glass, over that glass.
@@ -2634,8 +2641,9 @@ private fun PlayPill(
         Box(
             modifier = modifier
                 .size(size)
+                .pressSink(dent)
                 .clip(CircleShape)
-                .clickable {
+                .clickable(interactionSource = dent.interactions, indication = null) {
                     haptics.play(Haptic.Resume)
                     onClick()
                 }
@@ -2675,6 +2683,7 @@ private fun PlayPill(
     Row(
         modifier = modifier
             .then(if (iconOnly) Modifier.size(size) else Modifier.height(size))
+            .pressSink(dent)
             .clip(CircleShape)
             .then(
                 if (glass != null) {
@@ -2684,7 +2693,8 @@ private fun PlayPill(
                     Modifier.background(fill).glassSheen(CircleShape)
                 },
             )
-            .clickable {
+            .pressShade(dent)
+            .clickable(interactionSource = dent.interactions, indication = null) {
                 haptics.play(Haptic.Resume)
                 onClick()
             }

@@ -3,6 +3,8 @@ package com.music.bitchord
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.ui.screens.collageCovers
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PlaylistCollageCoversTest {
@@ -46,5 +48,16 @@ class PlaylistCollageCoversTest {
     fun `stops at the most covers a collage holds`() {
         val songs = (1..20).map { song("$it", "Artist $it", "album$it") }
         assertEquals(3, collageCovers(songs, newestFirst = true, max = 3).size)
+    }
+
+    @Test
+    fun `picking again draws other songs under the same rules`() {
+        val songs = (1..40).map { song("$it", "Artist ${it % 20}", "album$it") }
+        val newest = collageCovers(songs, newestFirst = true)
+        val again = collageCovers(songs, newestFirst = true, shuffle = kotlin.random.Random(7))
+        assertEquals(9, again.size)
+        assertNotEquals(newest, again)
+        assertEquals(again.size, again.toSet().size)
+        assertTrue(again.all { url -> songs.any { it.thumbnailUrl == url } })
     }
 }

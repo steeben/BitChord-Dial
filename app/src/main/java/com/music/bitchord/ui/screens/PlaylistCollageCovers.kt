@@ -2,6 +2,7 @@ package com.music.bitchord.ui.screens
 
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.model.artworkAt
+import kotlin.random.Random
 
 /** Covers in a generated playlist image: one in front, the rest floating round it. */
 internal const val COLLAGE_MAX_COVERS = 9
@@ -16,10 +17,20 @@ internal const val COLLAGE_MAX_COVERS = 9
  * No artwork, album or artist appears twice: a playlist of one album would
  * otherwise be the same sleeve nine times. If that leaves too few, artists
  * are allowed to repeat (with different albums), but artwork never is.
+ *
+ * With [shuffle], the songs are drawn in a random order instead, under the
+ * same rules: the cover generator's "pick again".
  */
-internal fun collageCovers(songs: List<Song>, newestFirst: Boolean, max: Int = COLLAGE_MAX_COVERS): List<String> {
+internal fun collageCovers(
+    songs: List<Song>,
+    newestFirst: Boolean,
+    max: Int = COLLAGE_MAX_COVERS,
+    shuffle: Random? = null,
+): List<String> {
     val withArt = songs.filter { !it.thumbnailUrl.isNullOrBlank() }
-    val ordered = if (withArt.any { it.localDateAddedSeconds != null }) {
+    val ordered = if (shuffle != null) {
+        withArt.shuffled(shuffle)
+    } else if (withArt.any { it.localDateAddedSeconds != null }) {
         withArt.withIndex()
             .sortedWith(
                 compareByDescending<IndexedValue<Song>> { it.value.localDateAddedSeconds ?: Long.MIN_VALUE }

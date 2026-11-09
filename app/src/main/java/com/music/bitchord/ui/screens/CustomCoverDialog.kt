@@ -20,8 +20,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -29,6 +31,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -58,7 +61,8 @@ import kotlinx.coroutines.withContext
  * "Custom cover" for a playlist: a card in the middle of the screen offering
  * a cover generated from the playlist's songs, made like its page's animated
  * backdrop, with a choice of ground colour (the backdrop's own first) and a
- * preview that follows it, or an image picked off the device.
+ * preview that follows it, and a button to pick other songs for it at
+ * random; or an image picked off the device.
  */
 @Composable
 internal fun CustomCoverDialog(
@@ -71,9 +75,20 @@ internal fun CustomCoverDialog(
     val context = LocalContext.current.applicationContext
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val scope = rememberCoroutineScope()
-    // Null while fetching; the outcome once it lands (a draft, or nothing to make one from).
-    val draft by produceState<Result<CollageCoverDraft?>?>(null, browseId) {
-        value = Result.success(prepareCollageCover(context, browseId, dark))
+    // How many times "pick other songs" was pressed; 0 is the newest songs.
+    var picks by remember(browseId) { mutableIntStateOf(0) }
+    var picking by remember(browseId) { mutableStateOf(false) }
+    // Null while fetching; the outcome once it lands (a draft, or nothing to
+    // make one from). A new pick keeps the last one up until it lands, and
+    // keeps it if the new one can't be made.
+    val draft by produceState<Result<CollageCoverDraft?>?>(null, browseId, picks) {
+        if (picks == 0) {
+            value = Result.success(prepareCollageCover(context, browseId, dark))
+        } else {
+            prepareCollageCover(context, browseId, dark, shuffle = kotlin.random.Random.Default)
+                ?.let { value = Result.success(it) }
+        }
+        picking = false
     }
     val ready = draft?.getOrNull()
     // Null is "Automatic": whatever the backdrop would be.
@@ -123,6 +138,22 @@ internal fun CustomCoverDialog(
                         )
                         else -> CircularProgressIndicator()
                     }
+                    if (ready != null) {
+                        FilledTonalIconButton(
+                            onClick = {
+                                picking = true
+                                picks++
+                            },
+                            enabled = !picking && !saving,
+                            modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
+                        ) {
+                            if (picking) {
+                                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                            } else {
+                                Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.custom_cover_shuffle))
+                            }
+                        }
+                    }
                 }
                 if (ready != null) {
                     Spacer(Modifier.height(14.dp))
@@ -152,7 +183,7 @@ internal fun CustomCoverDialog(
                         saving = true
                         scope.launch { onSaved(saveCollageCover(context, d, ground)) }
                     },
-                    enabled = ready != null && !saving,
+                    enabled = ready != null && !saving && !picking,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     if (saving) {
