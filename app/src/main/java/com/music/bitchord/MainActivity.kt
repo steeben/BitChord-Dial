@@ -7215,6 +7215,18 @@ private fun BitChordApp(
                         )
                     }
                 },
+                onGenerateCustomCover = pinnableId?.takeIf { customCover == null }?.let { id ->
+                    {
+                        browseActions = null
+                        showQueueNotice(context.getString(R.string.custom_cover_generating))
+                        scope.launch {
+                            val ok = com.music.bitchord.ui.screens.generateCollageCover(context, id)
+                            showQueueNotice(
+                                context.getString(if (ok) R.string.custom_cover_set else R.string.custom_cover_failed),
+                            )
+                        }
+                    }
+                },
                 onRemoveCustomCover = pinnableId?.takeIf { customCover != null }?.let { id ->
                     {
                         browseActions = null

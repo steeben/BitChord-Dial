@@ -105,7 +105,17 @@ internal fun rememberGeneratedCollage(page: DetailPage, songs: List<Song>): List
         eligible && settled, thumb, gridSources,
     ) {
         if (!eligible || !settled || liked) return@produceState
-        value = DefaultGridCheck.check(context, thumb, gridSources)
+        // A cover that wouldn't load is tried again a few times before the
+        // page is left on its own artwork.
+        repeat(GRID_CHECK_TRIES) { attempt ->
+            val verdict = DefaultGridCheck.check(context, thumb, gridSources)
+            if (verdict != null) {
+                value = verdict
+                return@produceState
+            }
+            if (attempt < GRID_CHECK_TRIES - 1) kotlinx.coroutines.delay(GRID_CHECK_RETRY_MS)
+        }
+        value = false
     }
     var shown by remember(page.browseId) { mutableStateOf(heldCollages[page.browseId]) }
     LaunchedEffect(page.browseId, eligible, settled, isDefault) {
@@ -131,6 +141,8 @@ private val heldCollages = HashMap<String, List<String>>()
 private val decidedCollages = HashSet<String>()
 
 private const val GRID_SOURCE_ROWS = 16
+private const val GRID_CHECK_TRIES = 3
+private const val GRID_CHECK_RETRY_MS = 2_000L
 
 /**
  * Whether a playlist's cover is YouTube Music's default grid: its four
@@ -143,24 +155,39 @@ private object DefaultGridCheck {
 
     fun cached(url: String?): Boolean? = url?.let { synchronized(verdicts) { verdicts[it] } }
 
-    suspend fun check(context: Context, url: String?, sources: List<String>): Boolean {
+    /**
+     * True for the grid, false for a cover of the owner's, null when the
+     * cover couldn't be fetched: the page then decides nothing yet, rather
+     * than settling on its plain artwork for good over one dropped request.
+     */
+    suspend fun check(context: Context, url: String?, sources: List<String>): Boolean? {
         if (url == null || !url.startsWith("http")) return false
         cached(url)?.let { return it }
+        var complete = true
         val verdict = withContext(Dispatchers.Default) {
             val cover = load(context, url.artworkAt(GRID_PX) ?: url, GRID_PX) ?: return@withContext null
-            val quarters = (0 until 4).map { q ->
-                val half = min(cover.width, cover.height) / 2
-                signature(cover, (q % 2) * half, (q / 2) * half, half)
-            }
+            // The grid fills the middle square of whatever shape the cover
+            // comes in (an old playlist's is a 4:3 video still).
+            val side = min(cover.width, cover.height)
+            val x0 = (cover.width - side) / 2
+            val y0 = (cover.height - side) / 2
+            val half = side / 2
+            val quarters = (0 until 4).map { q -> signature(cover, x0 + (q % 2) * half, y0 + (q / 2) * half, half) }
+            val distinct = sources.distinct()
             val sleeves = coroutineScope {
-                sources.distinct().map { src ->
+                distinct.map { src ->
                     async { load(context, src.artworkAt(GRID_PX) ?: src, GRID_PX)?.let(::squareSignature) }
                 }.awaitAll().filterNotNull()
             }
+            if (sleeves.size < distinct.size) complete = false
             val matched = quarters.count { q -> sleeves.any { distance(q, it) < MATCH_DISTANCE } }
-            matched >= 2 || (sleeves.isEmpty() && hasGridSeams(cover))
-        } ?: return false
-        synchronized(verdicts) { verdicts[url] = verdict }
+            // The seams decide it on their own too: the grid's four can be
+            // sleeves from further down the list than the rows compared, or
+            // ones the app doesn't list (an unavailable track's).
+            matched >= 2 || hasGridSeams(cover, x0, y0, side)
+        } ?: return null
+        // A "no" with sleeves missing may be one a retry would turn round.
+        if (verdict || complete) synchronized(verdicts) { verdicts[url] = verdict }
         return verdict
     }
 
@@ -202,16 +229,16 @@ private object DefaultGridCheck {
      * With no sleeves to compare against: a grid has hard edges down its
      * middle and across it, far sharper than the picture either side.
      */
-    private fun hasGridSeams(b: Bitmap): Boolean {
-        val w = b.width
-        val h = b.height
+    private fun hasGridSeams(b: Bitmap, x0: Int, y0: Int, side: Int): Boolean {
+        val w = side
+        val h = side
         if (w < 8 || h < 8) return false
         fun diff(p: Int, q: Int): Int =
             abs(((p shr 16) and 0xFF) - ((q shr 16) and 0xFF)) +
                 abs(((p shr 8) and 0xFF) - ((q shr 8) and 0xFF)) +
                 abs((p and 0xFF) - (q and 0xFF))
-        fun column(x: Int) = (0 until h).sumOf { diff(b.getPixel(x - 1, it), b.getPixel(x, it)) }.toFloat() / h
-        fun row(y: Int) = (0 until w).sumOf { diff(b.getPixel(it, y - 1), b.getPixel(it, y)) }.toFloat() / w
+        fun column(x: Int) = (0 until h).sumOf { diff(b.getPixel(x0 + x - 1, y0 + it), b.getPixel(x0 + x, y0 + it)) }.toFloat() / h
+        fun row(y: Int) = (0 until w).sumOf { diff(b.getPixel(x0 + it, y0 + y - 1), b.getPixel(x0 + it, y0 + y)) }.toFloat() / w
         val usualCol = listOf(w / 4, w / 3, 2 * w / 3, 3 * w / 4).map(::column).average().toFloat()
         val usualRow = listOf(h / 4, h / 3, 2 * h / 3, 3 * h / 4).map(::row).average().toFloat()
         return column(w / 2) > usualCol * 3f + 12f && row(h / 2) > usualRow * 3f + 12f
@@ -394,7 +421,13 @@ private fun CollageClock(state: CollageState) {
     }
 }
 
-private fun DrawScope.drawCollage(state: CollageState, geo: CollageGeometry, enter: Float, borderPx: Float) {
+private fun DrawScope.drawCollage(
+    state: CollageState,
+    geo: CollageGeometry,
+    enter: Float,
+    borderPx: Float,
+    centreY: Float = MAIN_CENTRE_Y,
+) {
     val w = size.width
     val h = size.height.coerceAtLeast(1f)
     geo.ensure(w, h)
@@ -417,7 +450,7 @@ private fun DrawScope.drawCollage(state: CollageState, geo: CollageGeometry, ent
     val om = 2.0 * PI / 26.0
     val rot = -7f + (1.6 * sin(om * t)).toFloat()
     val cx = w / 2f + (0.012 * w * sin(om * 0.7 * t + 1.0)).toFloat()
-    val cy = h * MAIN_CENTRE_Y + (0.012 * w * sin(om * 0.9 * t + 2.0)).toFloat()
+    val cy = h * centreY + (0.012 * w * sin(om * 0.9 * t + 2.0)).toFloat()
     val sc = (0.94f + 0.06f * enter) * (1f + 0.012f * sin(om * 1.3 * t).toFloat())
     // A soft shadow under the front cover.
     withTransform({
@@ -464,3 +497,54 @@ private fun DrawScope.drawTile(
         if (borderPx > 0f) drawPath(path, Color.White.copy(alpha = 0.22f * alpha), style = Stroke(borderPx * 2f))
     }
 }
+
+/**
+ * A cover for [browseId] made the way its page's backdrop is: one of its
+ * newest songs' sleeves in front, others round it, on a wash of the front
+ * one's colour. Saved as the playlist's custom cover (see
+ * [com.music.bitchord.data.CustomCovers]). False when the playlist has no
+ * songs to make one from or the sleeves couldn't be fetched.
+ */
+internal suspend fun generateCollageCover(context: Context, browseId: String): Boolean = runCatching {
+    val liked = browseId == YtMusicRepository.LIKED_MUSIC || browseId == "LM"
+    val id = when {
+        liked -> YtMusicRepository.LIKED_MUSIC
+        browseId.startsWith("VL") -> browseId
+        else -> "VL$browseId"
+    }
+    val songs = YtMusicRepository.browseSongs(id).getOrNull()?.songs.orEmpty()
+    val covers = collageCovers(songs, newestFirst = liked)
+    if (covers.isEmpty()) return@runCatching false
+    withContext(Dispatchers.Default) {
+        val main = loadSoftwareBitmap(context, covers.first().artworkAt(MAIN_PX) ?: covers.first(), MAIN_PX)
+            ?: return@withContext false
+        val tiles = coroutineScope {
+            covers.drop(1).take(SLOTS.size).map { url ->
+                async { loadSoftwareBitmap(context, url.artworkAt(THUMB_PX) ?: url, THUMB_PX)?.asImageBitmap() }
+            }.awaitAll()
+        }
+        val state = CollageState().apply {
+            this.main = main.asImageBitmap()
+            this.tiles = tiles
+        }
+        val swatch = androidx.palette.graphics.Palette.from(main).generate()
+        val base = Color(swatch.getDominantColor(0xFF303030.toInt()))
+        val top = androidx.compose.ui.graphics.lerp(base, Color.Black, 0.30f)
+        val bottom = androidx.compose.ui.graphics.lerp(top, Color.Black, 0.15f)
+        val out = Bitmap.createBitmap(GENERATED_COVER_PX, GENERATED_COVER_PX, Bitmap.Config.ARGB_8888)
+        val image = out.asImageBitmap()
+        val size = androidx.compose.ui.geometry.Size(GENERATED_COVER_PX.toFloat(), GENERATED_COVER_PX.toFloat())
+        androidx.compose.ui.graphics.drawscope.CanvasDrawScope().draw(
+            androidx.compose.ui.unit.Density(1f),
+            androidx.compose.ui.unit.LayoutDirection.Ltr,
+            androidx.compose.ui.graphics.Canvas(image),
+            size,
+        ) {
+            drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(top, bottom)))
+            drawCollage(state, CollageGeometry(), enter = 1f, borderPx = GENERATED_COVER_PX / 400f, centreY = 0.5f)
+        }
+        com.music.bitchord.data.CustomCovers.setBitmap(context, browseId, out)
+    }
+}.getOrDefault(false)
+
+private const val GENERATED_COVER_PX = 1080
