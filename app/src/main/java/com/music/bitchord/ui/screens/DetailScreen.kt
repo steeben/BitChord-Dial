@@ -1,5 +1,8 @@
 package com.music.bitchord.ui.screens
 
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.scaleIn
@@ -500,10 +503,13 @@ fun DetailScreen(
     // A playlist still on YouTube Music's default grid cover gets a collage
     // of its newest covers instead, and takes its colours from the front one.
     val collage = if (isArtist) null else rememberGeneratedCollage(page, rawSongs)
-    val palette = rememberArtworkPalette(
+    val artPalette = rememberArtworkPalette(
         imageUrl = appleArt?.heroUrl ?: collage?.firstOrNull() ?: page.thumbnailUrl,
         keyColors = appleArt?.keyColors(),
     )
+    // Under a collage the page is the accent's own colour, top to bottom,
+    // rather than whatever the front cover's background happens to be.
+    val palette = if (collage == null) artPalette else remember(artPalette) { artPalette.accentWashed() }
 
     // Narrowing the running order in place — the release equivalent of the
     // filter box on the Local Music tab, and the one thing a long track list
@@ -783,6 +789,13 @@ fun DetailScreen(
             Spacer(Modifier.height(bottomSpace))
         }
     }
+    // The artist's name fades away with Play and Shuffle while searching, and
+    // comes back with them, as a release's title does.
+    val artistInfoAlpha by animateFloatAsState(
+        targetValue = if (playRowFolded) 0f else 1f,
+        animationSpec = tween(PLAY_ROW_FOLD_MS, easing = FastOutSlowInEasing),
+        label = "artistInfo",
+    )
     if (isArtist) {
         // A library artist is already only what is on this device.
         val offersLocal = !page.browseId.startsWith("local:")
@@ -797,14 +810,22 @@ fun DetailScreen(
     }
 
     LaunchedEffect(searching) {
+        if (!searching) return@LaunchedEffect
         // With Play and Shuffle folded the pill sits where the controls start,
-        // so that is the place carried up to the bar. On an artist page the
-        // controls are an item of their own, starting at its top.
-        if (searching) {
-            if (isArtist) {
-                listState.animateScrollToItem(controlsIndex, -searchStop)
+        // so that is the place carried up to the bar (on an artist page the
+        // controls are an item of their own, starting at its top). Measured
+        // off the list as it stands, once the room under a short list is laid
+        // out, and checked again once the fold has finished, so it always
+        // lands there.
+        withFrameNanos { }
+        repeat(3) {
+            val header = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == controlsIndex }
+            if (header == null) {
+                listState.animateScrollToItem(controlsIndex, controlsOffset - searchStop)
             } else {
-                listState.animateScrollToItem(0, (controlsOffset - searchStop).coerceAtLeast(0))
+                val delta = (header.offset + controlsOffset - searchStop).toFloat()
+                if (kotlin.math.abs(delta) < 2f) return@LaunchedEffect
+                listState.animateScrollBy(delta, tween(PLAY_ROW_FOLD_MS + 60, easing = FastOutSlowInEasing))
             }
         }
     }
@@ -970,7 +991,11 @@ fun DetailScreen(
                 ) {
             item(key = "header") {
                 if (isArtist) {
-                    Box(Modifier.onSizeChanged { artistHeaderHeight = it.height }) {
+                    Box(
+                        Modifier
+                            .onSizeChanged { artistHeaderHeight = it.height }
+                            .graphicsLayer { alpha = artistInfoAlpha },
+                    ) {
                         ArtistHeader(
                             page = page,
                             palette = palette,
@@ -1420,6 +1445,13 @@ private fun ReleaseHeader(
     controlsPinned: () -> Boolean = { false },
 ) {
     val (credit, meta) = page.headerLines(trackCount, songs.playtime())
+    // The title, credit and meta line fade away with Play and Shuffle while
+    // searching, and come back with them.
+    val infoAlpha by animateFloatAsState(
+        targetValue = if (playRowShown) 1f else 0f,
+        animationSpec = tween(PLAY_ROW_FOLD_MS, easing = FastOutSlowInEasing),
+        label = "releaseInfo",
+    )
     // Held outside state: only read when the row reports where it landed.
     val headerCoords = remember { arrayOfNulls<LayoutCoordinates>(1) }
     val titleTop = remember { intArrayOf(0) }
@@ -1451,6 +1483,7 @@ private fun ReleaseHeader(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .padding(horizontal = HEADER_GUTTER)
+                    .graphicsLayer { alpha = infoAlpha }
                     .onGloballyPositioned { title ->
                         val header = headerCoords[0]?.takeIf { it.isAttached } ?: return@onGloballyPositioned
                         titleTop[0] = header.localPositionOf(title, Offset.Zero).y.roundToInt()
@@ -1468,6 +1501,7 @@ private fun ReleaseHeader(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
                         .padding(horizontal = HEADER_GUTTER)
+                        .graphicsLayer { alpha = infoAlpha }
                         .let { m ->
                             val id = artist?.artistId
                             if (id == null) {
@@ -1489,7 +1523,9 @@ private fun ReleaseHeader(
                     textAlign = TextAlign.Center,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(horizontal = HEADER_GUTTER),
+                    modifier = Modifier
+                        .padding(horizontal = HEADER_GUTTER)
+                        .graphicsLayer { alpha = infoAlpha },
                 )
             }
 
@@ -2079,7 +2115,26 @@ private fun PageBackground(
     // The page colour is part of what is recorded for the glass, not only
     // painted under it: below the picture the recording was otherwise empty,
     // and glass over nothing drew flat.
-    Box(modifier.clipToBounds().background(palette.wash)) {
+    Box(
+        modifier.clipToBounds().then(
+            if (collage == null) {
+                Modifier.background(palette.wash)
+            } else {
+                // Under a collage: the accent's wash, darkening by 15% from
+                // the foot of the picture to the foot of the page.
+                Modifier.drawBehind {
+                    drawRect(
+                        Brush.verticalGradient(
+                            0f to palette.wash,
+                            1f to palette.wash.darkened(COLLAGE_PAGE_DARKEN),
+                            startY = artHeight.toPx(),
+                            endY = size.height,
+                        ),
+                    )
+                }
+            },
+        ),
+    ) {
         Box(
             Modifier
                 .fillMaxWidth()
@@ -2200,6 +2255,29 @@ private fun PageBackground(
                 .background(palette.wash),
         )
     }
+}
+
+/** How much darker the foot of a collage page is than its top. */
+private const val COLLAGE_PAGE_DARKEN = 0.15f
+
+private fun Color.darkened(by: Float): Color =
+    Color(red * (1f - by), green * (1f - by), blue * (1f - by), alpha)
+
+/**
+ * The page's colours re-based on its accent, for a generated collage: the
+ * wash is the accent laid over the theme's own ground, so the accent's text
+ * and the Play pill still read on it.
+ */
+private fun ArtworkPalette.accentWashed(): ArtworkPalette {
+    val dark = wash.luminance() < 0.5f
+    val ground = if (dark) Color.Black else Color.White
+    val share = if (dark) 0.42f else 0.30f
+    val newWash = androidx.compose.ui.graphics.lerp(ground, accent, share)
+    return copy(
+        background = androidx.compose.ui.graphics.lerp(ground, accent, share * 0.8f),
+        wash = newWash,
+        elevated = androidx.compose.ui.graphics.lerp(newWash, accent, 0.2f),
+    )
 }
 
 /** How tall the page-colour strip laid over the artwork's bottom edge is. */
