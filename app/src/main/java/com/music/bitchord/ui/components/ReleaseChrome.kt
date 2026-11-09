@@ -157,6 +157,10 @@ fun ReleaseSaveButton(pageId: String?) {
 /**
  * The ⋯ in place of the account photo on an album or playlist page: the
  * page's menu, or with rows ticked, what can be done to them.
+ *
+ * Not a [menuAnchor] of its own: the menu grows out of the whole pill of
+ * buttons it sits in (which is one), so its top and trailing edges land on
+ * the pill's rather than on this button's smaller touch target inside it.
  */
 @Composable
 fun ReleaseMoreButton(modifier: Modifier = Modifier) {
@@ -164,7 +168,7 @@ fun ReleaseMoreButton(modifier: Modifier = Modifier) {
         onClick = {
             if (ListSelection.active) ListSelection.openMenu() else ReleaseChrome.openMore()
         },
-        modifier = modifier.menuAnchor(),
+        modifier = modifier,
     ) {
         Icon(
             Icons.Rounded.MoreHoriz,
@@ -347,10 +351,13 @@ fun ArtistRadioButton(pageId: String?) {
     }
 }
 
-/** The ⋯ in place of the account photo on an artist page; [onClick] opens the artist's menu. */
+/**
+ * The ⋯ in place of the account photo on an artist page; [onClick] opens the
+ * artist's menu, which grows out of the bar's pill as [ReleaseMoreButton]'s does.
+ */
 @Composable
 fun ArtistMoreButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    IconButton(onClick = onClick, modifier = modifier.menuAnchor()) {
+    IconButton(onClick = onClick, modifier = modifier) {
         Icon(
             Icons.Rounded.MoreHoriz,
             contentDescription = stringResource(R.string.more),
