@@ -1741,14 +1741,9 @@ private fun BitChordApp(
                 // No song version to swap in: the video's own audio carries
                 // on, untouched, and only its picture goes. The player then
                 // treats it as a song, its thumbnail cropped into the cover.
-                if (song.isVideo && stillCurrent && pauseWhileResolving && canvasAllowedNow()) {
-                    // Picked, not asked to be audio only, and Canvases are on
-                    // for this connection: the video's own picture is this
-                    // song's Canvas, rather than nothing. "Convert to audio"
-                    // from the menu still hides it.
-                    TrackLog.d("Player", "audio switch keeping the video's picture as the Canvas", song.videoId)
-                    keepVideoId = song.videoId
-                } else if (song.isVideo && stillCurrent) {
+                // Never shown as a video on its own: only "Convert to video"
+                // from the menu brings the picture back.
+                if (song.isVideo && stillCurrent) {
                     TrackLog.d("Player", "audio switch playing the video as audio only", song.videoId)
                     AudioOnlyVideos.add(song.videoId)
                 } else if (song.videoId !in missingVersions) {
@@ -1845,6 +1840,7 @@ private fun BitChordApp(
                 convertedFromAudio = song
                 convertedVideoId = song.videoId
                 keepVideoId = song.videoId
+                AudioOnlyVideos.remove(song.videoId)
                 if (holdUntilAligned) AppSettings.versionAlignmentInProgress.value = false
                 c.swapToVersion(song.copy(isVideo = true, isVideoOrigin = true))
                 if (resumeAfterResolution) c.play()
@@ -1864,6 +1860,7 @@ private fun BitChordApp(
 
             convertedFromAudio = song
             convertedVideoId = video.videoId
+            AudioOnlyVideos.remove(video.videoId)
             TrackLog.d("Player", "video switch applying '${video.title}' (${video.videoId})", song.videoId)
             val target = video.copy(
                 queueTier = song.queueTier,
@@ -1970,15 +1967,21 @@ private fun BitChordApp(
         playFrom(songs, index, source)
     }
     // Songs play as their audio version by default, music videos included.
-    // The video row starts so the player fills at once, and its catalogue
-    // release is swapped in behind the loading state; when there isn't one
-    // the video plays on untouched. Picking Video from the song menu is the
+    // The video row starts audio only (its thumbnail as the cover, never its
+    // picture), and its catalogue release is swapped in behind the loading
+    // state; when there isn't one the video's own audio plays on, still
+    // audio only. Picking "Convert to video" from the song menu is the
     // only way to watch: that choice is remembered for this occurrence
     // ([keepVideoId] on revert, [convertedVideoId] on an audio-to-video
     // switch) so it is not undone here. A Listen Together party plays one
     // cut for everyone, so it is left alone there.
     LaunchedEffect(player.song?.videoId, partyState.inParty) {
         val song = player.song ?: return@LaunchedEffect
+        if (song.isVideo && song.videoId != keepVideoId && song.videoId != convertedVideoId) {
+            // Hidden before anything is resolved, so the picture never flashes
+            // up — in a party too, where the cut itself is left alone.
+            AudioOnlyVideos.add(song.videoId)
+        }
         if (song.isVideo && !partyState.inParty &&
             song.videoId != keepVideoId && song.videoId != convertedVideoId
         ) {
@@ -6015,6 +6018,8 @@ private fun BitChordApp(
                             keepVideoId = original.videoId
                             convertedFromVideo = null
                             convertedAudioId = null
+                            // Hidden when it started; asked for by hand now.
+                            AudioOnlyVideos.remove(original.videoId)
                             if (!versionAlignmentPending(original.videoId)) optimisticVersionSong = original
                             c.swapToVersion(original)
                         }
@@ -8479,11 +8484,6 @@ private const val FROM_START_SWAP_GRACE_MS = 2_000L
 
 /** How long a just-picked track gets for its play state to reach the controller. */
 private const val PLAY_INTENT_WAIT_MS = 600L
-
-/** Whether a Canvas may stream on the connection the phone is on now. */
-private fun canvasAllowedNow(): Boolean =
-    AppSettings.animatedCanvas.value &&
-        (AppSettings.meteredConnection.value != true || AppSettings.canvasOverCellular.value)
 
 /**
  * How far a detail page scrolls before its title moves up into the bar.
