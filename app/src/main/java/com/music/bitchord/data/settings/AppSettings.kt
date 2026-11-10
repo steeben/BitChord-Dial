@@ -545,6 +545,13 @@ object AppSettings {
     val spotifyLikeSync = MutableStateFlow(false)
 
     /**
+     * Radio and AutoPlay follow Spotify's recommendations (matched back onto
+     * YouTube Music) rather than YouTube Music's own. Only does anything
+     * while a Spotify account is signed in; see `SpotifyRecommendations`.
+     */
+    val spotifyAlgorithm = MutableStateFlow(false)
+
+    /**
      * Secondary artist art: an artist-signature API used only when Apple Music
      * has no title logo. On by default against [DEFAULT_SIGNATURE_API_URL];
      * a blank URL means the user removed it and the lookup is skipped.
@@ -1035,6 +1042,7 @@ object AppSettings {
                 it.indexOf(com.music.bitchord.data.canvas.AnimatedArtKind.ANIMATED_COVER)
         }
         spotifyLikeSync.value = prefs.getBoolean(KEY_SPOTIFY_LIKE_SYNC, false)
+        spotifyAlgorithm.value = prefs.getBoolean(KEY_SPOTIFY_ALGORITHM, false)
         signatureApiEnabled.value = prefs.getBoolean(KEY_SIGNATURE_API_ENABLED, true)
         signatureApiUrl.value = normalizeSignatureApiUrl(
             prefs.getString(KEY_SIGNATURE_API_URL, DEFAULT_SIGNATURE_API_URL).orEmpty(),
@@ -1666,6 +1674,11 @@ object AppSettings {
     fun setSpotifyLikeSync(value: Boolean) {
         spotifyLikeSync.value = value
         prefs.edit().putBoolean(KEY_SPOTIFY_LIKE_SYNC, value).apply()
+    }
+
+    fun setSpotifyAlgorithm(value: Boolean) {
+        spotifyAlgorithm.value = value
+        prefs.edit().putBoolean(KEY_SPOTIFY_ALGORITHM, value).apply()
     }
 
     fun setSignatureApiEnabled(value: Boolean) {
@@ -2312,6 +2325,7 @@ object AppSettings {
     private const val KEY_ANIMATED_ART_ORDER = "animated_art_order"
     private const val KEY_ANIMATED_ART_ENABLED = "animated_art_enabled"
     private const val KEY_SPOTIFY_LIKE_SYNC = "spotify_like_sync"
+    private const val KEY_SPOTIFY_ALGORITHM = "spotify_algorithm"
     private const val KEY_FULL_BLEED_ARTWORK = "full_bleed_artwork"
     private const val KEY_LEGACY_MESH_GRADIENT = "legacy_mesh_gradient"
     private const val KEY_LAST_PLAYER_SCREEN = "last_player_screen"

@@ -8,6 +8,7 @@ import com.music.bitchord.data.model.QueueTier
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.sources.SourceRegistry
 import com.music.bitchord.data.sources.TrackMatcher
+import com.music.bitchord.data.spotify.SpotifyRecommendations
 import com.music.bitchord.playback.QueueCoordinator.asQueueEntry
 import kotlinx.coroutines.CancellationException
 
@@ -104,8 +105,18 @@ suspend fun loadAutoplayTracks(
     val seed = youtubeSeedFor(seedSong) ?: return Result.success(emptyList())
     // A music video plays on with music videos, as YouTube Music does.
     val videos = seedSong.isVideo && seed == seedSong.videoId
-    val related = YtMusicRepository.radio(seed, preferVideo = videos).getOrElse { return Result.failure(it) }
-    val extra = QueueBuilder.extend(existing, related, limit, preferVideos = videos)
+    // Spotify's station for the song when the listener chose its algorithm,
+    // and YouTube Music's radio whenever that has nothing new to add. A music
+    // video stays with YouTube: Spotify has no videos to play on with.
+    val fromSpotify = if (!videos && SpotifyRecommendations.active()) {
+        QueueBuilder.extend(existing, SpotifyRecommendations.songsFor(seedSong.title, seedSong.artist), limit)
+    } else {
+        emptyList()
+    }
+    val extra = fromSpotify.ifEmpty {
+        val related = YtMusicRepository.radio(seed, preferVideo = videos).getOrElse { return Result.failure(it) }
+        QueueBuilder.extend(existing, related, limit, preferVideos = videos)
+    }
     if (extra.isEmpty()) return Result.success(emptyList())
 
     return Result.success(extra.map {

@@ -176,6 +176,7 @@ import com.music.bitchord.ui.screens.HomeReset
 import com.music.bitchord.ui.screens.speedDialArtRequest
 import com.music.bitchord.ui.theme.Metropolis
 import com.music.bitchord.ui.components.HomeDialMenu
+import com.music.bitchord.ui.components.rememberDealtDialPicks
 import com.music.bitchord.ui.components.dialTileGlassEdge
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextOverflow
@@ -8587,16 +8588,15 @@ private fun rememberHomeFeed(
     val speedDialsOn by CustomizationSettings.speedDials.collectAsStateWithLifecycle()
     // YT Music is dealt once a round (app load, pull to refresh) and kept, so
     // a song starting doesn't move the tiles.
-    val dialSource by CustomizationSettings.speedDialSource.collectAsStateWithLifecycle()
+    val chosenDialSource by CustomizationSettings.speedDialSource.collectAsStateWithLifecycle()
+    // Spotify's picks need a Spotify account; without one the choice is YT Music.
+    val spotifyToken by AppSettings.spotifySpdcToken.collectAsStateWithLifecycle()
+    val dialSource = chosenDialSource.effective(spotifyToken.isNotBlank())
     val dialRound by viewModel.dialRound.collectAsStateWithLifecycle()
     val lastDialNewReleases by CustomizationSettings.lastDialNewReleases.collectAsStateWithLifecycle()
     val dealReady = homeFresh && homeState is UiState.Success
-    val dealtPicks = remember(dialRound, dialSource, dealReady) {
-        if (dialSource == SpeedDialSource.HISTORY || !dealReady) {
-            null
-        } else {
-            CustomizationSettings.pickSpeedDial(dialSource, (homeState as? UiState.Success)?.data.orEmpty())
-        }
+    val dealtPicks = rememberDealtDialPicks(dialRound, dialSource, dealReady) {
+        (homeState as? UiState.Success)?.data.orEmpty()
     }
     val dealt = dialSource == SpeedDialSource.HISTORY || dealtPicks != null
     val holdSavedDial = speedDialsOn && (!homeFresh || !dealt) && lastSpeedDial.isNotEmpty()

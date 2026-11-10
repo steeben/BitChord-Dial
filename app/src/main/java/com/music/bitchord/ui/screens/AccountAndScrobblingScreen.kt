@@ -68,6 +68,7 @@ fun AccountAndScrobblingScreen(
     val discordUsername by AppSettings.discordUsername.collectAsStateWithLifecycle()
     val discordRpcEnabled by AppSettings.discordRpcEnabled.collectAsStateWithLifecycle()
     val spotifyConnected by AppSettings.spotifySpdcToken.collectAsStateWithLifecycle()
+    val spotifyAlgorithm by AppSettings.spotifyAlgorithm.collectAsStateWithLifecycle()
     val hideUserInfo by AppSettings.hideUserInfo.collectAsStateWithLifecycle()
 
     Column(
@@ -122,6 +123,16 @@ fun AccountAndScrobblingScreen(
                 onClick = onOpenSpotify,
             )
             if (spotifyConnected.isNotBlank()) {
+                RowDivider()
+                SettingsRow(
+                    icon = Icons.Rounded.GraphicEq,
+                    title = stringResource(R.string.spotify_algorithm),
+                    subtitle = stringResource(R.string.spotify_algorithm_subtitle),
+                    trailing = {
+                        IosSwitch(checked = spotifyAlgorithm, onCheckedChange = AppSettings::setSpotifyAlgorithm)
+                    },
+                    onClick = { AppSettings.setSpotifyAlgorithm(!spotifyAlgorithm) },
+                )
                 FullWidthDivider()
                 DestructiveRow(
                     label = stringResource(R.string.spotify_disconnect),

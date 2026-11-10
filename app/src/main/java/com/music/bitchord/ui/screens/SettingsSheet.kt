@@ -1436,12 +1436,14 @@ fun SettingsScreen(
                 )
             }
             val speedDialSourceTitle = stringResource(R.string.speed_dial_source)
-            row(speedDialSourceTitle, "speed dial", "history", "youtube", "yt music", "official", "recommends") {
+            row(speedDialSourceTitle, "speed dial", "history", "youtube", "yt music", "official", "recommends", "spotify") {
                 SettingsRow(icon = Icons.Rounded.CropSquare, title = speedDialSourceTitle)
+                val spotifyToken by AppSettings.spotifySpdcToken.collectAsStateWithLifecycle()
+                val sources = SpeedDialSource.choices(spotifyToken.isNotBlank())
                 SegmentedControl(
-                    options = com.music.bitchord.ui.components.speedDialSourceLabels(),
-                    selectedIndex = speedDialSource.ordinal,
-                    onSelect = { CustomizationSettings.setSpeedDialSource(SpeedDialSource.entries[it]) },
+                    options = com.music.bitchord.ui.components.speedDialSourceLabels(sources),
+                    selectedIndex = sources.indexOf(speedDialSource.effective(spotifyToken.isNotBlank())),
+                    onSelect = { CustomizationSettings.setSpeedDialSource(sources[it]) },
                     modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, bottom = 14.dp),
                 )
             }

@@ -5,10 +5,23 @@ import com.music.bitchord.data.model.ShelfItem
 
 /**
  * Where the speed dial's tiles after the pins come from: what was played
- * lately, or YouTube Music's own speed dial (the default). The pickers show
- * them in this order.
+ * lately, YouTube Music's own speed dial (the default), or what Spotify
+ * recommends after the songs played lately. The pickers show them in this
+ * order; Spotify is only offered while a Spotify account is signed in.
  */
-enum class SpeedDialSource { HISTORY, YOUTUBE }
+enum class SpeedDialSource {
+    HISTORY, YOUTUBE, SPOTIFY;
+
+    /** This choice as it applies now: Spotify without a Spotify account is YouTube Music. */
+    fun effective(spotifyConnected: Boolean): SpeedDialSource =
+        if (this == SPOTIFY && !spotifyConnected) YOUTUBE else this
+
+    companion object {
+        /** The sources a picker offers. */
+        fun choices(spotifyConnected: Boolean): List<SpeedDialSource> =
+            if (spotifyConnected) entries else entries - SPOTIFY
+    }
+}
 
 /** The dial's tiles past the pins, and which of them are new releases (for their tag). */
 data class DialPicks(
@@ -37,7 +50,9 @@ object SpeedDialPicker {
     fun isQuickPicksShelf(title: String): Boolean = title.trim().lowercase() in QUICK_PICKS_TITLES
 
     /**
-     * The tiles for [source].
+     * The tiles for [source]. Spotify's own picks are fetched apart from this
+     * and put ahead of what this returns, which for that source is the
+     * YouTube dial, so the tiles Spotify can't fill are YouTube's.
      *
      * [history] is the dial as History builds it (recently played first).
      *
