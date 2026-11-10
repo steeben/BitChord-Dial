@@ -26,6 +26,9 @@ import com.music.bitchord.ui.components.IosSwitch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
@@ -73,6 +76,8 @@ fun AccountAndScrobblingScreen(
     val spotifyLikeSync by AppSettings.spotifyLikeSync.collectAsStateWithLifecycle()
     val spotifyPlayedPlaylist by AppSettings.spotifyPlayedPlaylist.collectAsStateWithLifecycle()
     val hideUserInfo by AppSettings.hideUserInfo.collectAsStateWithLifecycle()
+    var showPlayedPlaylist by remember { mutableStateOf(false) }
+    if (showPlayedPlaylist) PlayedInDialDialog(onDismiss = { showPlayedPlaylist = false })
 
     Column(
         modifier = modifier
@@ -150,11 +155,12 @@ fun AccountAndScrobblingScreen(
                 SettingsRow(
                     icon = Icons.Rounded.LibraryMusic,
                     title = stringResource(R.string.spotify_played_playlist),
-                    subtitle = stringResource(R.string.spotify_played_playlist_subtitle),
+                    subtitle = stringResource(R.string.spotify_played_playlist_summary),
                     trailing = {
                         IosSwitch(checked = spotifyPlayedPlaylist, onCheckedChange = AppSettings::setSpotifyPlayedPlaylist)
                     },
-                    onClick = { AppSettings.setSpotifyPlayedPlaylist(!spotifyPlayedPlaylist) },
+                    // The switch turns it on; the row opens what it is and how much it keeps.
+                    onClick = { showPlayedPlaylist = true },
                 )
                 FullWidthDivider()
                 DestructiveRow(

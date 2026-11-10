@@ -1,11 +1,13 @@
 package com.music.bitchord.data.spotify
 
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 
@@ -32,6 +34,22 @@ object SpotifyPlayedList {
         "https://api.spotify.com/v1/playlists/$playlistId/tracks",
     )
 
+    /** How many songs the playlist may hold, to choose from, and the choice until one is made. */
+    val KEEP_OPTIONS = listOf(100, 200, 500, 1000)
+    const val DEFAULT_KEEP = 500
+
+    /** The most songs read, or taken out, in one request. */
+    const val PAGE = 50
+
+    /** [saved] if it is one of [KEEP_OPTIONS], else [DEFAULT_KEEP]. */
+    fun keepOrDefault(saved: Int): Int = if (saved in KEEP_OPTIONS) saved else DEFAULT_KEEP
+
+    /** How many of the oldest songs to take out of a playlist holding [total], to keep [keep]; at most [PAGE]. */
+    fun excess(total: Int, keep: Int): Int = (total - keep).coerceIn(0, PAGE)
+
+    /** The playlist's oldest songs, a page of them: new songs are added at the end, so the oldest lead. */
+    fun oldestUrl(itemsUrl: String): String = "$itemsUrl?offset=0&limit=$PAGE"
+
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     fun createBody(): String = buildJsonObject {
@@ -49,6 +67,35 @@ object SpotifyPlayedList {
         val root = runCatching { json.parseToJsonElement(body) as? JsonObject }.getOrNull() ?: return null
         return (root["id"] as? JsonPrimitive)?.takeUnless { it is JsonNull }?.contentOrNull?.takeIf { it.isNotBlank() }
     }
+
+    /** How many songs the playlist holds, out of the answer to listing it. */
+    fun total(body: String): Int? {
+        val root = runCatching { json.parseToJsonElement(body) as? JsonObject }.getOrNull() ?: return null
+        return (root["total"] as? JsonPrimitive)?.intOrNull
+    }
+
+    /**
+     * The first [count] songs' uris out of the answer to listing the playlist. Each entry's
+     * song is under "track", or "item" where the address is the newer one.
+     */
+    fun oldestUris(body: String, count: Int): List<String> {
+        val root = runCatching { json.parseToJsonElement(body) as? JsonObject }.getOrNull() ?: return emptyList()
+        val items = root["items"] as? JsonArray ?: return emptyList()
+        return items.asSequence()
+            .mapNotNull { it as? JsonObject }
+            .mapNotNull { entry -> (entry["track"] as? JsonObject) ?: (entry["item"] as? JsonObject) }
+            .mapNotNull { track -> (track["uri"] as? JsonPrimitive)?.takeUnless { it is JsonNull }?.contentOrNull }
+            .filter { it.isNotBlank() }
+            .take(count.coerceAtLeast(0))
+            .toList()
+    }
+
+    /** The body that takes [uris] out of the playlist at [url]: the songs go by the name the address has. */
+    fun removeBody(url: String, uris: List<String>): String = buildJsonObject {
+        putJsonArray(if (url.endsWith("/items")) "items" else "tracks") {
+            uris.forEach { uri -> add(buildJsonObject { put("uri", uri) }) }
+        }
+    }.toString()
 
     /** [playlists] as the app lists them, without this one. */
     fun withoutPlayedList(playlists: List<SpotifyPlaylist>): List<SpotifyPlaylist> =

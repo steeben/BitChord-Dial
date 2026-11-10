@@ -554,6 +554,12 @@ object AppSettings {
     val spotifyPlayedPlaylist = MutableStateFlow(false)
 
     /**
+     * How many songs that playlist holds before the oldest are taken out to
+     * make room: one of `SpotifyPlayedList.KEEP_OPTIONS`.
+     */
+    val spotifyPlayedKeep = MutableStateFlow(com.music.bitchord.data.spotify.SpotifyPlayedList.DEFAULT_KEEP)
+
+    /**
      * Radio and AutoPlay follow Spotify's recommendations (matched back onto
      * YouTube Music) rather than YouTube Music's own. Only does anything
      * while a Spotify account is signed in; see `SpotifyRecommendations`.
@@ -1063,6 +1069,9 @@ object AppSettings {
         }
         spotifyLikeSync.value = prefs.getBoolean(KEY_SPOTIFY_LIKE_SYNC, true)
         spotifyPlayedPlaylist.value = prefs.getBoolean(KEY_SPOTIFY_PLAYED_PLAYLIST, false)
+        spotifyPlayedKeep.value = com.music.bitchord.data.spotify.SpotifyPlayedList.keepOrDefault(
+            prefs.getInt(KEY_SPOTIFY_PLAYED_KEEP, com.music.bitchord.data.spotify.SpotifyPlayedList.DEFAULT_KEEP),
+        )
         spotifyAlgorithm.value = prefs.getBoolean(KEY_SPOTIFY_ALGORITHM, false)
         signatureApiEnabled.value = prefs.getBoolean(KEY_SIGNATURE_API_ENABLED, true)
         signatureApiUrl.value = normalizeSignatureApiUrl(
@@ -1706,6 +1715,12 @@ object AppSettings {
     fun setSpotifyPlayedPlaylist(value: Boolean) {
         spotifyPlayedPlaylist.value = value
         prefs.edit().putBoolean(KEY_SPOTIFY_PLAYED_PLAYLIST, value).apply()
+    }
+
+    fun setSpotifyPlayedKeep(value: Int) {
+        val keep = com.music.bitchord.data.spotify.SpotifyPlayedList.keepOrDefault(value)
+        spotifyPlayedKeep.value = keep
+        prefs.edit().putInt(KEY_SPOTIFY_PLAYED_KEEP, keep).apply()
     }
 
     fun setSpotifyAlgorithm(value: Boolean) {
@@ -2359,6 +2374,7 @@ object AppSettings {
     private const val KEY_SPOTIFY_LIKE_SYNC = "spotify_like_sync"
     private const val KEY_SPOTIFY_ALGORITHM = "spotify_algorithm"
     private const val KEY_SPOTIFY_PLAYED_PLAYLIST = "spotify_played_playlist"
+    private const val KEY_SPOTIFY_PLAYED_KEEP = "spotify_played_keep"
     private const val KEY_FULL_BLEED_ARTWORK = "full_bleed_artwork"
     private const val KEY_LEGACY_MESH_GRADIENT = "legacy_mesh_gradient"
     private const val KEY_LAST_PLAYER_SCREEN = "last_player_screen"

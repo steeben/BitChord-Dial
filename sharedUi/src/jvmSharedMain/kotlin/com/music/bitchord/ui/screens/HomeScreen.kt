@@ -635,8 +635,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexedShelves(
                                     onReorder = null,
                                     currentSong = currentSong,
                                     isPlaying = isPlaying,
-                                    showLabels = dialLabels,
-                                    labelOverrides = dialLabelOverrides,
+                                    // A mix's art already carries its name.
+                                    showLabels = false,
                                     showPinIcon = false,
                                 )
                             },

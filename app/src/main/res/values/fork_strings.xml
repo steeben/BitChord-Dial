@@ -46,6 +46,9 @@
     <string name="spotify_like_sync_summary">Liking or un-liking a song here also saves or removes it from your Spotify Liked Songs</string>
     <string name="spotify_played_playlist">Played in Dial playlist</string>
     <string name="spotify_played_playlist_subtitle">Creates a private \"Played in Dial\" playlist on your Spotify account and adds the songs you play here, to help steer Spotify\'s recommendations. It stays hidden in this app.</string>
+    <string name="spotify_played_playlist_summary">Tap for details and how many songs to keep</string>
+    <string name="spotify_played_keep">Songs to keep</string>
+    <string name="spotify_played_keep_note">Once the playlist is full, the oldest songs are removed as new ones are added.</string>
     <string name="spotify_like_sync">Like songs on Spotify too</string>
     <string name="spotify_like_sync_subtitle">Liking or un-liking a song here also saves or removes it from your Spotify Liked Songs, using the sp_dc cookie below</string>
     <string name="spotify_canvas_compact_controls_subtitle">Instead of hiding, the controls shrink to the bottom of the screen, keeping the song, live lyrics and play controls</string>
