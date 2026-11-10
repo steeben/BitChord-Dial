@@ -68,6 +68,9 @@
     <string name="speed_dials_setting_subtitle">Open Home on the speed dial pages. Off, Home is just the list of sections</string>
     <string name="artist_dial">Give artists their own dial</string>
     <string name="artist_dial_subtitle">A page under the speed dial of the artists you pin, then the ones you play most</string>
+    <string name="mixes_dial">Mixes Dial</string>
+    <string name="mixes_dial_subtitle">Swipe right from the speed dial\'s first page for a page of random mixes from YouTube Music, and Spotify when you\'re signed in</string>
+    <string name="mixes_dial_empty">No mixes to show yet. Pull down to try again</string>
     <string name="favorite_artist">Favorite artist</string>
     <string name="unfavorite_artist">Remove from favorite artists</string>
     <string name="remove_from_dial">Remove from dial</string>

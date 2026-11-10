@@ -177,6 +177,7 @@ import com.music.bitchord.ui.screens.speedDialArtRequest
 import com.music.bitchord.ui.theme.Metropolis
 import com.music.bitchord.ui.components.HomeDialMenu
 import com.music.bitchord.ui.components.rememberDealtDialPicks
+import com.music.bitchord.ui.components.rememberMixesDial
 import com.music.bitchord.ui.components.dialTileGlassEdge
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextOverflow
@@ -4591,6 +4592,9 @@ private fun BitChordApp(
                             speedDialLucky = speedDialLucky,
                             dialHistoryLabel = stringResource(R.string.dial_history),
                             speedDialNewReleases = homeFeed.newReleaseIds,
+                            mixesDialOn = homeFeed.mixesDialOn,
+                            mixesDial = homeFeed.mixes,
+                            mixesDialEmptyLabel = stringResource(R.string.mixes_dial_empty),
                             newReleaseLabel = stringResource(R.string.dial_new_release),
                             onSpeedDialHistory = {
                                 viewModel.loadDialHistory()
@@ -8621,6 +8625,10 @@ private class HomeFeed(
     val speedDials: Boolean,
     /** The speed dial's tiles tagged as new releases. */
     val newReleaseIds: Set<String>,
+    /** Whether the speed dial has the Mixes Dial to its left. */
+    val mixesDialOn: Boolean,
+    /** The Mixes Dial's tiles: null until the first deal is in. */
+    val mixes: List<ShelfItem>?,
 )
 
 /**
@@ -8656,6 +8664,12 @@ private fun rememberHomeFeed(
         (homeState as? UiState.Success)?.data.orEmpty()
     }
     val dealt = dialSource == SpeedDialSource.HISTORY || dealtPicks != null
+    // The Mixes Dial, to the left of the speed dial: dealt afresh each round.
+    val mixesDialSetting by CustomizationSettings.mixesDial.collectAsStateWithLifecycle()
+    val mixesDialOn = speedDialsOn && mixesDialSetting
+    val mixes = rememberMixesDial(mixesDialOn, dialRound, dealReady, spotifyToken.isNotBlank(), hiddenFromDial) {
+        (homeState as? UiState.Success)?.data.orEmpty()
+    }
     val holdSavedDial = speedDialsOn && (!homeFresh || !dealt) && lastSpeedDial.isNotEmpty()
     // A track from the library has started: YouTube's history won't move for
     // it, so the dial is built again here instead.
@@ -8793,7 +8807,9 @@ private fun rememberHomeFeed(
             ?: return@LaunchedEffect
         CustomizationSettings.setLastSpeedDial(dial, newReleaseIds)
     }
-    return HomeFeed(arrangedHomeState, holdSavedDial, artistDialPinnedIds, speedDialsOn, newReleaseIds)
+    return HomeFeed(
+        arrangedHomeState, holdSavedDial, artistDialPinnedIds, speedDialsOn, newReleaseIds, mixesDialOn, mixes,
+    )
 }
 
 /**

@@ -53,6 +53,7 @@ fun HomeDialMenu(
     val sources = SpeedDialSource.choices(spotifyToken.isNotBlank())
     val artistDial by CustomizationSettings.artistDial.collectAsStateWithLifecycle()
     val feelingLucky by CustomizationSettings.feelingLucky.collectAsStateWithLifecycle()
+    val mixesDial by CustomizationSettings.mixesDial.collectAsStateWithLifecycle()
     val pinIcon by CustomizationSettings.dialPinIcon.collectAsStateWithLifecycle()
     val labels by CustomizationSettings.dialLabels.collectAsStateWithLifecycle()
     val tileStyle by CustomizationSettings.dialTileStyle.collectAsStateWithLifecycle()
@@ -84,6 +85,7 @@ fun HomeDialMenu(
                         modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp),
                     )
                     DialSwitch(stringResource(R.string.artist_dial), artistDial, CustomizationSettings::setArtistDial)
+                    DialSwitch(stringResource(R.string.mixes_dial), mixesDial, CustomizationSettings::setMixesDial)
                     DialSwitch(stringResource(R.string.feeling_lucky_setting), feelingLucky, CustomizationSettings::setFeelingLucky)
                     DialSwitch(stringResource(R.string.dial_labels_default), labels, CustomizationSettings::setDialLabels)
                     DialSwitch(stringResource(R.string.dial_pin_icon), pinIcon, CustomizationSettings::setDialPinIcon)
