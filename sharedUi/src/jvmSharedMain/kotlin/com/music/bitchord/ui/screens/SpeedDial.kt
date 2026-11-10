@@ -705,6 +705,10 @@ fun speedDialArtRequest(context: PlatformContext, url: String?): ImageRequest =
         .size(CARD_ART_PX)
         .build()
 
+/** How many times a tile asks again for art that failed to load, and the first wait. */
+private const val ART_RETRIES = 3
+private const val ART_RETRY_MS = 1_500L
+
 /** How long new art takes to sweep across a tile, top left to bottom right. */
 private const val ART_WIPE_MS = 1400
 
@@ -723,16 +727,31 @@ private fun SpeedDialArt(url: String?, contentDescription: String?, modifier: Mo
     // False from the moment the new art takes the bottom layer until that
     // layer has drawn it, so the swap underneath never shows a grey frame.
     var settled by remember { mutableStateOf(true) }
+    // A load that failed is asked for again, a few times and further apart.
+    // Nothing else would: the request is remembered, so a tile whose art
+    // missed once (a launch with the image cache empty and everything loading
+    // at the same moment) stayed grey until the dial was dealt again.
+    var failed by remember(shownUrl) { mutableStateOf(false) }
+    var attempt by remember(shownUrl) { mutableStateOf(0) }
+    LaunchedEffect(shownUrl, failed) {
+        if (!failed || shownUrl == null || attempt >= ART_RETRIES) return@LaunchedEffect
+        delay(ART_RETRY_MS * (attempt + 1))
+        attempt += 1
+        failed = false
+    }
     Box(modifier) {
         // Remembered: a request has no equals, so a new one each recomposition
         // would be a new load each time.
-        val shown = remember(shownUrl, context) { speedDialArtRequest(context, shownUrl) }
+        val shown = remember(shownUrl, context, attempt) { speedDialArtRequest(context, shownUrl) }
         AsyncImage(
             model = shown,
             contentDescription = contentDescription,
             contentScale = ContentScale.Crop,
             onSuccess = { settled = true },
-            onError = { settled = true },
+            onError = {
+                settled = true
+                failed = true
+            },
             modifier = Modifier.fillMaxSize(),
         )
         if (url != shownUrl || !settled) {

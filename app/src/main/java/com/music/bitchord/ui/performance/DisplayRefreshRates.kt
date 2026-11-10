@@ -21,6 +21,21 @@ fun Display?.supportedPerformanceRefreshRates(): List<Int> {
         ?: listOf(fallback)
 }
 
+/**
+ * The display mode running at [refreshRate] and at the resolution in use now,
+ * or 0 (no preference) when the display has none.
+ */
+fun Display?.performanceModeId(refreshRate: Int): Int {
+    val display = this ?: return 0
+    val current = display.mode ?: return 0
+    return display.supportedModes
+        .filter { it.physicalWidth == current.physicalWidth && it.physicalHeight == current.physicalHeight }
+        .filter { it.refreshRate.roundToInt() == refreshRate }
+        .maxByOrNull { it.refreshRate }
+        ?.modeId
+        ?: 0
+}
+
 /** Maps a saved preference to a real mode, including preferences restored on another device. */
 fun Display?.resolvePerformanceRefreshRate(preferred: Int): Int =
     supportedPerformanceRefreshRates().minBy { abs(it - preferred) }
