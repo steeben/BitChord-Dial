@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import com.music.bitchord.ui.theme.LocalNowPlayingTint
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -49,7 +50,6 @@ import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -65,9 +65,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -690,8 +688,11 @@ private fun AccountPhotoButton(
 }
 
 /**
- * The refresh indicator: a round puck that slides out from under the bar's
- * bottom edge as the list is pulled, Chrome-style.
+ * The refresh indicator: the dial's 3 x 4 mark, sliding out from under the
+ * bar's bottom edge as the list is pulled, its squares lighting one by one
+ * from the top until the grid is full, the same as Home's mark. Let go once
+ * it is full and the page refreshes, with the light running round the grid
+ * until it is done.
  *
  * It is drawn by the bar rather than by the pull-to-refresh box, so it lands on
  * top of the glass instead of behind it, and it is clipped to the band just
@@ -699,9 +700,9 @@ private fun AccountPhotoButton(
  * status bar. Its position is the pull state's own distance fraction — which
  * the pull box holds at 1 while refreshing and animates back to 0 when done —
  * so the slide down, the rest while loading and the slide back up are all one
- * value. The arc fills with the drag, then spins once the refresh is away.
+ * value.
  *
- * Laid out at zero height, so the bar keeps its size and the puck overhangs
+ * Laid out at zero height, so the bar keeps its size and the mark overhangs
  * the content without taking any touches from it.
  */
 @Composable
@@ -710,6 +711,8 @@ private fun RefreshPuck(refreshing: Boolean, pullFraction: () -> Float, modifier
     val pulling by remember { derivedStateOf { currentFraction() > 0f } }
     if (!refreshing && !pulling) return
 
+    // One bump per square, as on Home and Library.
+    LogoPullHaptics(refreshing = refreshing, pullFraction = pullFraction)
     val travel = with(LocalDensity.current) { (PUCK_REST + PUCK_SIZE).toPx() }
     Box(
         modifier = modifier
@@ -722,47 +725,24 @@ private fun RefreshPuck(refreshing: Boolean, pullFraction: () -> Float, modifier
             .clipToBounds(),
         contentAlignment = Alignment.TopCenter,
     ) {
-        Box(
+        SquareLogo(
+            // Wears the playing song's colour, like Home's mark.
+            color = LocalNowPlayingTint.current ?: MaterialTheme.colorScheme.onBackground,
+            refreshing = refreshing,
+            pullFraction = { currentFraction() },
             modifier = Modifier
                 .graphicsLayer {
                     val f = currentFraction().coerceIn(0f, 2f)
-                    // Past the threshold the puck keeps following, but
+                    // Past the threshold the mark keeps following, but
                     // reluctantly, like the list under it.
                     val eased = if (f <= 1f) f else 1f + (f - 1f) * 0.35f
                     translationY = travel * eased - PUCK_SIZE.toPx()
                     alpha = (f * 3f).coerceAtMost(1f)
                 }
-                .shadow(6.dp, CircleShape)
-                .size(PUCK_SIZE)
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            val indicatorModifier = Modifier.size(22.dp)
-            if (refreshing) {
-                CircularProgressIndicator(
-                    modifier = indicatorModifier,
-                    color = MaterialTheme.colorScheme.primary,
-                    strokeWidth = 2.5.dp,
-                    strokeCap = StrokeCap.Round,
-                )
-            } else {
-                CircularProgressIndicator(
-                    progress = { (currentFraction() * 0.8f).coerceIn(0f, 0.8f) },
-                    modifier = indicatorModifier.graphicsLayer {
-                        rotationZ = currentFraction().coerceIn(0f, 2f) * 180f
-                    },
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = Color.Transparent,
-                    strokeWidth = 2.5.dp,
-                    strokeCap = StrokeCap.Round,
-                    gapSize = 0.dp,
-                )
-            }
-        }
+                .height(PUCK_SIZE),
+        )
     }
 }
-
-private val PUCK_SIZE = 40.dp
 
 /** How far below the bar's edge the puck rests while a refresh runs. */
 private val PUCK_REST = 16.dp
