@@ -152,6 +152,7 @@ import com.music.bitchord.playback.smart.VersionAudioAligner
 import com.music.bitchord.widget.MediaWidget
 import com.music.bitchord.widget.MediaWidgetSnapshot
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -743,7 +744,17 @@ class PlaybackService : MediaLibraryService() {
      */
     private var discordPresenceUp = false
 
-    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    /**
+     * With a handler, because a SupervisorJob only keeps one failed job from
+     * cancelling its siblings: an exception nothing caught still goes to the
+     * thread's uncaught handler, which on the main thread ends the process
+     * and the music with it. Logged instead, where a log session can show it.
+     */
+    private val scope = CoroutineScope(
+        Dispatchers.Main + SupervisorJob() + CoroutineExceptionHandler { _, error ->
+            TrackLog.w("BitChord", "playback service job failed", error)
+        },
+    )
 
     /** Canonical context owner for the active local bounded album/playlist. */
     private val boundedContextRegistry = ContextRegistry { snapshot ->
@@ -3551,6 +3562,12 @@ class PlaybackService : MediaLibraryService() {
         .setLoadControl(farBufferingLoadControl())
         .setAudioAttributes(AUDIO_ATTRIBUTES, /* handleAudioFocus = */ ownsSession)
         .setHandleAudioBecomingNoisy(ownsSession)
+        // Held only while this player is meant to be playing. Sound coming
+        // out keeps the phone awake by itself; a stall with the screen off
+        // does not, and without this the CPU or the Wi-Fi could doze through
+        // the very load that would have ended the stall, leaving the song
+        // stuck until the phone was picked up.
+        .setWakeMode(C.WAKE_MODE_NETWORK)
         // Back restarts the track once you're this far into it; only a
         // press before that steps to the previous one.
         .setMaxSeekToPreviousPositionMs(BACK_RESTARTS_AFTER_MS)
@@ -7293,6 +7310,7 @@ class PlaybackService : MediaLibraryService() {
      */
     private fun reportProgress() {
         scope.launch {
+            var samplesSinceSave = 0
             while (isActive) {
                 // Re-read every tick rather than captured once: the session
                 // moves between two players, and a sampler pinned to the one
@@ -7312,9 +7330,15 @@ class PlaybackService : MediaLibraryService() {
                     player.currentMediaItem?.toSong()?.let {
                         ListeningRecorder.onSample(it, player.duration)
                     }
-                    // Only two primitive preference values. Queue JSON is
-                    // written from onTimelineChanged, never from this loop.
-                    savePlaybackState(player)
+                    // Only two primitive preference values, in a file of
+                    // their own. Queue JSON is written from onTimelineChanged,
+                    // never from this loop. Not every sample: a pause, a track
+                    // change and the service stopping each save for themselves,
+                    // so this only bounds what a killed process loses.
+                    if (++samplesSinceSave >= SAMPLES_PER_POSITION_SAVE) {
+                        samplesSinceSave = 0
+                        savePlaybackState(player)
+                    }
                     // The renderer can settle on its format a moment after the
                     // track change, which no callback of ours follows up on.
                     publishNerdStats()
@@ -7933,8 +7957,9 @@ class PlaybackService : MediaLibraryService() {
                 AppSettings.lyricsSources,
                 AppSettings.lyricsSourceOrder,
                 AppSettings.prioritizeSyllableSync,
-            ) { synced, sources, order, prio ->
-                synced to sources
+                AppSettings.lyricsInNotification,
+            ) { synced, sources, order, prio, onNotification ->
+                Triple(synced, sources, onNotification)
             }.distinctUntilChanged().collect {
                 loadLyricsForCurrentTrack()
             }
@@ -8541,7 +8566,8 @@ class PlaybackService : MediaLibraryService() {
             return
         }
 
-        if (!AppSettings.syncedLyrics.value) {
+        if (!lyricsOnNotification()) {
+            serviceLyricsJob?.cancel()
             serviceLyrics = null
             stopLyricsTicker()
             return
@@ -8574,12 +8600,24 @@ class PlaybackService : MediaLibraryService() {
                 serviceLyrics = lines
                 if (player?.isPlaying == true) {
                     updateLyricSubtitle()
+                    // The setting may have been switched on mid-song, after
+                    // the play that would have started this.
+                    startLyricsTicker()
                 }
             }
         }
     }
 
+    /**
+     * Whether the sung line goes out on the media session at all. Without it
+     * the service neither fetches lyrics nor runs the ticker — see
+     * [AppSettings.lyricsInNotification].
+     */
+    private fun lyricsOnNotification(): Boolean =
+        AppSettings.syncedLyrics.value && AppSettings.lyricsInNotification.value
+
     private fun startLyricsTicker() {
+        if (!lyricsOnNotification()) return
         if (lyricsTickerJob?.isActive == true) return
         lyricsTickerJob = scope.launch(Dispatchers.Main) {
             while (isActive) {
@@ -8600,7 +8638,7 @@ class PlaybackService : MediaLibraryService() {
         val currentSong = exoPlayer.currentMediaItem?.toSong() ?: return
         val lines = serviceLyrics
         val pos = crossfade?.loopPositionMs() ?: exoPlayer.currentPosition
-        val subtitleText = if (lines != null && lines.isNotEmpty() && AppSettings.syncedLyrics.value) {
+        val subtitleText = if (lines != null && lines.isNotEmpty() && lyricsOnNotification()) {
             val idx = lines.indexOfLast { it.timeMs <= pos }
             val currentLine = lines.getOrNull(idx)
             if (currentLine != null && !currentLine.isGap && currentLine.text.isNotBlank()) {
@@ -10141,6 +10179,9 @@ class PlaybackService : MediaLibraryService() {
 
         /** How often played-seconds are sampled off the player. */
         const val PROGRESS_SAMPLE_MS = 5_000L
+
+        /** Every this many progress samples the playhead goes to disk: 30 seconds. */
+        const val SAMPLES_PER_POSITION_SAVE = 6
 
         /** How often [driveDirectWindow] checks whether the next track's window has opened. */
         const val DIRECT_WINDOW_STEP_MS = 500L

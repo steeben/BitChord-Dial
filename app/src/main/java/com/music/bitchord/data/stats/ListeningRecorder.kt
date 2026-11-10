@@ -62,6 +62,12 @@ object ListeningRecorder {
         if (song.videoId != currentId) {
             // A new track anchors the clock and contributes nothing yet — see
             // the class note on undercounting.
+            // The track before this one is finished with, which makes this
+            // the natural moment to write it down; see [FLUSH_EVERY].
+            if (currentId != null) {
+                samplesSinceFlush = 0
+                ListeningStats.flush()
+            }
             currentId = song.videoId
             lastSampleAt = now
             playedThisTrack = 0L
@@ -185,8 +191,14 @@ object ListeningRecorder {
     /** Past four minutes, half a track is more listening than anyone disputes. */
     private const val PLAY_CEILING_MS = 4 * 60 * 1000L
 
-    /** Six ticks — about half a minute of listening between disk writes. */
-    private const val FLUSH_EVERY = 6
+    /**
+     * Sixty ticks — about five minutes of listening — between disk writes
+     * within one track. A flush re-encodes the whole month, so half a minute
+     * was a file that grows all month rewritten twice a minute. A track
+     * ending, a pause and the service stopping each flush for themselves;
+     * this is only the backstop for one very long track.
+     */
+    private const val FLUSH_EVERY = 60
 
     /** What a YouTube video id looks like, and nothing else this app plays does. */
     private const val YOUTUBE_ID_LENGTH = 11

@@ -300,7 +300,13 @@ object ArtistFacts {
                     .sortedByDescending { maxOf(it.cardAt, it.genresAt) }
                     .take(MAX_ARTISTS),
             )
-            file.writeText(json.encodeToString(Stored.serializer(), stored))
+            // Written aside and renamed, so a kill mid-write leaves the last
+            // cache rather than a truncated one, which reads as no cache.
+            val temporary = File(file.parentFile, file.name + ".tmp")
+            temporary.writeText(json.encodeToString(Stored.serializer(), stored))
+            if (!temporary.renameTo(file)) {
+                if (file.delete() && temporary.renameTo(file)) Unit else temporary.delete()
+            }
         }.onFailure { Log.w(TAG, "Could not write artist cache", it) }
     }
 

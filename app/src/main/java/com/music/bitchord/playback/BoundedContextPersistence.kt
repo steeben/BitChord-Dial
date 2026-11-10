@@ -40,6 +40,14 @@ object BoundedContextPersistence {
     )
 
     private lateinit var prefs: SharedPreferences
+
+    /**
+     * The playhead alone, in a file of its own. SharedPreferences rewrites its
+     * whole file on every change, and [prefs] holds the encoded context — a
+     * whole playlist — so a position kept beside it put all of that back on
+     * disk at every progress sample.
+     */
+    private lateinit var progress: SharedPreferences
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
@@ -49,12 +57,15 @@ object BoundedContextPersistence {
     @Synchronized
     fun init(context: Context) {
         prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        progress = context.getSharedPreferences(PROGRESS_PREFS_NAME, Context.MODE_PRIVATE)
     }
 
     /** Test-only dependency injection; production uses [init]. */
     @Synchronized
     internal fun initForTesting(testPrefs: SharedPreferences) {
         prefs = testPrefs
+        // One file is enough for a test: the progress keys have their own names.
+        progress = testPrefs
         writer = Executor { it.run() }
     }
 
@@ -92,6 +103,7 @@ object BoundedContextPersistence {
         synchronized(this) {
             if (startedAt != generation) return
             write(state, encoded).apply()
+            forgetProgress().apply()
         }
     }
 
@@ -101,8 +113,18 @@ object BoundedContextPersistence {
             pending = null
         }
         val encoded = encode(state) ?: return
-        synchronized(this) { write(state, encoded).commit() }
+        synchronized(this) {
+            write(state, encoded).commit()
+            forgetProgress().commit()
+        }
     }
+
+    /**
+     * A snapshot carries its own position, newer than any sample taken before
+     * it, so the samples go: the next one is written against this snapshot.
+     */
+    private fun forgetProgress(): SharedPreferences.Editor =
+        progress.edit().remove(KEY_PROGRESS_ENTRY_ID).remove(KEY_PROGRESS_POSITION)
 
     private fun write(state: State, encoded: String): SharedPreferences.Editor =
         prefs.edit()
@@ -122,8 +144,9 @@ object BoundedContextPersistence {
     fun savePlaybackState(currentEntryId: String?, positionMs: Long) {
         if (currentEntryId.isNullOrBlank() || !prefs.contains(KEY_STATE)) return
         if (runCatching { prefs.getString(KEY_CURRENT_ENTRY_ID, null) }.getOrNull() != currentEntryId) return
-        prefs.edit()
-            .putLong(KEY_POSITION, positionMs.coerceAtLeast(0L))
+        progress.edit()
+            .putString(KEY_PROGRESS_ENTRY_ID, currentEntryId)
+            .putLong(KEY_PROGRESS_POSITION, positionMs.coerceAtLeast(0L))
             .apply()
     }
 
@@ -135,7 +158,15 @@ object BoundedContextPersistence {
         val currentEntryId = state.entries[state.currentIndex].song.queueEntryId
         val scalarEntryId = runCatching { prefs.getString(KEY_CURRENT_ENTRY_ID, null) }.getOrNull()
         if (currentEntryId != scalarEntryId) return state
-        val positionMs = runCatching { prefs.getLong(KEY_POSITION, state.positionMs) }.getOrNull()
+        // The progress file when it is about this entry; otherwise the position
+        // written with the snapshot, which is also where builds before the
+        // split kept the playhead.
+        val sampled = runCatching {
+            progress.getLong(KEY_PROGRESS_POSITION, -1L)
+                .takeIf { it >= 0 && progress.getString(KEY_PROGRESS_ENTRY_ID, null) == currentEntryId }
+        }.getOrNull()
+        val positionMs = sampled
+            ?: runCatching { prefs.getLong(KEY_POSITION, state.positionMs) }.getOrNull()
             ?: return state
         return state.copy(positionMs = positionMs.coerceAtLeast(0L))
     }
@@ -145,6 +176,7 @@ object BoundedContextPersistence {
         generation += 1
         pending = null
         prefs.edit().clear().apply()
+        forgetProgress().apply()
     }
 
     @Synchronized
@@ -152,6 +184,7 @@ object BoundedContextPersistence {
         generation += 1
         pending = null
         prefs.edit().clear().commit()
+        forgetProgress().commit()
     }
 
     /** Visible to JVM tests; the Android wrapper above remains the only writer. */
@@ -643,4 +676,7 @@ object BoundedContextPersistence {
     private const val KEY_STATE = "state"
     private const val KEY_CURRENT_ENTRY_ID = "current_entry_id"
     private const val KEY_POSITION = "position"
+    private const val PROGRESS_PREFS_NAME = "bitchord_bounded_context_progress"
+    private const val KEY_PROGRESS_ENTRY_ID = "progress_entry_id"
+    private const val KEY_PROGRESS_POSITION = "progress_position"
 }

@@ -43,8 +43,16 @@ object PlaybackTracker {
 
     private const val TAG = "BitChord"
 
-    /** Report watched time once this much new audio has gone by. */
-    private const val REPORT_INTERVAL_SECONDS = 30L
+    /**
+     * Report watched time once this much new audio has gone by.
+     *
+     * Two minutes rather than thirty seconds. A track is on disk in full soon
+     * after it starts, so these pings were the only traffic left for most of a
+     * song, and one every half minute never let a mobile radio go idle. The
+     * play is still closed out exactly when the track ends, is skipped or the
+     * service stops; this only bounds what a killed process fails to report.
+     */
+    private const val REPORT_INTERVAL_SECONDS = 120L
 
     /**
      * Attempts at opening a session before the play is written off.

@@ -460,6 +460,8 @@ import com.music.bitchord.data.canvas.keyColors
 import com.music.bitchord.ui.theme.SystemBarIcons
 import com.music.bitchord.ui.utils.guardSheetFromContentTouches
 import com.music.bitchord.ui.utils.rememberIosOverscrollFactory
+import com.music.bitchord.ui.performance.describeForLog
+import com.music.bitchord.ui.performance.performanceModeId
 import com.music.bitchord.ui.performance.resolvePerformanceRefreshRate
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
@@ -545,14 +547,21 @@ class MainActivity : AppCompatActivity() {
         } else {
             SpeedDialIntro.played = true
         }
-        // The system splash fades into the app once it lets go: see LaunchGate.
+        // The system splash sweeps off the app once it lets go, top left to
+        // bottom right: see LaunchGate and LaunchWipeView. With "reduce
+        // animation" on it fades, as it always did.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             splashScreen.setOnExitAnimationListener { view ->
-                view.animate()
-                    .alpha(0f)
-                    .setDuration(LaunchGate.EXIT_FADE_MS)
-                    .withEndAction { view.remove() }
-                    .start()
+                val decor = window.decorView as? android.view.ViewGroup
+                if (decor == null || AppSettings.reduceAnimation.value) {
+                    view.animate()
+                        .alpha(0f)
+                        .setDuration(LaunchGate.EXIT_FADE_MS)
+                        .withEndAction { view.remove() }
+                        .start()
+                } else {
+                    com.music.bitchord.ui.components.LaunchWipeView(this).runOver(decor, view.iconView) { view.remove() }
+                }
             }
             // Hold the first frame, and so the system splash and its animation,
             // until Home is ready to be seen (see LaunchGate). A rotation or
@@ -590,8 +599,16 @@ class MainActivity : AppCompatActivity() {
             val iosOverscrollFactory = rememberIosOverscrollFactory()
             val performanceRefreshRate by AppSettings.performanceRefreshRate.collectAsStateWithLifecycle()
             val composeView = LocalView.current
-            LaunchedEffect(highPerformance, performanceRefreshRate, composeView) {
+            // Recording is a key so that switching logging on writes these
+            // lines too: the mode was applied at launch, before any log.
+            val logRecording by com.music.bitchord.data.LogRecorder.recording.collectAsStateWithLifecycle()
+            LaunchedEffect(highPerformance, performanceRefreshRate, composeView, logRecording) {
                 applyPerformanceMode(highPerformance, performanceRefreshRate, composeView)
+                if (!logRecording) return@LaunchedEffect
+                logPerformanceMode("applied", highPerformance, performanceRefreshRate, composeView)
+                // And once the display has had time to switch, or not to.
+                delay(PERFORMANCE_LOG_SETTLE_MS)
+                logPerformanceMode("settled", highPerformance, performanceRefreshRate, composeView)
             }
             val darkTheme = when (theme) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
@@ -690,6 +707,16 @@ class MainActivity : AppCompatActivity() {
         val supportedRefreshRate = composeView.display.resolvePerformanceRefreshRate(refreshRate)
         window.attributes = window.attributes.apply {
             preferredRefreshRate = if (enabled) supportedRefreshRate.toFloat() else 0f
+            // The mode itself as well as the rate. A preferred rate is only a
+            // vote, and several phones answer it with their everyday ceiling
+            // (120 on a 165Hz panel); naming the mode is the stronger ask. The
+            // mode named has the resolution already in use, so this still
+            // never changes that.
+            preferredDisplayModeId = if (enabled) {
+                composeView.display.performanceModeId(supportedRefreshRate)
+            } else {
+                0
+            }
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             window.setFrameRatePowerSavingsBalanced(!enabled)
@@ -699,6 +726,23 @@ class MainActivity : AppCompatActivity() {
                 View.REQUESTED_FRAME_RATE_CATEGORY_DEFAULT
             }
         }
+    }
+
+    /** What was asked of the display and what it is doing; see [describeForLog]. */
+    private fun logPerformanceMode(stage: String, enabled: Boolean, refreshRate: Int, composeView: View) {
+        val attributes = window.attributes
+        val viewRate = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            composeView.requestedFrameRate.toString()
+        } else {
+            "n/a"
+        }
+        com.music.bitchord.data.TrackLog.i(
+            "Display",
+            "performance mode $stage: on=$enabled, chosen=${refreshRate}Hz, " +
+                "asked rate=${attributes.preferredRefreshRate}, asked mode=#${attributes.preferredDisplayModeId}, " +
+                "view rate=$viewRate, API ${Build.VERSION.SDK_INT}, ${Build.MANUFACTURER} ${Build.MODEL}; " +
+                composeView.display.describeForLog(),
+        )
     }
 
     /**
@@ -3280,7 +3324,13 @@ private fun BitChordApp(
     }
     val reduceAnimationSetting by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
     val ambientBlobs = if (ambientOn) {
-        rememberAmbientBlobs(ambientPrimary, ambientSecondary, animate = !reduceAnimationSetting)
+        // Held still under the open player, as Home's artwork is: each step
+        // redraws the page and the blurred bars over it, for nobody.
+        rememberAmbientBlobs(
+            ambientPrimary,
+            ambientSecondary,
+            animate = !reduceAnimationSetting && !showNowPlaying,
+        )
     } else {
         null
     }
@@ -4094,7 +4144,7 @@ private fun BitChordApp(
                     } else if (key == "discord") {
                         DiscordScreen(
                             song = player.song,
-                            positionMs = player.position.positionMs,
+                            position = player.position,
                             durationMs = player.durationMs,
                             onOpenLogin = { showDiscordLogin = true },
                             onOpenDialog = { discordDialog = it },
@@ -8545,6 +8595,13 @@ private const val TAB_PLAYLISTS = 4
  * prefix has to be the one thing both the writing and the reading agree on.
  */
 private const val TAB_KEY = "tab:"
+/** How long after asking for a display mode the log reads back what the display did. */
+private const val PERFORMANCE_LOG_SETTLE_MS = 1_500L
+
+/** How often a pinned mix's cover is asked for at launch before giving up, and the first wait between. */
+private const val PIN_ART_TRIES = 3
+private const val PIN_ART_RETRY_MS = 4_000L
+
 private const val HOME_PAGE_KEY = "$TAB_KEY$TAB_HOME"
 
 /** How far Home sinks back while a dial tile's page opens over it. */
@@ -8609,18 +8666,30 @@ private fun rememberHomeFeed(
     // rather than the one it was pinned with.
     LaunchedEffect(homeFresh) {
         if (!homeFresh || CustomizationSettings.pinArtRefreshed) return@LaunchedEffect
-        CustomizationSettings.pinArtRefreshed = true
         val feed = (homeState as? UiState.Success)?.data?.flatMap { it.items }.orEmpty()
         CustomizationSettings.refreshPinArt(feed)
         // Only for a mix the feed left out: its page draws a different cover
         // with every request, so the feed's, when it has one, stands.
         val inFeed = feed.mapNotNullTo(HashSet()) { it.speedDialId }
-        val art = HashMap<String, String>()
-        CustomizationSettings.pinnedDynamicMixes().filterNot { it in inFeed }.forEach { id ->
-            val page = if (id.startsWith("VL")) id else "VL$id"
-            YtMusicRepository.browseSongs(page).getOrNull()?.header?.thumbnailUrl?.let { art[id] = it }
+        var missing = CustomizationSettings.pinnedDynamicMixes().filterNot { it in inFeed }
+        // Asked again when a lookup fails, and only marked done once none
+        // has: a launch is when every request competes, and a mix whose one
+        // lookup missed kept a cover that may no longer exist until the next
+        // fresh start. Marked at the end, so an effect cancelled part-way
+        // starts over rather than counting as done.
+        var tries = 0
+        while (missing.isNotEmpty() && tries < PIN_ART_TRIES) {
+            if (tries > 0) delay(PIN_ART_RETRY_MS * tries)
+            tries += 1
+            val art = HashMap<String, String>()
+            missing.forEach { id ->
+                val page = if (id.startsWith("VL")) id else "VL$id"
+                YtMusicRepository.browseSongs(page).getOrNull()?.header?.thumbnailUrl?.let { art[id] = it }
+            }
+            CustomizationSettings.refreshPinArt(art)
+            missing = missing.filterNot { it in art }
         }
-        CustomizationSettings.refreshPinArt(art)
+        CustomizationSettings.pinArtRefreshed = true
     }
     // The feed as Home draws it: the speed dial, then YouTube Music's shelves
     // in the order it gives them.

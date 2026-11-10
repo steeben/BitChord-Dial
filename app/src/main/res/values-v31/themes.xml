@@ -3,12 +3,12 @@
     <!--
       Android 12+ always shows a splash screen of its own: here the squares logo,
       white on black, building itself square by square (drawable/splash_logo),
-      held until Home is ready (see LaunchGate) and then faded into the app.
+      held until Home is ready (see LaunchGate) and then swept off the app with the logo still lit.
     -->
     <style name="Theme.BitChord" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="android:windowBackground">@android:color/black</item>
         <item name="android:windowSplashScreenBackground">@android:color/black</item>
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
-        <item name="android:windowSplashScreenAnimationDuration">1500</item>
+        <item name="android:windowSplashScreenAnimationDuration">1040</item>
     </style>
 </resources>
