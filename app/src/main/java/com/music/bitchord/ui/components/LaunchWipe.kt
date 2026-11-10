@@ -43,13 +43,7 @@ class LaunchWipeView(context: Context) : View(context) {
         val layer = canvas.saveLayer(0f, 0f, w, h, null)
         canvas.drawColor(Color.BLACK)
         logo?.let {
-            if (logoBox.isEmpty) {
-                // The splash icon's own box: 288dp, centred.
-                val half = (LOGO_DP * resources.displayMetrics.density / 2f).toInt()
-                val cx = width / 2
-                val cy = height / 2
-                logoBox.set(cx - half, cy - half, cx + half, cy + half)
-            }
+            if (logoBox.isEmpty) centreLogoOn(width / 2, height / 2)
             it.bounds = logoBox
             it.draw(canvas)
         }
@@ -68,9 +62,20 @@ class LaunchWipeView(context: Context) : View(context) {
     }
 
     /**
+     * The splash draws its icon in a 288dp box whatever size its icon view
+     * says it is (that reports the 192dp the system keeps clear, and a logo
+     * drawn to it comes out a third too small), so only the centre is taken
+     * from the view.
+     */
+    private fun centreLogoOn(cx: Int, cy: Int) {
+        val half = (LOGO_DP * resources.displayMetrics.density / 2f).toInt()
+        logoBox.set(cx - half, cy - half, cx + half, cy + half)
+    }
+
+    /**
      * Lays the wipe over [root], runs it once, and takes it away again.
      * [icon] is the splash's logo view, when the system hands one over: the
-     * logo is drawn exactly where that was.
+     * logo is drawn centred where that was.
      */
     fun runOver(root: ViewGroup, icon: View?, onCovered: () -> Unit) {
         if (icon != null && icon.width > 0 && icon.height > 0) {
@@ -78,9 +83,7 @@ class LaunchWipeView(context: Context) : View(context) {
             val origin = IntArray(2)
             icon.getLocationInWindow(at)
             root.getLocationInWindow(origin)
-            val left = at[0] - origin[0]
-            val top = at[1] - origin[1]
-            logoBox.set(left, top, left + icon.width, top + icon.height)
+            centreLogoOn(at[0] - origin[0] + icon.width / 2, at[1] - origin[1] + icon.height / 2)
         }
         root.addView(
             this,
