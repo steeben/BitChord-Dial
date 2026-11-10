@@ -176,6 +176,7 @@ import com.music.bitchord.ui.screens.HomeReset
 import com.music.bitchord.ui.screens.speedDialArtRequest
 import com.music.bitchord.ui.theme.Metropolis
 import com.music.bitchord.ui.components.HomeDialMenu
+import com.music.bitchord.ui.components.tourAnchor
 import com.music.bitchord.ui.components.rememberDealtDialPicks
 import com.music.bitchord.ui.components.rememberMixesDial
 import com.music.bitchord.ui.components.dialTileGlassEdge
@@ -5546,7 +5547,10 @@ private fun BitChordApp(
                             if (!showHistory && !showReplay && !showStats && !showDiscord && !showSpotify &&
                                 libraryShowAll == null && detail == null && selectedTab == TAB_LIBRARY
                             ) {
-                                IconButton(onClick = { libraryMenuOpen = true }) {
+                                IconButton(
+                                    onClick = { libraryMenuOpen = true },
+                                    modifier = Modifier.tourAnchor(com.music.bitchord.data.TourTarget.LIBRARY_MENU),
+                                ) {
                                     Icon(
                                         Icons.Rounded.MoreHoriz,
                                         contentDescription = stringResource(R.string.library_menu),
@@ -5604,7 +5608,10 @@ private fun BitChordApp(
                             // dial's settings. The menu is [HomeDialMenu],
                             // composed with the other frosted overlays below.
                             if (homeRoot) {
-                                IconButton(onClick = { dialMenuOpen = true }) {
+                                IconButton(
+                                    onClick = { dialMenuOpen = true },
+                                    modifier = Modifier.tourAnchor(com.music.bitchord.data.TourTarget.DIAL_MENU),
+                                ) {
                                     Icon(
                                         Icons.Rounded.MoreHoriz,
                                         contentDescription = stringResource(R.string.home_dial_menu),
@@ -5637,13 +5644,16 @@ private fun BitChordApp(
                             } else TopBarAccountButton(
                                 account = account,
                                 onClick = {
-                                    if (signedIn) {
+                                    // The placeholder account reads as signed out, and
+                                    // the switcher is the way back from it.
+                                    if (signedIn || viewModel.placeholderOffered()) {
                                         viewModel.loadChannels()
                                         showAccountSelector = true
                                     } else showSettings = true
                                 },
                                 onLongClick = { showSettings = true },
                                 onSwipeProfile = { forward -> viewModel.stepProfile(forward) },
+                                modifier = Modifier.tourAnchor(com.music.bitchord.data.TourTarget.ACCOUNT),
                             )
                         }
                     },
@@ -7623,6 +7633,11 @@ private fun BitChordApp(
         com.music.bitchord.ui.components.OldAppNoticeHost(hazeState) {
             showSettings = true
             MenuNav.settingsSection = com.music.bitchord.ui.screens.SettingsCategory.YOUR_DATA
+        }
+
+        // ---- First launch: the tour, over Home and then the Library ----
+        com.music.bitchord.ui.components.OnboardingHost(hazeState) { library ->
+            selectedTab = if (library) TAB_LIBRARY else TAB_HOME
         }
 
         // ---- Update available (once per launch) ----

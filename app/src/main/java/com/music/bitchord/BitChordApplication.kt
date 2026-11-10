@@ -118,13 +118,17 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
             authStore.select(restoredSession.accountId, restoredSession.activeProfileId)
         }
         authStore.cookie = restoredSession?.cookie
-        Innertube.cookie = restoredSession?.cookie
+        // The developer options' placeholder account, left in use last time:
+        // start as it would, with no session at all.
+        com.music.bitchord.data.settings.DeveloperOptions.init(this)
+        val asNobody = com.music.bitchord.data.settings.DeveloperOptions.placeholderSelected
+        Innertube.cookie = if (asNobody) null else restoredSession?.cookie
         // Which account that cookie actually acts as. Read here rather than on
         // demand so the answer is usually in hand before the first request needs
         // it: a play registered under the wrong account is indistinguishable, to
         // the listener, from one that was never registered at all. Fire and
         // forget — every caller works without it, just less precisely.
-        if (restoredSession != null) {
+        if (restoredSession != null && !asNobody) {
             // After the cookie, never before: setting the cookie clears any
             // channel the last session was acting as, so restoring the choice
             // first would restore it into the value about to be wiped.

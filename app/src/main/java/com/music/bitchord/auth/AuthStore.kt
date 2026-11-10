@@ -95,8 +95,10 @@ class AuthStore(context: Context) {
         return fallback
     }
 
+    /** Never while the developer options' placeholder account is the one in use: it is nobody. */
     val isSignedIn: Boolean
-        get() = activeSession?.cookie?.let { hasApiSid(it) } == true
+        get() = !com.music.bitchord.data.settings.DeveloperOptions.placeholderSelected &&
+            activeSession?.cookie?.let { hasApiSid(it) } == true
 
     /** The Discord account's bearer token. See DiscordRPC for why a user token. */
     var discordToken: String?

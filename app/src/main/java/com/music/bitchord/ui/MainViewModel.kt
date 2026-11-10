@@ -85,6 +85,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.channels.BufferOverflow
+import com.music.bitchord.data.settings.DeveloperOptions
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -731,22 +732,55 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * acting as whichever channel YouTube Music serves by default.
      */
     private val _selectedChannelKey = MutableStateFlow(
-        authStore.activeSession?.activeProfileId ?: authStore.channelPageId ?: authStore.channelDataSyncId,
+        if (DeveloperOptions.placeholderSelected) {
+            null
+        } else {
+            authStore.activeSession?.activeProfileId ?: authStore.channelPageId ?: authStore.channelDataSyncId
+        },
     )
     val selectedChannelKey: StateFlow<String?> = _selectedChannelKey.asStateFlow()
 
     private val _selectedChannelName = MutableStateFlow(
-        authStore.activeSession?.profiles?.firstOrNull { it.profileId == authStore.activeProfileId }?.name
-            ?: authStore.channelName,
+        if (DeveloperOptions.placeholderSelected) {
+            null
+        } else {
+            authStore.activeSession?.profiles?.firstOrNull { it.profileId == authStore.activeProfileId }?.name
+                ?: authStore.channelName
+        },
     )
     val selectedChannelName: StateFlow<String?> = _selectedChannelName.asStateFlow()
 
     /** Source of truth for Google sessions and their YouTube identities. */
     private val _googleAccounts = MutableStateFlow(authStore.sessions)
-    val googleAccounts: StateFlow<List<GoogleAccountSession>> = _googleAccounts.asStateFlow()
-    private val _activeAccountId = MutableStateFlow(authStore.activeSession?.accountId)
+
+    /**
+     * The accounts the switcher lists: the real ones, then the developer
+     * options' placeholder account while that is switched on. The placeholder
+     * is never saved with them; see [DeveloperOptions].
+     */
+    val googleAccounts: StateFlow<List<GoogleAccountSession>> =
+        combine(_googleAccounts, DeveloperOptions.placeholderAccount) { real, placeholder ->
+            if (placeholder) real + placeholderSession() else real
+        }.stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            if (DeveloperOptions.placeholderAccount.value) authStore.sessions + placeholderSession() else authStore.sessions,
+        )
+    private val _activeAccountId = MutableStateFlow(
+        if (DeveloperOptions.placeholderSelected) {
+            DeveloperOptions.PLACEHOLDER_ACCOUNT_ID
+        } else {
+            authStore.activeSession?.accountId
+        },
+    )
     val activeAccountId: StateFlow<String?> = _activeAccountId.asStateFlow()
-    private val _activeProfileId = MutableStateFlow(authStore.activeProfileId)
+    private val _activeProfileId = MutableStateFlow(
+        if (DeveloperOptions.placeholderSelected) {
+            DeveloperOptions.PLACEHOLDER_PROFILE_ID
+        } else {
+            authStore.activeProfileId
+        },
+    )
     val activeProfileId: StateFlow<String?> = _activeProfileId.asStateFlow()
 
     private val _history = MutableStateFlow<UiState<List<Song>>>(UiState.Loading)
@@ -1795,6 +1829,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     init {
+        // The placeholder account switched off while it was the one in use:
+        // back to the real account, if there is one.
+        viewModelScope.launch {
+            DeveloperOptions.placeholderAccount.collect { offered ->
+                if (!offered && _activeAccountId.value == DeveloperOptions.PLACEHOLDER_ACCOUNT_ID) leavePlaceholder()
+            }
+        }
         startSearchPipeline()
         startSuggestPipeline()
         startTypeaheadMediaPipeline()
@@ -4254,6 +4295,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             _selectedChannelName.value = account.name
             _account.value = account
             _channels.value = emptyList()
+            // A real sign-in takes over from the placeholder account.
+            DeveloperOptions.setPlaceholderSelected(false)
             _signedIn.value = true
 
             // Every resolver verdict and personalised page belongs to the
@@ -4276,9 +4319,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Selects an identity without ever allowing a response to replace it. */
     fun selectProfile(accountId: String, selectedProfileId: String, supplied: YouTubeProfile? = null) {
+        if (accountId == DeveloperOptions.PLACEHOLDER_ACCOUNT_ID) {
+            enterPlaceholder()
+            return
+        }
         val source = _googleAccounts.value.firstOrNull { it.accountId == accountId } ?: return
         val profile = supplied ?: source.profiles.firstOrNull { it.profileId == selectedProfileId } ?: return
         if (accountId == _activeAccountId.value && profile.profileId == _activeProfileId.value) return
+        val leavingPlaceholder = _activeAccountId.value == DeveloperOptions.PLACEHOLDER_ACCOUNT_ID
         cacheCurrentListener()
         val updated = source.copy(
             profiles = (source.profiles.filterNot { it.profileId == profile.profileId } + profile),
@@ -4294,20 +4342,82 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         Innertube.selectChannel(profile.pageId, profile.dataSyncId, profile.authUser)
         _selectedChannelKey.value = profile.profileId
         _selectedChannelName.value = profile.name
+        if (leavingPlaceholder) {
+            DeveloperOptions.setPlaceholderSelected(false)
+            _signedIn.value = authStore.isSignedIn
+        }
         StreamResolver.onSessionChanged()
         clearListenerState(restoreCached = true)
         reloadForAccount()
     }
 
+    /** Whether the switcher lists the developer options' placeholder account. */
+    fun placeholderOffered(): Boolean = DeveloperOptions.placeholderAccount.value
+
+    /** The placeholder account as the switcher lists it: a session with no cookie. */
+    private fun placeholderSession(): GoogleAccountSession = GoogleAccountSession(
+        accountId = DeveloperOptions.PLACEHOLDER_ACCOUNT_ID,
+        cookie = "",
+        name = text(R.string.developer_placeholder_account),
+        profiles = listOf(
+            YouTubeProfile(
+                profileId = DeveloperOptions.PLACEHOLDER_PROFILE_ID,
+                name = text(R.string.developer_placeholder_name),
+                handle = text(R.string.developer_placeholder_handle),
+            ),
+        ),
+        activeProfileId = DeveloperOptions.PLACEHOLDER_PROFILE_ID,
+    )
+
+    /**
+     * Acts as nobody: requests go out with no session and the app reads as
+     * signed out, as it does for someone who has never signed in to YouTube
+     * Music. The real accounts stay saved, and picking one in the switcher
+     * comes back to it.
+     */
+    private fun enterPlaceholder() {
+        if (_activeAccountId.value == DeveloperOptions.PLACEHOLDER_ACCOUNT_ID) return
+        cacheCurrentListener()
+        DeveloperOptions.setPlaceholderSelected(true)
+        _activeAccountId.value = DeveloperOptions.PLACEHOLDER_ACCOUNT_ID
+        _activeProfileId.value = DeveloperOptions.PLACEHOLDER_PROFILE_ID
+        Innertube.cookie = null
+        Innertube.selectChannel(null, null)
+        _selectedChannelKey.value = null
+        _selectedChannelName.value = null
+        _channels.value = emptyList()
+        StreamResolver.onSessionChanged()
+        _signedIn.value = false
+        clearListenerState(restoreCached = true)
+        loadHome()
+    }
+
+    /** Out of the placeholder account: to the real account last in use, or to nobody. */
+    private fun leavePlaceholder() {
+        val real = authStore.activeSession
+        val profileId = real?.activeProfileId ?: real?.profiles?.firstOrNull()?.profileId
+        if (real != null && profileId != null) {
+            selectProfile(real.accountId, profileId)
+        } else {
+            _activeAccountId.value = null
+            _activeProfileId.value = null
+        }
+    }
+
     /** Returns false at an edge, allowing the avatar to play its elastic cue. */
     fun stepProfile(forward: Boolean): Boolean {
-        val target = adjacentProfile(_googleAccounts.value, _activeAccountId.value, _activeProfileId.value, forward)
+        val target = adjacentProfile(googleAccounts.value, _activeAccountId.value, _activeProfileId.value, forward)
             ?: return false
         selectProfile(target.first, target.second)
         return true
     }
 
     fun removeAccount(accountId: String) {
+        if (accountId == DeveloperOptions.PLACEHOLDER_ACCOUNT_ID) {
+            // Not a saved account: taking it off the list is switching it off.
+            DeveloperOptions.setPlaceholderAccount(false)
+            return
+        }
         val fallback = authStore.removeAccount(accountId)
         _googleAccounts.value = authStore.sessions
         if (fallback == null) { signOut(); return }

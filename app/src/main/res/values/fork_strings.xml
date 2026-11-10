@@ -239,4 +239,40 @@
     <string name="progress_bar_glow">Glow</string>
     <string name="progress_bar_wave">Wave</string>
     <string name="progress_bar_plain">Plain</string>
+    <!-- First-launch tour -->
+    <string name="onboarding_welcome_title">Welcome to Dial</string>
+    <string name="onboarding_welcome_body">Your music, a tap away. A short tour shows how the dial works and where things are.</string>
+    <string name="onboarding_take_tour">Take a tour</string>
+    <string name="onboarding_skip">Skip tutorial</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_finish">Finish</string>
+    <string name="onboarding_step_count">%1$d of %2$d</string>
+    <string name="onboarding_dial_title">Your speed dial</string>
+    <string name="onboarding_dial_body">Home opens on your dial: the music you come back to, ready to play. Tap a tile to play or open it, and swipe left for more pages.</string>
+    <string name="onboarding_pins_title">Pin and rearrange</string>
+    <string name="onboarding_pins_body">Hold a song, album, playlist or artist anywhere in the app and choose Add to speed dial to pin it. Pins come first on the dial: hold one, then drag it to move it.</string>
+    <string name="onboarding_settings_title">Settings</string>
+    <string name="onboarding_settings_body">The profile button at the top right leads to Settings. Hold it to go straight there.</string>
+    <string name="onboarding_mixes_title">Mixes Dial</string>
+    <string name="onboarding_mixes_body">Swipe right from the dial's first page for a page of mixes, from YouTube Music and from Spotify once it's connected. Pull down on Home for a new set.</string>
+    <string name="onboarding_dial_menu_title">Dial options</string>
+    <string name="onboarding_dial_menu_body">The ⋯ button on Home holds the dial's own settings: where its picks come from, tile names, the grid and more.</string>
+    <string name="onboarding_library_title">Your library</string>
+    <string name="onboarding_library_body">On the Library tab, the ⋯ button filters what you see: YouTube Music, this device, or both. Your song history is there too.</string>
+    <string name="onboarding_finish_title">That's the tour</string>
+    <string name="onboarding_finish_body">There is much more to make Dial your own in Settings: the look, the player, lyrics, sound quality and the services you connect.</string>
+    <!-- Developer options -->
+    <string name="developer_options">Developer options</string>
+    <string name="developer_options_subtitle">Turn off to hide these rows and undo what they changed</string>
+    <string name="developer_options_enabled">Developer options are on. Find them under Advanced &amp; experimental options</string>
+    <string name="developer_options_already">Developer options are already on</string>
+    <string name="developer_placeholder_account">Placeholder account</string>
+    <string name="developer_placeholder_account_subtitle">Adds a signed-out account to the account switcher, to see the app as someone not signed in to YouTube Music</string>
+    <string name="developer_placeholder_name">Placeholder</string>
+    <string name="developer_placeholder_handle">Not signed in</string>
+    <string name="developer_onboarding">Onboarding experience</string>
+    <string name="developer_onboarding_subtitle">Restarts the app and shows the first-launch tour</string>
+    <string name="developer_stock_settings">Stock settings test</string>
+    <string name="developer_stock_settings_subtitle">Puts every setting back to its default. Turn off to restore your settings as they were</string>
+    <string name="developer_stock_settings_on">Every setting is at its default. Turn off to restore yours; changes made meanwhile are dropped</string>
 </resources>

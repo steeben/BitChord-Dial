@@ -307,6 +307,7 @@ fun SettingsScreen(
     val spatialAudio by AppSettings.spatialAudio.collectAsStateWithLifecycle()
     val nerdStats by AppSettings.showNerdStats.collectAsStateWithLifecycle()
     val hideUserInfo by AppSettings.hideUserInfo.collectAsStateWithLifecycle()
+    val developerOptions by com.music.bitchord.data.settings.DeveloperOptions.enabled.collectAsStateWithLifecycle()
     val listenTogetherButton by AppSettings.showListenTogetherButton.collectAsStateWithLifecycle()
     val reduceAnimation by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
@@ -2091,6 +2092,26 @@ fun SettingsScreen(
                     },
                     onClick = { AppSettings.setHideUserInfo(!hideUserInfo) },
                 )
+            }
+            // Only once the Dial logo at the foot of this page has been
+            // tapped ten times; see [SettingsColophon].
+            if (developerOptions) {
+                val developerOptionsTitle = stringResource(R.string.developer_options)
+                row(developerOptionsTitle, "developer", "debug", "test") {
+                    DeveloperOptionsRow(developerOptionsTitle)
+                }
+                val placeholderAccountTitle = stringResource(R.string.developer_placeholder_account)
+                row(placeholderAccountTitle, "developer", "account", "guest", "signed out", "sign in") {
+                    DeveloperPlaceholderAccountRow(placeholderAccountTitle)
+                }
+                val developerOnboardingTitle = stringResource(R.string.developer_onboarding)
+                row(developerOnboardingTitle, "developer", "tour", "tutorial", "welcome", "first launch") {
+                    DeveloperOnboardingRow(developerOnboardingTitle)
+                }
+                val stockSettingsTitle = stringResource(R.string.developer_stock_settings)
+                row(stockSettingsTitle, "developer", "default", "reset", "stock") {
+                    DeveloperStockSettingsRow(stockSettingsTitle)
+                }
             }
         }
 
@@ -3931,6 +3952,28 @@ private fun SettingsColophon(version: String, onShowUpdate: () -> Unit) {
     var lastResult by remember { mutableStateOf<com.music.bitchord.data.AppUpdateChecker.CheckResult?>(null) }
     val scope = rememberCoroutineScope()
     val dialColor = LocalNowPlayingTint.current ?: MaterialTheme.colorScheme.onBackground
+    // Ten taps in a row on the wordmark or the mark switch developer options
+    // on. Silent until the tenth, as such things are.
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val logoTaps = remember {
+        com.music.bitchord.data.settings.TapRun(com.music.bitchord.data.settings.DeveloperOptions.TAPS_TO_ENABLE)
+    }
+    val logoTap = Modifier.clickable(
+        indication = null,
+        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+    ) {
+        if (logoTaps.tap(android.os.SystemClock.uptimeMillis())) {
+            val already = com.music.bitchord.data.settings.DeveloperOptions.enabled.value
+            if (!already) com.music.bitchord.data.settings.DeveloperOptions.setEnabled(context, true)
+            Toast.makeText(
+                context,
+                context.getString(
+                    if (already) R.string.developer_options_already else R.string.developer_options_enabled,
+                ),
+                Toast.LENGTH_LONG,
+            ).show()
+        }
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -3939,6 +3982,7 @@ private fun SettingsColophon(version: String, onShowUpdate: () -> Unit) {
             .padding(start = 24.dp, end = 24.dp, top = 28.dp, bottom = 12.dp),
     ) {
         Text(
+            modifier = logoTap,
             // Just the pixel "DIAL" from Home's title, set larger than it
             // ever is there, rather than the whole app name.
             text = "DIAL",
@@ -4034,6 +4078,7 @@ private fun SettingsColophon(version: String, onShowUpdate: () -> Unit) {
             refreshing = checking,
             modifier = Modifier
                 .padding(top = 20.dp)
+                .then(logoTap)
                 .height(28.dp),
         )
     }

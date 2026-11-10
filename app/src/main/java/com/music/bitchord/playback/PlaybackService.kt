@@ -1369,7 +1369,10 @@ class PlaybackService : MediaLibraryService() {
     override fun onCreate() {
         super.onCreate()
 
-        if (com.music.bitchord.data.innertube.Innertube.cookie == null) {
+        // No cookie is the placeholder account's whole point: leave it without one.
+        if (com.music.bitchord.data.innertube.Innertube.cookie == null &&
+            !com.music.bitchord.data.settings.DeveloperOptions.placeholderSelected
+        ) {
             com.music.bitchord.data.innertube.Innertube.cookie = com.music.bitchord.auth.AuthStore(this).cookie
         }
 
