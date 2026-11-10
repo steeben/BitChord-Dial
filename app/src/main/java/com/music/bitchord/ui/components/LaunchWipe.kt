@@ -35,6 +35,7 @@ class LaunchWipeView(context: Context) : View(context) {
     private val logo: Drawable? = context.getDrawable(R.drawable.splash_logo_lit)
     private val logoBox = Rect()
     private var progress = 0f
+    private var onFirstDraw: (() -> Unit)? = null
 
     override fun onDraw(canvas: Canvas) {
         val w = width.toFloat()
@@ -59,6 +60,7 @@ class LaunchWipeView(context: Context) : View(context) {
         )
         canvas.drawRect(0f, 0f, w, h, paint)
         canvas.restoreToCount(layer)
+        firstDrawn()
     }
 
     /**
@@ -89,7 +91,31 @@ class LaunchWipeView(context: Context) : View(context) {
             this,
             ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT),
         )
-        onCovered()
+        // The splash goes only once this has been drawn over it and that frame
+        // has had time to reach the screen. The splash's logo is on a surface
+        // of its own that goes the moment it is removed, a frame before a view
+        // added in the same breath is first drawn: taken away at once, the
+        // logo blinked off for that frame.
+        onFirstDraw = {
+            postOnAnimation {
+                postOnAnimation {
+                    onCovered()
+                    sweep(root)
+                }
+            }
+        }
+        invalidate()
+        // Whatever happens to the first draw, the splash is not left up.
+        postDelayed({ firstDrawn() }, FIRST_DRAW_WAIT_MS)
+    }
+
+    private fun firstDrawn() {
+        val then = onFirstDraw ?: return
+        onFirstDraw = null
+        then()
+    }
+
+    private fun sweep(root: ViewGroup) {
         ValueAnimator.ofFloat(0f, 1f).apply {
             duration = LaunchGate.EXIT_WIPE_MS
             interpolator = PathInterpolator(0.4f, 0f, 0.2f, 1f)
@@ -112,5 +138,8 @@ class LaunchWipeView(context: Context) : View(context) {
 
         /** The splash icon's box when it has no icon background. */
         const val LOGO_DP = 288f
+
+        /** The longest the splash waits for the wipe's first draw before it goes anyway. */
+        const val FIRST_DRAW_WAIT_MS = 400L
     }
 }
