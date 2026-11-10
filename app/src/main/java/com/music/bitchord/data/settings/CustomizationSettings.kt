@@ -83,6 +83,12 @@ object CustomizationSettings {
     /** A die on the speed dial that starts a radio off a random personal pick. */
     val feelingLucky = MutableStateFlow(true)
 
+    /**
+     * A page to the left of the speed dial's first page, of mixes dealt at
+     * random from YouTube Music and, while signed in, Spotify.
+     */
+    val mixesDial = MutableStateFlow(true)
+
     /** Artists pinned to [artistDial]'s page, in their order there. */
     val artistDialPins = MutableStateFlow<List<ShelfItem>>(emptyList())
 
@@ -217,6 +223,7 @@ object CustomizationSettings {
         speedDials.value = p.getBoolean(KEY_SPEED_DIALS, true)
         artistDial.value = p.getBoolean(KEY_ARTIST_DIAL, true)
         feelingLucky.value = p.getBoolean(KEY_FEELING_LUCKY, true)
+        mixesDial.value = p.getBoolean(KEY_MIXES_DIAL, true)
         speedDialSource.value = SpeedDialSource.entries
             .firstOrNull { it.name == p.getString(KEY_SPEED_DIAL_SOURCE, null) } ?: SpeedDialSource.YOUTUBE
         speedDialRows.value = p.getInt(KEY_SPEED_DIAL_ROWS, DEFAULT_SPEED_DIAL_ROWS).takeIf { it in 3..4 }
@@ -425,6 +432,11 @@ object CustomizationSettings {
     fun setSpeedDials(value: Boolean) {
         speedDials.value = value
         prefs?.edit()?.putBoolean(KEY_SPEED_DIALS, value)?.apply()
+    }
+
+    fun setMixesDial(value: Boolean) {
+        mixesDial.value = value
+        prefs?.edit()?.putBoolean(KEY_MIXES_DIAL, value)?.apply()
     }
 
     /** Turning it on moves pinned artists onto their dial; off, back onto the speed dial. */
@@ -854,6 +866,7 @@ object CustomizationSettings {
     private const val KEY_SPEED_DIALS = "custom_speed_dials"
     private const val KEY_ARTIST_DIAL = "custom_artist_dial"
     private const val KEY_FEELING_LUCKY = "custom_feeling_lucky"
+    private const val KEY_MIXES_DIAL = "custom_mixes_dial"
     private const val KEY_ARTIST_DIAL_PINS = "custom_artist_dial_pins"
     private const val KEY_HIDDEN_FROM_DIAL = "custom_hidden_from_dial"
     private const val KEY_DIAL_HIDDEN_LABELS = "custom_dial_hidden_labels"

@@ -188,6 +188,14 @@ fun HomeScreen(
     speedDialNewReleases: Set<String> = emptySet(),
     newReleaseLabel: String = "",
     /**
+     * Whether the speed dial, when it leads Home, has the Mixes Dial to its
+     * left, and that page's tiles: null while they are dealt, empty for none
+     * (which shows [mixesDialEmptyLabel]).
+     */
+    mixesDialOn: Boolean = false,
+    mixesDial: List<ShelfItem>? = null,
+    mixesDialEmptyLabel: String = "",
+    /**
      * The saved section layout, for the loading placeholders: whether the speed
      * dial leads Home, and whether Recents is shown at all.
      */
@@ -403,6 +411,9 @@ fun HomeScreen(
                         dialHistoryLabel = dialHistoryLabel,
                         speedDialNewReleases = speedDialNewReleases,
                         newReleaseLabel = newReleaseLabel,
+                        mixesDialOn = mixesDialOn,
+                        mixesDial = mixesDial,
+                        mixesDialEmptyLabel = mixesDialEmptyLabel,
                         afterLead = {
                             if (dialLeads && !holdSpeedDial) bannerItem()
                             topPicksItem()
@@ -518,6 +529,9 @@ private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexedShelves(
     dialHistoryLabel: String = "",
     speedDialNewReleases: Set<String> = emptySet(),
     newReleaseLabel: String = "",
+    mixesDialOn: Boolean = false,
+    mixesDial: List<ShelfItem>? = null,
+    mixesDialEmptyLabel: String = "",
     /** Items to put straight after the lead page (or pages: the dials). */
     afterLead: (androidx.compose.foundation.lazy.LazyListScope.() -> Unit)? = null,
     /**
@@ -575,28 +589,62 @@ private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexedShelves(
                         historyLabel = dialHistoryLabel,
                     )
                 } else if (shelf.title == SPEED_DIAL_SHELF_TITLE) {
-                    SpeedDialShelf(
-                        shelf = shelf,
-                        pinnedIds = speedDialPinned,
-                        rows = speedDialRows,
-                        // Only worth fitting when it is what Home opens on.
-                        maxShelfHeight = if (index == 0) speedDialMaxHeight else null,
-                        pageHeight = if (index == 0) speedDialPageHeight else null,
-                        onItemClick = openItem,
-                        onItemLongPress = onDialItemLongPress?.let { menu -> { item: ShelfItem -> menu(item, false) } }
-                            ?: onItemLongPress,
-                        onReorder = onSpeedDialReorder,
-                        currentSong = currentSong,
-                        isPlaying = isPlaying,
-                        lucky = speedDialLucky,
-                        showLabels = dialLabels,
-                        labelOverrides = dialLabelOverrides,
-                        showPinIcon = dialPinIcon,
-                        onHistory = onSpeedDialHistory,
-                        historyLabel = dialHistoryLabel,
-                        newReleaseIds = speedDialNewReleases,
-                        newReleaseLabel = newReleaseLabel,
-                    )
+                    val speedDial: @Composable () -> Unit = {
+                        SpeedDialShelf(
+                            shelf = shelf,
+                            pinnedIds = speedDialPinned,
+                            rows = speedDialRows,
+                            // Only worth fitting when it is what Home opens on.
+                            maxShelfHeight = if (index == 0) speedDialMaxHeight else null,
+                            pageHeight = if (index == 0) speedDialPageHeight else null,
+                            onItemClick = openItem,
+                            onItemLongPress = onDialItemLongPress?.let { menu -> { item: ShelfItem -> menu(item, false) } }
+                                ?: onItemLongPress,
+                            onReorder = onSpeedDialReorder,
+                            currentSong = currentSong,
+                            isPlaying = isPlaying,
+                            lucky = speedDialLucky,
+                            showLabels = dialLabels,
+                            labelOverrides = dialLabelOverrides,
+                            showPinIcon = dialPinIcon,
+                            onHistory = onSpeedDialHistory,
+                            historyLabel = dialHistoryLabel,
+                            newReleaseIds = speedDialNewReleases,
+                            newReleaseLabel = newReleaseLabel,
+                        )
+                    }
+                    // The Mixes Dial only goes beside the dial Home opens on.
+                    if (index == 0 && mixesDialOn) {
+                        MixesDialPager(
+                            mixes = mixesDial,
+                            rows = speedDialRows,
+                            maxShelfHeight = speedDialMaxHeight,
+                            pageHeight = speedDialPageHeight,
+                            emptyLabel = mixesDialEmptyLabel,
+                            mixesPage = { mixes ->
+                                SpeedDialShelf(
+                                    shelf = mixes,
+                                    pinnedIds = emptySet(),
+                                    rows = speedDialRows,
+                                    maxShelfHeight = speedDialMaxHeight,
+                                    pageHeight = speedDialPageHeight,
+                                    onItemClick = openItem,
+                                    onItemLongPress = onDialItemLongPress
+                                        ?.let { menu -> { item: ShelfItem -> menu(item, false) } }
+                                        ?: onItemLongPress,
+                                    onReorder = null,
+                                    currentSong = currentSong,
+                                    isPlaying = isPlaying,
+                                    showLabels = dialLabels,
+                                    labelOverrides = dialLabelOverrides,
+                                    showPinIcon = false,
+                                )
+                            },
+                            speedDial = speedDial,
+                        )
+                    } else {
+                        speedDial()
+                    }
                 } else if (shelf.title.equals(RECENTS_TITLE, ignoreCase = true)) {
                     RecentShelf(
                         shelf = shelf,

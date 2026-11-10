@@ -276,35 +276,39 @@ fun LazyListScope.feedSkeleton(shelves: Int = 3, firstIsHero: Boolean = true) {
  * as the real shelf so the tiles land exactly where the placeholders were.
  */
 fun LazyListScope.speedDialSkeleton(rows: Int = 4, maxShelfHeight: Dp? = null, pageHeight: Dp? = null) {
-    item(key = "skeleton:speed-dial") {
-        Column(if (pageHeight != null) Modifier.height(pageHeight) else Modifier.padding(bottom = 66.dp)) {
-            Spacer(Modifier.height(com.music.bitchord.ui.screens.SPEED_DIAL_HEADER_HEIGHT))
-            BoxWithConstraints(Modifier.fillMaxWidth()) {
-                val metrics = com.music.bitchord.ui.screens.speedDialMetrics(
-                    maxWidth - PAGE_GUTTER * 2,
-                    rows,
-                    maxShelfHeight,
-                )
-                Column(
-                    modifier = Modifier.padding(start = PAGE_GUTTER + metrics.inset),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    repeat(rows) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            repeat(3) {
-                                ShimmerBox(
-                                    modifier = Modifier.size(metrics.tileWidth, metrics.tileHeight),
-                                    shape = RoundedCornerShape(10.dp),
-                                )
-                            }
+    item(key = "skeleton:speed-dial") { SpeedDialSkeletonPage(rows, maxShelfHeight, pageHeight) }
+}
+
+/** One dial page of placeholder tiles: the speed dial's while Home loads, the Mixes Dial's while it is dealt. */
+@Composable
+fun SpeedDialSkeletonPage(rows: Int = 4, maxShelfHeight: Dp? = null, pageHeight: Dp? = null) {
+    Column(if (pageHeight != null) Modifier.height(pageHeight) else Modifier.padding(bottom = 66.dp)) {
+        Spacer(Modifier.height(com.music.bitchord.ui.screens.SPEED_DIAL_HEADER_HEIGHT))
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val metrics = com.music.bitchord.ui.screens.speedDialMetrics(
+                maxWidth - PAGE_GUTTER * 2,
+                rows,
+                maxShelfHeight,
+            )
+            Column(
+                modifier = Modifier.padding(start = PAGE_GUTTER + metrics.inset),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                repeat(rows) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        repeat(3) {
+                            ShimmerBox(
+                                modifier = Modifier.size(metrics.tileWidth, metrics.tileHeight),
+                                shape = RoundedCornerShape(10.dp),
+                            )
                         }
                     }
                 }
             }
-            // The real shelf's page-dots row, empty here, keeps the height equal.
-            Spacer(Modifier.height(16.dp))
-            if (pageHeight != null) com.music.bitchord.ui.screens.SpeedDialMoreHint()
         }
+        // The real shelf's page-dots row, empty here, keeps the height equal.
+        Spacer(Modifier.height(16.dp))
+        if (pageHeight != null) com.music.bitchord.ui.screens.SpeedDialMoreHint()
     }
 }
 

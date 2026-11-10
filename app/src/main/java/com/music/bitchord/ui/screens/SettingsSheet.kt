@@ -2,6 +2,7 @@ package com.music.bitchord.ui.screens
 
 import androidx.compose.material.icons.rounded.PlayCircleOutline
 import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Build
@@ -358,6 +359,7 @@ fun SettingsScreen(
     val artistDial by CustomizationSettings.artistDial.collectAsStateWithLifecycle()
 
     val feelingLucky by CustomizationSettings.feelingLucky.collectAsStateWithLifecycle()
+    val mixesDial by CustomizationSettings.mixesDial.collectAsStateWithLifecycle()
     val ambientBackground by CustomizationSettings.ambientBackground.collectAsStateWithLifecycle()
     val ambientFollowsArtwork by CustomizationSettings.ambientFollowsArtwork.collectAsStateWithLifecycle()
     val hideSongStatus by AppSettings.hideSongStatus.collectAsStateWithLifecycle()
@@ -1601,6 +1603,21 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { CustomizationSettings.setArtistDial(!artistDial) },
+                )
+            }
+            val mixesDialTitle = stringResource(R.string.mixes_dial)
+            if (speedDials) row(mixesDialTitle, "mixes", "mix", "speed dial", "dial", "random", "spotify", "swipe") {
+                SettingsRow(
+                    icon = Icons.Rounded.Shuffle,
+                    title = mixesDialTitle,
+                    subtitle = stringResource(R.string.mixes_dial_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = mixesDial,
+                            onCheckedChange = CustomizationSettings::setMixesDial,
+                        )
+                    },
+                    onClick = { CustomizationSettings.setMixesDial(!mixesDial) },
                 )
             }
             val feelingLuckyTitle = stringResource(R.string.feeling_lucky_setting)
