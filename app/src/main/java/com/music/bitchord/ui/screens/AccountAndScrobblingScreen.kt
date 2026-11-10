@@ -15,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.LibraryMusic
@@ -69,6 +70,8 @@ fun AccountAndScrobblingScreen(
     val discordRpcEnabled by AppSettings.discordRpcEnabled.collectAsStateWithLifecycle()
     val spotifyConnected by AppSettings.spotifySpdcToken.collectAsStateWithLifecycle()
     val spotifyAlgorithm by AppSettings.spotifyAlgorithm.collectAsStateWithLifecycle()
+    val spotifyLikeSync by AppSettings.spotifyLikeSync.collectAsStateWithLifecycle()
+    val spotifyPlayedPlaylist by AppSettings.spotifyPlayedPlaylist.collectAsStateWithLifecycle()
     val hideUserInfo by AppSettings.hideUserInfo.collectAsStateWithLifecycle()
 
     Column(
@@ -132,6 +135,26 @@ fun AccountAndScrobblingScreen(
                         IosSwitch(checked = spotifyAlgorithm, onCheckedChange = AppSettings::setSpotifyAlgorithm)
                     },
                     onClick = { AppSettings.setSpotifyAlgorithm(!spotifyAlgorithm) },
+                )
+                RowDivider()
+                SettingsRow(
+                    icon = Icons.Rounded.FavoriteBorder,
+                    title = stringResource(R.string.spotify_like_sync),
+                    subtitle = stringResource(R.string.spotify_like_sync_summary),
+                    trailing = {
+                        IosSwitch(checked = spotifyLikeSync, onCheckedChange = AppSettings::setSpotifyLikeSync)
+                    },
+                    onClick = { AppSettings.setSpotifyLikeSync(!spotifyLikeSync) },
+                )
+                RowDivider()
+                SettingsRow(
+                    icon = Icons.Rounded.LibraryMusic,
+                    title = stringResource(R.string.spotify_played_playlist),
+                    subtitle = stringResource(R.string.spotify_played_playlist_subtitle),
+                    trailing = {
+                        IosSwitch(checked = spotifyPlayedPlaylist, onCheckedChange = AppSettings::setSpotifyPlayedPlaylist)
+                    },
+                    onClick = { AppSettings.setSpotifyPlayedPlaylist(!spotifyPlayedPlaylist) },
                 )
                 FullWidthDivider()
                 DestructiveRow(

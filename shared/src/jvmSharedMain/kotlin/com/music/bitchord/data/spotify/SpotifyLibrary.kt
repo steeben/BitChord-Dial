@@ -73,8 +73,24 @@ object SpotifyLibrary {
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
     private val mediaType = "application/json; charset=utf-8".toMediaType()
 
-    /** Every playlist in the library, however many pages it takes. */
+    /**
+     * Every playlist in the library, however many pages it takes. The app's
+     * own "Played in Dial" playlist is left out: it is there for Spotify's
+     * recommendations to read, not to be browsed here.
+     */
     suspend fun playlists(): List<SpotifyPlaylist> = withContext(Dispatchers.IO) {
+        // Liked Songs is not a playlist to Spotify's library query, so it is
+        // always offered first rather than depending on it turning up there.
+        listOf(SpotifyPlaylist(id = LIKED_ID, name = "Liked Songs", owner = null, imageUrl = LIKED_COVER)) +
+            SpotifyPlayedList.withoutPlayedList(libraryPlaylists())
+    }
+
+    /** The id of the library's playlist called [name], if there is one. */
+    suspend fun playlistIdNamed(name: String): String? = withContext(Dispatchers.IO) {
+        libraryPlaylists().firstOrNull { it.name == name }?.id
+    }
+
+    private suspend fun libraryPlaylists(): List<SpotifyPlaylist> {
         val headers = authHeaders()
         val collected = mutableListOf<SpotifyPlaylist>()
         var offset = 0
@@ -84,9 +100,7 @@ object SpotifyLibrary {
             offset += raw
             if (raw == 0 || offset >= total) break
         }
-        // Liked Songs is not a playlist to Spotify's library query, so it is
-        // always offered first rather than depending on it turning up there.
-        listOf(SpotifyPlaylist(id = LIKED_ID, name = "Liked Songs", owner = null, imageUrl = LIKED_COVER)) + collected
+        return collected
     }
 
     /**

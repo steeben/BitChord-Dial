@@ -540,9 +540,18 @@ object AppSettings {
 
     /**
      * Mirrors the heart onto Spotify's Liked Songs through the same `sp_dc`
-     * session Canvas uses. Off by default: it writes to another account.
+     * session Canvas uses. On by default; it only does anything once a
+     * Spotify account is signed in.
      */
-    val spotifyLikeSync = MutableStateFlow(false)
+    val spotifyLikeSync = MutableStateFlow(true)
+
+    /**
+     * Adds the songs played here to a "Played in Dial" playlist on the
+     * listener's Spotify account, for Spotify's recommendations to learn
+     * from. Off by default: it creates something on another account. See
+     * `SpotifyPlayedSync`.
+     */
+    val spotifyPlayedPlaylist = MutableStateFlow(false)
 
     /**
      * Radio and AutoPlay follow Spotify's recommendations (matched back onto
@@ -1041,7 +1050,8 @@ object AppSettings {
             it.indexOf(com.music.bitchord.data.canvas.AnimatedArtKind.CANVAS) <
                 it.indexOf(com.music.bitchord.data.canvas.AnimatedArtKind.ANIMATED_COVER)
         }
-        spotifyLikeSync.value = prefs.getBoolean(KEY_SPOTIFY_LIKE_SYNC, false)
+        spotifyLikeSync.value = prefs.getBoolean(KEY_SPOTIFY_LIKE_SYNC, true)
+        spotifyPlayedPlaylist.value = prefs.getBoolean(KEY_SPOTIFY_PLAYED_PLAYLIST, false)
         spotifyAlgorithm.value = prefs.getBoolean(KEY_SPOTIFY_ALGORITHM, false)
         signatureApiEnabled.value = prefs.getBoolean(KEY_SIGNATURE_API_ENABLED, true)
         signatureApiUrl.value = normalizeSignatureApiUrl(
@@ -1674,6 +1684,11 @@ object AppSettings {
     fun setSpotifyLikeSync(value: Boolean) {
         spotifyLikeSync.value = value
         prefs.edit().putBoolean(KEY_SPOTIFY_LIKE_SYNC, value).apply()
+    }
+
+    fun setSpotifyPlayedPlaylist(value: Boolean) {
+        spotifyPlayedPlaylist.value = value
+        prefs.edit().putBoolean(KEY_SPOTIFY_PLAYED_PLAYLIST, value).apply()
     }
 
     fun setSpotifyAlgorithm(value: Boolean) {
@@ -2326,6 +2341,7 @@ object AppSettings {
     private const val KEY_ANIMATED_ART_ENABLED = "animated_art_enabled"
     private const val KEY_SPOTIFY_LIKE_SYNC = "spotify_like_sync"
     private const val KEY_SPOTIFY_ALGORITHM = "spotify_algorithm"
+    private const val KEY_SPOTIFY_PLAYED_PLAYLIST = "spotify_played_playlist"
     private const val KEY_FULL_BLEED_ARTWORK = "full_bleed_artwork"
     private const val KEY_LEGACY_MESH_GRADIENT = "legacy_mesh_gradient"
     private const val KEY_LAST_PLAYER_SCREEN = "last_player_screen"
