@@ -593,6 +593,17 @@ object AppSettings {
      */
     val syncedLyrics = MutableStateFlow(true)
 
+    /**
+     * The line being sung, shown in place of the artist on the notification,
+     * the lock screen and a Bluetooth display.
+     *
+     * Off by default. It used to simply follow [syncedLyrics], which meant the
+     * playback service fetched lyrics for every track and rewrote the media
+     * session's metadata every few seconds for the whole of a listen, screen
+     * off and phone in a pocket included, for a line most listeners never saw.
+     */
+    val lyricsInNotification = MutableStateFlow(false)
+
     /** The databases [syncedLyrics] may ask. Empty is the same as off. */
     val lyricsSources = MutableStateFlow(LyricsSource.offered.toSet())
 
@@ -1047,6 +1058,7 @@ object AppSettings {
             )
         }.getOrDefault(LastPlayerScreen.MAIN)
         syncedLyrics.value = prefs.getBoolean(KEY_SYNCED_LYRICS, true)
+        lyricsInNotification.value = prefs.getBoolean(KEY_LYRICS_IN_NOTIFICATION, false)
         lyricsSources.value = readLyricsSources()
         lyricsSourceOrder.value = readLyricsSourceOrder()
         instrumentalTracks.value = prefs.getStringSet(KEY_INSTRUMENTAL_TRACKS, null)?.toSet().orEmpty()
@@ -1495,6 +1507,11 @@ object AppSettings {
     fun setSyncedLyrics(value: Boolean) {
         syncedLyrics.value = value
         prefs.edit().putBoolean(KEY_SYNCED_LYRICS, value).apply()
+    }
+
+    fun setLyricsInNotification(value: Boolean) {
+        lyricsInNotification.value = value
+        prefs.edit().putBoolean(KEY_LYRICS_IN_NOTIFICATION, value).apply()
     }
 
     fun setLyricsSources(value: Set<LyricsSource>) {
@@ -2316,6 +2333,7 @@ object AppSettings {
     private const val KEY_LEGACY_MESH_GRADIENT = "legacy_mesh_gradient"
     private const val KEY_LAST_PLAYER_SCREEN = "last_player_screen"
     private const val KEY_SYNCED_LYRICS = "synced_lyrics"
+    private const val KEY_LYRICS_IN_NOTIFICATION = "lyrics_in_notification"
     private const val KEY_LYRICS_SOURCES = "lyrics_sources"
     private const val KEY_LYRICS_SOURCES_SEEN = "lyrics_sources_seen"
     private const val KEY_LYRICS_SOURCE_ORDER = "lyrics_source_order"

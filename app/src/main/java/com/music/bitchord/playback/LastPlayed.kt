@@ -12,16 +12,24 @@ import kotlinx.serialization.json.Json
  * Queue contents are serialized only when Media3 reports that the playlist
  * changed. The frequently changing index and position are stored separately as
  * primitives, so progress sampling never walks or serializes the song list.
+ *
+ * They live in a file of their own, too. SharedPreferences rewrites its whole
+ * file on every change, so a position kept beside the queue put the queue's
+ * JSON back on disk at every progress sample.
  */
 object LastPlayed {
 
     class Snapshot(val songs: List<Song>, val index: Int, val positionMs: Long)
 
     private lateinit var prefs: SharedPreferences
+
+    /** Index and position only; see the class note. */
+    private lateinit var progress: SharedPreferences
     private val json = Json { ignoreUnknownKeys = true }
 
     fun init(context: Context) {
         prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        progress = context.getSharedPreferences(PROGRESS_PREFS_NAME, Context.MODE_PRIVATE)
     }
 
     internal fun window(size: Int, index: Int): IntRange {
@@ -45,10 +53,8 @@ object LastPlayed {
         val encoded = runCatching {
             json.encodeToString(StoredQueue.serializer(), stored)
         }.getOrNull() ?: return
-        prefs.edit()
-            .putString(KEY_QUEUE, encoded)
-            .putInt(KEY_INDEX, safeIndex - bounds.first)
-            .apply()
+        prefs.edit().putString(KEY_QUEUE, encoded).apply()
+        progress.edit().putInt(KEY_INDEX, safeIndex - bounds.first).apply()
     }
 
     /**
@@ -69,8 +75,8 @@ object LastPlayed {
         val encoded = runCatching {
             json.encodeToString(StoredQueue.serializer(), stored)
         }.getOrNull() ?: return
-        prefs.edit()
-            .putString(KEY_QUEUE, encoded)
+        prefs.edit().putString(KEY_QUEUE, encoded).commit()
+        progress.edit()
             .putInt(KEY_INDEX, safeIndex - bounds.first)
             .putLong(KEY_POSITION, positionMs.coerceAtLeast(0L))
             .commit()
@@ -79,7 +85,7 @@ object LastPlayed {
     /** Update only cheap scalar state; this performs no queue conversion or JSON work. */
     fun savePlaybackState(index: Int, positionMs: Long) {
         if (!prefs.contains(KEY_QUEUE)) return
-        prefs.edit()
+        progress.edit()
             .putInt(KEY_INDEX, index.coerceAtLeast(0))
             .putLong(KEY_POSITION, positionMs.coerceAtLeast(0L))
             .apply()
@@ -91,15 +97,17 @@ object LastPlayed {
             ?: return null
         if (stored.tracks.isEmpty()) return null
         val songs = stored.tracks.map(StoredTrack::toSong)
-        val index = if (prefs.contains(KEY_INDEX)) {
-            prefs.getInt(KEY_INDEX, 0)
-        } else {
-            stored.legacyIndex ?: 0
+        // The progress file first; then the queue's own file, where builds
+        // before the split kept them; then the snapshot itself, older still.
+        val index = when {
+            progress.contains(KEY_INDEX) -> progress.getInt(KEY_INDEX, 0)
+            prefs.contains(KEY_INDEX) -> prefs.getInt(KEY_INDEX, 0)
+            else -> stored.legacyIndex ?: 0
         }
-        val positionMs = if (prefs.contains(KEY_POSITION)) {
-            prefs.getLong(KEY_POSITION, 0L)
-        } else {
-            stored.legacyPositionMs ?: 0L
+        val positionMs = when {
+            progress.contains(KEY_POSITION) -> progress.getLong(KEY_POSITION, 0L)
+            prefs.contains(KEY_POSITION) -> prefs.getLong(KEY_POSITION, 0L)
+            else -> stored.legacyPositionMs ?: 0L
         }
         return Snapshot(
             songs = songs,
@@ -110,11 +118,13 @@ object LastPlayed {
 
     fun clear() {
         prefs.edit().clear().apply()
+        progress.edit().clear().apply()
     }
 
     /** Remove a stale queue before another one is installed. */
     fun clearImmediately() {
         prefs.edit().clear().commit()
+        progress.edit().clear().commit()
     }
 
     @Serializable
@@ -203,6 +213,7 @@ object LastPlayed {
 
     private const val KEEP_AHEAD = 50
     private const val PREFS_NAME = "bitchord_last_played"
+    private const val PROGRESS_PREFS_NAME = "bitchord_last_played_progress"
     private const val KEY_QUEUE = "queue"
     private const val KEY_INDEX = "index"
     private const val KEY_POSITION = "position"

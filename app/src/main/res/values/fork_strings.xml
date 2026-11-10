@@ -22,6 +22,8 @@
     <string name="keep_nav_bar_expanded">Keep navigation bar expanded</string>
     <string name="keep_nav_bar_expanded_subtitle">Stops the bar from shrinking while you scroll</string>
     <string name="layout_settings">Layout</string>
+    <string name="lyrics_in_notification">Lyrics in the notification</string>
+    <string name="lyrics_in_notification_subtitle">Shows the current line on the notification, lock screen and Bluetooth displays. Uses more battery.</string>
     <string name="library_view_heading">View</string>
     <string name="loading_your_library">Loading your library…</string>
     <string name="make_default_library">Make my default library</string>

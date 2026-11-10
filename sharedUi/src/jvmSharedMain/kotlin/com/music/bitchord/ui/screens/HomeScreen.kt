@@ -676,11 +676,14 @@ private fun ListShelf(
         SectionHeader(shelf.title, shelf.subtitle)
         BoxWithConstraints {
             val columnWidth = trackColumnWidth(maxWidth)
+            // Kept between recompositions: the row recomposes whenever the
+            // playing song changes, and the columns are the same lists.
+            val columns = remember(shelf.items) { shelf.items.chunked(RECENT_TRACKS_PER_COLUMN) }
             ShelfRow(
                 contentPadding = PaddingValues(horizontal = PAGE_GUTTER),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                items(shelf.items.chunked(RECENT_TRACKS_PER_COLUMN)) { column ->
+                items(columns) { column ->
                     Column(Modifier.width(columnWidth)) {
                         column.forEach { item ->
                             val current = item.matchesCurrentlyPlaying(currentSong)
@@ -759,11 +762,12 @@ private fun RecentShelf(
         if (viewType == LibraryViewType.LIST) {
             BoxWithConstraints {
                 val columnWidth = trackColumnWidth(maxWidth)
+                val columns = remember(shelf.items) { shelf.items.chunked(RECENT_TRACKS_PER_COLUMN) }
                 ShelfRow(
                     contentPadding = PaddingValues(horizontal = PAGE_GUTTER),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    items(shelf.items.chunked(RECENT_TRACKS_PER_COLUMN)) { column ->
+                    items(columns) { column ->
                         Column(Modifier.width(columnWidth)) {
                             column.forEach { item ->
                                 RecentTrackRow(

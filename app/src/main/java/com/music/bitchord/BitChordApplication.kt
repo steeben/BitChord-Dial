@@ -133,6 +133,19 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
             CoroutineScope(Dispatchers.IO).launch { Innertube.ensureSessionScope() }
         }
         AppSettings.init(this, authStore)
+        // One cache directory can only be opened once per process, and
+        // PlaybackService shares this one — so it's opened here, not there.
+        //
+        // Off the main thread, because opening it lists every cached file and
+        // then walks every key, which grows with the cache: on a full one it
+        // was the longest single step of a launch. After AppSettings, whose
+        // limit it reads, and behind the other opens rather than beside them,
+        // since CanvasCache keeps its index in the same database. Joined below
+        // like them, so nothing after startup sees it half open.
+        val cacheInit = thread(name = "startup-cache") {
+            backgroundInit.join()
+            AudioCache.init(this)
+        }
         // Before anything resolves a track: an addon with `checkValidLossless`
         // is gated on this, and the gate reads "no" until it has looked.
         com.music.bitchord.playback.audio.LosslessOutput.init(this)
@@ -165,9 +178,6 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         com.music.bitchord.data.stats.AutoBackup.init(this)
         // After AppSettings, whose switch decides whether half of it runs.
         ArtistFacts.init(this)
-        // One cache directory can only be opened once per process, and
-        // PlaybackService shares this one — so it's opened here, not there.
-        AudioCache.init(this)
         // The offscreen WebView that mints a Spotify access token from the
         // listener's own session cookie needs a Context, and nothing in the
         // suspend call chain that reaches it (a track's canvas lookup) has
@@ -191,9 +201,10 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         }
         // Initialize LastFM with saved settings if available
         initLastfm()
-        // The public "apps open right now" count; see Presence.
-        com.music.bitchord.data.presence.AndroidPresence.install(this)
+        // No presence ping: that counts installs of the app this one was
+        // forked from, on its server, and Dial is not one of them.
         backgroundInit.join()
+        cacheInit.join()
     }
 
     /**

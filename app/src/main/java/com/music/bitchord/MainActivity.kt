@@ -3280,7 +3280,13 @@ private fun BitChordApp(
     }
     val reduceAnimationSetting by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
     val ambientBlobs = if (ambientOn) {
-        rememberAmbientBlobs(ambientPrimary, ambientSecondary, animate = !reduceAnimationSetting)
+        // Held still under the open player, as Home's artwork is: each step
+        // redraws the page and the blurred bars over it, for nobody.
+        rememberAmbientBlobs(
+            ambientPrimary,
+            ambientSecondary,
+            animate = !reduceAnimationSetting && !showNowPlaying,
+        )
     } else {
         null
     }
@@ -4094,7 +4100,7 @@ private fun BitChordApp(
                     } else if (key == "discord") {
                         DiscordScreen(
                             song = player.song,
-                            positionMs = player.position.positionMs,
+                            position = player.position,
                             durationMs = player.durationMs,
                             onOpenLogin = { showDiscordLogin = true },
                             onOpenDialog = { discordDialog = it },

@@ -292,6 +292,13 @@ class BoundedContextPersistenceTest {
         assertEquals(1_000L, requireNotNull(BoundedContextPersistence.load()).positionMs)
         BoundedContextPersistence.savePlaybackState("current", 2_000L)
         assertEquals(2_000L, requireNotNull(BoundedContextPersistence.load()).positionMs)
+        // A sample never touches the snapshot's own keys: rewriting those is
+        // what put the whole context back on disk at every sample.
+        assertEquals(1_000L, prefs.getLong("position", -1L))
+        // A later snapshot carries a newer position than any earlier sample.
+        BoundedContextPersistence.saveImmediately(state.copy(positionMs = 3_000L))
+        assertEquals(3_000L, requireNotNull(BoundedContextPersistence.load()).positionMs)
+        BoundedContextPersistence.savePlaybackState("current", 4_000L)
         BoundedContextPersistence.clearImmediately()
         assertTrue(prefs.getAll().isEmpty())
         assertNull(BoundedContextPersistence.load())

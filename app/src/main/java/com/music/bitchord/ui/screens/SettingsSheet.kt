@@ -319,6 +319,7 @@ fun SettingsScreen(
     val fullBleedArtwork by AppSettings.fullBleedArtwork.collectAsStateWithLifecycle()
     val legacyMeshGradient by AppSettings.legacyMeshGradient.collectAsStateWithLifecycle()
     val syncedLyrics by AppSettings.syncedLyrics.collectAsStateWithLifecycle()
+    val lyricsInNotification by AppSettings.lyricsInNotification.collectAsStateWithLifecycle()
     val lyricsSources by AppSettings.lyricsSources.collectAsStateWithLifecycle()
     val translationLanguage by AppSettings.translationLanguage.collectAsStateWithLifecycle()
     val theme by AppSettings.themeMode.collectAsStateWithLifecycle()
@@ -1370,6 +1371,24 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { AppSettings.setSyncedLyrics(!syncedLyrics) },
+                )
+            }
+            // The same line on the notification, lock screen and Bluetooth
+            // displays. Its own switch, off by default: see the setting.
+            val notificationLyricsTitle = stringResource(R.string.lyrics_in_notification)
+            row(notificationLyricsTitle, "lyrics", "notification", "bluetooth", "lock screen") {
+                SettingsRow(
+                    icon = Icons.AutoMirrored.Rounded.Notes,
+                    title = notificationLyricsTitle,
+                    subtitle = stringResource(R.string.lyrics_in_notification_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = lyricsInNotification && syncedLyrics,
+                            onCheckedChange = AppSettings::setLyricsInNotification,
+                            enabled = syncedLyrics,
+                        )
+                    },
+                    onClick = { if (syncedLyrics) AppSettings.setLyricsInNotification(!lyricsInNotification) },
                 )
             }
             // Shown whether or not the strip is on: lyrics are still looked
