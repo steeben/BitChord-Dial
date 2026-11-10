@@ -7,7 +7,7 @@ package com.music.bitchord.ui.components
  * (`drawable/splash_logo`), an animated vector the system runs off the app's
  * main thread, so it stays smooth however busy the app is starting up. The
  * activity holds back its first frame, and with it the splash's exit, until
- * [open] is set; then the splash fades into the app.
+ * [open] is set; then the splash, its logo still lit, sweeps off the app.
  */
 object LaunchGate {
     @Volatile
@@ -17,8 +17,11 @@ object LaunchGate {
     @Volatile
     var createdAt: Long = 0L
 
-    /** How long the splash animation takes, its fade-out included; see `drawable/splash_logo`. */
-    const val ANIMATION_MS = 1_500L
+    /**
+     * The least the splash is shown: the logo building itself (1040ms, see
+     * `drawable/splash_logo`) and a beat with it fully lit before it leaves.
+     */
+    const val ANIMATION_MS = 1_250L
 
     /** The longest the first frame is held back, whatever happens. */
     const val MAX_HOLD_MS = 6_000L

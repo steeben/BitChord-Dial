@@ -560,7 +560,7 @@ class MainActivity : AppCompatActivity() {
                         .withEndAction { view.remove() }
                         .start()
                 } else {
-                    com.music.bitchord.ui.components.LaunchWipeView(this).runOver(decor) { view.remove() }
+                    com.music.bitchord.ui.components.LaunchWipeView(this).runOver(decor, view.iconView) { view.remove() }
                 }
             }
             // Hold the first frame, and so the system splash and its animation,
