@@ -254,12 +254,12 @@
     <string name="onboarding_settings_title">Settings</string>
     <string name="onboarding_settings_body">The profile button at the top right leads to Settings. Hold it to go straight there.</string>
     <string name="onboarding_mixes_title">Mixes Dial</string>
-    <string name="onboarding_mixes_body">Swipe right from the dial's first page for a page of mixes, from YouTube Music and from Spotify once it's connected. Pull down on Home for a new set.</string>
+    <string name="onboarding_mixes_body">Swipe right from the dial\'s first page for a page of mixes, from YouTube Music and from Spotify once it\'s connected. Pull down on Home for a new set.</string>
     <string name="onboarding_dial_menu_title">Dial options</string>
-    <string name="onboarding_dial_menu_body">The ⋯ button on Home holds the dial's own settings: where its picks come from, tile names, the grid and more.</string>
+    <string name="onboarding_dial_menu_body">The ⋯ button on Home holds the dial\'s own settings: where its picks come from, tile names, the grid and more.</string>
     <string name="onboarding_library_title">Your library</string>
     <string name="onboarding_library_body">On the Library tab, the ⋯ button filters what you see: YouTube Music, this device, or both. Your song history is there too.</string>
-    <string name="onboarding_finish_title">That's the tour</string>
+    <string name="onboarding_finish_title">That\'s the tour</string>
     <string name="onboarding_finish_body">There is much more to make Dial your own in Settings: the look, the player, lyrics, sound quality and the services you connect.</string>
     <!-- Developer options -->
     <string name="developer_options">Developer options</string>
