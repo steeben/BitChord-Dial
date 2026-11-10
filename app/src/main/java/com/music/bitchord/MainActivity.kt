@@ -546,14 +546,21 @@ class MainActivity : AppCompatActivity() {
         } else {
             SpeedDialIntro.played = true
         }
-        // The system splash fades into the app once it lets go: see LaunchGate.
+        // The system splash sweeps off the app once it lets go, top left to
+        // bottom right: see LaunchGate and LaunchWipeView. With "reduce
+        // animation" on it fades, as it always did.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             splashScreen.setOnExitAnimationListener { view ->
-                view.animate()
-                    .alpha(0f)
-                    .setDuration(LaunchGate.EXIT_FADE_MS)
-                    .withEndAction { view.remove() }
-                    .start()
+                val decor = window.decorView as? android.view.ViewGroup
+                if (decor == null || AppSettings.reduceAnimation.value) {
+                    view.animate()
+                        .alpha(0f)
+                        .setDuration(LaunchGate.EXIT_FADE_MS)
+                        .withEndAction { view.remove() }
+                        .start()
+                } else {
+                    com.music.bitchord.ui.components.LaunchWipeView(this).runOver(decor, view.iconView) { view.remove() }
+                }
             }
             // Hold the first frame, and so the system splash and its animation,
             // until Home is ready to be seen (see LaunchGate). A rotation or
