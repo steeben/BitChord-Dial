@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.R
+import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.CustomizationSettings
 import com.music.bitchord.data.settings.SpeedDialSource
 import com.music.bitchord.ui.screens.GlassMenuPanel
@@ -47,6 +48,9 @@ fun HomeDialMenu(
     val speedDials by CustomizationSettings.speedDials.collectAsStateWithLifecycle()
     val rows by CustomizationSettings.speedDialRows.collectAsStateWithLifecycle()
     val source by CustomizationSettings.speedDialSource.collectAsStateWithLifecycle()
+    // Spotify is a choice only while a Spotify account is signed in.
+    val spotifyToken by AppSettings.spotifySpdcToken.collectAsStateWithLifecycle()
+    val sources = SpeedDialSource.choices(spotifyToken.isNotBlank())
     val artistDial by CustomizationSettings.artistDial.collectAsStateWithLifecycle()
     val feelingLucky by CustomizationSettings.feelingLucky.collectAsStateWithLifecycle()
     val pinIcon by CustomizationSettings.dialPinIcon.collectAsStateWithLifecycle()
@@ -64,9 +68,9 @@ fun HomeDialMenu(
                 Column {
                     MenuHeading(stringResource(R.string.speed_dial_source))
                     SegmentedControl(
-                        options = speedDialSourceLabels(),
-                        selectedIndex = source.ordinal,
-                        onSelect = { CustomizationSettings.setSpeedDialSource(SpeedDialSource.entries[it]) },
+                        options = speedDialSourceLabels(sources),
+                        selectedIndex = sources.indexOf(source.effective(spotifyToken.isNotBlank())),
+                        onSelect = { CustomizationSettings.setSpeedDialSource(sources[it]) },
                         glass = true,
                         modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp),
                     )
@@ -101,12 +105,17 @@ fun HomeDialMenu(
     }
 }
 
-/** The speed dial source picker's options, in [SpeedDialSource]'s order. */
+/** The speed dial source picker's labels for [sources]. */
 @Composable
-fun speedDialSourceLabels(): List<String> = listOf(
-    stringResource(R.string.speed_dial_source_history),
-    stringResource(R.string.speed_dial_source_youtube),
-)
+fun speedDialSourceLabels(sources: List<SpeedDialSource>): List<String> = sources.map { source ->
+    stringResource(
+        when (source) {
+            SpeedDialSource.HISTORY -> R.string.speed_dial_source_history
+            SpeedDialSource.YOUTUBE -> R.string.speed_dial_source_youtube
+            SpeedDialSource.SPOTIFY -> R.string.spotify
+        },
+    )
+}
 
 @Composable
 private fun DialSwitch(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {

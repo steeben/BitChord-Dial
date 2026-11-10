@@ -84,7 +84,7 @@ object SpotifyLikeSync {
         }
     }
 
-    private fun headers(token: String): Map<String, String> {
+    internal fun headers(token: String): Map<String, String> {
         val headers = mutableMapOf(
             "Authorization" to "Bearer $token",
             "User-Agent" to CANVAS_UA,
@@ -96,7 +96,7 @@ object SpotifyLikeSync {
 
     // ---- Finding the track ---------------------------------------------
 
-    private fun findTrack(title: String, artist: String, token: String): String? =
+    internal fun findTrack(title: String, artist: String, token: String): String? =
         searchViaPathfinder(title, artist, token) ?: searchViaRest(title, artist, token)
 
     private fun searchViaPathfinder(title: String, artist: String, token: String): String? {

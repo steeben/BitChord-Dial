@@ -67,4 +67,19 @@ class SpeedDialPickerTest {
         assertTrue(SpeedDialPicker.isForgottenShelf("Forgotten favorites"))
         assertTrue(SpeedDialPicker.isListenAgainShelf("Listen again "))
     }
+
+    @Test
+    fun spotify_isOnlyAChoiceWithASpotifyAccount() {
+        assertEquals(listOf(SpeedDialSource.HISTORY, SpeedDialSource.YOUTUBE), SpeedDialSource.choices(spotifyConnected = false))
+        assertEquals(SpeedDialSource.entries.toList(), SpeedDialSource.choices(spotifyConnected = true))
+        assertEquals(SpeedDialSource.YOUTUBE, SpeedDialSource.SPOTIFY.effective(spotifyConnected = false))
+        assertEquals(SpeedDialSource.SPOTIFY, SpeedDialSource.SPOTIFY.effective(spotifyConnected = true))
+        assertEquals(SpeedDialSource.HISTORY, SpeedDialSource.HISTORY.effective(spotifyConnected = false))
+    }
+
+    @Test
+    fun spotify_fillsFromYouTubesDial() {
+        val official = items("o", 40)
+        assertEquals(official, SpeedDialPicker.pick(SpeedDialSource.SPOTIFY, history, official = official, size = 36).items)
+    }
 }

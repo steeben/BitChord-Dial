@@ -91,7 +91,11 @@ object ListeningRecorder {
             PLAY_FLOOR_MS
         }
         val counts = !playCounted && playedThisTrack >= threshold
-        if (counts) playCounted = true
+        if (counts) {
+            playCounted = true
+            // The listener's "Played in Dial" playlist on Spotify, when they keep one.
+            com.music.bitchord.data.spotify.SpotifyPlayedSync.onPlayed(song)
+        }
 
         ListeningStats.record(enriched(song), step, counts)
 
