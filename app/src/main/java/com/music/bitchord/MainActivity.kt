@@ -7619,6 +7619,12 @@ private fun BitChordApp(
             }
         }
 
+        // ---- Coming from the old app: its data doesn't move on its own ----
+        com.music.bitchord.ui.components.OldAppNoticeHost(hazeState) {
+            showSettings = true
+            MenuNav.settingsSection = com.music.bitchord.ui.screens.SettingsCategory.YOUR_DATA
+        }
+
         // ---- Update available (once per launch) ----
         if (showUpdateDialog) {
             updateNotice?.let { update ->

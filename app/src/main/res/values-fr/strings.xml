@@ -1460,4 +1460,8 @@
     <string name="song_fix_search_hint">Rechercher</string>
     <string name="song_fix_search_failed">Recherche impossible pour le moment</string>
     <string name="song_fix_search_none">Aucun résultat</string>
+    <string name="old_app_notice_title">Vous venez de l\'ancienne app ?</string>
+    <string name="old_app_notice_body">Vos réglages, votre bibliothèque, votre historique d\'écoute et vos connexions ne sont pas transférés automatiquement. Dans l\'ancienne app, ouvrez Paramètres, puis Vos données, et touchez Exporter les données. Touchez ensuite Importer des données ici et choisissez ce fichier. Vous devrez vous reconnecter.</string>
+    <string name="old_app_notice_take_me_there">M\'y emmener</string>
+    <string name="old_app_notice_got_it">Compris</string>
 </resources>

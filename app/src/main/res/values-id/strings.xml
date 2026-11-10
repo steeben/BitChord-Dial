@@ -1436,4 +1436,8 @@
     <string name="song_fix_search_hint">Cari</string>
     <string name="song_fix_search_failed">Tidak bisa mencari sekarang</string>
     <string name="song_fix_search_none">Tidak ditemukan apa pun</string>
+    <string name="old_app_notice_title">Pindah dari aplikasi lama?</string>
+    <string name="old_app_notice_body">Pengaturan, pustaka, riwayat dengar, dan login dari aplikasi lama tidak ikut pindah sendiri. Di aplikasi lama, buka Pengaturan, lalu Data Anda, dan ketuk Ekspor data. Lalu ketuk Impor data di sini dan pilih file itu. Kamu perlu login lagi.</string>
+    <string name="old_app_notice_take_me_there">Bawa ke Sana</string>
+    <string name="old_app_notice_got_it">Mengerti</string>
 </resources>

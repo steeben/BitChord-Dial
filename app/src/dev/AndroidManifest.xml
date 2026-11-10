@@ -2,6 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- So Dial can tell the old app (up to 1.4.1) is installed; see OldAppNotice. -->
+    <queries>
+        <package android:name="com.steeben.bitchord" />
+    </queries>
+
     <application
         android:label="Dial"
         android:usesCleartextTraffic="true"

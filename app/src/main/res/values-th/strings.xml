@@ -1442,4 +1442,8 @@
     <string name="song_fix_search_hint">ค้นหา</string>
     <string name="song_fix_search_failed">ค้นหาไม่ได้ในขณะนี้</string>
     <string name="song_fix_search_none">ไม่พบอะไรเลย</string>
+    <string name="old_app_notice_title">ย้ายมาจากแอปเดิมใช่ไหม</string>
+    <string name="old_app_notice_body">การตั้งค่า คลังเพลง ประวัติการฟัง และการลงชื่อเข้าใช้จากแอปเดิมจะไม่ย้ายมาเอง ในแอปเดิม เปิดการตั้งค่า แล้วข้อมูลของคุณ แตะส่งออกข้อมูล จากนั้นแตะนำเข้าข้อมูลที่นี่และเลือกไฟล์นั้น คุณจะต้องลงชื่อเข้าใช้อีกครั้ง</string>
+    <string name="old_app_notice_take_me_there">พาไปที่นั่น</string>
+    <string name="old_app_notice_got_it">เข้าใจแล้ว</string>
 </resources>

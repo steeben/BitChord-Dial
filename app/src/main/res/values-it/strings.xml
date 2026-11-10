@@ -1398,4 +1398,8 @@
     <string name="song_fix_search_hint">Cerca</string>
     <string name="song_fix_search_failed">Impossibile cercare ora</string>
     <string name="song_fix_search_none">Nessun risultato</string>
+    <string name="old_app_notice_title">Arrivi dalla vecchia app?</string>
+    <string name="old_app_notice_body">Impostazioni, libreria, cronologia d\'ascolto e accessi della vecchia app non vengono trasferiti da soli. Nella vecchia app apri Impostazioni, poi I tuoi dati, e tocca Esporta dati. Poi tocca Importa dati qui e scegli quel file. Dovrai accedere di nuovo.</string>
+    <string name="old_app_notice_take_me_there">Portami lì</string>
+    <string name="old_app_notice_got_it">Ho capito</string>
 </resources>

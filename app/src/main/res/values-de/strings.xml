@@ -1459,4 +1459,8 @@
     <string name="song_fix_search_hint">Suchen</string>
     <string name="song_fix_search_failed">Suche gerade nicht möglich</string>
     <string name="song_fix_search_none">Nichts gefunden</string>
+    <string name="old_app_notice_title">Von der alten App umziehen?</string>
+    <string name="old_app_notice_body">Einstellungen, Mediathek, Hörverlauf und Anmeldungen aus der alten App kommen nicht von selbst mit. Öffne in der alten App Einstellungen, dann Deine Daten, und tippe auf Daten exportieren. Tippe dann hier auf Daten importieren und wähle diese Datei. Danach musst du dich erneut anmelden.</string>
+    <string name="old_app_notice_take_me_there">Dorthin</string>
+    <string name="old_app_notice_got_it">Verstanden</string>
 </resources>

@@ -1438,4 +1438,8 @@
     <string name="song_fix_search_hint">搜尋</string>
     <string name="song_fix_search_failed">目前無法搜尋</string>
     <string name="song_fix_search_none">找不到任何內容</string>
+    <string name="old_app_notice_title">從舊應用程式搬過來？</string>
+    <string name="old_app_notice_body">舊應用程式中的設定、資料庫、收聽紀錄和登入資訊不會自動搬移。在舊應用程式中開啟「設定」>「你的資料」，點選「匯出資料」。接著在這裡點選「匯入資料」並選擇該檔案。你需要重新登入。</string>
+    <string name="old_app_notice_take_me_there">帶我前往</string>
+    <string name="old_app_notice_got_it">知道了</string>
 </resources>

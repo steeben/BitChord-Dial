@@ -1416,4 +1416,8 @@
     <string name="song_fix_search_hint">Ara</string>
     <string name="song_fix_search_failed">Şu anda aranamıyor</string>
     <string name="song_fix_search_none">Hiçbir şey bulunamadı</string>
+    <string name="old_app_notice_title">Eski uygulamadan mı geliyorsun?</string>
+    <string name="old_app_notice_body">Eski uygulamadaki ayarlar, kitaplık, dinleme geçmişi ve oturumlar kendiliğinden taşınmaz. Eski uygulamada Ayarlar\'ı, ardından Verileriniz bölümünü aç ve Verileri dışa aktar\'a dokun. Sonra burada Verileri içe aktar\'a dokunup o dosyayı seç. Yeniden oturum açman gerekecek.</string>
+    <string name="old_app_notice_take_me_there">Beni Oraya Götür</string>
+    <string name="old_app_notice_got_it">Anladım</string>
 </resources>

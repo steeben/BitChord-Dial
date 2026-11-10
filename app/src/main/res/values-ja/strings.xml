@@ -1437,4 +1437,8 @@
     <string name="song_fix_search_hint">検索</string>
     <string name="song_fix_search_failed">今は検索できません</string>
     <string name="song_fix_search_none">見つかりませんでした</string>
+    <string name="old_app_notice_title">以前のアプリから移行しますか？</string>
+    <string name="old_app_notice_body">以前のアプリの設定、ライブラリ、再生履歴、ログイン情報は自動では移りません。以前のアプリで「設定」→「あなたのデータ」を開き、「データをエクスポート」をタップします。次にここで「データをインポート」をタップしてそのファイルを選びます。ログインはやり直しが必要です。</string>
+    <string name="old_app_notice_take_me_there">そこへ移動</string>
+    <string name="old_app_notice_got_it">OK</string>
 </resources>

@@ -1499,4 +1499,8 @@
     <string name="song_fix_search_hint">Szukaj</string>
     <string name="song_fix_search_failed">Nie można teraz wyszukać</string>
     <string name="song_fix_search_none">Nic nie znaleziono</string>
+    <string name="old_app_notice_title">Przenosisz się ze starej aplikacji?</string>
+    <string name="old_app_notice_body">Ustawienia, biblioteka, historia słuchania i logowania ze starej aplikacji nie przeniosą się same. W starej aplikacji otwórz Ustawienia, potem Twoje dane, i stuknij Wyeksportuj dane. Następnie stuknij tutaj Importuj dane i wybierz ten plik. Trzeba będzie zalogować się ponownie.</string>
+    <string name="old_app_notice_take_me_there">Zabierz mnie tam</string>
+    <string name="old_app_notice_got_it">Rozumiem</string>
 </resources>

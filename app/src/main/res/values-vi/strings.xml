@@ -1376,4 +1376,8 @@
     <string name="song_fix_search_hint">Tìm kiếm</string>
     <string name="song_fix_search_failed">Không thể tìm kiếm lúc này</string>
     <string name="song_fix_search_none">Không tìm thấy gì</string>
+    <string name="old_app_notice_title">Chuyển từ ứng dụng cũ?</string>
+    <string name="old_app_notice_body">Cài đặt, thư viện, lịch sử nghe và đăng nhập từ ứng dụng cũ không tự chuyển sang. Trong ứng dụng cũ, mở Cài đặt, rồi Dữ liệu của bạn, và chạm Xuất dữ liệu. Sau đó chạm Nhập dữ liệu ở đây và chọn tệp đó. Bạn sẽ cần đăng nhập lại.</string>
+    <string name="old_app_notice_take_me_there">Đưa tôi đến đó</string>
+    <string name="old_app_notice_got_it">Đã hiểu</string>
 </resources>

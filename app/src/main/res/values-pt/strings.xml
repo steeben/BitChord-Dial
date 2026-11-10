@@ -1464,4 +1464,8 @@
     <string name="song_fix_search_hint">Pesquisar</string>
     <string name="song_fix_search_failed">Não foi possível pesquisar agora</string>
     <string name="song_fix_search_none">Nada encontrado</string>
+    <string name="old_app_notice_title">Vindo do app antigo?</string>
+    <string name="old_app_notice_body">Suas configurações, biblioteca, histórico de audição e logins do app antigo não vêm sozinhos. No app antigo, abra Configurações, depois Seus dados, e toque em Exportar dados. Depois toque em Importar dados aqui e escolha esse arquivo. Você precisará entrar de novo.</string>
+    <string name="old_app_notice_take_me_there">Levar até lá</string>
+    <string name="old_app_notice_got_it">Entendi</string>
 </resources>

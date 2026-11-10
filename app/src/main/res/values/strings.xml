@@ -1303,4 +1303,8 @@
     <string name="glass_style">Style</string>
     <string name="glass_style_classic">Classic</string>
     <string name="glass_style_new">New</string>
+    <string name="old_app_notice_title">Moving from the old app?</string>
+    <string name="old_app_notice_body">Your settings, library, listening history and sign-ins from the old app don\'t come over on their own. In the old app, open Settings, then Your data, and tap Export data. Then tap Import data here and pick that file. You\'ll need to sign in again.</string>
+    <string name="old_app_notice_take_me_there">Take Me There</string>
+    <string name="old_app_notice_got_it">Got It</string>
 </resources>

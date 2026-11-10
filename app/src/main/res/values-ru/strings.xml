@@ -1491,4 +1491,8 @@
     <string name="song_fix_search_hint">Поиск</string>
     <string name="song_fix_search_failed">Сейчас не удалось выполнить поиск</string>
     <string name="song_fix_search_none">Ничего не найдено</string>
+    <string name="old_app_notice_title">Переходите со старого приложения?</string>
+    <string name="old_app_notice_body">Настройки, медиатека, история прослушивания и входы из старого приложения сами не перенесутся. В старом приложении откройте Настройки, затем Ваши данные, и нажмите Экспорт данных. Потом нажмите здесь Импорт данных и выберите этот файл. Войти в аккаунты нужно будет заново.</string>
+    <string name="old_app_notice_take_me_there">Перейти туда</string>
+    <string name="old_app_notice_got_it">Понятно</string>
 </resources>
