@@ -744,6 +744,9 @@ private fun RefreshPuck(refreshing: Boolean, pullFraction: () -> Float, modifier
     }
 }
 
+/** The mark's height as it slides out. */
+private val PUCK_SIZE = 40.dp
+
 /** How far below the bar's edge the puck rests while a refresh runs. */
 private val PUCK_REST = 16.dp
 
