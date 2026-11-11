@@ -180,6 +180,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import com.music.bitchord.AppIcon
+import com.music.bitchord.AppIconColor
 import com.music.bitchord.ui.components.GlassTint
 import com.music.bitchord.ui.components.isGlassSupported
 import com.music.bitchord.ui.components.languageDisplayNameRes
@@ -1059,14 +1060,17 @@ fun SettingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState())
-                        .padding(start = ROW_INSET, end = ROW_INSET, bottom = 14.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        .padding(start = ROW_INSET, end = ROW_INSET, bottom = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    AppIcon.entries.forEach { option ->
+                    // One tile per colour, drawn in the dark or bright version
+                    // picked below.
+                    AppIconColor.entries.forEach { color ->
+                        val option = AppIcon.of(color, selectedIcon.dark)
                         val selected = option == selectedIcon
                         Column(
                             modifier = Modifier
-                                .width(84.dp)
+                                .width(72.dp)
                                 .clip(RoundedCornerShape(16.dp))
                                 .clickable {
                                     if (option != selectedIcon) {
@@ -1090,15 +1094,14 @@ fun SettingsScreen(
                             // An ImageView draws the adaptive icon through the
                             // device's own mask, the shape the launcher will use.
                             AndroidView(
-                                factory = { ctx ->
-                                    android.widget.ImageView(ctx).apply { setImageResource(option.iconRes) }
-                                },
+                                factory = { ctx -> android.widget.ImageView(ctx) },
+                                update = { it.setImageResource(option.iconRes) },
                                 modifier = tile,
                             )
                             Text(
-                                text = stringResource(option.labelRes),
+                                text = stringResource(color.labelRes),
                                 textAlign = TextAlign.Center,
-                                maxLines = 2,
+                                maxLines = 1,
                                 style = MaterialTheme.typography.labelMedium,
                                 color = if (selected) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1108,6 +1111,19 @@ fun SettingsScreen(
                         }
                     }
                 }
+                // Dark or bright, for whichever colour is picked.
+                SegmentedControl(
+                    options = listOf(stringResource(R.string.app_icon_dark), stringResource(R.string.app_icon_bright)),
+                    selectedIndex = if (selectedIcon.dark) 0 else 1,
+                    onSelect = { index ->
+                        val option = AppIcon.of(selectedIcon.color, dark = index == 0)
+                        if (option != selectedIcon) {
+                            selectedIcon = option
+                            AppIcon.apply(context, option)
+                        }
+                    },
+                    modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, bottom = 14.dp),
+                )
             }
             val reduceAnimationTitle = stringResource(R.string.reduce_animation)
             row(reduceAnimationTitle, "motion") {
