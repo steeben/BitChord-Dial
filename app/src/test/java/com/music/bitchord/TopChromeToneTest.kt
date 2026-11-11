@@ -10,37 +10,46 @@ import org.junit.Test
 class TopChromeToneTest {
     @Test
     fun aDarkBannerOnALightPageIsDarkWhileItShows() {
-        assertEquals(true, topChromeOverDark(artLuminance = 0.02f, washLuminance = 0.8f, artShowing = 1f))
+        assertEquals(true, topChromeOverDark(artLuminance = 0.02f, washLuminance = 0.8f, artShowing = 1f, themeDark = false))
         // Scrolled off: the light page is what is left under the controls.
-        assertEquals(false, topChromeOverDark(artLuminance = 0.02f, washLuminance = 0.8f, artShowing = 0f))
+        assertEquals(false, topChromeOverDark(artLuminance = 0.02f, washLuminance = 0.8f, artShowing = 0f, themeDark = false))
     }
 
     @Test
     fun aBrightBannerOnADarkPageIsLight() {
-        assertEquals(false, topChromeOverDark(artLuminance = 0.9f, washLuminance = 0.03f, artShowing = 1f))
-        assertEquals(true, topChromeOverDark(artLuminance = 0.9f, washLuminance = 0.03f, artShowing = 0f))
+        assertEquals(false, topChromeOverDark(artLuminance = 0.9f, washLuminance = 0.03f, artShowing = 1f, themeDark = true))
+        assertEquals(true, topChromeOverDark(artLuminance = 0.9f, washLuminance = 0.03f, artShowing = 0f, themeDark = true))
     }
 
     @Test
     fun aHeldBannerStillCountsAtItsFadedStrength() {
-        // A dark photo held at 20% over a white wash: no longer dark enough for white glyphs.
-        assertEquals(false, topChromeOverDark(artLuminance = 0.02f, washLuminance = 0.95f, artShowing = 0.2f))
+        // A dark photo held at 45% over a light wash: no longer dark enough for white glyphs.
+        assertEquals(false, topChromeOverDark(artLuminance = 0.02f, washLuminance = 0.8f, artShowing = 0.45f, themeDark = false))
         // Over a dark wash it stays dark.
-        assertEquals(true, topChromeOverDark(artLuminance = 0.02f, washLuminance = 0.05f, artShowing = 0.2f))
+        assertEquals(true, topChromeOverDark(artLuminance = 0.02f, washLuminance = 0.05f, artShowing = 0.45f, themeDark = true))
     }
 
     @Test
-    fun onlyAVeryBrightBannerTurnsTheGlyphsBlack() {
+    fun inTheDarkThemeOnlyAVeryBrightBannerTurnsTheGlyphsBlack() {
         // Sunlit grass and flowers (the album header Stephen reported): white still reads.
-        assertEquals(true, topChromeOverDark(artLuminance = 0.39f, washLuminance = 0.05f, artShowing = 1f))
-        assertEquals(true, topChromeOverDark(artLuminance = 0.55f, washLuminance = 0.05f, artShowing = 1f))
+        assertEquals(true, topChromeOverDark(artLuminance = 0.39f, washLuminance = 0.05f, artShowing = 1f, themeDark = true))
+        assertEquals(true, topChromeOverDark(artLuminance = 0.55f, washLuminance = 0.05f, artShowing = 1f, themeDark = true))
         // A cream or white sleeve: white would be lost.
-        assertEquals(false, topChromeOverDark(artLuminance = 0.7f, washLuminance = 0.05f, artShowing = 1f))
+        assertEquals(false, topChromeOverDark(artLuminance = 0.7f, washLuminance = 0.05f, artShowing = 1f, themeDark = true))
+    }
+
+    @Test
+    fun inTheLightThemeOnlyADarkBannerTurnsTheGlyphsWhite() {
+        // The same grass in the light theme: black glyphs, as on the rest of the app.
+        assertEquals(false, topChromeOverDark(artLuminance = 0.39f, washLuminance = 0.8f, artShowing = 1f, themeDark = false))
+        assertEquals(false, topChromeOverDark(artLuminance = 0.25f, washLuminance = 0.8f, artShowing = 1f, themeDark = false))
+        // A dim stage photograph: black would be lost.
+        assertEquals(true, topChromeOverDark(artLuminance = 0.1f, washLuminance = 0.8f, artShowing = 1f, themeDark = false))
     }
 
     @Test
     fun nothingIsSaidBeforeThePictureIsRead() {
-        assertNull(topChromeOverDark(artLuminance = null, washLuminance = 0.8f, artShowing = 1f))
+        assertNull(topChromeOverDark(artLuminance = null, washLuminance = 0.8f, artShowing = 1f, themeDark = false))
     }
 
     @Test
@@ -60,7 +69,7 @@ class TopChromeToneTest {
         // The artist's photo is bright, the clip playing over it is black at the top.
         val art = bannerArtLuminance(still = 0.7f, clip = 0.01f, clipShowing = 1f)
         assertEquals(0.01f, art!!, 0.0001f)
-        assertEquals(true, topChromeOverDark(art, washLuminance = 0.8f, artShowing = 1f))
+        assertEquals(true, topChromeOverDark(art, washLuminance = 0.8f, artShowing = 1f, themeDark = false))
     }
 
     @Test

@@ -53,6 +53,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -242,7 +243,13 @@ fun FrostedTopBar(
     // over a bright one. See [TopChromeTone].
     val themeDark = MaterialTheme.colorScheme.surface.luminance() <= 0.5f
     val chromeDark = (if (LocalOnArtworkPage.current) TopChromeTone.overDark else null) ?: themeDark
-    ChromeTheme(dark = chromeDark) {
+    // In the light theme, while the glyphs are black, the bar's glass over a
+    // banner wears the theme's own glass (its slight white tint) like the
+    // rest of the app, rather than the stock glass of an artwork page.
+    val appDark = LocalAppThemeDark.current ?: themeDark
+    val followsOptions = LocalGlassFollowsOptions.current ||
+        (LocalOnArtworkPage.current && !appDark && !chromeDark)
+    TopChrome(dark = chromeDark, glassFollowsOptions = followsOptions) {
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -769,3 +776,11 @@ private val PUCK_OVERSHOOT = 20.dp
  * glyph does, and at 24 it sat heavier in the bar than the wordmark opposite it.
  */
 private val AVATAR_SIZE = 28.dp
+
+/** The top bar's own theme ([ChromeTheme]) and whether its glass follows the Liquid Glass options. */
+@Composable
+private fun TopChrome(dark: Boolean, glassFollowsOptions: Boolean, content: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalGlassFollowsOptions provides glassFollowsOptions) {
+        ChromeTheme(dark = dark, content = content)
+    }
+}
