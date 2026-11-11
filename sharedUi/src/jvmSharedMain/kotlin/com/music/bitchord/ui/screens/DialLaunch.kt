@@ -2,6 +2,7 @@ package com.music.bitchord.ui.screens
 
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.Transition
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.snap
@@ -17,6 +18,7 @@ import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.findRootCoordinates
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.Image
@@ -93,6 +95,12 @@ class DialOrigin(
      * become of the image cache since.
      */
     val art: Painter? = null,
+    /**
+     * What of it was in view: less than [bounds] for a card part of the way
+     * off the edge of its row. Its page closes onto [bounds] all the same,
+     * showing only as much of itself as this.
+     */
+    val visible: Rect = bounds,
 ) : Launched {
     /**
      * Whether the tapped tile's page has come up in its place. The tile hides
@@ -194,18 +202,25 @@ object DialLaunch {
     private const val BACK_REACH = 0.6f
 
     const val OPEN_MS = 420
-    const val CLOSE_MS = 420
+    const val CLOSE_MS = 600
+
+    /**
+     * How long the page under a closing one takes to come forward again: back
+     * in place by the time the closing page is down to its tile (see
+     * [closeCurve]), so the tile it lands on is where the page lands.
+     */
+    const val CLOSE_UNDER_MS = 270
 }
 
 /** Quick off the mark and long to settle, like a phone's own app launch. */
 private val LaunchEasing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
 
 /**
- * The close's curve: the launch's quick start, then a touch past the tile
- * (about 7% smaller than it) and a settle back out to it, so the page lands
- * with a small bounce rather than stopping dead.
+ * The close's curve, a spring's (see [closeCurve]): a gentle start, down to
+ * the tile, a touch past it (about 5% smaller) and a settle back out to it,
+ * so the page lands with a small bounce rather than stopping dead.
  */
-private val CloseEasing = CubicBezierEasing(0.2f, 0f, 0.1f, 1.4f)
+private val CloseEasing = Easing { closeCurve(it) }
 
 /**
  * One page of the app's content, grown out of / shrunk back into its dial
@@ -275,17 +290,16 @@ fun DialLaunchPage(
                             // back into it at full size, as it will be drawn.
                             val from = if (closing) origin.bounds else origin.bounds.scaled(origin.pressedScale)
                             val tile = from.translate(-pageAt.value)
+                            // As much of the tile as was in view: all of it, but
+                            // for a card part of the way off the edge of its row.
+                            val seen = from.intersect(origin.visible).translate(-pageAt.value)
                             val w = size.width
                             val h = size.height
                             if (w <= 0f || h <= 0f) return@graphicsLayer
                             // Where the page is drawn: from the tile to the whole
                             // page, or, below zero (the close's bounce), the tile
                             // itself a little smaller, about its own centre.
-                            val at = if (p >= 0f) {
-                                Rect(lerp(tile.left, 0f, p), lerp(tile.top, 0f, p), lerp(tile.right, w, p), lerp(tile.bottom, h, p))
-                            } else {
-                                tile.scaled(1f + p)
-                            }
+                            val at = tile.launched(w, h, tile.center, p)
                             val scale = at.width / w
                             transformOrigin = TransformOrigin(0f, 0f)
                             scaleX = scale
@@ -294,11 +308,27 @@ fun DialLaunchPage(
                             translationY = at.top
                             // The window: the tile's shape growing to the page's,
                             // in the page's own (unscaled) units.
-                            val shownHeight = at.height / scale
+                            // Cut where the tile itself is cut off, so the page
+                            // comes down onto the part of it in view at the
+                            // tile's own proportions, not squeezed into that part.
+                            val shown = seen.launched(w, h, tile.center, p)
+                            val window = Rect(
+                                (shown.left - at.left) / scale,
+                                (shown.top - at.top) / scale,
+                                (shown.right - at.left) / scale,
+                                (shown.bottom - at.top) / scale,
+                            )
                             val tileScale = if (closing) 1f else origin.pressedScale
                             val radius = lerp(origin.corner.toPx() * tileScale, 0f, p.coerceAtLeast(0f)) *
                                 (1f + p.coerceAtMost(0f)) / scale
-                            shape = WindowShape(shownHeight, radius)
+                            shape = WindowShape(
+                                window,
+                                radius,
+                                cutLeft = seen.left - tile.left > CUT_PX,
+                                cutTop = seen.top - tile.top > CUT_PX,
+                                cutRight = tile.right - seen.right > CUT_PX,
+                                cutBottom = tile.bottom - seen.bottom > CUT_PX,
+                            )
                             clip = true
                         }
                         // The page is see-through (the colour behind it belongs to
@@ -357,7 +387,7 @@ private const val LAND_AT = 0.04f
 /** How near its tile's own size a bouncing page has to be back to count as landed. */
 private const val SETTLED = 0.004f
 
-/** How far past its tile a closing page has to have gone for the bounce to be under way (it peaks near 0.07). */
+/** How far past its tile a closing page has to have gone for the bounce to be under way (it peaks at [CLOSE_DIP], near 0.05). */
 private const val BOUNCED = 0.02f
 
 private fun lerp(a: Float, b: Float, t: Float) = a + (b - a) * t
@@ -368,12 +398,49 @@ private fun Rect.scaled(factor: Float): Rect {
     return Rect(c.x - half.width, c.y - half.height, c.x + half.width, c.y + half.height)
 }
 
-/** The page's top [height], with [radius] corners: what of it shows while it grows. */
-private class WindowShape(val height: Float, val radius: Float) : Shape {
-    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline =
-        Outline.Rounded(
-            RoundRect(0f, 0f, size.width, height.coerceAtMost(size.height), CornerRadius(radius)),
+/** This tile's rect on its way to a page [w] by [h], at launch [progress]: see [launchEdge]. */
+private fun Rect.launched(w: Float, h: Float, centre: Offset, progress: Float) = Rect(
+    launchEdge(left, 0f, centre.x, progress),
+    launchEdge(top, 0f, centre.y, progress),
+    launchEdge(right, w, centre.x, progress),
+    launchEdge(bottom, h, centre.y, progress),
+)
+
+/** How much of a tile's side has to be out of view (in pixels) for it to count as cut off there. */
+private const val CUT_PX = 0.5f
+
+/**
+ * What of the page shows while it grows: its [window], with [radius] corners.
+ * A side the tile is cut off at (by the edge of its row, say) is cut square,
+ * as the tile is there.
+ */
+private class WindowShape(
+    val window: Rect,
+    val radius: Float,
+    val cutLeft: Boolean = false,
+    val cutTop: Boolean = false,
+    val cutRight: Boolean = false,
+    val cutBottom: Boolean = false,
+) : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+        val rect = Rect(
+            window.left.coerceAtLeast(0f),
+            window.top.coerceAtLeast(0f),
+            window.right.coerceAtMost(size.width),
+            window.bottom.coerceAtMost(size.height),
         )
+        val round = CornerRadius(radius)
+        if (!cutLeft && !cutTop && !cutRight && !cutBottom) return Outline.Rounded(RoundRect(rect, round))
+        return Outline.Rounded(
+            RoundRect(
+                rect,
+                topLeft = if (cutLeft || cutTop) CornerRadius.Zero else round,
+                topRight = if (cutRight || cutTop) CornerRadius.Zero else round,
+                bottomRight = if (cutRight || cutBottom) CornerRadius.Zero else round,
+                bottomLeft = if (cutLeft || cutBottom) CornerRadius.Zero else round,
+            ),
+        )
+    }
 }
 
 /**
@@ -423,8 +490,14 @@ class CardLaunch internal constructor(
     /** Opens the card's page with [action], out of the artwork as it is drawn now. */
     fun open(action: () -> Unit) {
         scope.launch {
-            val bounds = coordinates?.takeIf { it.isAttached }?.boundsInRoot()
-            if (bounds != null && !bounds.isEmpty) {
+            val placed = coordinates?.takeIf { it.isAttached }
+            // What of it is in view, and the whole of it, in view or not: a
+            // card part of the way off the edge of its row has less in view
+            // than its picture is, and its page still closes to the picture's
+            // own proportions.
+            val visible = placed?.boundsInRoot()
+            val bounds = placed?.let { it.findRootCoordinates().localBoundingBoxOf(it, clipBounds = false) }
+            if (bounds != null && visible != null && !visible.isEmpty) {
                 val snapshot = runCatching { layer.toImageBitmap() }.getOrNull()
                 DialLaunch.origin = DialOrigin(
                     key = key,
@@ -439,6 +512,7 @@ class CardLaunch internal constructor(
                     rowOffset = row?.state?.firstVisibleItemScrollOffset ?: 0,
                     card = true,
                     art = art,
+                    visible = visible,
                 )
             }
             action()
