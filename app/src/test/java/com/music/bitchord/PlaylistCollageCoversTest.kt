@@ -2,6 +2,7 @@ package com.music.bitchord
 
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.ui.screens.collageCovers
+import com.music.bitchord.ui.screens.playlistTakesGeneratedImage
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -11,6 +12,14 @@ class PlaylistCollageCoversTest {
 
     private fun song(id: String, artist: String, album: String, art: String = "https://i.ytimg.com/$album.jpg") =
         Song(videoId = id, title = id, artist = artist, thumbnailUrl = art, albumId = album)
+
+    @Test
+    fun `Spotify playlists and mixes get a generated image, as YouTube Music's do`() {
+        assertTrue(playlistTakesGeneratedImage("VLPL123"))
+        assertTrue(playlistTakesGeneratedImage("spotify:playlist:37i9dQZF1EQpoj8u9Hn81e"))
+        assertTrue(!playlistTakesGeneratedImage("MPREb_album"))
+        assertTrue(!playlistTakesGeneratedImage("local:songs"))
+    }
 
     @Test
     fun `a playlist's newest songs are at its foot`() {

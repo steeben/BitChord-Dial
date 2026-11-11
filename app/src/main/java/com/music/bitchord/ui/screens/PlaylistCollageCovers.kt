@@ -2,10 +2,19 @@ package com.music.bitchord.ui.screens
 
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.model.artworkAt
+import com.music.bitchord.data.spotify.SPOTIFY_PAGE_PREFIX
 import kotlin.random.Random
 
 /** Covers in a generated playlist image: one in front, the rest floating round it. */
 internal const val COLLAGE_MAX_COVERS = 9
+
+/**
+ * Whether a playlist page with this id can have a generated image: one of
+ * YouTube Music's (VL…) or one of Spotify's, a mix included. Liked music is
+ * the caller's to add, as its ids differ by where it is read from.
+ */
+internal fun playlistTakesGeneratedImage(browseId: String): Boolean =
+    browseId.startsWith("VL") || browseId.startsWith(SPOTIFY_PAGE_PREFIX)
 
 /**
  * The covers a generated playlist image is made of, newest addition first.
