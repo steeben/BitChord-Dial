@@ -1,5 +1,9 @@
 package com.music.bitchord.ui.components
 
+import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -56,12 +60,14 @@ import com.music.bitchord.data.VideoCanvases
 import com.music.bitchord.data.YtMusicRepository
 import com.music.bitchord.data.canvas.CanvasRepository
 import com.music.bitchord.data.model.Song
+import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.sources.MusicSource
 import com.music.bitchord.data.sources.SourceKind
 import com.music.bitchord.data.sources.SourceRegistry
 import com.music.bitchord.data.sources.SourceResolver
 import com.music.bitchord.data.sources.SourceStream
 import com.music.bitchord.data.sources.TrackMatcher
+import com.music.bitchord.download.FileRetagger
 import com.music.bitchord.playback.OriginalVersion
 import com.music.bitchord.playback.SOURCE_YOUTUBE
 import com.music.bitchord.playback.SourcePins
@@ -257,6 +263,38 @@ fun SongFixHost(
         c?.retagCurrent(original)
         onNotice(context.getString(R.string.song_fix_details_restored))
     }
+    // Saving the details into the file itself, for a listener who asked for
+    // that in Settings. [song] is the song as it now reads.
+    fun report(outcome: FileRetagger.Outcome, song: Song) {
+        if (outcome == FileRetagger.Outcome.Saved) {
+            // The player still has the old file open, and the audio has moved
+            // inside it. Reopened at the same spot, the same way another
+            // version of a song is swapped in.
+            playing(song)?.swapToVersion(song, fromStart = false)
+        }
+        onNotice(
+            context.getString(
+                when (outcome) {
+                    FileRetagger.Outcome.Saved -> R.string.song_fix_details_saved
+                    FileRetagger.Outcome.Unsupported -> R.string.song_fix_details_unsupported
+                    FileRetagger.Outcome.Failed -> R.string.song_fix_details_failed
+                    FileRetagger.Outcome.Denied, is FileRetagger.Outcome.NeedsAccess -> R.string.song_fix_details_denied
+                },
+            ),
+        )
+    }
+    // A rewrite Android wants the listener's leave for, held while it asks.
+    var awaitingAccess by remember { mutableStateOf<Pair<FileRetagger.Pending, Song>?>(null) }
+    val askAccess = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
+        val (pending, song) = awaitingAccess ?: return@rememberLauncherForActivityResult
+        awaitingAccess = null
+        if (result.resultCode == Activity.RESULT_OK) {
+            scope.launch { report(FileRetagger.finish(context, pending), song) }
+        } else {
+            FileRetagger.discard(pending)
+            report(FileRetagger.Outcome.Denied, song)
+        }
+    }
     val open = request?.takeUnless { it.kind == SongFixRequests.Kind.RESTORE_DETAILS } ?: return
     val dismiss = { SongFixRequests.request.value = null }
     SlideDownBottomSheet(
@@ -322,7 +360,25 @@ fun SongFixHost(
                     // Open artist and Open album follow.
                     if (LocalLinks.keyOf(open.song) != null) LocalLinks.link(open.song, match)
                     c?.retagCurrent(renamed)
-                    onNotice(context.getString(R.string.song_fix_details_picked))
+                    val file = FileRetagger.fileOf(base).takeIf { AppSettings.writeSongFixToFile.value }
+                    if (file == null) {
+                        onNotice(context.getString(R.string.song_fix_details_picked))
+                        return@launch
+                    }
+                    val outcome = FileRetagger.write(context, file, renamed, match.thumbnailUrl)
+                    if (outcome is FileRetagger.Outcome.NeedsAccess) {
+                        awaitingAccess?.let { FileRetagger.discard(it.first) }
+                        awaitingAccess = outcome.pending to renamed
+                        runCatching {
+                            askAccess.launch(IntentSenderRequest.Builder(outcome.sender).build())
+                        }.onFailure {
+                            awaitingAccess = null
+                            FileRetagger.discard(outcome.pending)
+                            report(FileRetagger.Outcome.Denied, renamed)
+                        }
+                    } else {
+                        report(outcome, renamed)
+                    }
                 }
             }
             SongFixRequests.Kind.RESTORE_DETAILS -> Unit

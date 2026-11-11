@@ -80,6 +80,127 @@ object Mp4Tagger {
         }.getOrDefault(bytes)
     }
 
+    /** Bytes [start] until [end] of the original file, to be replaced by [replacement]. */
+    class Splice(val start: Int, val end: Int, val replacement: ByteArray)
+
+    /**
+     * A new `moov` for a file that may be tagged already, with title, artist,
+     * album and cover replaced and every other item the file had kept.
+     *
+     * [tag] is for a fresh download, which has no metadata, so it only appends.
+     * This is for one of the listener's own files, when a song fix is saved
+     * into it (see [FileRetagger]): the existing `udta/meta/ilst` is rebuilt
+     * around the new items, so a track number or a year survives, and the
+     * chunk offsets are moved by however much `moov` grew or shrank.
+     *
+     * @return null when there is nothing to write or the layout isn't one this
+     *   recognises, and the file is to be left alone.
+     */
+    fun retag(
+        bytes: ByteArray,
+        title: String,
+        artist: String,
+        album: String?,
+        cover: ByteArray?,
+        coverIsPng: Boolean,
+    ): Splice? = runCatching {
+        val items = mutableListOf<Pair<String, ByteArray>>()
+        if (title.isNotBlank()) items += "©nam" to textItem("©nam", title)
+        if (artist.isNotBlank()) items += "©ART" to textItem("©ART", artist)
+        if (!album.isNullOrBlank()) items += "©alb" to textItem("©alb", album)
+        if (cover != null && cover.isNotEmpty()) items += "covr" to coverItem(cover, coverIsPng)
+        if (items.isEmpty()) return@runCatching null
+
+        val top = parseBoxes(bytes, 0, bytes.size)
+        // An MP4 opens with `ftyp`; anything else is not one to guess at.
+        if (top.firstOrNull()?.type != "ftyp") return@runCatching null
+        val moov = top.firstOrNull { it.type == "moov" } ?: return@runCatching null
+        val children = childrenOf(bytes, moov.contentOffset, moov.end) ?: return@runCatching null
+        val udta = children.firstOrNull { it.type == "udta" }
+        val newUdta = rebuiltUdta(bytes, udta, items) ?: return@runCatching null
+
+        val payload = java.io.ByteArrayOutputStream(moov.size + newUdta.size)
+        children.forEach { child ->
+            if (child === udta) payload.write(newUdta) else payload.write(bytes, child.offset, child.size)
+        }
+        if (udta == null) payload.write(newUdta)
+        val newMoov = box("moov", payload.toByteArray())
+
+        // Chunk offsets are positions in the old file; the ones past the old
+        // `moov` are the ones its change of size moves.
+        val delta = newMoov.size - moov.size
+        val offsetBoxes = mutableListOf<BoxRef>()
+        collectOffsetBoxes(newMoov, BoxRef(0, 8, newMoov.size, newMoov.size.toLong(), "moov"), offsetBoxes)
+        offsetBoxes.forEach { box ->
+            when (box.type) {
+                "stco" -> patchStco(newMoov, box, moov.end, delta)
+                "co64" -> patchCo64(newMoov, box, moov.end, delta)
+            }
+        }
+        Splice(moov.offset, moov.end, newMoov)
+    }.getOrNull()
+
+    /** The boxes filling [start] until [end], or null when they don't account for it. */
+    private fun childrenOf(bytes: ByteArray, start: Int, end: Int): List<BoxRef>? {
+        val boxes = parseBoxes(bytes, start, end)
+        val covered = boxes.lastOrNull()?.end ?: start
+        // QuickTime ends a `udta` with four zero bytes, so a short tail is
+        // allowed; anything longer is a box this couldn't read.
+        return boxes.takeIf { end - covered < 8 }
+    }
+
+    private fun rebuiltUdta(bytes: ByteArray, udta: BoxRef?, items: List<Pair<String, ByteArray>>): ByteArray? {
+        if (udta == null) return udtaAtom(metaAtom(ilstAtom(items.map { it.second })))
+        val children = childrenOf(bytes, udta.contentOffset, udta.end) ?: return null
+        val meta = children.firstOrNull { it.type == "meta" }
+        val newMeta = rebuiltMeta(bytes, meta, items) ?: return null
+        val payload = java.io.ByteArrayOutputStream()
+        children.forEach { child ->
+            if (child === meta) payload.write(newMeta) else payload.write(bytes, child.offset, child.size)
+        }
+        if (meta == null) payload.write(newMeta)
+        return box("udta", payload.toByteArray())
+    }
+
+    private fun rebuiltMeta(bytes: ByteArray, meta: BoxRef?, items: List<Pair<String, ByteArray>>): ByteArray? {
+        if (meta == null) return metaAtom(ilstAtom(items.map { it.second }))
+        // `meta` is a FullBox, with four bytes of version and flags before its
+        // children, except in files QuickTime wrote, where `hdlr` comes first.
+        val bare = meta.contentOffset + 8 <= meta.end &&
+            String(bytes, meta.contentOffset + 4, 4, Charsets.ISO_8859_1) == "hdlr"
+        val prefix = if (bare) 0 else 4
+        if (meta.contentOffset + prefix > meta.end) return null
+        val children = childrenOf(bytes, meta.contentOffset + prefix, meta.end) ?: return null
+        // Only iTunes-style metadata names its items by type. QuickTime's
+        // `mdta` numbers them against a key table, which this doesn't write.
+        val hdlr = children.firstOrNull { it.type == "hdlr" }
+        if (hdlr != null) {
+            if (hdlr.contentOffset + 12 > hdlr.end) return null
+            if (String(bytes, hdlr.contentOffset + 8, 4, Charsets.ISO_8859_1) != "mdir") return null
+        }
+        val ilst = children.firstOrNull { it.type == "ilst" }
+        val replaced = items.map { it.first }.toSet()
+        val cover = items.filter { it.first == "covr" }.map { it.second }
+        val kept = ilst?.let { childrenOf(bytes, it.contentOffset, it.end) ?: return null }.orEmpty()
+            .filterNot { it.type in replaced }
+            .map { bytes.copyOfRange(it.offset, it.end) }
+        val newIlst = ilstAtom(items.filter { it.first != "covr" }.map { it.second } + kept + cover)
+
+        val payload = java.io.ByteArrayOutputStream()
+        payload.write(bytes, meta.contentOffset, prefix)
+        if (hdlr == null) payload.write(hdlrAtom())
+        children.forEach { child ->
+            when {
+                child === ilst -> payload.write(newIlst)
+                // Padding, which exists to be spent on an edit like this one.
+                child.type == "free" -> Unit
+                else -> payload.write(bytes, child.offset, child.size)
+            }
+        }
+        if (ilst == null) payload.write(newIlst)
+        return box("meta", payload.toByteArray())
+    }
+
     private fun insert(bytes: ByteArray, moov: BoxRef, udta: ByteArray): ByteArray {
         val insertAt = moov.end
         val delta = udta.size

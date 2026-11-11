@@ -236,6 +236,13 @@
     <string name="song_fix_restore_details">Restore original details</string>
     <string name="song_fix_restore_details_detail">Back to “%1$s”</string>
     <string name="song_fix_details_restored">Original details restored</string>
+    <string name="song_fix_details_saved">Details updated and saved to the file</string>
+    <string name="song_fix_details_unsupported">Details updated in Dial. This type of file can\'t be changed.</string>
+    <string name="song_fix_details_denied">Details updated in Dial. It wasn\'t allowed to change the file.</string>
+    <string name="song_fix_details_failed">Details updated in Dial, but the file couldn\'t be changed.</string>
+    <string name="song_fix_write_to_file">Save song details to the file</string>
+    <string name="song_fix_write_to_file_on">“Find this song\'s details” also rewrites the title, artist, album and cover inside your music file. The old ones can\'t be brought back.</string>
+    <string name="song_fix_write_to_file_off">“Find this song\'s details” only changes what Dial shows. Your music files stay as they are.</string>
     <string name="animated_art_priority_caption">The first one a song has is what plays. Use the arrows to change the order.</string>
     <string name="animated_art_cover">Animated album art</string>
     <string name="animated_art_cover_detail">Motion covers from Apple Music, Tidal and the community index</string>

@@ -693,6 +693,15 @@ object AppSettings {
      */
     val replayGenres = MutableStateFlow(true)
 
+    /**
+     * Whether "Find this song's details" also rewrites the tags and cover
+     * inside the listener's own music file, see
+     * [FileRetagger][com.music.bitchord.download.FileRetagger]. Off by
+     * default: it changes a file that isn't this app's, and the old tags
+     * can't be brought back.
+     */
+    val writeSongFixToFile = MutableStateFlow(false)
+
     // ── Library ─────────────────────────────────────────────────────────────
 
     /** Hides short clips, recorder output and non-music formats from Local Music. */
@@ -1112,6 +1121,7 @@ object AppSettings {
         listenBrainzPrimaryArtistOnly.value = prefs.getBoolean(KEY_LISTENBRAINZ_PRIMARY_ARTIST_ONLY, false)
         spotifySpdcToken.value = prefs.getString(KEY_SPOTIFY_SPDC_TOKEN, "").orEmpty()
         replayGenres.value = prefs.getBoolean(KEY_REPLAY_GENRES, true)
+        writeSongFixToFile.value = prefs.getBoolean(KEY_WRITE_SONG_FIX_TO_FILE, false)
         filterNonMusicAudio.value = prefs.getBoolean(KEY_FILTER_NON_MUSIC_AUDIO, true)
         hideCombinedDuplicates.value = prefs.getBoolean(KEY_HIDE_COMBINED_DUPLICATES, true)
         duplicateChoices.value = DuplicateChoices(
@@ -2003,6 +2013,11 @@ object AppSettings {
         prefs.edit().putBoolean(KEY_REPLAY_GENRES, value).apply()
     }
 
+    fun setWriteSongFixToFile(value: Boolean) {
+        writeSongFixToFile.value = value
+        prefs.edit().putBoolean(KEY_WRITE_SONG_FIX_TO_FILE, value).apply()
+    }
+
     fun setHideCombinedDuplicates(value: Boolean) {
         hideCombinedDuplicates.value = value
         prefs.edit().putBoolean(KEY_HIDE_COMBINED_DUPLICATES, value).apply()
@@ -2394,6 +2409,7 @@ object AppSettings {
     private const val KEY_IGNORE_SHORT_LYRICS = "ignore_short_lyrics"
     private const val KEY_PAXSENIX_API_KEY = "paxsenix_api_key"
     private const val KEY_REPLAY_GENRES = "replay_genres"
+    private const val KEY_WRITE_SONG_FIX_TO_FILE = "write_song_fix_to_file"
     private const val KEY_FILTER_NON_MUSIC_AUDIO = "filter_non_music_audio"
     private const val KEY_HIDE_COMBINED_DUPLICATES = "hide_combined_duplicates"
     private const val KEY_DUPLICATES_KEPT_APART = "duplicates_kept_apart"

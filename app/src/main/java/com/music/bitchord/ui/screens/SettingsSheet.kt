@@ -4,6 +4,7 @@ import androidx.compose.material.icons.rounded.PlayCircleOutline
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.Inventory2
+import androidx.compose.material.icons.rounded.SaveAs
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Build
 import androidx.annotation.StringRes
@@ -1897,6 +1898,24 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { AppSettings.setReplayGenres(!replayGenres) },
+                )
+            }
+            val writeSongFixTitle = stringResource(R.string.song_fix_write_to_file)
+            row(writeSongFixTitle, "metadata", "tags", "song fix", "cover", "album art", "local", "file") {
+                val writeSongFix by AppSettings.writeSongFixToFile.collectAsStateWithLifecycle()
+                SettingsRow(
+                    icon = Icons.Rounded.SaveAs,
+                    title = writeSongFixTitle,
+                    subtitle = stringResource(
+                        if (writeSongFix) R.string.song_fix_write_to_file_on else R.string.song_fix_write_to_file_off,
+                    ),
+                    trailing = {
+                        IosSwitch(
+                            checked = writeSongFix,
+                            onCheckedChange = AppSettings::setWriteSongFixToFile,
+                        )
+                    },
+                    onClick = { AppSettings.setWriteSongFixToFile(!writeSongFix) },
                 )
             }
             val exportDataTitle = stringResource(R.string.export_data)

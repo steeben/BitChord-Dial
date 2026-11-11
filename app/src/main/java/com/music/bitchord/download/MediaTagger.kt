@@ -343,7 +343,7 @@ object MediaTagger {
     }
 
     /** Move [temp] over whatever [uri] names, leaving nothing behind either way. */
-    private fun replaceWith(context: Context, uri: Uri, temp: File) {
+    internal fun replaceWith(context: Context, uri: Uri, temp: File) {
         if (uri.scheme == "file") {
             val target = File(requireNotNull(uri.path))
             // Both live under the app's own data directory, so this is a rename
@@ -362,8 +362,31 @@ object MediaTagger {
         temp.delete()
     }
 
+    /**
+     * Writes [front] and then [uri] from [audioStart] on into [temp]: a file
+     * with a new front, for the formats whose tags sit ahead of the audio.
+     */
+    internal fun spliceFront(context: Context, uri: Uri, front: ByteArray, audioStart: Int, temp: File) {
+        temp.outputStream().buffered().use { sink ->
+            sink.write(front)
+            openInput(context, uri)?.use { source ->
+                source.skipFully(audioStart.toLong())
+                source.copyTo(sink, COPY_BUFFER)
+            } ?: error("could not reopen $uri")
+        }
+    }
+
+    /** The size of [uri] in bytes, or -1 when nothing says. */
+    internal fun lengthOf(context: Context, uri: Uri): Long = runCatching {
+        if (uri.scheme == "file") {
+            File(requireNotNull(uri.path)).length()
+        } else {
+            context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { it.length } ?: -1L
+        }
+    }.getOrDefault(-1L)
+
     /** At most [max] bytes from the front of [uri], or null if it can't be read. */
-    private fun readPrefix(context: Context, uri: Uri, max: Int): ByteArray? = runCatching {
+    internal fun readPrefix(context: Context, uri: Uri, max: Int): ByteArray? = runCatching {
         openInput(context, uri)?.use { source ->
             val out = ByteArrayOutputStream()
             val buffer = ByteArray(COPY_BUFFER)
@@ -436,7 +459,7 @@ object MediaTagger {
         )
     }
 
-    private fun readAll(context: Context, uri: Uri): ByteArray? = runCatching {
+    internal fun readAll(context: Context, uri: Uri): ByteArray? = runCatching {
         if (uri.scheme == "file") {
             File(requireNotNull(uri.path)).readBytes()
         } else {

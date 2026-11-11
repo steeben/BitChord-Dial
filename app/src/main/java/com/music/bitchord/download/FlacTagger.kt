@@ -82,6 +82,12 @@ object FlacTagger {
         cover: ByteArray?,
         coverMime: String,
         wordLyrics: String? = null,
+        /**
+         * For a file that isn't a fresh download (see [FileRetagger]): the
+         * comment fields this doesn't set, and the picture when [cover] is
+         * null, stay as the file had them.
+         */
+        keepExisting: Boolean = false,
     ): Rewrite? {
         if (!head.regionMatches(0, MAGIC)) return null
 
@@ -106,8 +112,14 @@ object FlacTagger {
         // there is not one to guess at.
         if (blocks.firstOrNull()?.type != TYPE_STREAMINFO) return null
 
+        val existing = if (keepExisting) {
+            blocks.firstOrNull { it.type == TYPE_VORBIS_COMMENT }
+                ?.let { existingComment(head, it.start, it.length) }
+        } else {
+            null
+        }
         val additions = listOfNotNull(
-            vorbisComment(title, artist, album, lyrics, wordLyrics)?.let { TYPE_VORBIS_COMMENT to it },
+            vorbisComment(title, artist, album, lyrics, wordLyrics, existing)?.let { TYPE_VORBIS_COMMENT to it },
             cover?.takeIf { it.isNotEmpty() }?.let { TYPE_PICTURE to picture(it, coverMime) },
         )
             // A payload past what three bytes of length can describe costs that
@@ -117,7 +129,8 @@ object FlacTagger {
             .filter { it.second.size <= MAX_BLOCK_BYTES }
         if (additions.isEmpty()) return null
 
-        val chain = blocks.filterNot { it.type in REPLACED }
+        val added = additions.map { it.first }.toSet()
+        val chain = blocks.filterNot { it.type in REPLACED && (!keepExisting || it.type == TYPE_PADDING || it.type in added) }
             .map { it.type to head.copyOfRange(it.start, it.start + it.length) } + additions
 
         val out = ByteArrayOutputStream(offset + additions.sumOf { it.second.size } + 64)
@@ -157,6 +170,7 @@ object FlacTagger {
         album: String?,
         lyrics: String?,
         wordLyrics: String?,
+        existing: Comment? = null,
     ): ByteArray? {
         val fields = buildList {
             if (title.isNotBlank()) add("TITLE=$title")
@@ -168,19 +182,57 @@ object FlacTagger {
             if (!wordLyrics.isNullOrBlank()) add("$WORD_LYRICS_FIELD=$wordLyrics")
         }
         if (fields.isEmpty()) return null
+        // Field names are case-insensitive, and a name may repeat (two
+        // `ARTIST` lines), so every old field of a name being set goes.
+        val set = fields.map { it.substringBefore('=').uppercase() }.toSet()
+        val carried = existing?.fields.orEmpty().filterNot { field ->
+            val name = field.indexOf('='.code.toByte()).takeIf { it >= 0 }
+                ?.let { String(field, 0, it, Charsets.UTF_8).uppercase() }
+            name in set
+        }
 
         val out = ByteArrayOutputStream()
-        val vendor = VENDOR.toByteArray(Charsets.UTF_8)
+        val vendor = existing?.vendor ?: VENDOR.toByteArray(Charsets.UTF_8)
         out.writeLe(vendor.size)
         out.write(vendor)
-        out.writeLe(fields.size)
+        out.writeLe(fields.size + carried.size)
         for (field in fields) {
             val encoded = field.toByteArray(Charsets.UTF_8)
             out.writeLe(encoded.size)
             out.write(encoded)
         }
+        for (field in carried) {
+            out.writeLe(field.size)
+            out.write(field)
+        }
         return out.toByteArray()
     }
+
+    /** A `VORBIS_COMMENT` block read back: who wrote it, and its `NAME=value` fields as stored. */
+    private class Comment(val vendor: ByteArray, val fields: List<ByteArray>)
+
+    /** Null when the block doesn't parse, which costs the old fields and nothing else. */
+    private fun existingComment(head: ByteArray, start: Int, length: Int): Comment? = runCatching {
+        val end = start + length
+        var pos = start
+        fun readLe(): Int {
+            check(pos + 4 <= end)
+            val value = (head[pos].toInt() and 0xFF) or ((head[pos + 1].toInt() and 0xFF) shl 8) or
+                ((head[pos + 2].toInt() and 0xFF) shl 16) or ((head[pos + 3].toInt() and 0xFF) shl 24)
+            pos += 4
+            return value
+        }
+        fun readBytes(): ByteArray {
+            val size = readLe()
+            check(size >= 0 && pos + size <= end)
+            return head.copyOfRange(pos, pos + size).also { pos += size }
+        }
+        val vendor = readBytes()
+        val count = readLe()
+        // Every field costs at least its four bytes of length.
+        check(count >= 0 && count <= (end - pos) / 4)
+        Comment(vendor, List(count) { readBytes() })
+    }.getOrNull()
 
     /**
      * A `PICTURE` payload holding [cover] as the front cover.
