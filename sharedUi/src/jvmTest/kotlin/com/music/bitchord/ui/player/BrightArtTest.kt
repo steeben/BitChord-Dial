@@ -43,17 +43,19 @@ class BrightArtTest {
 
     @Test
     fun lightThemeBandInkGoesDarkOverABrightBand() {
-        // A pale grey sleeve (0.6 to 0.75) is light ink on a scrim in the dark
+        // A pale grey sleeve (0.6 to 0.85) is light ink on a scrim in the dark
         // theme and dark ink in the light one.
-        assertEquals(false, bandInkIsDark(0.62f, wasDark = false))
-        assertEquals(true, bandInkIsDark(0.62f, wasDark = false, lightTheme = true))
-        assertEquals(true, bandInkIsDark(0.55f, wasDark = false, lightTheme = true))
-        // A mid-toned band keeps light ink there as well.
-        assertEquals(false, bandInkIsDark(0.54f, wasDark = false, lightTheme = true))
-        assertEquals(false, bandInkIsDark(0.30f, wasDark = false, lightTheme = true))
+        assertEquals(false, bandInkIsDark(0.84f, wasDark = false))
+        assertEquals(true, bandInkIsDark(0.84f, wasDark = false, lightTheme = true))
+        // So is a pastel one (about 0.5).
+        assertEquals(true, bandInkIsDark(0.50f, wasDark = false, lightTheme = true))
+        assertEquals(true, bandInkIsDark(0.42f, wasDark = false, lightTheme = true))
+        // A band on the dark side of the middle keeps light ink there as well.
+        assertEquals(false, bandInkIsDark(0.41f, wasDark = false, lightTheme = true))
+        assertEquals(false, bandInkIsDark(0.20f, wasDark = false, lightTheme = true))
         // And it holds across its own gap.
-        assertEquals(true, bandInkIsDark(0.45f, wasDark = true, lightTheme = true))
-        assertEquals(false, bandInkIsDark(0.44f, wasDark = true, lightTheme = true))
+        assertEquals(true, bandInkIsDark(0.34f, wasDark = true, lightTheme = true))
+        assertEquals(false, bandInkIsDark(0.33f, wasDark = true, lightTheme = true))
     }
 
     @Test
@@ -63,8 +65,26 @@ class BrightArtTest {
         assertEquals(0f, lightVeilAlpha(0.90f), 0.0001f)
         val mid = lightVeilAlpha(0.72f)
         assertTrue("mid was $mid", mid > 0.1f && mid < 0.4f)
-        assertEquals(0.44f, lightVeilAlpha(0.55f), 0.0001f)
-        assertEquals(0.44f, lightVeilAlpha(0.45f), 0.0001f)
+        assertEquals(0.56f, lightVeilAlpha(0.42f), 0.0001f)
+        assertEquals(0.56f, lightVeilAlpha(0.34f), 0.0001f)
+    }
+
+    @Test
+    fun inkReportNamesWhatDecided() {
+        assertEquals(
+            "Text dark (auto) · band 84% · cover 80% · light theme · scrim 0% · veil 4%",
+            playerInkReport(
+                dark = true, band = 0.84f, artLuminance = 0.80f, lightTheme = true,
+                forced = false, overClip = false, scrim = 0f, veil = 0.04f,
+            ),
+        )
+        assertEquals(
+            "Text light (clip) · band ? · cover ? · dark theme · scrim 36% · veil 0%",
+            playerInkReport(
+                dark = false, band = null, artLuminance = null, lightTheme = false,
+                forced = false, overClip = true, scrim = 0.36f, veil = 0f,
+            ),
+        )
     }
 
     @Test

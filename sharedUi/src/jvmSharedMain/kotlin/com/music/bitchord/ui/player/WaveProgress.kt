@@ -149,6 +149,33 @@ internal val LocalPlayerInkVeil = compositionLocalOf { 0f }
 internal val LocalPlayerControlsVeil = compositionLocalOf { 0f }
 
 /**
+ * What [ProvidePlayerInk] decided and from what, for Stats for nerds: the band it read,
+ * the theme it was told, and the text and scrim that came of them. Null outside the player.
+ */
+internal val LocalPlayerInkReport = compositionLocalOf<String?> { null }
+
+/** The line [LocalPlayerInkReport] carries. */
+internal fun playerInkReport(
+    dark: Boolean,
+    band: Float?,
+    artLuminance: Float?,
+    lightTheme: Boolean,
+    forced: Boolean,
+    overClip: Boolean,
+    scrim: Float,
+    veil: Float,
+): String {
+    fun pct(value: Float?) = value?.let { "${(it * 100f).roundToInt()}%" } ?: "?"
+    val why = when {
+        forced -> "picked"
+        overClip -> "clip"
+        else -> "auto"
+    }
+    return "Text ${if (dark) "dark" else "light"} ($why) · band ${pct(band)} · cover ${pct(artLuminance)} · " +
+        "${if (lightTheme) "light" else "dark"} theme · scrim ${pct(scrim)} · veil ${pct(veil)}"
+}
+
+/**
  * What the player's buttons sit on that their glass does not see: the dark scrim under
  * light ink or the white veil under dark ink, as a colour to lay under their own fill
  * (see [PlayerGlass.surface]'s underlay). Without it a button showed the bright sleeve
@@ -295,7 +322,18 @@ fun ProvidePlayerInk(
         animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing),
         label = "playerControlsVeil",
     )
+    val report = playerInkReport(
+        dark = dark,
+        band = verdictBand,
+        artLuminance = artLuminance,
+        lightTheme = lightTheme,
+        forced = conditions?.forcedDark != null,
+        overClip = conditions?.overClip == true,
+        scrim = scrimTarget,
+        veil = veilTarget,
+    )
     CompositionLocalProvider(
+        LocalPlayerInkReport provides report,
         LocalPlayerInkVeil provides veil,
         LocalPlayerControlsVeil provides controlsVeil,
         LocalPlayerInk provides lerp(ink, pole.copy(alpha = ink.alpha), lift),
@@ -365,21 +403,22 @@ private const val BAND_DARK_FROM = 0.90f
 private const val BAND_LIGHT_BELOW = 0.80f
 
 /**
- * In the light theme, where dark ink takes over: a bright band (an sRGB grey of about
- * 196), not only a near white one. A light app with a pale sleeve should stay light
- * rather than be darkened until white text reads; the veil ([lightVeilAlpha]) makes up
- * the brightness the band is short of.
+ * In the light theme, where dark ink takes over: any band on the bright side of the
+ * middle (an sRGB grey of about 174), a pastel cover as much as a white one. A light app
+ * with a pale sleeve should stay light rather than be darkened until white text reads;
+ * the veil ([lightVeilAlpha]) makes up the brightness the band is short of.
  */
-private const val LIGHT_THEME_BAND_DARK_FROM = 0.55f
+private const val LIGHT_THEME_BAND_DARK_FROM = 0.42f
 
 /** ...and where it hands back to light ink there. */
-private const val LIGHT_THEME_BAND_LIGHT_BELOW = 0.45f
+private const val LIGHT_THEME_BAND_LIGHT_BELOW = 0.34f
 
 /**
  * The most white the veil lays down. Over a band at [LIGHT_THEME_BAND_DARK_FROM] it
- * leaves the dark ink at about 4.5:1, the contrast body text is asked for.
+ * leaves the dark ink at about 4.5:1, the contrast body text is asked for. As strong as
+ * the dark scrim is the other way ([CONTROLS_SCRIM_MAX]).
  */
-private const val LIGHT_VEIL_MAX = 0.44f
+private const val LIGHT_VEIL_MAX = 0.56f
 
 /** Band brightness below which light ink needs no scrim at all (an sRGB grey of about 125). */
 private const val SCRIM_FROM = 0.20f
