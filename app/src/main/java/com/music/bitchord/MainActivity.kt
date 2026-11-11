@@ -3931,8 +3931,8 @@ private fun BitChordApp(
                                     )
                             dialZoom -> (
                                 (
-                                    fadeIn(tween(DialLaunch.CLOSE_MS, easing = LinearOutSlowInEasing)) +
-                                        scaleIn(tween(DialLaunch.CLOSE_MS, easing = FastOutSlowInEasing), initialScale = DIAL_HOME_SINK)
+                                    fadeIn(tween(DialLaunch.CLOSE_UNDER_MS, easing = LinearOutSlowInEasing)) +
+                                        scaleIn(tween(DialLaunch.CLOSE_UNDER_MS, easing = FastOutSlowInEasing), initialScale = DIAL_HOME_SINK)
                                     ) togetherWith ExitTransition.None
                                 ).apply { targetContentZIndex = -1f }
                             settingsStep && !reduceAnimationSetting -> {
