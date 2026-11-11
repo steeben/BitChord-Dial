@@ -70,24 +70,6 @@ class BrightArtTest {
     }
 
     @Test
-    fun inkReportNamesWhatDecided() {
-        assertEquals(
-            "Text dark (auto) · band 84% · cover 80% · light theme · scrim 0% · veil 4%",
-            playerInkReport(
-                dark = true, band = 0.84f, artLuminance = 0.80f, lightTheme = true,
-                forced = false, overClip = false, scrim = 0f, veil = 0.04f,
-            ),
-        )
-        assertEquals(
-            "Text light (clip) · band ? · cover ? · dark theme · scrim 36% · veil 0%",
-            playerInkReport(
-                dark = false, band = null, artLuminance = null, lightTheme = false,
-                forced = false, overClip = true, scrim = 0.36f, veil = 0f,
-            ),
-        )
-    }
-
-    @Test
     fun inkStaysLightOverAClipUnlessPicked() {
         // Over a clip: light, even when the band or the sleeve says dark.
         assertEquals(false, playerInkDark(null, overClip = true, bandDark = true, artLuminance = 0.9f))

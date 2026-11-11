@@ -422,18 +422,6 @@ internal fun PlayerNerdStats(song: Song, modifier: Modifier = Modifier) {
                 textAlign = TextAlign.Center,
             )
         }
-        // How the player came to its light or dark text: the one thing
-        // about its look that can't be told from a screenshot.
-        LocalPlayerInkReport.current?.let { report ->
-            Text(
-                text = report,
-                style = nerdStyle,
-                color = playerInk(alpha = 0.65f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-            )
-        }
         // Only when Automix is actually switched on: otherwise this would
         // report on analysis nothing is going to use, which is noise rather
         // than a stat.

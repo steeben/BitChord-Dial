@@ -149,33 +149,6 @@ internal val LocalPlayerInkVeil = compositionLocalOf { 0f }
 internal val LocalPlayerControlsVeil = compositionLocalOf { 0f }
 
 /**
- * What [ProvidePlayerInk] decided and from what, for Stats for nerds: the band it read,
- * the theme it was told, and the text and scrim that came of them. Null outside the player.
- */
-internal val LocalPlayerInkReport = compositionLocalOf<String?> { null }
-
-/** The line [LocalPlayerInkReport] carries. */
-internal fun playerInkReport(
-    dark: Boolean,
-    band: Float?,
-    artLuminance: Float?,
-    lightTheme: Boolean,
-    forced: Boolean,
-    overClip: Boolean,
-    scrim: Float,
-    veil: Float,
-): String {
-    fun pct(value: Float?) = value?.let { "${(it * 100f).roundToInt()}%" } ?: "?"
-    val why = when {
-        forced -> "picked"
-        overClip -> "clip"
-        else -> "auto"
-    }
-    return "Text ${if (dark) "dark" else "light"} ($why) · band ${pct(band)} · cover ${pct(artLuminance)} · " +
-        "${if (lightTheme) "light" else "dark"} theme · scrim ${pct(scrim)} · veil ${pct(veil)}"
-}
-
-/**
  * What the player's buttons sit on that their glass does not see: the dark scrim under
  * light ink or the white veil under dark ink, as a colour to lay under their own fill
  * (see [PlayerGlass.surface]'s underlay). Without it a button showed the bright sleeve
@@ -322,18 +295,7 @@ fun ProvidePlayerInk(
         animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing),
         label = "playerControlsVeil",
     )
-    val report = playerInkReport(
-        dark = dark,
-        band = verdictBand,
-        artLuminance = artLuminance,
-        lightTheme = lightTheme,
-        forced = conditions?.forcedDark != null,
-        overClip = conditions?.overClip == true,
-        scrim = scrimTarget,
-        veil = veilTarget,
-    )
     CompositionLocalProvider(
-        LocalPlayerInkReport provides report,
         LocalPlayerInkVeil provides veil,
         LocalPlayerControlsVeil provides controlsVeil,
         LocalPlayerInk provides lerp(ink, pole.copy(alpha = ink.alpha), lift),
