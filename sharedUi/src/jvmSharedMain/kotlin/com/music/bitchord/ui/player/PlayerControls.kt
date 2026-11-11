@@ -374,16 +374,35 @@ internal fun PlaybackQualityLabel(
 }
 
 /**
- * Stats for nerds, among the controls where the volume bar is: the measured
- * stream, and under it what Automix's analysis is doing. Nothing at all while
- * the setting is off.
+ * The measured stream as Stats for nerds words it: codec, bit depth, sample
+ * rate, bitrate, channels. Null while the setting is off, and until there is
+ * something measured to state. Shown by [OutputCaption] in place of the
+ * output's name.
+ */
+@Composable
+internal fun rememberNerdStatsLine(): String? {
+    val showNerdStats by PlayerSettings.showNerdStats.collectAsStateWithLifecycle()
+    if (!showNerdStats) return null
+    val nerdStats by NerdStats.current.collectAsStateWithLifecycle()
+    return nerdStats?.describe()
+}
+
+/**
+ * The Automix half of Stats for nerds, among the controls where the volume bar
+ * is: what Automix's analysis is doing. The measured stream is not here: it
+ * takes the output caption's place at the foot of the player, see
+ * [rememberNerdStatsLine]. Nothing at all while the setting or Automix is off.
  */
 @Composable
 internal fun PlayerNerdStats(song: Song, modifier: Modifier = Modifier) {
     val showNerdStats by PlayerSettings.showNerdStats.collectAsStateWithLifecycle()
     if (!showNerdStats) return
-    val nerdStats by NerdStats.current.collectAsStateWithLifecycle()
     val smartFadeOn by PlayerSettings.smartFadeEnabled.collectAsStateWithLifecycle()
+    // Only when Automix is actually switched on: otherwise this would report
+    // on analysis nothing is going to use, which is noise rather than a stat.
+    // Returned from rather than drawn empty, so the padding the caller gives
+    // this takes no room either.
+    if (!smartFadeOn) return
     val smartAnalysis by PlayerSettings.smartAnalysis.collectAsStateWithLifecycle()
     val automixDetail by PlayerSettings.automixDetail.collectAsStateWithLifecycle()
     // A party doesn't mix, and doesn't analyse for one either — see
@@ -412,53 +431,36 @@ internal fun PlayerNerdStats(song: Song, modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier,
     ) {
-        nerdStats?.describe()?.let { stats ->
-            Text(
-                text = stats,
-                style = nerdStyle,
-                color = playerInk(alpha = 0.65f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-            )
-        }
-        // Only when Automix is actually switched on: otherwise this would
-        // report on analysis nothing is going to use, which is noise rather
-        // than a stat.
-        if (smartFadeOn) {
-            Text(
-                // Both sides always named, even when they agree, so the line
-                // reads the same way every time and the eye can find the half
-                // it wants without re-parsing the sentence.
-                text = when {
-                    // Ahead of the video case because it is the broader one:
-                    // in a party nothing is analysed for any song, video or
-                    // not, so naming the video limitation there would describe
-                    // a rule that is not the one in force.
-                    inParty -> stringResource(Res.string.automix_stopped_in_party)
-                    song.isVideoOrigin ->
-                        stringResource(Res.string.automix_not_supported_video)
-                    // The detailed line once the controller has one: each song's
-                    // grid, then the planned mix — the loops and what cleared them.
-                    automixDetail != null -> automixDetail!!
-                    else -> stringResource(
-                        Res.string.automix_analysis_status,
-                        smartAnalysis.current.localizedLabel(),
-                        smartAnalysis.next.localizedLabel(),
-                    )
-                },
-                style = nerdStyle,
-                // Dimmer than the measured line above it: that one describes
-                // the audio, this one describes the app, and the ranking
-                // should show.
-                color = playerInk(alpha = 0.5f),
-                // The detailed line runs long on a phone: a second line rather
-                // than an ellipsis through the part that says what the mix is.
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-            )
-        }
+        Text(
+            // Both sides always named, even when they agree, so the line
+            // reads the same way every time and the eye can find the half
+            // it wants without re-parsing the sentence.
+            text = when {
+                // Ahead of the video case because it is the broader one:
+                // in a party nothing is analysed for any song, video or
+                // not, so naming the video limitation there would describe
+                // a rule that is not the one in force.
+                inParty -> stringResource(Res.string.automix_stopped_in_party)
+                song.isVideoOrigin ->
+                    stringResource(Res.string.automix_not_supported_video)
+                // The detailed line once the controller has one: each song's
+                // grid, then the planned mix — the loops and what cleared them.
+                automixDetail != null -> automixDetail!!
+                else -> stringResource(
+                    Res.string.automix_analysis_status,
+                    smartAnalysis.current.localizedLabel(),
+                    smartAnalysis.next.localizedLabel(),
+                )
+            },
+            style = nerdStyle,
+            // Dim: this line describes the app rather than the audio.
+            color = playerInk(alpha = 0.5f),
+            // The detailed line runs long on a phone: a second line rather
+            // than an ellipsis through the part that says what the mix is.
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -1246,7 +1248,8 @@ private fun PillSegment(
 
 /**
  * The line under the transport: normally the output, and the party's name
- * whenever there is one.
+ * whenever there is one. With Stats for nerds on, the measured stream is
+ * stated here instead of the output's name (the party's name still wins).
  *
  * A party overrides the output rather than sitting beside it because the two
  * are not the same kind of fact. "Kushagra's Phone" answers which speaker in
@@ -1264,6 +1267,8 @@ internal fun OutputCaption(
     val haptics = rememberHaptics()
     val badge = rememberPartyBadge()
     val outputName = rememberAudioOutputName(accountName)
+    // Not in a party: there the line names the party, not the output.
+    val statsLine = rememberNerdStatsLine().takeUnless { badge.inParty }
     val outputFormat by PlayerPlatform.host.outputFormat.collectAsStateWithLifecycle()
     // The shine means one thing: the DAC has this track to itself, bit-perfect
     // or at the most the DAC can take. Anything weaker — a hi-res stream on a
@@ -1275,12 +1280,24 @@ internal fun OutputCaption(
         ?.let { stringResource(Res.string.listen_together_jam, it) }
         ?: stringResource(Res.string.listen_together_jam_unnamed)
     val captionModifier = Modifier
-        .fillMaxWidth(0.65f)
+        // The stats run longer than a device's name: codec, depth, rate,
+        // bitrate and channels have to fit on the one line.
+        .fillMaxWidth(if (statsLine != null) 0.92f else 0.65f)
         .clickable {
             haptics.play(Haptic.Tap)
             if (badge.inParty) onOpenMembers() else onOpenOutput()
         }
-    if (!badge.inParty && (outputFormat.bitPerfect || outputFormat.dacLimited)) {
+    if (statsLine != null) {
+        Text(
+            text = statsLine,
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+            color = playerInk(alpha = 0.65f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = captionModifier,
+        )
+    } else if (!badge.inParty && (outputFormat.bitPerfect || outputFormat.dacLimited)) {
         ShimmerText(
             text = outputName,
             style = MaterialTheme.typography.labelSmall.copy(

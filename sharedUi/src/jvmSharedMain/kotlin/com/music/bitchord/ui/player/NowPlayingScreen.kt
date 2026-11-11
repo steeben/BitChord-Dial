@@ -3039,8 +3039,10 @@ fun NowPlayingScreen(
                                 compact = compact,
                             )
                         },
-                        // Stats for nerds sit where the volume bar does: above
-                        // it when it is shown, in its place when it is not.
+                        // The Automix line of Stats for nerds sits where the
+                        // volume bar does: above it when it is shown, in its
+                        // place when it is not. The codec line is the output
+                        // caption's, under the action row.
                         volume = if (hideVolumeBar && !showNerdStats) {
                             null
                         } else {
@@ -5141,10 +5143,11 @@ fun NowPlayingScreen(
 
             Spacer(Modifier.height(12.dp + controlSpread / 2).collapseBy { deckCompact() })
 
-            // Stats for nerds sit where the volume bar does: between the
-            // transport and the bar when it is shown, in its place when it is
-            // not. They fold away with the bar when the queue comes up, and
-            // take no room at all while the setting is off.
+            // The Automix line of Stats for nerds sits where the volume bar
+            // does: between the transport and the bar when it is shown, in its
+            // place when it is not. It folds away with the bar when the queue
+            // comes up, and takes no room at all while the setting or Automix
+            // is off. The codec line is the output caption's, at the foot.
             Box(
                 Modifier.fillMaxWidth().collapseBy { deckCompact() },
                 contentAlignment = Alignment.Center,
