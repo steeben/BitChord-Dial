@@ -264,6 +264,8 @@ internal fun SpeedDialShelf(
     /** Tiles (by video or browse id) tagged as new releases, and the tag's words. */
     newReleaseIds: Set<String> = emptySet(),
     newReleaseLabel: String = "",
+    /** Whether each tile is tagged with the app it is from: the Mixes Dial's Spotify and YouTube Music marks. */
+    sourceTags: Boolean = false,
 ) {
     if (shelf.items.isEmpty()) return
     val perPage = SPEED_DIAL_COLUMNS * rows
@@ -604,6 +606,7 @@ internal fun SpeedDialShelf(
                                         spot = tileSpots.getOrPut(id) { TileSpot() },
                                         pinned = pinnedTile && showPinIcon,
                                         newRelease = if (id in newReleaseIds) newReleaseLabel else null,
+                                        source = if (sourceTags) mixSourceOf(item) else null,
                                         showLabel = showLabels != (id in labelOverrides),
                                         current = currentSong != null && item.videoId == currentSong.videoId,
                                         isPlaying = isPlaying,
@@ -646,6 +649,7 @@ internal fun SpeedDialShelf(
                             item = item,
                             pinned = showPinIcon,
                             newRelease = if (liftedId in newReleaseIds) newReleaseLabel else null,
+                            source = if (sourceTags) mixSourceOf(item) else null,
                             showLabel = showLabels != (liftedId in labelOverrides),
                             current = false,
                             isPlaying = false,
@@ -835,6 +839,8 @@ private fun SpeedDialTile(
     pinned: Boolean,
     /** The "new release" tag's words, for a tile that carries it; null for none. */
     newRelease: String? = null,
+    /** The app the tile is from, for a tile that carries its tag; null for none. */
+    source: MixSource? = null,
     showLabel: Boolean = true,
     current: Boolean,
     isPlaying: Boolean,
@@ -900,7 +906,11 @@ private fun SpeedDialTile(
                     .dialTileLabelPadding(),
             )
         }
-        if (newRelease != null) NewReleaseTag(newRelease, Modifier.align(Alignment.TopStart))
+        if (source != null) {
+            MixSourceTag(source, Modifier.align(Alignment.TopStart))
+        } else if (newRelease != null) {
+            NewReleaseTag(newRelease, Modifier.align(Alignment.TopStart))
+        }
         if (pinned) {
             Icon(
                 imageVector = BitChordIcons.Pin,

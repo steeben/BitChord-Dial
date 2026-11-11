@@ -9,6 +9,46 @@ import kotlin.test.assertNull
 class SpotifyLibraryTest {
     private val json = Json { ignoreUnknownKeys = true }
 
+    private fun card(id: String, name: String, type: String = "Playlist") =
+        """{"uri":"spotify:playlist:$id","content":{"__typename":"PlaylistResponseWrapper","data":{
+          "__typename":"$type","uri":"spotify:playlist:$id","name":"$name",
+          "images":{"items":[{"sources":[{"url":"https://img/$id"}]}]},
+          "ownerV2":{"data":{"name":"Spotify"}}}}}"""
+
+    @Test
+    fun topMixesAreTheHomeShelfByUriOrTitle() {
+        fun home(uri: String, title: String) = json.parseToJsonElement(
+            """
+            {"data":{"home":{"sectionContainer":{"sections":{"items":[
+              {"uri":"spotify:section:other","data":{"title":{"transformedLabel":"Recommended radios"}},
+               "sectionItems":{"items":[${card("r1", "Radio X")}]}},
+              {"uri":"$uri","data":{"title":{"transformedLabel":"$title"}},
+               "sectionItems":{"items":[${card("m1", "Chill Mix")},${card("37i9dQZF1EYkqdzj48dyYq", "DJ")},
+                 ${card("a1", "An album", "Album")},${card("m2", "Pop Mix")}]}}
+            ]}}}}}
+            """.trimIndent(),
+        ).jsonObject
+        val byUri = parseHomeTopMixes(home(SpotifyLibrary.TOP_MIXES_SECTION, "Tes mixes"))
+        assertEquals(listOf("m1", "m2"), byUri.map { it.id })
+        assertEquals("Chill Mix", byUri.first().name)
+        assertEquals("Spotify", byUri.first().owner)
+        assertEquals("https://img/m1", byUri.first().imageUrl)
+        assertEquals(listOf("m1", "m2"), parseHomeTopMixes(home("spotify:section:moved", "Your top mixes")).map { it.id })
+        assertEquals(emptyList(), parseHomeTopMixes(home("spotify:section:moved", "Something else")))
+    }
+
+    @Test
+    fun aShelfAskedForOnItsOwnGivesItsPlaylists() {
+        val root = json.parseToJsonElement(
+            """
+            {"data":{"homeSections":{"sections":[
+              {"sectionItems":{"totalCount":2,"items":[${card("m1", "Chill Mix")},${card("m1", "Chill Mix")},${card("m2", "Pop Mix")}]}}
+            ]}}}
+            """.trimIndent(),
+        ).jsonObject
+        assertEquals(listOf("m1", "m2"), parseHomeSectionPlaylists(root).map { it.id })
+    }
+
     @Test
     fun playlistsIncludeFolderLeaves() {
         val root = json.parseToJsonElement(

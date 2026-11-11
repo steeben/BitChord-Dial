@@ -66,6 +66,18 @@ object SpotifyLibrary {
     private const val LIKED = "087278b20b743578a6262c2b0b4bcd20d879c503cc359a2285baf083ef944240"
     /** The web player's own search page query, the one Meld reads Spotify's catalogue through. */
     private const val SEARCH = "4801118d4a100f756e833d33984436a3899cff359c532f8fd3aaf174b60b3b49"
+    /**
+     * The web player's home page query, newest first: Spotify retires these
+     * hashes now and then, so an older one is tried when the newest is refused.
+     */
+    private val HOME = listOf(
+        "5fb7da7a03ee2776c0670856609cb85a189a3cecc36cc160b91cde79063b9cf1",
+        "23e37f2e58d82d567f27080101d36609009d8c3676457b1086cb0acc55b72a5d",
+    )
+    /** One shelf of the home page on its own, for when the whole page can't be read. */
+    private const val HOME_SECTION = "eb3fba2d388cf4fc4d696b1757a58584e9538a3b515ea742e9cc9465807340be"
+    /** Home's "Your top mixes" shelf: the same uri for every account. */
+    internal const val TOP_MIXES_SECTION = "spotify:section:0JQ5DAnM3wGh0gz1MXnu89"
     /** The phone's canvas client sent this one; kept so its requests look unchanged. */
     private const val USER_AGENT =
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) " +
@@ -83,6 +95,40 @@ object SpotifyLibrary {
         // always offered first rather than depending on it turning up there.
         listOf(SpotifyPlaylist(id = LIKED_ID, name = "Liked Songs", owner = null, imageUrl = LIKED_COVER)) +
             SpotifyPlayedList.withoutPlayedList(libraryPlaylists())
+    }
+
+    /**
+     * The playlists on Home's "Your top mixes" shelf, in Spotify's order:
+     * the genre, mood, decade and artist mixes it made for this account,
+     * whether or not they are saved to the library. Read from the home page,
+     * and failing that from the shelf's own query.
+     */
+    suspend fun topMixes(): List<SpotifyPlaylist> = withContext(Dispatchers.IO) {
+        val headers = authHeaders()
+        val timeZone = java.util.TimeZone.getDefault().id
+        val homeVariables = buildJsonObject {
+            put("homeEndUserIntegration", "INTEGRATION_WEB_PLAYER")
+            put("timeZone", timeZone)
+            put("sp_t", "")
+            put("facet", "")
+            put("sectionItemsLimit", 20)
+            put("includeEpisodeContentRatingsV2", false)
+        }
+        val fromHome = HOME.firstNotNullOfOrNull { hash ->
+            runCatching { parseHomeTopMixes(gql("home", hash, homeVariables, headers)) }
+                .getOrNull()?.takeIf { it.isNotEmpty() }
+        }
+        fromHome ?: run {
+            val variables = buildJsonObject {
+                put("uri", TOP_MIXES_SECTION)
+                put("country", java.util.Locale.getDefault().country)
+                put("timeZone", timeZone)
+                put("sp_t", "")
+                put("sectionItemsLimit", 20)
+                put("sectionItemsOffset", 0)
+            }
+            parseHomeSectionPlaylists(gql("homeSection", HOME_SECTION, variables, headers))
+        }
     }
 
     /** The id of the library's playlist called [name], if there is one. */
@@ -290,6 +336,45 @@ internal fun parsePlaylistPage(root: JsonObject): Triple<List<SpotifyPlaylist>, 
     }
     return Triple(items, library.int("totalCount") ?: rawItems.size, rawItems.size)
 }
+
+/** Spotify's DJ: a card on the mixes shelf that is not a playlist with songs to list. */
+private const val SPOTIFY_DJ_URI = "spotify:playlist:37i9dQZF1EYkqdzj48dyYq"
+
+/** The "Your top mixes" shelf of a home page response: found by its uri, or failing that its title. */
+internal fun parseHomeTopMixes(root: JsonObject): List<SpotifyPlaylist> {
+    val sections = root.obj("data")?.obj("home")?.obj("sectionContainer")?.obj("sections")?.arr("items").orEmpty()
+        .map { it.jsonObject }
+    val shelf = sections.firstOrNull { it.str("uri") == SpotifyLibrary.TOP_MIXES_SECTION }
+        ?: sections.firstOrNull { section ->
+            val title = section.obj("data")?.obj("title")
+            val text = title?.str("transformedLabel") ?: title?.str("translatedBaseText") ?: title?.str("text")
+            text?.trim().equals("Your top mixes", ignoreCase = true)
+        }
+    return shelf?.let(::sectionPlaylists).orEmpty()
+}
+
+/** The playlists of a home shelf asked for on its own. */
+internal fun parseHomeSectionPlaylists(root: JsonObject): List<SpotifyPlaylist> =
+    root.obj("data")?.obj("homeSections")?.arr("sections").orEmpty()
+        .flatMap { sectionPlaylists(it.jsonObject) }
+        .distinctBy { it.id }
+
+/** A home shelf's playlist cards; albums, artists and the DJ are passed over. */
+private fun sectionPlaylists(section: JsonObject): List<SpotifyPlaylist> =
+    section.obj("sectionItems")?.arr("items").orEmpty().mapNotNull { element ->
+        val data = element.jsonObject.obj("content")?.obj("data") ?: return@mapNotNull null
+        if (data.str("__typename") != "Playlist") return@mapNotNull null
+        val uri = data.str("uri") ?: return@mapNotNull null
+        if (uri == SPOTIFY_DJ_URI || !uri.startsWith(SPOTIFY_PAGE_PREFIX)) return@mapNotNull null
+        val name = data.str("name").orEmpty()
+        if (name.isBlank()) return@mapNotNull null
+        SpotifyPlaylist(
+            id = uri.substringAfterLast(":"),
+            name = name,
+            owner = data.obj("ownerV2")?.obj("data")?.str("name"),
+            imageUrl = coverUrl(data.obj("images")),
+        )
+    }
 
 /** The tracks kept, the playlist's total, and how many entries the page held before filtering. */
 internal fun parseTrackPage(root: JsonObject): Triple<List<SpotifyTrack>, Int, Int> {
