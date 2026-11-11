@@ -4,15 +4,42 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
 
+/** The colours the home-screen icon comes in. */
+enum class AppIconColor(val labelRes: Int) {
+    Red(R.string.app_icon_color_red),
+    Blue(R.string.app_icon_color_blue),
+    Green(R.string.app_icon_color_green),
+    Pink(R.string.app_icon_color_pink),
+    Orange(R.string.app_icon_color_orange),
+    Purple(R.string.app_icon_color_purple),
+    Yellow(R.string.app_icon_color_yellow),
+    Mono(R.string.app_icon_color_mono),
+}
+
 /**
  * The home-screen icon choices. Each is an `<activity-alias>` in the manifest
  * carrying the launcher intent filter; exactly one is enabled at a time.
+ * Every [color] comes as a pair, a dark icon and a bright one.
  */
-enum class AppIcon(val alias: String, val iconRes: Int, val labelRes: Int) {
+enum class AppIcon(val alias: String, val iconRes: Int, val color: AppIconColor, val dark: Boolean) {
     // Dark is the one that ships enabled. Bright keeps the old Default alias
     // name, so an install that had picked it explicitly keeps it.
-    Dark("LauncherDark", R.mipmap.ic_launcher_dark, R.string.app_icon_dark),
-    Bright("LauncherDefault", R.mipmap.ic_launcher, R.string.app_icon_bright);
+    Dark("LauncherDark", R.mipmap.ic_launcher_dark, AppIconColor.Red, true),
+    Bright("LauncherDefault", R.mipmap.ic_launcher, AppIconColor.Red, false),
+    BlueDark("LauncherBlueDark", R.mipmap.ic_launcher_blue_dark, AppIconColor.Blue, true),
+    Blue("LauncherBlue", R.mipmap.ic_launcher_blue, AppIconColor.Blue, false),
+    GreenDark("LauncherGreenDark", R.mipmap.ic_launcher_green_dark, AppIconColor.Green, true),
+    Green("LauncherGreen", R.mipmap.ic_launcher_green, AppIconColor.Green, false),
+    PinkDark("LauncherPinkDark", R.mipmap.ic_launcher_pink_dark, AppIconColor.Pink, true),
+    Pink("LauncherPink", R.mipmap.ic_launcher_pink, AppIconColor.Pink, false),
+    OrangeDark("LauncherOrangeDark", R.mipmap.ic_launcher_orange_dark, AppIconColor.Orange, true),
+    Orange("LauncherOrange", R.mipmap.ic_launcher_orange, AppIconColor.Orange, false),
+    PurpleDark("LauncherPurpleDark", R.mipmap.ic_launcher_purple_dark, AppIconColor.Purple, true),
+    Purple("LauncherPurple", R.mipmap.ic_launcher_purple, AppIconColor.Purple, false),
+    YellowDark("LauncherYellowDark", R.mipmap.ic_launcher_yellow_dark, AppIconColor.Yellow, true),
+    Yellow("LauncherYellow", R.mipmap.ic_launcher_yellow, AppIconColor.Yellow, false),
+    MonoDark("LauncherMonoDark", R.mipmap.ic_launcher_mono_dark, AppIconColor.Mono, true),
+    Mono("LauncherMono", R.mipmap.ic_launcher_mono, AppIconColor.Mono, false);
 
     // The aliases are declared against the namespace, not the flavour's
     // applicationId, so the class name is fixed while the package is not.
@@ -20,6 +47,10 @@ enum class AppIcon(val alias: String, val iconRes: Int, val labelRes: Int) {
         ComponentName(context.packageName, "com.music.bitchord.$alias")
 
     companion object {
+        /** The icon of [color] in its dark or bright version. */
+        fun of(color: AppIconColor, dark: Boolean): AppIcon =
+            entries.first { it.color == color && it.dark == dark }
+
         fun current(context: Context): AppIcon {
             val pm = context.packageManager
             return entries.firstOrNull {

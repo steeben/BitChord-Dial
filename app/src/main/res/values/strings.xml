@@ -374,8 +374,6 @@
     <string name="show_listen_together_button">Show Listen Together button</string>
     <string name="show_listen_together_button_subtitle">The output and Listen Together pill under the player controls</string>
     <string name="app_icon">App icon</string>
-    <string name="app_icon_bright" translatable="false">Bright</string>
-    <string name="app_icon_dark" translatable="false">Dark</string>
     <string name="liquid_glass_subtitle">Real refracting glass on the floating nav bar. Android 12+ only; uses more GPU.</string>
     <string name="liquid_glass_unavailable">Requires Android 12 or newer</string>
     <string name="glass_options_subtitle">Adjust how see-through, tinted and blurred the glass is</string>
