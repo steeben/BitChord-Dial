@@ -12,6 +12,9 @@ import java.util.WeakHashMap
  * first [SLOTS] play, which is more than a screenful; whatever is further
  * down is simply there by the time it is scrolled to.
  *
+ * It plays once per opening and not at all with Reduce animations on; the
+ * page checks that setting before asking for an entrance.
+ *
  * Kept free of Compose so the rules can be tested on their own.
  */
 internal object PageEntrance {
