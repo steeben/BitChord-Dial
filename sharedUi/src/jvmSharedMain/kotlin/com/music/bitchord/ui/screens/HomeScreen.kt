@@ -32,7 +32,6 @@ import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.lazy.LazyListState
 import com.music.bitchord.ui.components.ShelfRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -699,6 +698,14 @@ private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexedShelves(
 }
 
 /**
+ * The page a tap on this opens, by its key, for the launch out of its artwork:
+ * null for a track or a video, which play where they are, and for the
+ * device's own folders, whose cards are drawn rather than pictured.
+ */
+internal fun ShelfItem.launchKey(): String? =
+    browseId?.takeIf { videoId == null && !it.startsWith("local:") }
+
+/**
  * How many of Home's first shelves are dials: the speed dial, the artists'
  * dial, both or neither. What Home puts "after the lead" goes after these.
  */
@@ -834,7 +841,8 @@ private fun RecentShelf(
         } else {
             BoxWithConstraints {
                 val cardWidth = heroCardWidth(maxWidth)
-                ShelfRow(
+                LaunchShelfRow(
+                    title = shelf.title,
                     contentPadding = PaddingValues(horizontal = PAGE_GUTTER),
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
@@ -1240,8 +1248,8 @@ private fun HeroShelf(
         // into a height, so the card keeps its shape however it was arrived at.
         BoxWithConstraints {
             val cardWidth = heroCardWidth(maxWidth)
-            ShelfRow(
-                state = rememberLazyListState(),
+            LaunchShelfRow(
+                title = shelf.title,
                 contentPadding = PaddingValues(horizontal = PAGE_GUTTER),
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
             ) {
@@ -1260,6 +1268,30 @@ private fun HeroShelf(
     }
 }
 
+/**
+ * A shelf's row whose cards may open their pages out of their artwork (see
+ * [rememberCardLaunch]): it is back where it was scrolled to when one of its
+ * cards' pages closes, for the page to land on the card.
+ */
+@Composable
+private fun LaunchShelfRow(
+    title: String,
+    contentPadding: PaddingValues,
+    horizontalArrangement: Arrangement.Horizontal,
+    content: androidx.compose.foundation.lazy.LazyListScope.() -> Unit,
+) {
+    val state = rememberLaunchRowState(title)
+    val row = remember(title, state) { LaunchRow(title, state) }
+    CompositionLocalProvider(LocalLaunchRow provides row) {
+        ShelfRow(
+            contentPadding = contentPadding,
+            horizontalArrangement = horizontalArrangement,
+            state = state,
+            content = content,
+        )
+    }
+}
+
 /** Big card: artwork with the caption laid over a scrim, as on Listen Now. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -1271,13 +1303,15 @@ private fun HeroCard(
     isCurrent: Boolean = false,
     isPlaying: Boolean = false,
 ) {
+    val launch = rememberCardLaunch(item.launchKey(), item.thumbnailUrl, 18.dp)
     Box(
         modifier = modifier
             .aspectRatio(HERO_CARD_RATIO)
+            .launchArt(launch)
             .clip(RoundedCornerShape(18.dp))
             .thumbnailBorder(RoundedCornerShape(18.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .longPressMenuClickable(onClick = onClick, onLongClick = onLongPress)
+            .longPressMenuClickable(onClick = launching(launch, onClick), onLongClick = onLongPress)
             .contextClick(onLongPress),
     ) {
         AsyncImage(
@@ -1338,7 +1372,8 @@ internal fun Shelf(
 ) {
     Column(Modifier.padding(bottom = 26.dp)) {
         SectionHeader(shelf.title, shelf.subtitle)
-        ShelfRow(
+        LaunchShelfRow(
+            title = shelf.title,
             contentPadding = PaddingValues(horizontal = PAGE_GUTTER),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
@@ -1460,9 +1495,10 @@ internal fun ShelfCard(
     isCurrent: Boolean = false,
     isPlaying: Boolean = false,
 ) {
+    val launch = rememberCardLaunch(item.launchKey(), item.thumbnailUrl, 12.dp)
     Column(
         modifier = modifier
-            .longPressMenuClickable(onClick = onClick, onLongClick = onLongPress)
+            .longPressMenuClickable(onClick = launching(launch, onClick), onLongClick = onLongPress)
             .contextClick(onLongPress),
     ) {
         when (item.browseId) {
@@ -1514,6 +1550,7 @@ internal fun ShelfCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(1f)
+                        .launchArt(launch)
                         .clip(RoundedCornerShape(12.dp))
                         .thumbnailBorder(RoundedCornerShape(12.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant),

@@ -167,6 +167,8 @@ import com.music.bitchord.ui.components.PopupLayer
 import com.music.bitchord.ui.screens.SpeedDialIntro
 import com.music.bitchord.ui.screens.DialLaunch
 import com.music.bitchord.ui.screens.DialLaunchPage
+import com.music.bitchord.ui.screens.MOOD_PAGE_KEY
+import com.music.bitchord.ui.screens.moodPageKey
 import com.music.bitchord.ui.screens.ARTIST_DIAL_SHELF_TITLE
 import com.music.bitchord.ui.screens.SpeedDialLucky
 import com.music.bitchord.ui.screens.RecentArtistsScreen
@@ -204,6 +206,7 @@ import com.music.bitchord.data.model.BrowseType
 import com.music.bitchord.data.model.SubscriptionState
 import com.music.bitchord.data.model.DetailPage
 import com.music.bitchord.data.model.HomeShelf
+import com.music.bitchord.data.model.MoodGenre
 import com.music.bitchord.data.model.LikeStatus
 import com.music.bitchord.data.model.PlaybackSourceType
 import com.music.bitchord.data.model.SearchFilter
@@ -3659,6 +3662,7 @@ private fun BitChordApp(
                     spotify: Boolean = showSpotify,
                     showAll: HomeShelf? = libraryShowAll,
                     history: Boolean = showHistory,
+                    mood: MoodGenre? = selectedMoodGenre,
                 ): String = when {
                     // Over everything it was opened on, under the Replay and
                     // Settings it can open in turn.
@@ -3697,9 +3701,14 @@ private fun BitChordApp(
                     showSettings -> MenuNav.settingsPageKey
                     showReplay -> "replay"
                     top != null -> top.browseId
+                    // A mood or genre's playlists: a page of its own, for it
+                    // to grow out of its card on Explore and shrink back in.
+                    mood != null && selectedTab == TAB_EXPLORE -> moodPageKey(mood)
                     else -> "$TAB_KEY$selectedTab"
                 }
                 val pageKey = pageKeyFor()
+                // What a tile or card tapped now opens its page from.
+                androidx.compose.runtime.SideEffect { DialLaunch.page = pageKey }
                 // Settings itself, with nothing of its own pushed over it.
                 val settingsRoot = pageKey == "settings" && settingsSubScreen == null &&
                     !showDiscord && !showSpotify
@@ -3723,12 +3732,23 @@ private fun BitChordApp(
                 val libraryDepths = remember { HashMap<String, Int>() }
                 if (libraryDepth != null) libraryDepths[pageKey] = libraryDepth else libraryDepths.remove(pageKey)
                 // What one back step from a Library page shows, and the step.
-                // A page opened from a dial tile, straight off Home: the swipe
-                // runs its close, shrinking it back toward its tile as the
-                // finger goes, in place of the blur the other pages get.
-                val dialBack = !reduceAnimationSetting && detail != null && detailStack.size == 1 &&
-                    pageKey == detail.browseId && DialLaunch.origin?.key == pageKey &&
-                    pageKeyFor(top = null) == HOME_PAGE_KEY
+                // A page opened from a dial tile or a card, with the page it
+                // was opened from straight under it: the swipe runs its close,
+                // shrinking it back toward its tile as the finger goes, in
+                // place of the blur the other pages get.
+                val launchBack: Pair<String, () -> Unit>? = DialLaunch.origin
+                    ?.takeIf { !reduceAnimationSetting && it.key == pageKey && detailActiveShelf == null }
+                    ?.let { launch ->
+                        when {
+                            detail != null && pageKey == detail.browseId ->
+                                pageKeyFor(top = detailStack.getOrNull(detailStack.size - 2)) to
+                                    { viewModel.closeDetail(); Unit }
+                            detail == null && pageKey.startsWith(MOOD_PAGE_KEY) ->
+                                pageKeyFor(mood = null) to { viewModel.closeMoodGenre(); Unit }
+                            else -> null
+                        }?.takeIf { it.first == launch.parent }
+                    }
+                val dialBack = launchBack != null
                 // A Settings category's page, with nothing laid over it: the swipe
                 // slides it back off to the right with the main page coming in
                 // from the left, the reverse of how it was opened.
@@ -3763,7 +3783,7 @@ private fun BitChordApp(
                         showListenTogether = false
                         settingsSubScreen = null
                     }
-                    dialBack -> HOME_PAGE_KEY to { viewModel.closeDetail(); Unit }
+                    launchBack != null -> launchBack
                     libraryDepth == null || libraryDepth == 0 || detailActiveShelf != null -> null
                     pageKey == "history" -> pageKeyFor(history = false) to { showHistory = false }
                     pageKey == "spotify" -> pageKeyFor(spotify = false) to { showSpotify = false }
@@ -3781,23 +3801,26 @@ private fun BitChordApp(
                         pageTransitionState.animateTo(pageKey)
                     }
                 }
-                // A dial tile's page is let go of once Home is back on screen
-                // after it closes, or once the page is gone some other way
-                // (another tab, a tap that opened nothing), so the tile shows again.
-                LaunchedEffect(pageTransitionState.currentState) {
-                    if (pageTransitionState.currentState == HOME_PAGE_KEY &&
-                        pageTransitionState.targetState == HOME_PAGE_KEY
-                    ) {
-                        DialLaunch.origin = null
+                // A tile's page is let go of once the page it was opened from
+                // is back on screen after it closes, or once the page is gone
+                // some other way (another tab, a tap that opened nothing), so
+                // the tile shows again.
+                LaunchedEffect(pageTransitionState.currentState, pageTransitionState.targetState) {
+                    if (pageTransitionState.currentState == pageTransitionState.targetState) {
+                        DialLaunch.settledOn(pageTransitionState.currentState)
                     }
                 }
-                val launchedFrom = DialLaunch.origin
-                LaunchedEffect(launchedFrom, pageKey) {
-                    val origin = launchedFrom ?: return@LaunchedEffect
-                    if (pageKey == origin.key || detailStack.any { it.browseId == origin.key }) return@LaunchedEffect
-                    // Back on Home: its close is under way, and lets it go when done.
-                    if (pageKey == HOME_PAGE_KEY) delay(DialLaunch.CLOSE_MS * 2L)
-                    DialLaunch.origin = null
+                val launches = DialLaunch.origins
+                // The pages still open, on screen or under the one that is.
+                val openPages = detailStack.joinToString("\n") { it.browseId } +
+                    "\n" + selectedMoodGenre?.let(::moodPageKey).orEmpty()
+                LaunchedEffect(launches, pageKey, openPages) {
+                    val open = openPages.split("\n")
+                    val gone = launches.filter { it.key != pageKey && it.key !in open }
+                    if (gone.isEmpty()) return@LaunchedEffect
+                    // Back on the page it came from: its close is under way, and lets it go when done.
+                    if (gone.any { it.parent == pageKey }) delay(DialLaunch.CLOSE_MS * 2L)
+                    gone.forEach(DialLaunch::drop)
                 }
                 val currentLibraryBack by rememberUpdatedState(libraryBack)
                 // Library pages: the swipe slides this page off to the right and
@@ -3892,14 +3915,15 @@ private fun BitChordApp(
                                 (targetState == "settings" && initialState.startsWith(SETTINGS_SECTION_KEY_PREFIX)) ||
                                 (initialState == "settings" && targetState in SETTINGS_PAGE_KEYS) ||
                                 (targetState == "settings" && initialState in SETTINGS_PAGE_KEYS)
-                        val dialZoom = !reduceAnimationSetting && DialLaunch.zooms(initialState, targetState, HOME_PAGE_KEY)
+                        val dialZoom = !reduceAnimationSetting && DialLaunch.zooms(initialState, targetState)
                         when {
-                            // A dial tile's page opening, as an app does from a
+                            // A tile's page opening, as an app does from a
                             // phone's home screen: the page grows out of the tile
-                            // (see [DialLaunchPage]) over Home, which sinks back
-                            // and fades. Closing, Home comes forward again under
-                            // the page shrinking back into its tile.
-                            dialZoom && initialState == HOME_PAGE_KEY ->
+                            // (see [DialLaunchPage]) over the page the tile is
+                            // on, which sinks back and fades. Closing, that page
+                            // comes forward again under the one shrinking back
+                            // into its tile.
+                            dialZoom && DialLaunch.opens(initialState, targetState) ->
                                 EnterTransition.None togetherWith (
                                     fadeOut(tween(DialLaunch.OPEN_MS * 7 / 10, easing = FastOutLinearInEasing)) +
                                         scaleOut(tween(DialLaunch.OPEN_MS, easing = FastOutSlowInEasing), targetScale = DIAL_HOME_SINK)
@@ -3958,15 +3982,18 @@ private fun BitChordApp(
                             }
                         },
                 ) { key ->
-                    // A page opened from a dial tile grows out of it, and shrinks back on closing.
+                    // A page opened from a tile grows out of it, and shrinks back on closing.
                     DialLaunchPage(
                         key = key,
-                        zooming = !reduceAnimationSetting && DialLaunch.zooms(
+                        zooming = !reduceAnimationSetting && DialLaunch.between(
                             pageTransitionState.currentState,
                             pageTransitionState.targetState,
-                            HOME_PAGE_KEY,
-                        ),
+                        )?.key == key,
                         visibility = transition,
+                        // Home's cards and Explore's open their pages as the dial's tiles do.
+                        cardLaunch = !reduceAnimationSetting && (
+                            key == HOME_PAGE_KEY || key == "$TAB_KEY$TAB_EXPLORE" || key.startsWith(MOOD_PAGE_KEY)
+                            ),
                     ) {
                     // Every branch below reads `key` rather than the state that
                     // produced it. The two are the same thing only for the page
@@ -4594,7 +4621,9 @@ private fun BitChordApp(
                         )
                         }
                         }
-                    } else when (key.removePrefix(TAB_KEY).toIntOrNull() ?: selectedTab) {
+                    } else when (
+                        if (key.startsWith(MOOD_PAGE_KEY)) TAB_EXPLORE else key.removePrefix(TAB_KEY).toIntOrNull() ?: selectedTab
+                    ) {
                         TAB_HOME -> HomeScreen(
                             state = arrangedHomeState.withCustomCovers(customCovers),
                             speedDialPinned = speedDialPinnedIds,
@@ -4691,7 +4720,12 @@ private fun BitChordApp(
                                 }
                             },
                         )
-                        TAB_EXPLORE -> selectedMoodGenre?.let { category ->
+                        // The mood this page is for, held while it closes: by
+                        // then no mood is selected, and it would shrink away
+                        // as Explore itself.
+                        TAB_EXPLORE -> remember(key) { arrayOfNulls<MoodGenre>(1) }.also { held ->
+                            selectedMoodGenre?.takeIf { moodPageKey(it) == key }?.let { held[0] = it }
+                        }[0]?.let { category ->
                             MoodGenrePlaylistsScreen(
                                 title = category.title,
                                 state = moodGenreShelves,

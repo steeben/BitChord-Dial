@@ -155,12 +155,15 @@ private fun MoodGenreCard(
     modifier: Modifier = Modifier,
 ) {
     val tone = remember(item.stripeColor, item.title) { moodTone(item) }
+    // Its page grows out of the card, as a dial tile's does.
+    val launch = rememberCardLaunch(moodPageKey(item), item.thumbnailUrl, MOOD_CARD_CORNER)
     Box(
         modifier = modifier
             .aspectRatio(MOOD_CARD_ASPECT)
+            .launchArt(launch)
             .clip(MOOD_CARD_SHAPE)
             .background(tone.stripe)
-            .clickable(onClick = onClick),
+            .clickable(onClick = launching(launch, onClick)),
     ) {
         Box(
             Modifier
@@ -252,7 +255,15 @@ private fun fallbackMoodColor(title: String): Color = when ((title.hashCode() an
 /** Gap between mood cards, in both directions. */
 private val MOOD_SPACING = 12.dp
 
-private val MOOD_CARD_SHAPE = RoundedCornerShape(18.dp)
+private val MOOD_CARD_CORNER = 18.dp
+
+private val MOOD_CARD_SHAPE = RoundedCornerShape(MOOD_CARD_CORNER)
+
+/** Starts the key of a mood or genre's own page. */
+const val MOOD_PAGE_KEY = "mood:"
+
+/** The key of [item]'s page of playlists: what its card on Explore opens. */
+fun moodPageKey(item: MoodGenre): String = "$MOOD_PAGE_KEY${item.browseId}|${item.params}"
 
 /** Width over height; a two-column phone row lands at about 100dp tall. */
 private const val MOOD_CARD_ASPECT = 1.72f
