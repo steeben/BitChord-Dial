@@ -96,9 +96,15 @@ internal fun frostFill(): Color = MaterialTheme.colorScheme.surface.copy(
 private val DARK_SURFACE = Color(0xFF0D0D0F)
 private val LIGHT_SURFACE = Color(0xFFF7F7F9)
 
-/** [frostFill] for ground that is [dark] or bright, whatever the theme. */
-private fun frostFill(dark: Boolean): Color =
-    if (dark) DARK_SURFACE.copy(alpha = FROST_FILL_DARK) else LIGHT_SURFACE.copy(alpha = FROST_FILL_LIGHT)
+/**
+ * [frostFill] for ground that is [dark] or bright, whatever the theme. A
+ * surface text is read off ([carriesText], a drawer) keeps the dense fill; a
+ * button on dark ground is lifted instead, see [frostButtonFill].
+ */
+private fun frostFill(dark: Boolean, carriesText: Boolean): Color {
+    val dense = if (dark) DARK_SURFACE.copy(alpha = FROST_FILL_DARK) else LIGHT_SURFACE.copy(alpha = FROST_FILL_LIGHT)
+    return if (carriesText) dense else frostButtonFill(dark, dense)
+}
 
 /**
  * The hairline around a frosted or solid surface: a trace of white on a dark
@@ -457,7 +463,7 @@ fun Modifier.liquidGlass(
         // frost is not.
         // Not laid over the underlay: the frost is as see-through on a menu
         // as on the bars, and its fill is dense enough to sit on a dimmed page.
-        val fill = (surfaceTint?.takeIf { it.alpha > 0f } ?: if (dark == null) frostFill() else frostFill(dark))
+        val fill = (surfaceTint?.takeIf { it.alpha > 0f } ?: if (dark == null) frostFill() else frostFill(dark, carriesText))
             .let { if (legible) it.legibleOnLight() else it }
         val frostBlurPx = with(LocalDensity.current) { maxOf(minBlurDp, FROST_BLUR_DP).dp.toPx() } *
             GLASS_RESOLUTION_SCALE

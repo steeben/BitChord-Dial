@@ -14,6 +14,23 @@ internal const val TINT_WASH = 0.28f
 /** How far black the tint darkness slider goes at its top. */
 internal const val MAX_SHADE = 0.85f
 
+/**
+ * How much white a frosted button lays over the dark ground it is told it is
+ * on: the player's heart, ⋯ and bottom pill, over the sleeve.
+ */
+internal const val FROST_BUTTON_LIFT = 0.16f
+
+/**
+ * The Frost style's fill for a button on ground that is [dark] or bright,
+ * where [dense] is the fill a menu gets there. On dark ground the theme's
+ * near-black surface made the buttons black holes in a sleeve that is a
+ * colour, not black, so they are a pale lift of the blurred sleeve instead,
+ * like the frost everywhere else. On bright ground the pale dense fill is
+ * already that.
+ */
+internal fun frostButtonFill(dark: Boolean, dense: Color): Color =
+    if (dark) Color.White.copy(alpha = FROST_BUTTON_LIFT) else dense
+
 /** Classic's fill opacity at the transparency its fill is measured against. */
 internal const val SURFACE_OPACITY = 1f - CustomizationSettings.GLASS_REFERENCE_TRANSPARENCY
 

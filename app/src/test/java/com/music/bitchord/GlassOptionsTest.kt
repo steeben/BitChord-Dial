@@ -2,12 +2,14 @@ package com.music.bitchord
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.luminance
 import com.music.bitchord.data.settings.CustomizationSettings
 import com.music.bitchord.ui.components.GlassTint
 import com.music.bitchord.ui.components.LEGIBLE_LIGHT_FILL
 import com.music.bitchord.ui.components.classicGlassFillColor
 import com.music.bitchord.ui.components.clearGlassFillColor
 import com.music.bitchord.ui.components.clearGlassStrength
+import com.music.bitchord.ui.components.frostButtonFill
 import com.music.bitchord.ui.components.legibleFloor
 import com.music.bitchord.ui.components.legibleOnDark
 import com.music.bitchord.ui.components.legibleOnLight
@@ -208,5 +210,22 @@ class GlassOptionsTest {
         assertEquals(0f, legibleFloor(1f, shipped), 0f)
         // No floor: a clear fill stays clear.
         assertEquals(0f, Color.Transparent.legibleOnLight(legibleFloor(1f, shipped)).alpha, 0f)
+    }
+
+    @Test
+    fun `a frosted button on dark ground is a pale lift, not the dense dark fill`() {
+        val dense = Color(0xFF0D0D0F).copy(alpha = 0.65f)
+        val fill = frostButtonFill(dark = true, dense = dense)
+        // Over a mid-dark sleeve it comes out brighter than the sleeve, where
+        // the dense fill came out darker.
+        val sleeve = Color(0xFF3A3A22)
+        assertTrue(fill.compositeOver(sleeve).luminance() > sleeve.luminance())
+        assertTrue(dense.compositeOver(sleeve).luminance() < sleeve.luminance())
+    }
+
+    @Test
+    fun `a frosted button on bright ground keeps the pale dense fill`() {
+        val dense = Color(0xFFF7F7F9).copy(alpha = 0.6f)
+        assertEquals(dense, frostButtonFill(dark = false, dense = dense))
     }
 }
