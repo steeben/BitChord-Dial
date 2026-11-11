@@ -4,7 +4,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.rememberUpdatedState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
+import com.music.bitchord.data.stats.ListeningStats
+import com.music.bitchord.data.stats.ReplayPeriod
 import com.music.bitchord.data.mixes.MixesDial
 import com.music.bitchord.data.model.HomeShelf
 import com.music.bitchord.data.model.ShelfItem
@@ -38,10 +41,23 @@ fun rememberMixesDial(
     }
     val dealt by produceState<List<ShelfItem>?>(null, on, round, ready, spotify, sleepTime) {
         if (!on || !ready) return@produceState
-        value = MixesDial.deal(latestShelves(), spotify, hidden = emptySet(), sleepTime = sleepTime)
+        value = MixesDial.deal(latestShelves(), spotify, hidden = emptySet(), sleepTime = sleepTime, listened = listenedGenres())
     }
     if (!on) return null
     return dealt?.filterNot { (it.videoId ?: it.browseId) in hidden }
+}
+
+/**
+ * The time listened per genre, over all the listening this app has counted,
+ * for the Mixes Dial to favour the listener's genres by. Empty when there is
+ * no genre chart (it is turned off in settings, or nothing is counted yet).
+ */
+private suspend fun listenedGenres(): Map<String, Long> = try {
+    ListeningStats.summary(ReplayPeriod.ALL_TIME).genres.associate { it.title to it.ms }
+} catch (cancelled: CancellationException) {
+    throw cancelled
+} catch (error: Exception) {
+    emptyMap()
 }
 
 /** How often the clock is checked for the sleep mixes' hours. */
