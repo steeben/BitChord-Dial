@@ -45,12 +45,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.R
 import com.music.bitchord.data.Onboarding
 import com.music.bitchord.data.OnboardingStep
 import com.music.bitchord.data.TourTarget
+import com.music.bitchord.data.settings.AppSettings
+import com.music.bitchord.data.settings.AppStyle
+import com.music.bitchord.data.settings.ThemeMode
+import com.music.bitchord.ui.screens.SegmentedControl
 import com.music.bitchord.ui.screens.SpeedDialIntro
 import dev.chrisbanes.haze.HazeState
 import kotlinx.coroutines.Dispatchers
@@ -203,6 +209,7 @@ fun OnboardingHost(hazeState: HazeState, onShowLibrary: (Boolean) -> Unit) {
                         color = contentColor,
                         textAlign = TextAlign.Center,
                     )
+                    if (current == OnboardingStep.WELCOME) LookChoices(contentColor)
                 }
                 AlertRule()
                 when (current) {
@@ -226,6 +233,67 @@ fun OnboardingHost(hazeState: HazeState, onShowLibrary: (Boolean) -> Unit) {
             }
         }
     }
+}
+
+/**
+ * The welcome's two choices of look, the theme and the app style: the same
+ * settings as in Settings, so the app behind the card, and the card itself,
+ * change as they are picked. On the welcome rather than a step of the tour,
+ * so skipping the tour doesn't skip them.
+ */
+@Composable
+private fun LookChoices(contentColor: Color) {
+    val theme by AppSettings.themeMode.collectAsStateWithLifecycle()
+    val liquidGlass by AppSettings.liquidGlass.collectAsStateWithLifecycle()
+    val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
+    val glassSupported = isGlassSupported()
+    val styles = AppStyle.choices(glassSupported)
+    val style = AppStyle.of(liquidGlass && glassSupported, reduceDynamicBlur)
+
+    LookHeading(stringResource(R.string.theme), contentColor, top = 16.dp)
+    SegmentedControl(
+        options = listOf(
+            stringResource(R.string.system),
+            stringResource(R.string.light),
+            stringResource(R.string.dark),
+        ),
+        selectedIndex = THEME_CHOICES.indexOf(theme),
+        onSelect = { AppSettings.setThemeMode(THEME_CHOICES[it]) },
+    )
+    LookHeading(stringResource(R.string.app_style), contentColor, top = 12.dp)
+    SegmentedControl(
+        options = styles.map {
+            stringResource(
+                when (it) {
+                    AppStyle.GLASS -> R.string.app_style_glass
+                    AppStyle.FROST -> R.string.app_style_frost
+                    AppStyle.SOLID -> R.string.app_style_solid
+                },
+            )
+        },
+        selectedIndex = styles.indexOf(style),
+        onSelect = { AppSettings.setAppStyle(styles[it]) },
+    )
+    Text(
+        text = stringResource(R.string.onboarding_look_note),
+        modifier = Modifier.padding(top = 8.dp),
+        style = MaterialTheme.typography.bodySmall,
+        color = contentColor.copy(alpha = 0.6f),
+        textAlign = TextAlign.Center,
+    )
+}
+
+/** The themes in the order the welcome offers them, as the labels above are written. */
+private val THEME_CHOICES = listOf(ThemeMode.SYSTEM, ThemeMode.LIGHT, ThemeMode.DARK)
+
+@Composable
+private fun LookHeading(text: String, contentColor: Color, top: Dp) {
+    Text(
+        text = text,
+        modifier = Modifier.fillMaxWidth().padding(top = top, bottom = 6.dp),
+        style = MaterialTheme.typography.labelMedium,
+        color = contentColor.copy(alpha = 0.6f),
+    )
 }
 
 private fun OnboardingStep.titleRes(): Int = when (this) {

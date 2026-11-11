@@ -276,6 +276,7 @@
     <!-- First-launch tour -->
     <string name="onboarding_welcome_title">Welcome to Dial</string>
     <string name="onboarding_welcome_body">Your music, a tap away. A short tour shows how the dial works and where things are.</string>
+    <string name="onboarding_look_note">You can change these any time in Settings.</string>
     <string name="onboarding_take_tour">Take a tour</string>
     <string name="onboarding_skip">Skip tutorial</string>
     <string name="onboarding_next">Next</string>
