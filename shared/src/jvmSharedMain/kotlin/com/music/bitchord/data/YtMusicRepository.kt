@@ -738,8 +738,13 @@ object YtMusicRepository {
      * being read — see [moreSongs].
      */
     suspend fun browseSongs(browseId: String): Result<SongPage> = call("browse:$browseId") {
-        if (browseId == LIKED_MUSIC || browseId == "LM") likedMusicFirstPage() else firstPage(browseId)
+        val page = if (browseId == LIKED_MUSIC || browseId == "LM") likedMusicFirstPage() else firstPage(browseId)
+        // An endless mix is given an end here and in [moreSongs]; see [MixPaging].
+        val bounded = mixPaging.first(browseId, page.songs, page.continuation)
+        page.copy(songs = bounded.songs, continuation = bounded.continuation)
     }
+
+    private val mixPaging = MixPaging()
 
     /**
      * Liked Music's first page, made to actually hold rows.
@@ -887,9 +892,15 @@ object YtMusicRepository {
         return response
     }
 
-    /** The page [SongPage.continuation] points at. */
-    suspend fun moreSongs(token: String): Result<SongPage> = call("browse:more") {
-        pageOf(Innertube.browseContinuation(token), showByToken[token])
+    /**
+     * The page [SongPage.continuation] points at. [browseId] is the list the
+     * token pages, for a caller that may hold a token from an earlier run of
+     * the app; see [MixPaging.next].
+     */
+    suspend fun moreSongs(token: String, browseId: String? = null): Result<SongPage> = call("browse:more") {
+        val page = pageOf(Innertube.browseContinuation(token), showByToken[token])
+        val bounded = mixPaging.next(token, page.songs, page.continuation, browseId)
+        page.copy(songs = bounded.songs, continuation = bounded.continuation)
     }
 
     /**
@@ -986,6 +997,7 @@ object YtMusicRepository {
      */
     private suspend fun songsPaged(browseId: String): List<Song> {
         val out = LinkedHashMap<String, Song>()
+        val endlessMix = MixPaging.isEndlessMix(browseId)
         var response = Innertube.browse(browseId)
         if (browseId.startsWith("MPREb")) {
             val albumRows = InnertubeParser.collectSongsDeep(response).size
@@ -1002,9 +1014,11 @@ object YtMusicRepository {
             (shelf?.songs ?: InnertubeParser.collectSongsDeep(response, show)).forEach { out[it.videoId] = it }
             val token = shelf?.continuation ?: InnertubeParser.continuationToken(response)
             if (token == null || page++ >= MAX_PAGES) break
+            // An endless mix has no last page to reach; see [MixPaging].
+            if (endlessMix && out.size >= MixPaging.MAX_SONGS) break
             response = runCatching { Innertube.browseContinuation(token) }.getOrNull() ?: break
         }
-        return out.values.toList()
+        return if (endlessMix) out.values.take(MixPaging.MAX_SONGS) else out.values.toList()
     }
 
     /**
