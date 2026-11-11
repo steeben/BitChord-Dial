@@ -1156,8 +1156,7 @@ fun SettingsScreen(
             val appStyle = AppStyle.of(liquidGlass && liquidGlassSupported, reduceDynamicBlur)
             row(appStyleTitle, "glass", "frost", "solid", "blur", "liquid", "performance") {
                 SettingsRow(icon = Icons.Rounded.AutoAwesome, title = appStyleTitle)
-                // Glass needs Android 12; older devices choose between the other two.
-                val styles = if (liquidGlassSupported) AppStyle.entries else listOf(AppStyle.FROST, AppStyle.SOLID)
+                val styles = AppStyle.choices(liquidGlassSupported)
                 SegmentedControl(
                     options = styles.map {
                         stringResource(

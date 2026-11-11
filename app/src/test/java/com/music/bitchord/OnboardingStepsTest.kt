@@ -2,6 +2,7 @@ package com.music.bitchord
 
 import com.music.bitchord.data.OnboardingStep
 import com.music.bitchord.data.TourTarget
+import com.music.bitchord.data.settings.AppStyle
 import com.music.bitchord.data.settings.TapRun
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -40,6 +41,15 @@ class OnboardingStepsTest {
         assertEquals(listOf(OnboardingStep.LIBRARY), OnboardingStep.entries.filter { it.onLibrary })
         assertEquals(TourTarget.LIBRARY_MENU, OnboardingStep.LIBRARY.target)
         assertEquals(TourTarget.DIAL_MENU, OnboardingStep.DIAL_MENU.target)
+    }
+
+    @Test
+    fun theWelcomeOffersEveryStyleTheDeviceCanDraw() {
+        assertEquals(AppStyle.entries, AppStyle.choices(glassSupported = true))
+        assertEquals(listOf(AppStyle.FROST, AppStyle.SOLID), AppStyle.choices(glassSupported = false))
+        // What is chosen by default is among them, glass or not.
+        assertTrue(AppStyle.of(liquidGlass = true, reduceDynamicBlur = false) in AppStyle.choices(true))
+        assertTrue(AppStyle.of(liquidGlass = false, reduceDynamicBlur = false) in AppStyle.choices(false))
     }
 
     @Test

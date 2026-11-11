@@ -23,5 +23,8 @@ enum class AppStyle {
             liquidGlass -> GLASS
             else -> FROST
         }
+
+        /** The styles there are to choose from. Glass needs Android 12; older devices choose between the other two. */
+        fun choices(glassSupported: Boolean): List<AppStyle> = if (glassSupported) entries else listOf(FROST, SOLID)
     }
 }
