@@ -23,10 +23,19 @@ class TopChromeToneTest {
 
     @Test
     fun aHeldBannerStillCountsAtItsFadedStrength() {
-        // A dark photo held at 45% over a light wash: no longer dark enough for white glyphs.
-        assertEquals(false, topChromeOverDark(artLuminance = 0.02f, washLuminance = 0.8f, artShowing = 0.45f))
+        // A dark photo held at 20% over a white wash: no longer dark enough for white glyphs.
+        assertEquals(false, topChromeOverDark(artLuminance = 0.02f, washLuminance = 0.95f, artShowing = 0.2f))
         // Over a dark wash it stays dark.
-        assertEquals(true, topChromeOverDark(artLuminance = 0.02f, washLuminance = 0.05f, artShowing = 0.45f))
+        assertEquals(true, topChromeOverDark(artLuminance = 0.02f, washLuminance = 0.05f, artShowing = 0.2f))
+    }
+
+    @Test
+    fun onlyAVeryBrightBannerTurnsTheGlyphsBlack() {
+        // Sunlit grass and flowers (the album header Stephen reported): white still reads.
+        assertEquals(true, topChromeOverDark(artLuminance = 0.39f, washLuminance = 0.05f, artShowing = 1f))
+        assertEquals(true, topChromeOverDark(artLuminance = 0.55f, washLuminance = 0.05f, artShowing = 1f))
+        // A cream or white sleeve: white would be lost.
+        assertEquals(false, topChromeOverDark(artLuminance = 0.7f, washLuminance = 0.05f, artShowing = 1f))
     }
 
     @Test
