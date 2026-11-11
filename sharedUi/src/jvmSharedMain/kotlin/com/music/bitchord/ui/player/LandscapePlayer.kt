@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
@@ -26,6 +27,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.offset
@@ -57,6 +60,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -66,7 +72,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.request.ImageRequest
@@ -170,9 +179,19 @@ internal fun LandscapePlayerLayout(
      * leaves those taps alone.
      */
     onBackgroundTap: (() -> Unit)? = null,
+    /**
+     * The lyrics beside the song's music video: the video has the left of the
+     * screen to itself (see [LandscapeCanvasBackdrop]'s split) and this, the
+     * lyric sheet over the scrubber, has the right. Null for the ordinary two
+     * columns. The sleeve, the row under it and the panes all stand down
+     * while it is up.
+     */
+    videoLyrics: (@Composable () -> Unit)? = null,
+    /** A tap on the video while [videoLyrics] is up: the way back out of the lyrics. */
+    onVideoTap: () -> Unit = {},
 ) {
     val chromeAlpha by animateFloatAsState(
-        targetValue = if (chromeHidden) 0f else 1f,
+        targetValue = if (chromeHidden || videoLyrics != null) 0f else 1f,
         animationSpec = tween(LANDSCAPE_CANVAS_DIM_MS),
         label = "landscapeChrome",
     )
@@ -284,7 +303,7 @@ internal fun LandscapePlayerLayout(
 
             // The sheet closes from a downward drag anywhere nothing else
             // claims, as it does in portrait; this is only the promise.
-            if (showHandle) {
+            if (showHandle && videoLyrics == null) {
                 Box(
                     Modifier
                         .align(Alignment.TopCenter)
@@ -296,6 +315,122 @@ internal fun LandscapePlayerLayout(
                         .background(Color.White.copy(alpha = 0.70f)),
                 )
             }
+        }
+
+        androidx.compose.animation.AnimatedVisibility(
+            visible = videoLyrics != null && !chromeHidden,
+            enter = fadeIn(tween(LANDSCAPE_PANE_FADE_IN_MS, delayMillis = LANDSCAPE_PANE_FADE_IN_DELAY_MS)),
+            exit = fadeOut(tween(LANDSCAPE_PANE_FADE_OUT_MS)),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            // Held through the fade out, when the caller's has already gone.
+            val held = remember { HeldContent() }
+            if (videoLyrics != null) held.content = videoLyrics
+            val currentVideoTap by rememberUpdatedState(onVideoTap)
+            BoxWithConstraints(
+                Modifier
+                    .fillMaxSize()
+                    // Nothing faded out under this can be touched through it.
+                    .pointerInput(Unit) { detectTapGestures { } },
+            ) {
+                val video = landscapeVideoPane(maxWidth, maxHeight)
+                val compactPane = maxHeight < LANDSCAPE_COMPACT_HEIGHT
+                Row(Modifier.fillMaxSize()) {
+                    // The video itself is the backdrop's; this is the tap on it.
+                    Box(
+                        Modifier
+                            .width(video.width)
+                            .fillMaxHeight()
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClickLabel = stringResource(Res.string.close_lyrics),
+                            ) { currentVideoTap() },
+                    )
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .windowInsetsPadding(
+                                WindowInsets.safeDrawing.only(
+                                    WindowInsetsSides.Top + WindowInsetsSides.Bottom + WindowInsetsSides.End,
+                                ),
+                            )
+                            .padding(
+                                start = PLAYER_GUTTER,
+                                end = PLAYER_GUTTER,
+                                top = 8.dp,
+                                bottom = if (compactPane) 4.dp else 16.dp,
+                            ),
+                    ) {
+                        held.content?.invoke()
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** The last content a slot was given, kept to draw while it fades out. */
+private class HeldContent {
+    var content: (@Composable () -> Unit)? = null
+}
+
+/** How much of the window's width the music video takes beside the lyrics. */
+private const val LANDSCAPE_VIDEO_SPLIT = 0.56f
+
+/** How long the video takes to draw aside for the lyrics, and to come back. */
+private const val LANDSCAPE_VIDEO_SPLIT_MS = 380
+
+/**
+ * The music video's place beside the lyrics, in a window [maxWidth] by
+ * [maxHeight]: the left of the screen, top to bottom on a phone. On a
+ * squarer window it stops at a square, centred, rather than cropping a wide
+ * picture down to a tall sliver.
+ */
+internal fun landscapeVideoPane(maxWidth: Dp, maxHeight: Dp): DpSize {
+    val width = maxWidth * LANDSCAPE_VIDEO_SPLIT
+    return DpSize(width, minOf(maxHeight, width))
+}
+
+/**
+ * The right of the screen with the lyrics beside the music video: the sheet,
+ * and under it the scrubber, on the same left and right edges as the lines —
+ * in place of the romanize / source / translate row of [LandscapeLyricsPane].
+ */
+@Composable
+internal fun LandscapeVideoLyricsPane(
+    hasLyrics: Boolean,
+    /** Shown in place of the sheet while there are no lines to draw. */
+    placeholder: String,
+    picking: Boolean,
+    pickBar: @Composable () -> Unit,
+    scrubber: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    panel: @Composable (Modifier) -> Unit,
+) {
+    Column(modifier = modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+        ) {
+            if (hasLyrics) {
+                panel(Modifier.fillMaxSize())
+            } else {
+                Text(
+                    text = placeholder,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = playerInk(alpha = 0.6f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            }
+        }
+        if (picking) {
+            Box(Modifier.fillMaxWidth()) { pickBar() }
+        } else {
+            Box(Modifier.fillMaxWidth()) { scrubber() }
         }
     }
 }
@@ -439,6 +574,12 @@ internal fun LandscapeCanvasBackdrop(
     presentationAlpha: () -> Float = { 1f },
     /** The clip is being watched full screen, with no player over it to read. */
     fullscreen: Boolean = false,
+    /**
+     * The lyrics are up beside a music video: the picture draws aside to the
+     * left of the screen (see [landscapeVideoPane]), sharp and undimmed, and
+     * the cover's blur shows, dimmed, under the lyrics on the right.
+     */
+    split: Boolean = false,
 ) {
     // Laid on from the start rather than at the clip's first frame: the cover's
     // blur under it until then is dimmed the same, so the tint never pops in.
@@ -449,11 +590,21 @@ internal fun LandscapeCanvasBackdrop(
     )
     // Off when it is watched full screen, like the dim.
     val blurRadius by animateDpAsState(
-        targetValue = if (fullscreen) 0.dp else LANDSCAPE_CANVAS_BLUR,
+        targetValue = if (fullscreen || split) 0.dp else LANDSCAPE_CANVAS_BLUR,
         animationSpec = tween(LANDSCAPE_CANVAS_DIM_MS),
         label = "landscapeCanvasBlur",
     )
-    Box(modifier = modifier.fillMaxSize()) {
+    val splitT by animateFloatAsState(
+        targetValue = if (split && !fullscreen) 1f else 0f,
+        animationSpec = tween(LANDSCAPE_VIDEO_SPLIT_MS, easing = FastOutSlowInEasing),
+        label = "landscapeVideoSplit",
+    )
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        // The same player throughout, resized: the picture carries on playing
+        // as it draws aside and as it comes back.
+        val pane = landscapeVideoPane(maxWidth, maxHeight)
+        val videoWidth = lerp(maxWidth, pane.width, splitT)
+        val videoHeight = lerp(maxHeight, pane.height, splitT)
         CanvasArtworkPlayer(
             canvas = canvas,
             isPlaying = isPlaying,
@@ -462,14 +613,32 @@ internal fun LandscapeCanvasBackdrop(
             presentationAlpha = presentationAlpha,
             onRenderedChanged = onRenderedChange,
             modifier = Modifier
-                .fillMaxSize()
+                .align(Alignment.CenterStart)
+                .size(videoWidth, videoHeight)
                 .then(if (blurRadius > 0.dp) Modifier.blur(blurRadius) else Modifier),
         )
         Box(
             Modifier
                 .fillMaxSize()
-                .graphicsLayer { alpha = dim * presentationAlpha() }
-                .background(Color.Black),
+                .drawBehind {
+                    // Lifted off the picture as it draws aside, and left on
+                    // what shows beside it.
+                    val shade = dim * presentationAlpha()
+                    val edge = videoWidth.toPx().coerceAtMost(size.width)
+                    if (splitT < 1f) {
+                        drawRect(
+                            Color.Black.copy(alpha = (shade * (1f - splitT)).coerceIn(0f, 1f)),
+                            size = Size(edge, size.height),
+                        )
+                    }
+                    if (edge < size.width) {
+                        drawRect(
+                            Color.Black.copy(alpha = shade.coerceIn(0f, 1f)),
+                            topLeft = Offset(edge, 0f),
+                            size = Size(size.width - edge, size.height),
+                        )
+                    }
+                },
         )
     }
 }

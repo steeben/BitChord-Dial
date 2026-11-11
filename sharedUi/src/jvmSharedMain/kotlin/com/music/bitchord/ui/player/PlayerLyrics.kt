@@ -4,7 +4,9 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateDpAsState
@@ -16,6 +18,7 @@ import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
@@ -114,6 +117,7 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.ResolvedTextDirection
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -375,6 +379,9 @@ private const val SCROLL_LEAD_MAX_MS = 500L
  */
 private val LYRIC_EASING = CubicBezierEasing(0.41f, 0f, 0.12f, 0.99f)
 private const val LYRIC_SETTLE_MS = 400
+
+/** How long the strip's break bar and a sung line take to change places. */
+private const val BREAK_MORPH_MS = 420
 
 /**
  * How the rows fan out as the panel moves between lines.
@@ -716,6 +723,8 @@ private fun SweptLyricLine(
     rise: Boolean = true,
     alignEnd: Boolean = false,
     translationProgress: State<Float>? = null,
+    /** Told how the line was laid out, for a caller that scrolls it. */
+    onLayout: ((TextLayoutResult) -> Unit)? = null,
 ) {
     var layout by remember(line) { mutableStateOf<TextLayoutResult?>(null) }
 
@@ -832,7 +841,10 @@ private fun SweptLyricLine(
             color = PlayerInk.copy(alpha = dimAlpha),
             maxLines = maxLines,
             overflow = overflow,
-            onTextLayout = { layout = it },
+            onTextLayout = {
+                layout = it
+                onLayout?.invoke(it)
+            },
             modifier = riseAgainst(room),
         )
         if (glowAlpha > 0.01f) {
@@ -2651,14 +2663,47 @@ private fun CurrentLyricLine(
             )
             Spacer(Modifier.width(6.dp))
         }
+        // Where the break a gap line belongs to began: a break can be more
+        // than one bare stamp in a row, and the bar counts the whole of it.
+        val breakStart: (Int) -> Int = { at ->
+            var start = at
+            while (start - 1 >= firstSung.coerceAtLeast(0) && lines[start - 1].isGap) start--
+            start
+        }
+        val isBreakBar: (Int, LyricLine?) -> Boolean = { at, item ->
+            item != null && item.isGap && firstSung >= 0 && at >= firstSung
+        }
         AnimatedContent(
             targetState = Triple(index, current, text),
+            // One bar for the whole of a break, however many stamps it is
+            // made of: keyed on each, it slid out and back in mid-count.
+            contentKey = { state ->
+                if (isBreakBar(state.first, state.second)) "break@${breakStart(state.first)}" else state
+            },
             transitionSpec = {
                 val duration = if (reduceAnimation) 0 else 340
+                val barInvolved = isBreakBar(initialState.first, initialState.second) !=
+                    isBreakBar(targetState.first, targetState.second)
                 if (reduceAnimation) {
                     (fadeIn(snap()) togetherWith fadeOut(snap())).using(
                         SizeTransform(clip = false, sizeAnimationSpec = { _, _ -> snap() })
                     )
+                } else if (barInvolved) {
+                    // The break's bar and a sung line change places where they
+                    // stand: the one dissolves as the other comes up out of
+                    // it from the same left edge, and the strip's width eases
+                    // between the two on one curve. The slide the lines use
+                    // between themselves threw a full bar upward at the very
+                    // moment it finished, while the width caught up behind it.
+                    val grow = tween<Float>(BREAK_MORPH_MS, easing = LYRIC_EASING)
+                    (fadeIn(tween(BREAK_MORPH_MS - 80, delayMillis = 60, easing = LinearOutSlowInEasing)) +
+                        scaleIn(grow, initialScale = 0.94f, transformOrigin = TransformOrigin(0f, 0.5f)))
+                        .togetherWith(fadeOut(tween(220, easing = FastOutLinearInEasing)))
+                        .using(
+                            SizeTransform(clip = false, sizeAnimationSpec = { _, _ ->
+                                tween(BREAK_MORPH_MS, easing = LYRIC_EASING)
+                            })
+                        )
                 } else {
                     (fadeIn(animationSpec = tween(duration, easing = FastOutSlowInEasing)) +
                         slideInVertically(animationSpec = tween(duration, easing = FastOutSlowInEasing)) { height -> (height * 0.35f).toInt() })
@@ -2678,9 +2723,10 @@ private fun CurrentLyricLine(
             // A break inside the song counts itself down rather than naming
             // itself: a thin bar from the break's own stamp to the next sung
             // line. The intro keeps its line of copy.
-            val breakSpan = if (itemInstrumental && lineItem != null && lineIndex >= firstSung) {
+            val breakSpan = if (isBreakBar(lineIndex, lineItem) && lineItem != null) {
+                val began = lines[breakStart(lineIndex)].timeMs
                 val until = lines.subList(lineIndex + 1, lines.size).firstOrNull { !it.isGap }?.timeMs
-                until?.takeIf { it > lineItem.timeMs }?.let { lineItem.timeMs to it }
+                until?.takeIf { it > began }?.let { began to it }
             } else {
                 null
             }
@@ -2728,22 +2774,72 @@ private fun CurrentLyricLine(
                     )
                 }
             } else if (swept != null) {
+                // A line too long for the strip scrolls with the singing
+                // rather than ending in an ellipsis: the word being sung stays
+                // in view with the next two after it. See [wordMarqueeOffset].
+                var sweptLayout by remember(swept) { mutableStateOf<TextLayoutResult?>(null) }
+                val wordStarts = remember(swept) { LongArray(swept.words.size) { swept.words[it].startMs } }
+                val wordRights = remember(swept, sweptLayout) {
+                    val measured = sweptLayout
+                    val last = swept.text.lastIndex
+                    if (measured == null || last < 0 || measured.layoutInput.text.length != swept.text.length) {
+                        null
+                    } else {
+                        val spans = swept.wordSpans
+                        FloatArray(spans.size) { measured.getBoundingBox(spans[it].last.coerceIn(0, last)).right }
+                    }
+                }
+                val rtl = sweptLayout?.let { it.lineCount > 0 && it.getParagraphDirection(0) == ResolvedTextDirection.Rtl } == true
+                val wordsEnd = swept.words.last().endMs
                 SweptLyricLine(
                     line = swept,
                     clock = clock,
                     style = MaterialTheme.typography.titleMedium,
                     dimAlpha = UNSUNG_ALPHA_STRIP,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = TextOverflow.Clip,
                     rise = false,
+                    onLayout = { sweptLayout = it },
+                    modifier = Modifier.lyricMarquee { viewport, width ->
+                        val rights = wordRights
+                        when {
+                            // Right to left, the line starts at its far edge:
+                            // crossed over its own time, from that side.
+                            rtl -> (width - viewport) - lineMarqueeOffset(
+                                swept.timeMs, wordsEnd, clock.longValue, viewport, width,
+                            )
+                            rights == null -> 0f
+                            else -> wordMarqueeOffset(
+                                wordStarts, wordsEnd, rights, clock.longValue, viewport, width,
+                            )
+                        }
+                    },
                 )
             } else {
+                // No word timing: the line crosses its overflow over its own
+                // time, to its stated end or the next line's start.
+                val from = lineItem?.timeMs ?: 0L
+                val until = if (lineItem == null || itemInstrumental) {
+                    from
+                } else {
+                    val next = lines.getOrNull(lineIndex + 1)?.timeMs ?: durationMs
+                    lineItem.sungUntilMs?.takeIf { it in (from + 1)..next } ?: next
+                }
+                var plainRtl by remember(lineText) { mutableStateOf(false) }
                 Text(
                     text = lineText,
                     style = MaterialTheme.typography.titleMedium,
                     color = if (itemInstrumental) PlayerInk.copy(alpha = 0.5f) else PlayerInk,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    softWrap = false,
+                    overflow = TextOverflow.Clip,
+                    onTextLayout = {
+                        plainRtl = it.lineCount > 0 && it.getParagraphDirection(0) == ResolvedTextDirection.Rtl
+                    },
+                    modifier = Modifier.lyricMarquee { viewport, width ->
+                        val across = lineMarqueeOffset(from, until, clock.longValue, viewport, width)
+                        if (plainRtl) (width - viewport) - across else across
+                    },
                 )
             }
         }

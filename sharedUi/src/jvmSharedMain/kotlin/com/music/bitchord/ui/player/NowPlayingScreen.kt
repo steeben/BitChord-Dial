@@ -1114,6 +1114,13 @@ fun NowPlayingScreen(
     // A music video plays its own picture where the sleeve is — see
     // [MusicVideoSurface] — and takes the place of any animated cover.
     val musicVideo = showsMusicVideo(song) && song.videoId !in audioOnlyVideos
+    val restoredPlayerScreen = remember { PlayerSettings.lastPlayerScreen.value }
+    var queueOpen by remember {
+        mutableStateOf(restoredPlayerScreen == LastPlayerScreen.QUEUE)
+    }
+    var lyricsOpen by remember {
+        mutableStateOf(restoredPlayerScreen == LastPlayerScreen.LYRICS)
+    }
     // On a phone held upright the music video is the Canvas: cropped to the
     // whole screen behind the controls, with the Canvas's dim, deck and sweep.
     // Wider players, and the phone turned sideways, keep the 16:9 picture.
@@ -1121,12 +1128,19 @@ fun NowPlayingScreen(
     // instead of filling the screen as the Canvas.
     val animatedArt by PlayerSettings.animatedArt.collectAsStateWithLifecycle()
     val videoArtAllowed = animatedArt.allows(AnimatedArtKind.MUSIC_VIDEO)
-    val videoAsCanvas = musicVideo && playerFillsWindow(windowWidth) && videoArtAllowed
-    val videoMode = musicVideo && !videoAsCanvas
     // The two-column player — see [landscapePlayerAvailable]. Asked this early
     // because it runs a Canvas (or a music video standing in for one) under
     // the whole screen, so the stand-in is looked for here as on a phone.
     val landscapeLayout = landscapePlayerAvailable(windowWidth, windowHeight)
+    // Sideways with the lyrics open, a music video is not the whole screen
+    // but the left of it, with the lyrics on the right: it runs as the clip
+    // behind the landscape player, which draws it aside for them — see
+    // [LandscapePlayerLayout]'s videoLyrics. Whatever Appearance says about
+    // video as artwork: this is the video being watched, not standing in.
+    val videoBesideLyrics = musicVideo && landscapeLayout && lyricsOpen
+    val videoAsCanvas = musicVideo &&
+        ((playerFillsWindow(windowWidth) && videoArtAllowed) || videoBesideLyrics)
+    val videoMode = musicVideo && !videoAsCanvas
     val clipBehindPlayer = playerFillsWindow(windowWidth) || landscapeLayout
     // Fixes the listener made from the ⋯ menu — see [CanvasAudioFixes].
     val canvasFixes by CanvasAudioFixes.state.collectAsStateWithLifecycle()
@@ -1204,6 +1218,9 @@ fun NowPlayingScreen(
         if (!landscapeVideoBehind) landscapeVideoFullscreenAsked = false
     }
     val landscapeVideoFullscreen = landscapeVideoFullscreenAsked && landscapeVideoBehind
+    // The lyrics beside the video rather than over it: any song whose music
+    // video is what is playing behind the sideways player.
+    val landscapeVideoLyrics = landscapeVideoBehind && lyricsOpen && !landscapeVideoFullscreen
     // Told to the ⋯ menu, so "fix mismatched Canvas/audio" knows what is on screen.
     SideEffect {
         CanvasAudioFixes.showing.value = CanvasAudioFixes.Showing(
@@ -1382,13 +1399,8 @@ fun NowPlayingScreen(
     // written below, so reopening the player (and a process restart) returns to
     // the same surface on phones and tablets without making this UI state a
     // continuously collected setting.
-    val restoredPlayerScreen = remember { PlayerSettings.lastPlayerScreen.value }
-    var queueOpen by remember {
-        mutableStateOf(restoredPlayerScreen == LastPlayerScreen.QUEUE)
-    }
-    var lyricsOpen by remember {
-        mutableStateOf(restoredPlayerScreen == LastPlayerScreen.LYRICS)
-    }
+    // [restoredPlayerScreen], [queueOpen] and [lyricsOpen] are declared with
+    // the music video above, which asks whether the lyrics are open.
     val queueSlide = remember { mutableFloatStateOf(0f) }
     val queueRecenter = remember { QueueRecenter() }
     // Expensive, song-scoped preparation is deliberately staggered. The small
@@ -2615,8 +2627,96 @@ fun NowPlayingScreen(
         }
 
         Box(modifier = modifier.fillMaxSize().then(dockHost)) {
+            // The lyric sheet of either landscape arrangement: beside the
+            // sleeve, or beside the song's music video.
+            val landscapeLyricsPlaceholder = if (lyricsInstrumental) {
+                            stringResource(Res.string.lyrics_instrumental)
+                        } else if (lyricsUnavailable) {
+                            stringResource(Res.string.lyrics_not_available)
+                        } else {
+                            lyricsLoadingText
+                        }
+            val landscapePickBar: @Composable () -> Unit = {
+                            LyricsPickBar(
+                                shareEnabled = lyricPicker.picks.isNotEmpty() &&
+                                    !lyricPicker.overBudget,
+                                onCancel = lyricPicker.cancel,
+                                onShare = lyricPicker.share,
+                            )
+                        }
+            val landscapeLyricSheet: @Composable (Modifier) -> Unit = { panelModifier ->
+                        LyricsTranslationMotion(
+                            trigger = lyricsTranslation.transition,
+                            reduceMotion = lyricsTranslation.reduceMotion,
+                            modifier = panelModifier.panelBackSwipe(panelBack.progress),
+                        ) { particleProgress ->
+                            // [controlsOpen] is a constant `true`: that flag
+                            // exists because the portrait player hides its
+                            // transport behind the lyrics and needs a tap to
+                            // bring it back. Here there is nothing hidden for
+                            // a tap to reveal, and leaving the reveal gesture
+                            // armed would only eat taps meant for the lines.
+                            LyricsPanel(
+                                lines = lyrics.orEmpty(),
+                                subLines = lyricsTranslation.subLines,
+                                trackKey = song.videoId,
+                                playhead = lyricsPlayhead,
+                                looking = !lyricsUnavailable,
+                                instrumental = lyricsInstrumental,
+                                isPlaying = isPlaying && position.advancing,
+                                onSeekToLine = seekToLyric,
+                                controlsOpen = true,
+                                onRevealControls = {},
+                                onHideControls = {},
+                                translationProgress = particleProgress,
+                                canPick = lyricsShareEnabled,
+                                picking = lyricPicker.picking,
+                                picked = lyricPicker.picks,
+                                onPickLine = lyricPicker.pick,
+                                onTogglePick = lyricPicker.toggle,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        }
+            }
+            // The scrubber as the main pane has it, for under the lyrics
+            // beside a music video.
+            val landscapeScrubber: @Composable () -> Unit = {
+                PlayerScrubber(
+                    shown = shown,
+                    durationMs = barDurationMs,
+                    loading = versionAligning || audioVersionSwitching,
+                    mixing = mixing && !scrub.scrubbing,
+                    transitionWindow = transitionWindow
+                        ?.takeIf { !scrub.scrubbing && it.end > it.start }
+                        ?.let { it.start..it.end },
+                    onScrub = onScrub,
+                    onScrubFinished = onScrubFinished,
+                    waves = wavyProgressBar,
+                    glow = glowProgressBar,
+                    waveArtwork = remoteArt,
+                    playing = isPlaying && position.advancing,
+                )
+            }
             LandscapePlayerLayout(
                 showHandle = !hideSongStatus,
+                videoLyrics = if (landscapeVideoLyrics) {
+                    {
+                        LandscapeVideoLyricsPane(
+                            hasLyrics = lyricsTranslation.displayedLyrics.isNotEmpty(),
+                            placeholder = landscapeLyricsPlaceholder,
+                            picking = lyricPicker.picking,
+                            pickBar = landscapePickBar,
+                            scrubber = landscapeScrubber,
+                            panel = landscapeLyricSheet,
+                        )
+                    }
+                } else {
+                    null
+                },
+                onVideoTap = {
+                    haptics.play(Haptic.Tap)
+                    closeLyrics()
+                },
                 pane = when {
                     lyricsOpen -> PlayerPane.Lyrics
                     queueOpen -> PlayerPane.Queue
@@ -2643,6 +2743,7 @@ fun NowPlayingScreen(
                                     isPlaying = isPlaying,
                                     panelOpen = panelOpen,
                                     fullscreen = landscapeVideoFullscreen,
+                                    split = landscapeVideoLyrics,
                                     onRenderedChange = { canvasRendered = it },
                                     pausedForTransition = dockMoving,
                                     // A TextureView doesn't reliably take the
@@ -2825,26 +2926,15 @@ fun NowPlayingScreen(
                     )
                 },
                 lyricsPane = {
-                    LandscapeLyricsPane(
+                    // Beside a music video the sheet is drawn there instead,
+                    // and one sheet is enough to keep in step with the song.
+                    if (!landscapeVideoLyrics) LandscapeLyricsPane(
                         hasLyrics = lyricsTranslation.displayedLyrics.isNotEmpty(),
-                        placeholder = if (lyricsInstrumental) {
-                            stringResource(Res.string.lyrics_instrumental)
-                        } else if (lyricsUnavailable) {
-                            stringResource(Res.string.lyrics_not_available)
-                        } else {
-                            lyricsLoadingText
-                        },
+                        placeholder = landscapeLyricsPlaceholder,
                         status = lyricsTranslation.status,
                         onStatusClick = { showLyricsProviders = true },
                         picking = lyricPicker.picking,
-                        pickBar = {
-                            LyricsPickBar(
-                                shareEnabled = lyricPicker.picks.isNotEmpty() &&
-                                    !lyricPicker.overBudget,
-                                onCancel = lyricPicker.cancel,
-                                onShare = lyricPicker.share,
-                            )
-                        },
+                        pickBar = landscapePickBar,
                         romanizationToggle = {
                             RomanizationToggleButton(
                                 state = lyricsTranslation.romanizationState,
@@ -2861,40 +2951,8 @@ fun NowPlayingScreen(
                                 onClick = lyricsTranslation.toggleTranslation,
                             )
                         },
-                    ) { panelModifier ->
-                        LyricsTranslationMotion(
-                            trigger = lyricsTranslation.transition,
-                            reduceMotion = lyricsTranslation.reduceMotion,
-                            modifier = panelModifier.panelBackSwipe(panelBack.progress),
-                        ) { particleProgress ->
-                            // [controlsOpen] is a constant `true`: that flag
-                            // exists because the portrait player hides its
-                            // transport behind the lyrics and needs a tap to
-                            // bring it back. Here there is nothing hidden for
-                            // a tap to reveal, and leaving the reveal gesture
-                            // armed would only eat taps meant for the lines.
-                            LyricsPanel(
-                                lines = lyrics.orEmpty(),
-                                subLines = lyricsTranslation.subLines,
-                                trackKey = song.videoId,
-                                playhead = lyricsPlayhead,
-                                looking = !lyricsUnavailable,
-                                instrumental = lyricsInstrumental,
-                                isPlaying = isPlaying && position.advancing,
-                                onSeekToLine = seekToLyric,
-                                controlsOpen = true,
-                                onRevealControls = {},
-                                onHideControls = {},
-                                translationProgress = particleProgress,
-                                canPick = lyricsShareEnabled,
-                                picking = lyricPicker.picking,
-                                picked = lyricPicker.picks,
-                                onPickLine = lyricPicker.pick,
-                                onTogglePick = lyricPicker.toggle,
-                                modifier = Modifier.fillMaxSize(),
-                            )
-                        }
-                    }
+                        panel = landscapeLyricSheet,
+                    )
                 },
                 queuePane = {
                     InlineQueue(

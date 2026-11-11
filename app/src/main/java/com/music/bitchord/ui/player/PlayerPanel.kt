@@ -216,7 +216,7 @@ fun PlayerPanel(
                             // player squeezed into the pill: the pill's own row
                             // stands in for it. Once it takes part, it fades
                             // itself and flies its cover outside that fade.
-                            alpha = if (dock.attached) 1f else (dock.openFraction() / pillUntil).coerceIn(0f, 1f)
+                            alpha = if (dock.attached) 1f else dock.panelFill(pillUntil)
                         },
                 ) { content() }
                 if (pillVisible) {

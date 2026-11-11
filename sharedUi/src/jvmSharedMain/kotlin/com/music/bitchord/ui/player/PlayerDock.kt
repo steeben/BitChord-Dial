@@ -239,8 +239,15 @@ class PlayerDock {
         return Rect(left, offset, right.coerceAtLeast(left + 1f), bottom.coerceAtLeast(offset + 1f))
     }
 
-    /** 0 on the pill, 1 once the player's plain fill has fully covered the pill's material. */
-    fun panelFill(until: Float): Float = (openFraction() / until).coerceIn(0f, 1f)
+    /**
+     * 0 on the pill, 1 once the player's plain fill has fully covered the
+     * pill's material. Still 0 for the first [PILL_HOLD] of the way: a press
+     * that has only begun to lift the pill, and the last of the slide home,
+     * are the pill as it is at rest. The dark fill starting with the very
+     * first pixel of travel read as a shadow dropping onto the pill the
+     * moment it was touched, and lifting off it only once it had landed.
+     */
+    fun panelFill(until: Float): Float = panelFillAt(openFraction(), until)
 
     /**
      * The panel's corner radius this frame: the pill's, rounding into a
@@ -294,6 +301,13 @@ class PlayerDock {
     // changed.
     private val coversMiniArtState = derivedStateOf { attached && (openFraction() > 0f || panelShown) }
 }
+
+/** How far open the panel is before any of the player's fill comes over the pill. */
+internal const val PILL_HOLD = 0.06f
+
+/** [PlayerDock.panelFill] for an open fraction of [open]. */
+internal fun panelFillAt(open: Float, until: Float): Float =
+    ((open - PILL_HOLD) / until).coerceIn(0f, 1f)
 
 /** How far the panel is open when its width has reached the screen's: gradual, not at once. */
 private const val PANEL_WIDE_AT = 0.8f

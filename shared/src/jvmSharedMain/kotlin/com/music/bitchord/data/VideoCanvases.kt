@@ -17,7 +17,8 @@ import java.util.concurrent.ConcurrentHashMap
  * song's video id, so whichever surface draws the Canvas can ask "is there a
  * music video for what's playing?" without knowing how it got there. The
  * player only falls back to it when the song has no Canvas of its own — see
- * NowPlayingScreen.
+ * NowPlayingScreen. Only a video that calls itself a music video, a lyric
+ * video, a visualizer or the like is taken by [findFor]: see [MusicVideoTerms].
  *
  * A song whose own id is a YouTube video (YouTube files some uploads as songs
  * in one place and videos in another) is linked to itself: its own picture
@@ -83,14 +84,34 @@ object VideoCanvases {
         runCatching {
             val pair = YtMusicRepository.versionPair(id)
             if (pair?.isVideo == true) {
+                if (!saysItIsAVideo(song.title, id)) {
+                    TrackLog.d("Canvas", "'${song.title}' is a video itself, but not one that calls itself a music video: no Canvas from it", id)
+                    return
+                }
                 TrackLog.d("Canvas", "'${song.title}' is a video itself: its own picture is the Canvas", id)
                 linkFound(id, id)
                 return
             }
             val video = YtMusicRepository.resolveVideo(song) ?: return
+            if (!saysItIsAVideo(video.title, video.videoId)) {
+                TrackLog.d("Canvas", "'${video.title}' (${video.videoId}) does not call itself a music video: not used as the Canvas", id)
+                return
+            }
             TrackLog.d("Canvas", "'${song.title}' has no Canvas: its music video ${video.videoId} stands in", id)
             linkFound(id, video.videoId)
         }.onFailure { TrackLog.w("Canvas", "music video lookup failed: ${it.message}", id) }
+    }
+
+    /**
+     * Whether the upload [videoId] calls itself a music video, a lyric video,
+     * a visualizer or the like — see [MusicVideoTerms]. Its title first, which
+     * is already in hand; its description is fetched only when the title
+     * does not say. Only a video found by looking is asked: one the listener
+     * tapped, or picked by hand from the ⋯ menu, is theirs to choose.
+     */
+    private suspend fun saysItIsAVideo(title: String?, videoId: String): Boolean {
+        if (MusicVideoTerms.inTitle(title)) return true
+        return MusicVideoTerms.inDescription(SongInfoRepository.description(videoId))
     }
 
     /** Lets [songVideoId] be looked up again — after the listener undoes their fixes. */
