@@ -201,6 +201,7 @@ import com.music.bitchord.ui.theme.ArtworkPalette
 import com.music.bitchord.ui.theme.rememberArtworkPalette
 import com.music.bitchord.ui.theme.rememberArtworkTopBandLuminance
 import com.music.bitchord.ui.components.TopChromeTone
+import com.music.bitchord.ui.components.LocalAppThemeDark
 import com.music.bitchord.ui.components.topChromeOverDark
 import com.music.bitchord.ui.components.bannerArtLuminance
 import com.music.bitchord.ui.components.CLIP_TOP_BAND
@@ -951,12 +952,17 @@ fun DetailScreen(
                 // colour once it has faded or scrolled away.
                 val bannerPx by rememberUpdatedState(with(LocalDensity.current) { artHeight.toPx() })
                 val toneOwner = remember { Any() }
+                // The glyphs lean toward the app's theme: see [topChromeOverDark].
+                val appThemeDark by rememberUpdatedState(
+                    LocalAppThemeDark.current ?: (MaterialTheme.colorScheme.surface.luminance() <= 0.5f),
+                )
                 LaunchedEffect(toneOwner) {
                     snapshotFlow {
                         topChromeOverDark(
                             artLuminance = bannerArtLuminance(bannerTopLuminance, clipTone.luminance, clipTone.showing),
                             washLuminance = washLuminance,
                             artShowing = listState.artUnderTopBar(bannerPx, headerStopScroll()),
+                            themeDark = appThemeDark,
                         )
                     }.collect { TopChromeTone.set(toneOwner, it) }
                 }

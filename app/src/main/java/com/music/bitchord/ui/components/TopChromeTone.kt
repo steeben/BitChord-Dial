@@ -38,24 +38,39 @@ val LocalOnArtworkPage = staticCompositionLocalOf { false }
 
 /**
  * Relative luminance (WCAG, 0..1) under which white glyphs are used over a
- * banner. White is the rule and black the exception: the glyphs only go black
- * over a banner that is very bright (a white or cream sleeve, a pale sky),
- * where white would be lost. A mid-bright photograph (sunlit grass, about
- * 0.4) keeps white, which reads well on it; the earlier 0.30 flipped there.
+ * banner in the dark theme. White is the rule there and black the exception:
+ * the glyphs only go black over a banner that is very bright (a white or
+ * cream sleeve, a pale sky), where white would be lost. A mid-bright
+ * photograph (sunlit grass, about 0.4) keeps white, which reads well on it.
  */
 internal const val CHROME_DARK_BELOW = 0.60f
 
 /**
- * Whether what is under the top controls is dark. [artLuminance] is the top
- * of the banner picture (null until it has been read), [washLuminance] the
- * page colour it is laid on, and [artShowing] how much of the picture is
- * still up there: 1 at the top of the page, less as it fades or scrolls off.
+ * The same in the light theme, the other way about: black glyphs on the
+ * theme's white-tinted glass are the rule, and they only go white over a
+ * banner that is dark. Black and white read equally well at about 0.18.
  */
-internal fun topChromeOverDark(artLuminance: Float?, washLuminance: Float, artShowing: Float): Boolean? {
+internal const val CHROME_DARK_BELOW_LIGHT_THEME = 0.20f
+
+/**
+ * Whether what is under the top controls is dark enough for white glyphs.
+ * [artLuminance] is the top of the banner picture (null until it has been
+ * read), [washLuminance] the page colour it is laid on, and [artShowing] how
+ * much of the picture is still up there: 1 at the top of the page, less as it
+ * fades or scrolls off. [themeDark] is the app's theme, which the glyphs lean
+ * toward: white in the dark theme unless the banner is very bright, black in
+ * the light theme unless it is dark.
+ */
+internal fun topChromeOverDark(
+    artLuminance: Float?,
+    washLuminance: Float,
+    artShowing: Float,
+    themeDark: Boolean,
+): Boolean? {
     if (artLuminance == null) return null
     val showing = artShowing.coerceIn(0f, 1f)
     val under = washLuminance + (artLuminance - washLuminance) * showing
-    return under < CHROME_DARK_BELOW
+    return under < if (themeDark) CHROME_DARK_BELOW else CHROME_DARK_BELOW_LIGHT_THEME
 }
 
 /**
