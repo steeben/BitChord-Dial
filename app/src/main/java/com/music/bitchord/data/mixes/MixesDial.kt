@@ -33,6 +33,11 @@ import kotlin.random.Random
  * Only one mix of a kind is dealt: one "Feel Good Mix" whichever app it is
  * from, and one of "Chill Mix 01" and "Chill Mix 02"; see [mixType].
  *
+ * The listener's genres are favoured ([MixTaste]): a mix naming a genre
+ * they play comes up more often, and a playlist from the community's shelves
+ * or the decades naming only genres they don't play ("'00s Country", to
+ * someone who never plays country) is not dealt at all.
+ *
  * Sleep mixes are dealt only at night, between [SLEEP_FROM] and [SLEEP_UNTIL]
  * by the phone's clock; see [isSleepTime].
  */
@@ -92,6 +97,8 @@ object MixesDial {
     /**
      * A fresh deal: YouTube Music's mixes and, with [spotify], Spotify's,
      * shuffled together. Sleep mixes are left out unless it is [sleepTime].
+     * [listened] is the time listened per genre, by the genre's name, for
+     * [MixTaste]; the mixes the two apps made for this listener add to it.
      */
     suspend fun deal(
         homeShelves: List<HomeShelf>,
@@ -99,6 +106,7 @@ object MixesDial {
         hidden: Set<String>,
         random: Random = Random(System.nanoTime()),
         sleepTime: Boolean = isSleepTime(),
+        listened: Map<String, Long> = emptyMap(),
     ): List<ShelfItem> = coroutineScope {
         val fromSpotify = async { if (spotify) spotifyMixes() else emptyList() }
         val fromHome = homeShelves.flatMap { it.items }.filter(::isYouTubeMix)
@@ -114,18 +122,36 @@ object MixesDial {
         val fromCommunity = shelfPlaylists(community, FROM_THE_COMMUNITY)
         val trending = shelfPlaylists(community, TRENDING_COMMUNITY)
         val decades = decadesPlaylists()
+        val spotifyMixes = fromSpotify.await()
+        val taste = MixTaste.of(listened, madeForYou(fromHome + mixedForYou, spotifyMixes))
         val dealt: (ShelfItem) -> Boolean = { key(it) !in hidden && (sleepTime || !isSleepMix(it)) }
+        // Playlists made for everyone are only dealt in the listener's genres; their own mixes are theirs whatever they name.
+        val toTaste: (ShelfItem) -> Boolean = { dealt(it) && !taste.misses(it.title) }
         pick(
-            youTube = (fromHome + mixedForYou + fromCommunity).filter(dealt),
-            spotify = fromSpotify.await().filter(dealt),
+            youTube = (fromHome + mixedForYou).filter(dealt) + fromCommunity.filter(toTaste),
+            spotify = spotifyMixes.filter(dealt),
             random = random,
-            filler = trending.filter(dealt),
-            decades = decades.filter(dealt),
+            filler = trending.filter(toTaste),
+            decades = decades.filter(toTaste),
+            taste = taste,
         ).also {
             named.value = communityIds(community)
-            Log.d(TAG, "dealt ${it.size} mixes (community ${fromCommunity.size}, trending ${trending.size}, decades ${decades.size})")
+            val passed = (fromCommunity + trending + decades).count { taste.misses(it.title) }
+            Log.d(
+                TAG,
+                "dealt ${it.size} mixes (community ${fromCommunity.size}, trending ${trending.size}, decades ${decades.size}; " +
+                    "taste ${if (taste.known) "known" else "unknown"}, $passed passed over)",
+            )
         }
     }
+
+    /**
+     * The names of the mixes made for this listener among [youTube]'s (the
+     * account's own, `RDTMAK…`) and all of [spotify]'s: what [MixTaste] reads
+     * the listener's genres off.
+     */
+    fun madeForYou(youTube: List<ShelfItem>, spotify: List<ShelfItem>): List<String> =
+        (youTube.filter { it.browseId?.removePrefix("VL")?.startsWith("RDTMAK") == true } + spotify).map { it.title }
 
     /**
      * Up to [limit] mixes: each source shuffled, then taken from in turn, so
@@ -133,6 +159,8 @@ object MixesDial {
      * second mix of a kind already dealt ([mixType]). [decades] takes its
      * turn with the two sources until [decadesLimit] of its playlists are
      * dealt. [filler] is only dealt from once both sources have run out.
+     * With a [taste], each shuffle leans towards the mixes in the listener's
+     * genres ([MixTaste.shuffled]).
      */
     fun pick(
         youTube: List<ShelfItem>,
@@ -142,9 +170,11 @@ object MixesDial {
         filler: List<ShelfItem> = emptyList(),
         decades: List<ShelfItem> = emptyList(),
         decadesLimit: Int = DECADES_LIMIT,
+        taste: MixTaste = MixTaste.UNKNOWN,
     ): List<ShelfItem> {
-        val yt = youTube.distinctBy(::key).shuffled(random)
-        val sp = spotify.distinctBy(::key).shuffled(random)
+        fun List<ShelfItem>.shuffledToTaste() = taste.shuffled(this, random, ShelfItem::title)
+        val yt = youTube.distinctBy(::key).shuffledToTaste()
+        val sp = spotify.distinctBy(::key).shuffledToTaste()
         val dealt = ArrayList<ShelfItem>(limit)
         val ids = HashSet<String>()
         val types = HashSet<String>()
@@ -159,7 +189,7 @@ object MixesDial {
         // Which source leads is chosen at random too.
         val sources = if (random.nextBoolean()) listOf(yt, sp) else listOf(sp, yt)
         // The decades' playlists, and where in each round their turn comes: before, between or after the two.
-        val byDecade = if (decadesLimit > 0) decades.distinctBy(::key).shuffled(random).iterator() else emptyList<ShelfItem>().iterator()
+        val byDecade = if (decadesLimit > 0) decades.distinctBy(::key).shuffledToTaste().iterator() else emptyList<ShelfItem>().iterator()
         val decadesTurn = if (byDecade.hasNext()) random.nextInt(sources.size + 1) else -1
         var decadesDealt = 0
         // One of the decades' playlists, passing over any already on the page; a turn is not lost to those.
@@ -182,7 +212,7 @@ object MixesDial {
             }
             i++
         }
-        for (item in filler.shuffled(random)) {
+        for (item in filler.shuffledToTaste()) {
             if (dealt.size >= limit) break
             if (fresh(item)) dealt += item
         }
