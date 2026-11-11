@@ -6,6 +6,19 @@ import androidx.compose.animation.core.Transition
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.layer.GraphicsLayer
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInRoot
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -14,6 +27,7 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.SideEffect
@@ -39,20 +53,22 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 
 /**
- * A dial tile that opens a page (an album, an artist, a playlist), as it was
- * when it was let go of: where it sat on screen ([bounds], in root
- * coordinates, at full size), how far it was pressed in, and which page of
- * which dial it was on, so Home can come back to that page for it to close into.
+ * A dial tile or a card that opens a page (an album, an artist, a playlist, a
+ * mood's page), as it was when it was let go of: where it sat on screen
+ * ([bounds], in root coordinates, at full size), how far it was pressed in,
+ * and where on its page it was (which page of which dial, or how far along
+ * which shelf), so that page can come back to it for this one to close into.
  */
 class DialOrigin(
     /** The page it opens: its browse id, which is also the page's key. */
-    val key: String,
+    override val key: String,
     val bounds: Rect,
     val pressedScale: Float,
     val thumbnailUrl: String?,
@@ -60,23 +76,16 @@ class DialOrigin(
     val page: Int,
     /** The tile as drawn, unpressed: what the page grows out of and lands back as. */
     val snapshot: ImageBitmap? = null,
-)
-
-/**
- * The phone-home-screen launch: a page opened from a dial tile grows out of
- * the tile, and closing it shrinks it back in. The tile is hidden for as long
- * as its page is open, as an app's icon is.
- */
-object DialLaunch {
-    private var current: DialOrigin? by mutableStateOf(null)
-    var origin: DialOrigin?
-        get() = current
-        set(value) {
-            current = value
-            landed = false
-            launched = false
-        }
-
+    /** The page it was on, by key: the one its page shrinks back onto. */
+    override val parent: String = DialLaunch.page,
+    /** Its corners, as drawn. */
+    val corner: Dp = 10.dp,
+    /** How far along its shelf's row was scrolled, for a card in one. */
+    val rowIndex: Int = 0,
+    val rowOffset: Int = 0,
+    /** Whether it is a card on a shelf ([shelfTitle]) rather than a dial tile. */
+    val card: Boolean = false,
+) : Launched {
     /**
      * Whether the tapped tile's page has come up in its place. The tile hides
      * only from then: hidden as soon as it was tapped, it was gone for a frame
@@ -90,18 +99,70 @@ object DialLaunch {
      * picture by that point), so the page is gone over it with no gap between.
      */
     internal var landed by mutableStateOf(false)
+}
+
+/**
+ * The phone-home-screen launch: a page opened from a dial tile, or from a card
+ * on a page that asks for it (see [LocalCardLaunch]), grows out of the tile,
+ * and closing it shrinks it back in. The tile is hidden for as long as its
+ * page is open, as an app's icon is.
+ *
+ * A page opened this way can open another the same way (a mood's page, then a
+ * playlist on it), so the launches are kept one on top of the other, each to
+ * close back onto the page under it.
+ */
+object DialLaunch {
+    private var stack: List<DialOrigin> by mutableStateOf(emptyList())
+
+    /** The page on screen, by key, told by whoever lays the pages out: what a tile tapped now opens from. */
+    var page: String = ""
+
+    /** Every launch still open, the first one opened first. */
+    val origins: List<DialOrigin> get() = stack
+
+    /** The last launch: the page on top, when it was opened from a tile. */
+    var origin: DialOrigin?
+        get() = stack.lastOrNull()
+        set(value) {
+            stack = stackWith(stack, value)
+        }
+
+    /** Lets go of [origin], and of whatever was launched from its page. */
+    fun drop(origin: DialOrigin) {
+        stack = stackWithout(stack, origin)
+    }
+
+    /** Lets go of every launch that closes onto [page], now that [page] is back on screen. */
+    fun settledOn(page: String) {
+        stack = stackSettledOn(stack, page)
+    }
 
     /** The dial page Home should open on: the one a launched tile is on. */
-    internal fun pageOf(shelfTitle: String): Int = origin?.takeIf { it.shelfTitle == shelfTitle }?.page ?: 0
+    internal fun pageOf(shelfTitle: String): Int = stack.lastOrNull { it.shelfTitle == shelfTitle }?.page ?: 0
 
-    /** Whether the tile for [id] is out on its page, so not on the dial. */
-    internal fun isOut(id: String): Boolean = launched && !landed && origin?.key == id
+    /** The launch from the shelf called [shelfTitle], for its row to come back to where it was. */
+    internal fun rowOf(shelfTitle: String): DialOrigin? =
+        stack.lastOrNull { it.card && it.shelfTitle == shelfTitle }
 
-    /** Whether going from page [from] to page [to] opens or closes the launched tile's page from [home]. */
-    fun zooms(from: String, to: String, home: String): Boolean {
-        val key = origin?.key ?: return false
-        return (from == home && to == key) || (from == key && to == home)
-    }
+    /**
+     * Whether the tile for [id] is out on its page, so not where it was. A
+     * card is asked for by its shelf ([cardShelf]) as well: the same album can
+     * be on the dial and on a shelf under it, and only the one tapped is out.
+     */
+    internal fun isOut(id: String, cardShelf: String? = null): Boolean =
+        stack.any {
+            it.key == id && it.launched && !it.landed &&
+                if (cardShelf == null) !it.card else it.card && it.shelfTitle == cardShelf
+        }
+
+    /** The launch that going from page [from] to page [to] opens or closes, if it is one. */
+    fun between(from: String, to: String): DialOrigin? = launchBetween(stack, from, to)
+
+    /** Whether going from page [from] to page [to] opens or closes a launched tile's page. */
+    fun zooms(from: String, to: String): Boolean = between(from, to) != null
+
+    /** Whether going from page [from] to page [to] opens a launched tile's page, rather than closes it. */
+    fun opens(from: String, to: String): Boolean = between(from, to)?.parent == from
 
     /**
      * Where in a close's run to seek for a back swipe [progress] (0 to 1) of
@@ -138,9 +199,6 @@ private val LaunchEasing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
  */
 private val CloseEasing = CubicBezierEasing(0.2f, 0f, 0.1f, 1.4f)
 
-/** The tile's corners, as drawn on the dial. */
-private val TILE_CORNER = 10.dp
-
 /**
  * One page of the app's content, grown out of / shrunk back into its dial
  * tile while [zooming]. [visibility] is the page's own enter/exit transition
@@ -152,10 +210,12 @@ fun DialLaunchPage(
     key: String,
     zooming: Boolean,
     visibility: Transition<EnterExitState>,
+    /** Whether this page's own cards open their pages the same way: see [LocalCardLaunch]. */
+    cardLaunch: Boolean = false,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val closing = visibility.targetState == EnterExitState.PostExit
-    val live = DialLaunch.origin?.takeIf { zooming && it.key == key }
+    val live = if (zooming) DialLaunch.origins.lastOrNull { it.key == key } else null
     // Held through a close to its very last frame. The page change is over a
     // moment before the closing page is taken away, and in that moment
     // [zooming] is already false: let go of, the page drew once at full size,
@@ -164,7 +224,7 @@ fun DialLaunchPage(
     if (live != null) {
         held[0] = live
         // In the same frame this page first draws over the tile.
-        SideEffect { DialLaunch.launched = true }
+        SideEffect { live.launched = true }
     }
     val origin = live ?: held[0]?.takeIf { closing }
     val progress by visibility.animateFloat(
@@ -190,7 +250,7 @@ fun DialLaunchPage(
             // back the moment the bounce began.
             snapshotFlow { progress }.first { it <= -BOUNCED }
             snapshotFlow { progress }.first { it >= -SETTLED }
-            DialLaunch.landed = true
+            origin.landed = true
         }
     }
     Box(
@@ -228,7 +288,7 @@ fun DialLaunchPage(
                             // in the page's own (unscaled) units.
                             val shownHeight = at.height / scale
                             val tileScale = if (closing) 1f else origin.pressedScale
-                            val radius = lerp(TILE_CORNER.toPx() * tileScale, 0f, p.coerceAtLeast(0f)) *
+                            val radius = lerp(origin.corner.toPx() * tileScale, 0f, p.coerceAtLeast(0f)) *
                                 (1f + p.coerceAtMost(0f)) / scale
                             shape = WindowShape(shownHeight, radius)
                             clip = true
@@ -244,7 +304,7 @@ fun DialLaunchPage(
             ),
         propagateMinConstraints = true,
     ) {
-        content()
+        CompositionLocalProvider(LocalCardLaunch provides cardLaunch) { content() }
         if (origin != null) {
             // The tile itself over the top of the page, fading into the
             // page's banner as it opens, and back in as it closes: wholly the
@@ -307,3 +367,106 @@ private class WindowShape(val height: Float, val radius: Float) : Shape {
             RoundRect(0f, 0f, size.width, height.coerceAtMost(size.height), CornerRadius(radius)),
         )
 }
+
+/**
+ * Whether the cards under this open their pages as dial tiles do, growing out
+ * of their artwork (see [rememberCardLaunch]). Off unless a page asks: where
+ * pages slide in sideways (the Library), they still do.
+ */
+val LocalCardLaunch = staticCompositionLocalOf { false }
+
+/** The shelf a card sits in and its row's scroll, for the row to come back to when the card's page closes. */
+class LaunchRow(val title: String, val state: LazyListState)
+
+val LocalLaunchRow = compositionLocalOf<LaunchRow?> { null }
+
+/**
+ * The scroll of the shelf called [title]'s row: where it was when a card on
+ * it was opened, while that card's page is open, so the page closes onto the
+ * card rather than onto wherever a row starting over would have put it.
+ */
+@Composable
+fun rememberLaunchRowState(title: String): LazyListState {
+    val from = DialLaunch.rowOf(title)
+    return rememberLazyListState(from?.rowIndex ?: 0, from?.rowOffset ?: 0)
+}
+
+/**
+ * A card's artwork as what its page grows out of: where it is, and every frame
+ * of it kept to hand, as a dial tile's are. Put on the artwork with
+ * [launchArt], and told of a tap with [open].
+ */
+class CardLaunch internal constructor(
+    internal val layer: GraphicsLayer,
+    private val scope: CoroutineScope,
+) {
+    internal var key: String = ""
+    internal var thumbnailUrl: String? = null
+    internal var corner: Dp = 0.dp
+    internal var row: LaunchRow? = null
+    internal var coordinates: LayoutCoordinates? = null
+
+    /** Opens the card's page with [action], out of the artwork as it is drawn now. */
+    fun open(action: () -> Unit) {
+        scope.launch {
+            val bounds = coordinates?.takeIf { it.isAttached }?.boundsInRoot()
+            if (bounds != null && !bounds.isEmpty) {
+                val snapshot = runCatching { layer.toImageBitmap() }.getOrNull()
+                DialLaunch.origin = DialOrigin(
+                    key = key,
+                    bounds = bounds,
+                    pressedScale = 1f,
+                    thumbnailUrl = thumbnailUrl,
+                    shelfTitle = row?.title.orEmpty(),
+                    page = 0,
+                    snapshot = snapshot,
+                    corner = corner,
+                    rowIndex = row?.state?.firstVisibleItemIndex ?: 0,
+                    rowOffset = row?.state?.firstVisibleItemScrollOffset ?: 0,
+                    card = true,
+                )
+            }
+            action()
+        }
+    }
+}
+
+/**
+ * The launch for a card that opens the page [opens] (its key), or null where
+ * cards don't launch (see [LocalCardLaunch]) or this one opens no page.
+ * [corner] is its artwork's corners.
+ */
+@Composable
+fun rememberCardLaunch(opens: String?, thumbnailUrl: String?, corner: Dp): CardLaunch? {
+    if (opens == null || !LocalCardLaunch.current) return null
+    val layer = rememberGraphicsLayer()
+    val scope = rememberCoroutineScope()
+    val launch = remember(layer, scope) { CardLaunch(layer, scope) }
+    launch.key = opens
+    launch.thumbnailUrl = thumbnailUrl
+    launch.corner = corner
+    launch.row = LocalLaunchRow.current
+    return launch
+}
+
+/** A tap's action for a card: through its [launch] when it has one. */
+fun launching(launch: CardLaunch?, action: () -> Unit): () -> Unit =
+    if (launch == null) action else ({ launch.open(action) })
+
+/**
+ * Marks a card's artwork as what its page grows out of. Goes ahead of the
+ * artwork's clip, so the picture taken of it has its corners. The artwork is
+ * hidden while its page is open, as a dial tile is.
+ */
+fun Modifier.launchArt(launch: CardLaunch?): Modifier =
+    if (launch == null) {
+        this
+    } else {
+        this
+            .onPlaced { launch.coordinates = it }
+            .graphicsLayer { alpha = if (DialLaunch.isOut(launch.key, launch.row?.title.orEmpty())) 0f else 1f }
+            .drawWithContent {
+                launch.layer.record { this@drawWithContent.drawContent() }
+                drawLayer(launch.layer)
+            }
+    }
