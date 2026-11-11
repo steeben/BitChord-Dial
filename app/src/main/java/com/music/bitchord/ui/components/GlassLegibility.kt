@@ -2,6 +2,7 @@ package com.music.bitchord.ui.components
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
+import com.music.bitchord.data.settings.AppStyle
 
 /**
  * The least fill a light theme's glass carries under a menu's text. The
@@ -36,3 +37,14 @@ internal fun legibleFloor(transparency: Float, defaultTransparency: Float): Floa
     val strength = ((1f - transparency) / (1f - defaultTransparency)).coerceIn(0f, 1f)
     return LEGIBLE_LIGHT_FILL * strength
 }
+
+/**
+ * Whether the player's ⋯ menu is drawn in the dark theme's colours. In the
+ * dark theme, always. In the light theme it is light as every other menu is,
+ * wherever its fill holds black text up by itself: Frost's dense fill and
+ * Solid's opaque one do, over any sleeve. Liquid glass shows the sleeve
+ * through, so there the menu is light only over a sleeve that is bright
+ * ([sleeveBright]) and stays dark over a dark one.
+ */
+internal fun playerMenuDark(appThemeDark: Boolean, style: AppStyle, sleeveBright: Boolean): Boolean =
+    appThemeDark || (style == AppStyle.GLASS && !sleeveBright)

@@ -6578,12 +6578,14 @@ private fun BitChordApp(
                 // so without a Canvas the menu bent a blurred wash of
                 // the background and read as solid.
                 val playerMenuBackdrop = rememberLayerBackdrop()
+                val playerSleeveTone = remember { com.music.bitchord.ui.player.PlayerSleeveTone() }
                 Box(if (glassSamplesBackdrop) Modifier.layerBackdrop(playerMenuBackdrop) else Modifier) {
                     CompositionLocalProvider(
                         LocalPlayerDock provides activeDock,
                         // The player's glass follows the Liquid Glass options,
                         // as its ⋯ menu below and every other menu do.
                         com.music.bitchord.ui.player.LocalPlayerGlass provides playerGlass.takeIf { glassSamplesBackdrop },
+                        com.music.bitchord.ui.player.LocalPlayerSleeveTone provides playerSleeveTone,
                     ) {
                         nowPlaying(playerSong)
                     }
@@ -6591,11 +6593,16 @@ private fun BitChordApp(
                 // The player's ⋯ menu, drawn with the player so
                 // it is over the player, on the player's glass. Outside the
                 // provider above: the menu follows the Liquid Glass options
-                // as every other menu does. In the dark theme's colours
-                // whatever the app's theme: the player under it is dark in
-                // both, and the light theme's black labels could not be read
-                // through glass over it.
-                BitChordTheme(darkTheme = true) {
+                // as every other menu does. In the light theme it is light
+                // like the rest wherever black labels can be read off it:
+                // always in Frost and Solid, and in liquid glass over a
+                // bright sleeve. See [playerMenuDark].
+                val playerMenuDark = com.music.bitchord.ui.components.playerMenuDark(
+                    appThemeDark = com.music.bitchord.ui.components.LocalAppThemeDark.current != false,
+                    style = com.music.bitchord.ui.components.appStyle(),
+                    sleeveBright = playerSleeveTone.bright,
+                )
+                BitChordTheme(darkTheme = playerMenuDark) {
                     IosMenuPopover(
                         item = songActions?.takeIf {
                             menuFromPlayer && songMenuOrigin == null && dialMenuItem == null

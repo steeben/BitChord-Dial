@@ -192,6 +192,9 @@ fun ProvidePlayerInk(
         bandDark = bandDark,
         artLuminance = artLuminance,
     )
+    // Told to the app as well, for the ⋯ menu it draws over the player.
+    val sleeveTone = LocalPlayerSleeveTone.current
+    SideEffect { sleeveTone?.bright = dark }
     // The scrim behind the controls is the main player's alone: with lyrics or
     // the queue up there are no controls on that band to stand it under.
     val panelOpen = conditions?.panelOpen == true

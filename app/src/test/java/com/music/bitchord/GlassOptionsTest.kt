@@ -3,6 +3,7 @@ package com.music.bitchord
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
+import com.music.bitchord.data.settings.AppStyle
 import com.music.bitchord.data.settings.CustomizationSettings
 import com.music.bitchord.ui.components.GlassTint
 import com.music.bitchord.ui.components.LEGIBLE_LIGHT_FILL
@@ -13,6 +14,7 @@ import com.music.bitchord.ui.components.frostButtonFill
 import com.music.bitchord.ui.components.legibleFloor
 import com.music.bitchord.ui.components.legibleOnDark
 import com.music.bitchord.ui.components.legibleOnLight
+import com.music.bitchord.ui.components.playerMenuDark
 import com.music.bitchord.ui.screens.collagePageIsDark
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -227,5 +229,29 @@ class GlassOptionsTest {
     fun `a frosted button on bright ground keeps the pale dense fill`() {
         val dense = Color(0xFFF7F7F9).copy(alpha = 0.6f)
         assertEquals(dense, frostButtonFill(dark = false, dense = dense))
+    }
+
+    @Test
+    fun `the player's menu is dark in the dark theme whatever the style or sleeve`() {
+        for (style in AppStyle.entries) {
+            for (bright in listOf(true, false)) {
+                assertTrue(playerMenuDark(appThemeDark = true, style = style, sleeveBright = bright))
+            }
+        }
+    }
+
+    @Test
+    fun `the player's menu is light in the light theme in Frost and Solid`() {
+        for (style in listOf(AppStyle.FROST, AppStyle.SOLID)) {
+            for (bright in listOf(true, false)) {
+                assertFalse(playerMenuDark(appThemeDark = false, style = style, sleeveBright = bright))
+            }
+        }
+    }
+
+    @Test
+    fun `liquid glass in the light theme goes by the sleeve under the menu`() {
+        assertFalse(playerMenuDark(appThemeDark = false, style = AppStyle.GLASS, sleeveBright = true))
+        assertTrue(playerMenuDark(appThemeDark = false, style = AppStyle.GLASS, sleeveBright = false))
     }
 }

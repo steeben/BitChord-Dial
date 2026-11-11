@@ -3,6 +3,9 @@ package com.music.bitchord.ui.player
 import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -43,3 +46,15 @@ interface PlayerGlass {
 }
 
 val LocalPlayerGlass = staticCompositionLocalOf<PlayerGlass?> { null }
+
+/**
+ * Whether the player's sleeve is bright enough that its text went dark
+ * ([ProvidePlayerInk]'s verdict), for what the app draws over the player from
+ * outside it: the ⋯ menu, which is light or dark as the ground under it is.
+ */
+@Stable
+class PlayerSleeveTone {
+    var bright by mutableStateOf(false)
+}
+
+val LocalPlayerSleeveTone = staticCompositionLocalOf<PlayerSleeveTone?> { null }
