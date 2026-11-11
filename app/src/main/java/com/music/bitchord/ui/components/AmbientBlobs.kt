@@ -216,7 +216,7 @@ fun frostedSurfaceColor(fallback: Color): Color {
 }
 
 /** How far a card darkens (dark theme) or lightens (light theme) the page under it. */
-internal const val FROSTED_CARD_VEIL = 0.15f
+internal const val FROSTED_CARD_VEIL = 0.35f
 
 /** The veil [frostedSurfaceColor] lays over the page in the [dark] theme or the light one. */
 internal fun frostedCardVeil(dark: Boolean): Color =

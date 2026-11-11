@@ -95,6 +95,26 @@ object SongInfoRepository {
         ).let { it.copy(failed = it.failed || release.isFailure) }
     }
 
+    /**
+     * What the uploader wrote under the video [videoId], or null when it
+     * can't be read. Not kept: asked once per song a session, by
+     * [VideoCanvases].
+     */
+    suspend fun description(videoId: String): String? = withContext(Dispatchers.IO) {
+        if (!Regex("[A-Za-z0-9_-]{11}").matches(videoId)) return@withContext null
+        attempt {
+            val response = client.get("https://www.youtube.com/watch") {
+                header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
+                // As in [load]: answers the consent question, opts into nothing.
+                header("Cookie", "SOCS=CAI")
+                parameter("v", videoId)
+                parameter("hl", Innertube.currentLanguage)
+            }
+            check(response.status.value == 200)
+            SongInfoParser.description(response.bodyAsText(), videoId)
+        }.getOrNull()
+    }
+
     private suspend fun <T> attempt(block: suspend () -> T): Result<T> = try {
         Result.success(block())
     } catch (e: CancellationException) {
@@ -105,6 +125,16 @@ object SongInfoRepository {
 }
 
 internal object SongInfoParser {
+    /** The uploader's description of [videoId] off its watch page, or null when the page carries none. */
+    fun description(html: String, videoId: String): String? {
+        val player = Jsoup.parse(html).select("script").map { it.data() }
+            .firstNotNullOfOrNull { extract(it, "ytInitialPlayerResponse") }
+            ?: error("Missing player metadata")
+        val details = player.obj("videoDetails")
+        check(details.str("videoId") == videoId) { "Metadata belongs to another track" }
+        return details.str("shortDescription")?.takeIf { it.isNotBlank() }
+    }
+
     fun parse(html: String, videoId: String): SongInfo {
         val scripts = Jsoup.parse(html).select("script").map { it.data() }
         val player = scripts.firstNotNullOfOrNull { extract(it, "ytInitialPlayerResponse") }

@@ -23,6 +23,6 @@ class SplashThemeTest {
     fun settingsCardsDarkenInTheDarkThemeAndLightenInTheLight() {
         assertEquals(Color.Black.copy(alpha = FROSTED_CARD_VEIL), frostedCardVeil(dark = true))
         assertEquals(Color.White.copy(alpha = FROSTED_CARD_VEIL), frostedCardVeil(dark = false))
-        assertEquals(0.15f, FROSTED_CARD_VEIL, 0f)
+        assertEquals(0.35f, FROSTED_CARD_VEIL, 0f)
     }
 }
