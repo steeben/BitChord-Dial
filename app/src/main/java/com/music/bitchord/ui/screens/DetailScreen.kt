@@ -27,6 +27,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
@@ -112,6 +113,7 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -675,16 +677,17 @@ fun DetailScreen(
         canvas = CanvasRepository.canvasForAlbum(page.title, credit)
             ?: canvas?.takeIf { it.kind in animatedArt.clipOrder }
     }
-    // Opened from a dial tile, the page grows out of that tile, and the tile's
-    // own picture is what its banner starts as: the same image, already in
-    // memory, so there is no blank frame while the full-size art loads. The
-    // banner stays that picture until the launch is over and the Apple lookup
-    // has said whether there is a moving one, then goes once, straight to what
-    // it settles on: the moving banner on wifi, the still one otherwise.
-    val dialArt = remember(page.browseId) {
-        DialLaunch.origin?.takeIf { isArtist && it.key == page.browseId }?.thumbnailUrl
-    }
-    var launchSettled by remember(page.browseId) { mutableStateOf(dialArt == null) }
+    // Opened from a dial tile or a card, the page grows out of it, and its own
+    // picture is what the banner starts as: the same image, already in memory
+    // (a card hands over the very picture it was showing), so there is no
+    // blank frame while the full-size art loads. The banner stays that picture
+    // until the launch is over and the Apple lookup has said whether there is
+    // a moving one, then goes once, straight to what it settles on: the moving
+    // banner on wifi, the still one otherwise.
+    val launchedFrom = remember(page.browseId) { DialLaunch.origin?.takeIf { it.key == page.browseId } }
+    val dialArt = launchedFrom?.thumbnailUrl
+    val launchArt = launchedFrom?.art
+    var launchSettled by remember(page.browseId) { mutableStateOf(dialArt == null && launchArt == null) }
     LaunchedEffect(page.browseId) {
         if (launchSettled) return@LaunchedEffect
         delay(DialLaunch.OPEN_MS.toLong())
@@ -981,6 +984,7 @@ fun DetailScreen(
                     listState = listState,
                     heroUrl = appleArt?.heroUrl?.takeIf { launchSettled },
                     placeholderUrl = dialArt,
+                    placeholderArt = launchArt,
                     stopScroll = headerStopScroll,
                     collage = collage,
                     clipTone = clipTone,
@@ -2310,6 +2314,8 @@ private fun PageBackground(
      * full-size art loads.
      */
     placeholderUrl: String? = null,
+    /** The picture the card it grew out of was showing: used ahead of [placeholderUrl], with nothing to load. */
+    placeholderArt: Painter? = null,
     /**
      * How far the page scrolls before its header holds, or null where it never
      * does. Up to there the picture barely rises and slowly fades as the title
@@ -2412,7 +2418,15 @@ private fun PageBackground(
                 // scrim showed as a thin bright line along the artwork's edge.
                 .clipToBounds(),
         ) {
-            if (placeholderUrl != null) {
+            val placeheld = placeholderArt != null || placeholderUrl != null
+            if (placeholderArt != null) {
+                HeaderArt(
+                    art = null,
+                    painter = placeholderArt,
+                    softenFoot = softenFoot,
+                    modifier = Modifier.matchParentSize().background(palette.elevated),
+                )
+            } else if (placeholderUrl != null) {
                 // The tile's own request, so it is the tile's memory-cache entry.
                 val context = LocalPlatformContext.current
                 HeaderArt(
@@ -2434,7 +2448,7 @@ private fun PageBackground(
                     softenFoot = softenFoot,
                     onLoaded = { baseLoaded = true },
                     modifier = Modifier.matchParentSize().then(
-                        if (placeholderUrl == null) {
+                        if (!placeheld) {
                             Modifier.background(palette.elevated)
                         } else {
                             // Over the tile's picture it eases in, in case the
@@ -2625,21 +2639,31 @@ private fun HeaderArt(
     art: Any?,
     softenFoot: Boolean,
     modifier: Modifier = Modifier,
+    /** A picture already loaded, drawn as it is in place of [art]. */
+    painter: Painter? = null,
     onLoaded: () -> Unit = {},
 ) {
     Box(modifier) {
-        AsyncImage(
-            model = art,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            onState = { if (it is AsyncImagePainter.State.Success) onLoaded() },
-            modifier = Modifier.matchParentSize(),
-        )
-        if (softenFoot) {
+        if (painter != null) {
+            Image(
+                painter = painter,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.matchParentSize(),
+            )
+        } else {
             AsyncImage(
                 model = art,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
+                onState = { if (it is AsyncImagePainter.State.Success) onLoaded() },
+                modifier = Modifier.matchParentSize(),
+            )
+        }
+        if (softenFoot) {
+            HeaderPicture(
+                art = art,
+                painter = painter,
                 modifier = Modifier
                     .matchParentSize()
                     // Offscreen so the mask cuts the blurred result rather
@@ -2654,6 +2678,16 @@ private fun HeaderArt(
                     .blur(SOFT_FOOT_BLUR, BlurredEdgeTreatment.Rectangle),
             )
         }
+    }
+}
+
+/** The header's picture, loaded from [art] or, when there is one, [painter] as it is. */
+@Composable
+private fun HeaderPicture(art: Any?, painter: Painter?, modifier: Modifier = Modifier) {
+    if (painter != null) {
+        Image(painter = painter, contentDescription = null, contentScale = ContentScale.Crop, modifier = modifier)
+    } else {
+        AsyncImage(model = art, contentDescription = null, contentScale = ContentScale.Crop, modifier = modifier)
     }
 }
 
