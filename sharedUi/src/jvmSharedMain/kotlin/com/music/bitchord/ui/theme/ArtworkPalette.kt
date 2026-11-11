@@ -211,6 +211,17 @@ fun rememberArtworkLuminance(
     artPx: Int = CARD_ART_PX,
 ): Float? = rememberArtworkSeed(imageUrl, artPx)?.luminance
 
+/**
+ * The colour the artwork is mostly made of, as read and unadjusted, off the
+ * same cached decode as [rememberArtworkPalette]. Null while the decode is
+ * still on its way.
+ */
+@Composable
+fun rememberArtworkDominant(
+    imageUrl: String?,
+    artPx: Int = CARD_ART_PX,
+): Color? = rememberArtworkSeed(imageUrl, artPx)?.dominant
+
 @Composable
 private fun rememberArtworkSeed(imageUrl: String?, artPx: Int): Seed? {
     val context = LocalPlatformContext.current
