@@ -1056,74 +1056,68 @@ fun SettingsScreen(
                 // whatever the launcher is really showing.
                 var selectedIcon by remember { mutableStateOf(AppIcon.current(context)) }
                 SettingsRow(icon = Icons.Rounded.Apps, title = appIconTitle)
-                Row(
+                // Dark icons on the top row, each colour's bright version under
+                // it. Both rows scroll together so the pairs stay lined up.
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState())
-                        .padding(start = ROW_INSET, end = ROW_INSET, bottom = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        .padding(start = ROW_INSET, end = ROW_INSET, bottom = 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    // One tile per colour, drawn in the dark or bright version
-                    // picked below.
-                    AppIconColor.entries.forEach { color ->
-                        val option = AppIcon.of(color, selectedIcon.dark)
-                        val selected = option == selectedIcon
-                        Column(
-                            modifier = Modifier
-                                .width(72.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .clickable {
-                                    if (option != selectedIcon) {
-                                        selectedIcon = option
-                                        AppIcon.apply(context, option)
+                    listOf(true, false).forEach { dark ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            AppIconColor.entries.forEach { color ->
+                                val option = AppIcon.of(color, dark)
+                                val selected = option == selectedIcon
+                                Column(
+                                    modifier = Modifier
+                                        .width(72.dp)
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .clickable {
+                                            if (option != selectedIcon) {
+                                                selectedIcon = option
+                                                AppIcon.apply(context, option)
+                                            }
+                                        }
+                                        .padding(vertical = 6.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                ) {
+                                    val tile = Modifier
+                                        .size(60.dp)
+                                        .then(
+                                            if (selected) {
+                                                Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(18.dp))
+                                            } else {
+                                                Modifier
+                                            },
+                                        )
+                                        .padding(4.dp)
+                                    // An ImageView draws the adaptive icon through the
+                                    // device's own mask, the shape the launcher will use.
+                                    AndroidView(
+                                        factory = { ctx -> android.widget.ImageView(ctx) },
+                                        update = { it.setImageResource(option.iconRes) },
+                                        modifier = tile,
+                                    )
+                                    // Colour names once, under the bright row.
+                                    if (!dark) {
+                                        Text(
+                                            text = stringResource(color.labelRes),
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1,
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = if (AppIcon.of(color, true) == selectedIcon || selected) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontWeight = if (AppIcon.of(color, true) == selectedIcon || selected) FontWeight.Bold else FontWeight.Normal,
+                                            modifier = Modifier.padding(top = 6.dp),
+                                        )
                                     }
                                 }
-                                .padding(vertical = 6.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            val tile = Modifier
-                                .size(60.dp)
-                                .then(
-                                    if (selected) {
-                                        Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(18.dp))
-                                    } else {
-                                        Modifier
-                                    },
-                                )
-                                .padding(4.dp)
-                            // An ImageView draws the adaptive icon through the
-                            // device's own mask, the shape the launcher will use.
-                            AndroidView(
-                                factory = { ctx -> android.widget.ImageView(ctx) },
-                                update = { it.setImageResource(option.iconRes) },
-                                modifier = tile,
-                            )
-                            Text(
-                                text = stringResource(color.labelRes),
-                                textAlign = TextAlign.Center,
-                                maxLines = 1,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = if (selected) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                                modifier = Modifier.padding(top = 6.dp),
-                            )
+                            }
                         }
                     }
                 }
-                // Dark or bright, for whichever colour is picked.
-                SegmentedControl(
-                    options = listOf(stringResource(R.string.app_icon_dark), stringResource(R.string.app_icon_bright)),
-                    selectedIndex = if (selectedIcon.dark) 0 else 1,
-                    onSelect = { index ->
-                        val option = AppIcon.of(selectedIcon.color, dark = index == 0)
-                        if (option != selectedIcon) {
-                            selectedIcon = option
-                            AppIcon.apply(context, option)
-                        }
-                    },
-                    modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, bottom = 14.dp),
-                )
             }
             val reduceAnimationTitle = stringResource(R.string.reduce_animation)
             row(reduceAnimationTitle, "motion") {
