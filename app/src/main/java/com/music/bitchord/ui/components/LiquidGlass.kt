@@ -448,6 +448,14 @@ fun Modifier.liquidGlass(
      * options followed are still the app theme's. Null leaves it to the theme.
      */
     dark: Boolean? = null,
+    /**
+     * A button lying on a page's picture or wash: the album, playlist and
+     * artist pages' Shuffle, Search and Play. The Frost style then gives it
+     * the pale see-through lift of [frostPageButtonFill] rather than the
+     * bars' dense fill, and a clear [surfaceTint] leaves it the blurred page
+     * alone, for a caller that lays its own colour on top (Play).
+     */
+    pageButton: Boolean = false,
 ): Modifier {
     if (!isGlassSupported()) return this
     val style = appStyle()
@@ -463,8 +471,12 @@ fun Modifier.liquidGlass(
         // frost is not.
         // Not laid over the underlay: the frost is as see-through on a menu
         // as on the bars, and its fill is dense enough to sit on a dimmed page.
-        val fill = (surfaceTint?.takeIf { it.alpha > 0f } ?: if (dark == null) frostFill() else frostFill(dark, carriesText))
-            .let { if (legible) it.legibleOnLight() else it }
+        val fill = when {
+            surfaceTint != null && surfaceTint.alpha > 0f -> surfaceTint
+            pageButton -> if (surfaceTint != null) Color.Transparent else frostPageButtonFill(!light)
+            dark == null -> frostFill()
+            else -> frostFill(dark, carriesText)
+        }.let { if (legible) it.legibleOnLight() else it }
         val frostBlurPx = with(LocalDensity.current) { maxOf(minBlurDp, FROST_BLUR_DP).dp.toPx() } *
             GLASS_RESOLUTION_SCALE
         return drawBackdrop(

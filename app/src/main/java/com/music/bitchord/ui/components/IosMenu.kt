@@ -474,19 +474,15 @@ fun <T : Any> IosMenuPopover(
         val right = anchorBounds?.right?.roundToInt() ?: (width - margin)
         val panelX = (right - panel.width)
             .coerceIn(margin, (width - margin - panel.width).coerceAtLeast(margin))
-        val lowest = (bottom - panel.height).coerceAtLeast(top)
-        val hangsDown = anchorBounds != null && anchorBounds.center.y < height / 2f
-        val preferredY = if (hangsDown) anchorBounds!!.top.roundToInt() else lowest
-        // Over the button wherever the panel settles, so it can grow out of it:
-        // a short panel for the player's ⋯ rises from the button rather than
-        // sitting at the bottom of the screen below it.
-        val panelY = if (anchorBounds != null) {
-            val coverLow = (anchorBounds.bottom.roundToInt() - panel.height)
-            val coverHigh = anchorBounds.top.roundToInt()
-            preferredY.coerceIn(minOf(coverLow, coverHigh), coverHigh).coerceIn(top, lowest)
-        } else {
-            preferredY
-        }
+        val panelY = hungMenuTop(
+            anchorTop = anchorBounds?.top?.roundToInt(),
+            anchorBottom = anchorBounds?.bottom?.roundToInt(),
+            panelHeight = panel.height,
+            insetTop = insets.getTop(this),
+            top = top,
+            bottom = bottom,
+            screenHeight = height,
+        )
         // With no button to grow from, a button-sized nub at its bottom end.
         val nub = 44.dp.toPx()
         geometry.source = anchorBounds?.translate(-panelX.toFloat(), -panelY.toFloat())

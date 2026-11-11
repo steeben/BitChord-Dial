@@ -11,6 +11,7 @@ import com.music.bitchord.ui.components.classicGlassFillColor
 import com.music.bitchord.ui.components.clearGlassFillColor
 import com.music.bitchord.ui.components.clearGlassStrength
 import com.music.bitchord.ui.components.frostButtonFill
+import com.music.bitchord.ui.components.frostPageButtonFill
 import com.music.bitchord.ui.components.legibleFloor
 import com.music.bitchord.ui.components.legibleOnDark
 import com.music.bitchord.ui.components.legibleOnLight
@@ -229,6 +230,18 @@ class GlassOptionsTest {
     fun `a frosted button on bright ground keeps the pale dense fill`() {
         val dense = Color(0xFFF7F7F9).copy(alpha = 0.6f)
         assertEquals(dense, frostButtonFill(dark = false, dense = dense))
+    }
+
+    @Test
+    fun `a frosted button on a page shows the page through it in either theme`() {
+        // The bars' fills, which left a header button reading as a solid disc.
+        val denseDark = Color(0xFF0D0D0F).copy(alpha = 0.65f)
+        val denseLight = Color(0xFFF7F7F9).copy(alpha = 0.6f)
+        assertTrue(frostPageButtonFill(dark = true).alpha < denseDark.alpha / 2f)
+        assertTrue(frostPageButtonFill(dark = false).alpha < denseLight.alpha)
+        // A veil of white both ways: it lifts a dark page and pales a light one.
+        val page = Color(0xFF3A3A22)
+        assertTrue(frostPageButtonFill(dark = true).compositeOver(page).luminance() > page.luminance())
     }
 
     @Test

@@ -31,6 +31,23 @@ internal const val FROST_BUTTON_LIFT = 0.16f
 internal fun frostButtonFill(dark: Boolean, dense: Color): Color =
     if (dark) Color.White.copy(alpha = FROST_BUTTON_LIFT) else dense
 
+/**
+ * How much white a frosted button lays over a light page: enough to stand
+ * off the page as a pane, with the page's picture still plain through it.
+ */
+internal const val FROST_PAGE_BUTTON_VEIL = 0.35f
+
+/**
+ * The Frost style's fill for a button lying on a page's picture: an album,
+ * playlist or artist page's Shuffle and Search. The bars' fill (the theme's
+ * surface at 60 to 65%) left nothing of the page to see through a button
+ * that small, so it read as a solid disc. It is a veil of white over the
+ * blurred page instead: the player buttons' [FROST_BUTTON_LIFT] on a [dark]
+ * page, [FROST_PAGE_BUTTON_VEIL] on a light one.
+ */
+internal fun frostPageButtonFill(dark: Boolean): Color =
+    Color.White.copy(alpha = if (dark) FROST_BUTTON_LIFT else FROST_PAGE_BUTTON_VEIL)
+
 /** Classic's fill opacity at the transparency its fill is measured against. */
 internal const val SURFACE_OPACITY = 1f - CustomizationSettings.GLASS_REFERENCE_TRANSPARENCY
 

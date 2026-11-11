@@ -1908,7 +1908,7 @@ private fun Modifier.headerGlass(shape: androidx.compose.foundation.shape.Corner
     return if (glass != null) {
         // The real thing, as on the bars: the page under the button, blurred
         // and bent at the rim.
-        this.liquidGlass(shape, backdrop = glass, exportedBackdrop = null)
+        this.liquidGlass(shape, backdrop = glass, exportedBackdrop = null, pageButton = true)
     } else {
         this.lightweightLiquidGlass(
             shape = shape,
@@ -2716,7 +2716,15 @@ private fun PlayPill(
     // Glass under the fill where real glass is on, else the sheen and rim
     // that stand in for it.
     val surface = if (glass != null) {
-        Modifier.liquidGlass(CircleShape, backdrop = glass, exportedBackdrop = null, surfaceTint = Color.Transparent)
+        Modifier.liquidGlass(
+            CircleShape,
+            backdrop = glass,
+            exportedBackdrop = null,
+            surfaceTint = Color.Transparent,
+            // In Frost too the fill is this button's own, over the blurred
+            // page: the frost's fill under it left Play all but opaque.
+            pageButton = true,
+        )
     } else {
         Modifier.glassSheen(CircleShape)
     }
