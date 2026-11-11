@@ -3,6 +3,8 @@ package com.music.bitchord.data.mixes
 import com.music.bitchord.data.DebugLog as Log
 import com.music.bitchord.data.YtMusicRepository
 import com.music.bitchord.data.model.HomeShelf
+import com.music.bitchord.data.model.MoodGenre
+import com.music.bitchord.data.model.MoodGenreSection
 import com.music.bitchord.data.model.ShelfItem
 import com.music.bitchord.data.spotify.SPOTIFY_PAGE_PREFIX
 import com.music.bitchord.data.spotify.SpotifyLibrary
@@ -22,9 +24,11 @@ import kotlin.random.Random
  * is signed in, are the playlists Spotify made for it (Daily Mixes, Discover
  * Weekly and the like) that are in its library, and those on its home page's
  * "Your top mixes" shelf. The two are dealt in turn, so neither fills the
- * page alone. What room is left goes to YouTube Music's "Trending community
- * playlists". A tile from either community shelf shows its playlist's name
- * ([named]): a mix's art carries its name, a listener's playlist's does not.
+ * page alone. Up to [DECADES_LIMIT] playlists from Explore's "Decades"
+ * category are dealt in turn with them. What room is left goes to YouTube
+ * Music's "Trending community playlists". A tile from either community shelf
+ * shows its playlist's name ([named]): a mix's art carries its name, a
+ * listener's playlist's does not.
  *
  * Only one mix of a kind is dealt: one "Feel Good Mix" whichever app it is
  * from, and one of "Chill Mix 01" and "Chill Mix 02"; see [mixType].
@@ -57,6 +61,12 @@ object MixesDial {
 
     /** How many more pages of Home are read looking for [FROM_THE_COMMUNITY], when the pages Home has loaded lack it. */
     private const val COMMUNITY_PAGES = 4
+
+    /** Explore's category of playlists by decade ('80s, '90s and so on), by its button's title. */
+    const val DECADES = "Decades"
+
+    /** How many of the [DECADES] category's playlists one deal may hold. */
+    const val DECADES_LIMIT = 3
 
     /** Spotify's own playlists made for one listener, by name, besides those called a mix. */
     private val SPOTIFY_PERSONAL = setOf(
@@ -103,23 +113,26 @@ object MixesDial {
         val community = communityShelves(homeShelves)
         val fromCommunity = shelfPlaylists(community, FROM_THE_COMMUNITY)
         val trending = shelfPlaylists(community, TRENDING_COMMUNITY)
+        val decades = decadesPlaylists()
         val dealt: (ShelfItem) -> Boolean = { key(it) !in hidden && (sleepTime || !isSleepMix(it)) }
         pick(
             youTube = (fromHome + mixedForYou + fromCommunity).filter(dealt),
             spotify = fromSpotify.await().filter(dealt),
             random = random,
             filler = trending.filter(dealt),
+            decades = decades.filter(dealt),
         ).also {
             named.value = communityIds(community)
-            Log.d(TAG, "dealt ${it.size} mixes (community ${fromCommunity.size}, trending ${trending.size})")
+            Log.d(TAG, "dealt ${it.size} mixes (community ${fromCommunity.size}, trending ${trending.size}, decades ${decades.size})")
         }
     }
 
     /**
      * Up to [limit] mixes: each source shuffled, then taken from in turn, so
      * the page has both while both have some. Duplicates go, and so does a
-     * second mix of a kind already dealt ([mixType]). [filler] is only dealt
-     * from once both sources have run out.
+     * second mix of a kind already dealt ([mixType]). [decades] takes its
+     * turn with the two sources until [decadesLimit] of its playlists are
+     * dealt. [filler] is only dealt from once both sources have run out.
      */
     fun pick(
         youTube: List<ShelfItem>,
@@ -127,6 +140,8 @@ object MixesDial {
         random: Random,
         limit: Int = SIZE,
         filler: List<ShelfItem> = emptyList(),
+        decades: List<ShelfItem> = emptyList(),
+        decadesLimit: Int = DECADES_LIMIT,
     ): List<ShelfItem> {
         val yt = youTube.distinctBy(::key).shuffled(random)
         val sp = spotify.distinctBy(::key).shuffled(random)
@@ -143,10 +158,26 @@ object MixesDial {
         }
         // Which source leads is chosen at random too.
         val sources = if (random.nextBoolean()) listOf(yt, sp) else listOf(sp, yt)
+        // The decades' playlists, and where in each round their turn comes: before, between or after the two.
+        val byDecade = if (decadesLimit > 0) decades.distinctBy(::key).shuffled(random).iterator() else emptyList<ShelfItem>().iterator()
+        val decadesTurn = if (byDecade.hasNext()) random.nextInt(sources.size + 1) else -1
+        var decadesDealt = 0
+        // One of the decades' playlists, passing over any already on the page; a turn is not lost to those.
+        fun dealDecade() {
+            while (dealt.size < limit && decadesDealt < decadesLimit && byDecade.hasNext()) {
+                val item = byDecade.next()
+                if (fresh(item)) {
+                    dealt += item
+                    decadesDealt++
+                    return
+                }
+            }
+        }
         var i = 0
-        while (dealt.size < limit && i < maxOf(yt.size, sp.size)) {
-            for (source in sources) {
-                val item = source.getOrNull(i) ?: continue
+        while (dealt.size < limit && (i < maxOf(yt.size, sp.size) || (decadesDealt < decadesLimit && byDecade.hasNext()))) {
+            for (turn in 0..sources.size) {
+                if (turn == decadesTurn) dealDecade()
+                val item = sources.getOrNull(turn)?.getOrNull(i) ?: continue
                 if (dealt.size < limit && fresh(item)) dealt += item
             }
             i++
@@ -209,6 +240,35 @@ object MixesDial {
             Log.w(TAG, "Community playlists unavailable: ${error.message}")
         }
         return loaded + read
+    }
+
+    /** The [DECADES] category's place on Explore, kept once found: its browse id and params. */
+    @Volatile
+    private var decadesCategory: Pair<String, String?>? = null
+
+    /** The [DECADES] button among Explore's [sections], whichever group it is in. */
+    fun decadesCategory(sections: List<MoodGenreSection>): MoodGenre? =
+        sections.flatMap { it.items }.firstOrNull { it.title.trim().equals(DECADES, ignoreCase = true) }
+
+    /** Every playlist of Explore's [DECADES] category, across its shelves; none when it can't be read. */
+    private suspend fun decadesPlaylists(): List<ShelfItem> = try {
+        val category = decadesCategory
+            ?: decadesCategory(YtMusicRepository.moodAndGenres().getOrNull().orEmpty())
+                ?.let { it.browseId to it.params }
+                ?.also { decadesCategory = it }
+        if (category == null) {
+            Log.w(TAG, "Explore has no $DECADES category")
+            emptyList()
+        } else {
+            YtMusicRepository.moodGenreShelves(category.first, category.second).getOrNull().orEmpty()
+                .flatMap { it.items }
+                .filter(::isYouTubePlaylist)
+        }
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (error: Exception) {
+        Log.w(TAG, "Decades playlists unavailable: ${error.message}")
+        emptyList()
     }
 
     /**
