@@ -213,6 +213,7 @@ import com.music.bitchord.ui.components.frostedTrackTint
 import com.music.bitchord.ui.components.lightweightLiquidGlass
 import com.music.bitchord.ui.components.rememberFrostedGlassDensity
 import com.music.bitchord.ui.components.SquareLogo
+import com.music.bitchord.ui.theme.AccentRed
 import com.music.bitchord.ui.theme.LocalNowPlayingTint
 import com.music.bitchord.ui.theme.Tiny5Lcd
 import androidx.compose.ui.unit.sp
@@ -1905,9 +1906,20 @@ fun SettingsScreen(
                 SettingsRow(
                     icon = Icons.Rounded.SaveAs,
                     title = writeSongFixTitle,
-                    subtitle = stringResource(
-                        if (writeSongFix) R.string.song_fix_write_to_file_on else R.string.song_fix_write_to_file_off,
-                    ),
+                    subtitleContent = {
+                        Text(
+                            text = stringResource(R.string.song_fix_write_to_file_detail),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        // Said in red and on its own line, because it is the
+                        // one thing here that can't be taken back.
+                        Text(
+                            text = stringResource(R.string.song_fix_write_to_file_warning),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = AccentRed,
+                        )
+                    },
                     trailing = {
                         IosSwitch(
                             checked = writeSongFix,
