@@ -7,6 +7,7 @@ import com.music.bitchord.ui.components.GlassTint
 import com.music.bitchord.ui.components.LEGIBLE_LIGHT_FILL
 import com.music.bitchord.ui.components.classicGlassFillColor
 import com.music.bitchord.ui.components.clearGlassFillColor
+import com.music.bitchord.ui.components.legibleFloor
 import com.music.bitchord.ui.components.legibleOnLight
 import com.music.bitchord.ui.screens.collagePageIsDark
 import org.junit.After
@@ -45,10 +46,10 @@ class GlassOptionsTest {
         val light = CustomizationSettings.glassOptions(clear = true, dark = false)
         val darkBlur = dark.blur.value
         CustomizationSettings.setClearGlassBlur(20f, dark = false)
-        CustomizationSettings.setClearGlassTint(GlassTint.DEFAULT, dark = false)
+        CustomizationSettings.setClearGlassTint(GlassTint.WHITE, dark = false)
         CustomizationSettings.setClearGlassTransparency(0.25f, dark = false)
         assertEquals(20f, light.blur.value, 0f)
-        assertEquals(GlassTint.DEFAULT, light.tint.value)
+        assertEquals(GlassTint.WHITE, light.tint.value)
         assertEquals(0.25f, light.transparency.value, 0f)
         assertEquals(darkBlur, dark.blur.value, 0f)
         assertEquals(CustomizationSettings.DEFAULT_CLEAR_GLASS_TINT, dark.tint.value)
@@ -63,7 +64,7 @@ class GlassOptionsTest {
         CustomizationSettings.setGlassTintDarkness(0.5f)
         assertEquals(GlassTint.PINK, dark.tint.value)
         assertEquals(0.5f, dark.darkness.value, 0f)
-        assertEquals(GlassTint.DEFAULT, light.tint.value)
+        assertEquals(GlassTint.WHITE, light.tint.value)
         assertEquals(0f, light.darkness.value, 0f)
     }
 
@@ -136,8 +137,34 @@ class GlassOptionsTest {
     }
 
     @Test
-    fun whiteAndNoTintAreBothOnOffer() {
+    fun theSongComesFirstThenWhiteAndBlack() {
+        assertEquals(listOf(GlassTint.SONG, GlassTint.WHITE, GlassTint.BLACK), GlassTint.entries.take(3))
         assertEquals(0xFFFFFFFF, GlassTint.WHITE.argb)
-        assertEquals(GlassTint.NONE, GlassTint.entries.first())
+        assertEquals(0xFF000000, GlassTint.BLACK.argb)
+        assertTrue(GlassTint.entries.none { it.name in setOf("NONE", "DEFAULT", "ACCENT") })
+    }
+
+    @Test
+    fun retiredTintsLandOnTheNearestOneLeft() {
+        // No tint and Default were the theme's own surface: white in the light theme, black in the dark.
+        for (old in listOf("NONE", "DEFAULT")) {
+            assertEquals(GlassTint.WHITE, GlassTint.fromSaved(old, dark = false))
+            assertEquals(GlassTint.BLACK, GlassTint.fromSaved(old, dark = true))
+        }
+        // Accent was the theme's primary: black on light, white on dark.
+        assertEquals(GlassTint.BLACK, GlassTint.fromSaved("ACCENT", dark = false))
+        assertEquals(GlassTint.WHITE, GlassTint.fromSaved("ACCENT", dark = true))
+        assertEquals(GlassTint.PINK, GlassTint.fromSaved("PINK", dark = true))
+        assertEquals(null, GlassTint.fromSaved(null, dark = true))
+    }
+
+    @Test
+    fun theMenuFloorIsGoneAtFullTransparency() {
+        val shipped = CustomizationSettings.DEFAULT_CLEAR_GLASS_TRANSPARENCY
+        assertEquals(LEGIBLE_LIGHT_FILL, legibleFloor(shipped, shipped), 0f)
+        assertEquals(LEGIBLE_LIGHT_FILL, legibleFloor(0.2f, shipped), 0f)
+        assertEquals(0f, legibleFloor(1f, shipped), 0f)
+        // No floor: a clear fill stays clear.
+        assertEquals(0f, Color.Transparent.legibleOnLight(legibleFloor(1f, shipped)).alpha, 0f)
     }
 }

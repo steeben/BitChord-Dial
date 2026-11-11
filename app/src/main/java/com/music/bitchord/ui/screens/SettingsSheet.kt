@@ -5,7 +5,6 @@ import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material.icons.rounded.MoreHoriz
-import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.Build
 import androidx.annotation.StringRes
 import android.content.Context
@@ -148,6 +147,7 @@ import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.positionChanged
 import kotlin.math.abs
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.semantics.contentDescription
@@ -3125,7 +3125,7 @@ internal fun LiquidGlassOptions() {
             saturation == CustomizationSettings.DEFAULT_CLEAR_GLASS_SATURATION &&
             blur == CustomizationSettings.DEFAULT_CLEAR_GLASS_BLUR
     } else {
-        tint == GlassTint.DEFAULT && darkness == 0f &&
+        tint == GlassTint.themeNeutral(editDark) && darkness == 0f &&
             transparency == CustomizationSettings.DEFAULT_GLASS_TRANSPARENCY &&
             saturation == CustomizationSettings.DEFAULT_GLASS_SATURATION &&
             blur == CustomizationSettings.DEFAULT_GLASS_BLUR
@@ -3291,15 +3291,21 @@ internal fun LiquidGlassOptions() {
             GlassTint.entries.forEach { option ->
                 val chosen = option == tint
                 val label = stringResource(option.labelRes())
-                // No tint is the first swatch: an empty ring with a line through it.
-                val noTint = option == GlassTint.NONE
-                val swatch = option.color()
-                    ?: MaterialTheme.colorScheme.surfaceVariant
+                // The playing song's swatch is first, a rainbow with a note in
+                // it: its colour changes from one song to the next.
+                val song = option == GlassTint.SONG
+                val swatch = option.color() ?: MaterialTheme.colorScheme.surfaceVariant
                 Box(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(if (noTint) Color.Transparent else swatch, CircleShape)
+                        .then(
+                            if (song) {
+                                Modifier.background(SONG_TINT_SWATCH, CircleShape)
+                            } else {
+                                Modifier.background(swatch, CircleShape)
+                            },
+                        )
                         .border(
                             width = if (chosen) 2.dp else 0.5.dp,
                             color = if (chosen) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.outline,
@@ -3312,18 +3318,16 @@ internal fun LiquidGlassOptions() {
                         .semantics { contentDescription = label },
                     contentAlignment = Alignment.Center,
                 ) {
-                    // The playing song's swatch says what it is, since its
-                    // colour changes from one song to the next.
-                    if (noTint) {
+                    if (song) {
                         Icon(
-                            Icons.Rounded.Block,
+                            Icons.Rounded.MusicNote,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = if (chosen) 1f else 0.6f),
-                            modifier = Modifier.size(22.dp),
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp),
                         )
-                    } else if (chosen || option == GlassTint.SONG) {
+                    } else if (chosen) {
                         Icon(
-                            if (chosen) Icons.Rounded.Check else Icons.Rounded.MusicNote,
+                            Icons.Rounded.Check,
                             contentDescription = null,
                             tint = if (swatch.luminance() > 0.5f) Color.Black else Color.White,
                             modifier = Modifier.size(18.dp),
@@ -3357,11 +3361,19 @@ internal fun LiquidGlassOptions() {
     }
 }
 
+/** The "Match the playing song" swatch: a rainbow from the middle out. */
+private val SONG_TINT_SWATCH = Brush.radialGradient(
+    0f to Color(0xFFFF3B30),
+    0.2f to Color(0xFFFF9500),
+    0.38f to Color(0xFFFFCC00),
+    0.56f to Color(0xFF34C759),
+    0.74f to Color(0xFF007AFF),
+    0.88f to Color(0xFF5856D6),
+    1f to Color(0xFFAF52DE),
+)
+
 private fun GlassTint.labelRes(): Int = when (this) {
-    GlassTint.NONE -> R.string.glass_tint_none
-    GlassTint.DEFAULT -> R.string.glass_tint_default
     GlassTint.WHITE -> R.string.glass_tint_white
-    GlassTint.ACCENT -> R.string.glass_tint_accent
     GlassTint.SONG -> R.string.glass_tint_song
     GlassTint.BLUE -> R.string.glass_tint_blue
     GlassTint.PURPLE -> R.string.glass_tint_purple

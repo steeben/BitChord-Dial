@@ -1,6 +1,7 @@
 package com.music.bitchord
 
 import com.music.bitchord.ui.components.TopChromeTone
+import com.music.bitchord.ui.components.bannerArtLuminance
 import com.music.bitchord.ui.components.topChromeOverDark
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -43,5 +44,24 @@ class TopChromeToneTest {
         assertEquals(false, TopChromeTone.overDark)
         TopChromeTone.clear(arriving)
         assertNull(TopChromeTone.overDark)
+    }
+
+    @Test
+    fun aDarkClipOverABrightPhotoMakesTheControlsWhite() {
+        // The artist's photo is bright, the clip playing over it is black at the top.
+        val art = bannerArtLuminance(still = 0.7f, clip = 0.01f, clipShowing = 1f)
+        assertEquals(0.01f, art!!, 0.0001f)
+        assertEquals(true, topChromeOverDark(art, washLuminance = 0.8f, artShowing = 1f))
+    }
+
+    @Test
+    fun theClipCountsOnlyAsFarAsItHasFadedIn() {
+        assertEquals(0.7f, bannerArtLuminance(still = 0.7f, clip = 0.01f, clipShowing = 0f)!!, 0.0001f)
+        assertEquals(0.355f, bannerArtLuminance(still = 0.7f, clip = 0.01f, clipShowing = 0.5f)!!, 0.0001f)
+        // No frame read yet: the photo stands.
+        assertEquals(0.7f, bannerArtLuminance(still = 0.7f, clip = null, clipShowing = 1f)!!, 0.0001f)
+        // A clip up before the photo has been read.
+        assertEquals(0.01f, bannerArtLuminance(still = null, clip = 0.01f, clipShowing = 1f)!!, 0.0001f)
+        assertNull(bannerArtLuminance(still = null, clip = null, clipShowing = 1f))
     }
 }

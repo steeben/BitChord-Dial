@@ -387,8 +387,15 @@ private const val EDGE_BAND = 0.18f
  */
 private const val TOP_BAND = 0.10f
 
-private fun ImageBitmap.topBandRelativeLuminance(): Float {
-    val band = (height * TOP_BAND).toInt().coerceIn(1, height)
+private fun ImageBitmap.topBandRelativeLuminance(): Float = topBandLuminance(TOP_BAND)
+
+/**
+ * The mean relative luminance of the top [fraction] of this picture. Works on
+ * a frame read back off a playing clip as well as on a decoded sleeve; at the
+ * sizes those come in at it is cheap enough for the main thread.
+ */
+fun ImageBitmap.topBandLuminance(fraction: Float): Float {
+    val band = (height * fraction).toInt().coerceIn(1, height)
     val pixels = IntArray(width * band)
     readPixels(pixels, startX = 0, startY = 0, width = width, height = band)
     return averageRelativeLuminance(pixels)

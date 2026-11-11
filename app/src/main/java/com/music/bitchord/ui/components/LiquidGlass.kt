@@ -142,34 +142,46 @@ private const val LENS_MAX_DP = 48f
 val LocalGlassFollowsOptions = staticCompositionLocalOf { true }
 
 /**
- * A colour washed into the glass's fill. [DEFAULT] leaves the theme's own
- * surface in it and adds nothing; [NONE] takes that out as well, leaving the
- * glass with no colour of its own at all.
+ * A colour washed into the glass's fill, in the order the options drawer
+ * shows them: the playing song's first, then white and black, then the
+ * colours. How much of it shows is the transparency's to say; at 100% none
+ * does, so there is no separate "no tint" any more.
  */
 enum class GlassTint(val argb: Long?) {
-    NONE(null),
-    DEFAULT(null),
-    WHITE(0xFFFFFFFF),
-    ACCENT(null),
     SONG(null),
+    WHITE(0xFFFFFFFF),
+    BLACK(0xFF000000),
     BLUE(0xFF3D7BFF),
     PURPLE(0xFF9B5CFF),
     PINK(0xFFFF4F9A),
     ORANGE(0xFFFF8A3D),
     GREEN(0xFF34C77B),
-    BLACK(0xFF000000),
     ;
 
-    /**
-     * The colour itself, or null for [NONE] and [DEFAULT]. [ACCENT] is the theme's
-     * primary; [SONG] is the playing song's accent, and none while nothing plays.
-     */
+    /** The colour itself; [SONG] is the playing song's accent, and none while nothing plays. */
     @Composable
     fun color(): Color? = when (this) {
-        NONE, DEFAULT -> null
-        ACCENT -> MaterialTheme.colorScheme.primary
         SONG -> LocalNowPlayingTint.current
         else -> Color(argb!!)
+    }
+
+    companion object {
+        /**
+         * The tint saved as [name], for the [dark] theme or the light one, or
+         * null if nothing was saved. Tints that have since been taken off the
+         * row come back as the one nearest them: No tint and Default (the
+         * theme's own surface) as the theme's own white or black, and Accent,
+         * which was the theme's primary, as the black or white it drew.
+         */
+        fun fromSaved(name: String?, dark: Boolean): GlassTint? = when (name) {
+            null -> null
+            "NONE", "DEFAULT" -> themeNeutral(dark)
+            "ACCENT" -> if (dark) WHITE else BLACK
+            else -> entries.firstOrNull { it.name == name }
+        }
+
+        /** White on the light theme, black on the dark one: the theme's own surface, near enough. */
+        fun themeNeutral(dark: Boolean): GlassTint = if (dark) BLACK else WHITE
     }
 }
 
@@ -188,9 +200,8 @@ private fun glassFill(base: Color?, themeFill: Color): Color {
     // The saturation slider reaches the tint too, measured from where the
     // glass ships: the tint as picked at the default, grey at 0%.
     val tint = picked.color()?.saturated(saturation / CustomizationSettings.DEFAULT_GLASS_SATURATION)
-    // No tint takes the theme's surface out; a caller's own colour stands.
     return classicGlassFillColor(
-        base = base ?: themeFill.takeIf { picked != GlassTint.NONE },
+        base = base ?: themeFill,
         tint = tint,
         darkness = darkness,
         transparency = transparency,
@@ -211,10 +222,9 @@ private fun clearGlassFill(veil: Color?, themeTint: Color): Color {
     val saturation by options.saturation.collectAsStateWithLifecycle()
     val picked by options.tint.collectAsStateWithLifecycle()
     val tint = picked.color()?.saturated(saturation / CustomizationSettings.DEFAULT_CLEAR_GLASS_SATURATION)
-    val none = picked == GlassTint.NONE
     return clearGlassFillColor(
-        veil = veil ?: own.takeIf { !none },
-        themeSurface = themeTint.takeIf { !none },
+        veil = own,
+        themeSurface = themeTint,
         tint = tint,
         darkness = darkness,
         transparency = transparency,
@@ -436,6 +446,17 @@ fun Modifier.liquidGlass(
     // one for each theme.
     val clearStyle by CustomizationSettings.clearGlassStyle.collectAsStateWithLifecycle()
     val options = CustomizationSettings.glassOptions(clear = clearStyle, dark = !light)
+    // The floor under a menu's text gives way as the glass is made more
+    // see-through, and is gone at 100%: no colour shows then, menus included.
+    val userTransparency by options.transparency.collectAsStateWithLifecycle()
+    val floor = if (!followsOptions) {
+        LEGIBLE_LIGHT_FILL
+    } else {
+        legibleFloor(
+            userTransparency,
+            if (clearStyle) CustomizationSettings.DEFAULT_CLEAR_GLASS_TRANSPARENCY else CustomizationSettings.DEFAULT_GLASS_TRANSPARENCY,
+        )
+    }
     if (clearStyle) {
         val clearBlur by options.blur.collectAsStateWithLifecycle()
         val clearSaturation by options.saturation.collectAsStateWithLifecycle()
@@ -444,7 +465,7 @@ fun Modifier.liquidGlass(
             backdrop = backdrop,
             exportedBackdrop = exportedBackdrop,
             surfaceColor = clearGlassFill(surfaceTint, themeTint)
-                .let { if (legible) it.legibleOnLight() else it }
+                .let { if (legible) it.legibleOnLight(floor) else it }
                 .over(underlay),
             blurDp = maxOf(minBlurDp, if (followsOptions) clearBlur else CustomizationSettings.DEFAULT_CLEAR_GLASS_BLUR),
             saturation = if (followsOptions) clearSaturation else CustomizationSettings.DEFAULT_CLEAR_GLASS_SATURATION,
@@ -459,7 +480,7 @@ fun Modifier.liquidGlass(
     val lensHeightPx = with(density) { (LENS_HEIGHT * LENS_MAX_DP).dp.toPx() } * GLASS_RESOLUTION_SCALE
     val lensAmountPx = with(density) { (LENS_AMOUNT * LENS_MAX_DP).dp.toPx() } * GLASS_RESOLUTION_SCALE
     val surfaceTintColor = glassFill(surfaceTint, themeTint.copy(alpha = SURFACE_OPACITY))
-        .let { if (legible) it.legibleOnLight() else it }
+        .let { if (legible) it.legibleOnLight(floor) else it }
         .over(underlay)
 
     return drawBackdrop(

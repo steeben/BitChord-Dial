@@ -4,4 +4,8 @@
     <style name="Theme.BitChord" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="android:windowBackground">@android:color/black</item>
     </style>
+
+    <!-- The splash looks the app picks for itself; filled in values-v31, where splashes have them. -->
+    <style name="Theme.BitChord.SplashLight" />
+    <style name="Theme.BitChord.SplashDark" />
 </resources>

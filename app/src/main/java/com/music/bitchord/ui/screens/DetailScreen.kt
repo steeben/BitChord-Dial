@@ -202,6 +202,10 @@ import com.music.bitchord.ui.theme.rememberArtworkPalette
 import com.music.bitchord.ui.theme.rememberArtworkTopBandLuminance
 import com.music.bitchord.ui.components.TopChromeTone
 import com.music.bitchord.ui.components.topChromeOverDark
+import com.music.bitchord.ui.components.bannerArtLuminance
+import com.music.bitchord.ui.components.CLIP_TOP_BAND
+import com.music.bitchord.ui.components.CLIP_TONE_REFRESH_MS
+import com.music.bitchord.ui.theme.topBandLuminance
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onPlaced
@@ -531,6 +535,9 @@ fun DetailScreen(
         rememberArtworkTopBandLuminance(appleArt?.heroUrl ?: collage?.firstOrNull() ?: page.thumbnailUrl),
     )
     val washLuminance by rememberUpdatedState(palette.wash.luminance())
+    // A moving banner (an artist's clip) is read off its own frames as it
+    // plays: the still picture under it can be nothing like it.
+    val clipTone = remember(page.browseId) { BannerClipTone() }
 
     // Narrowing the running order in place — the release equivalent of the
     // filter box on the Local Music tab, and the one thing a long track list
@@ -947,7 +954,7 @@ fun DetailScreen(
                 LaunchedEffect(toneOwner) {
                     snapshotFlow {
                         topChromeOverDark(
-                            artLuminance = bannerTopLuminance,
+                            artLuminance = bannerArtLuminance(bannerTopLuminance, clipTone.luminance, clipTone.showing),
                             washLuminance = washLuminance,
                             artShowing = listState.artUnderTopBar(bannerPx, headerStopScroll()),
                         )
@@ -970,6 +977,7 @@ fun DetailScreen(
                     placeholderUrl = dialArt,
                     stopScroll = headerStopScroll,
                     collage = collage,
+                    clipTone = clipTone,
                     modifier = Modifier
                         .matchParentSize()
                         .then(if (realGlass) Modifier.layerBackdrop(artBackdrop) else Modifier),
@@ -2307,6 +2315,8 @@ private fun PageBackground(
      * drawn in place of the page's own artwork; null shows the artwork.
      */
     collage: List<String>? = null,
+    /** Told how bright the top of the moving clip is and how much of it shows; see [BannerClipTone]. */
+    clipTone: BannerClipTone? = null,
     modifier: Modifier = Modifier,
 ) {
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
@@ -2345,6 +2355,14 @@ private fun PageBackground(
         delay(CLIP_FADE_DELAY_MS)
         clipIn.animateTo(1f, tween(CLIP_FADE_MS, easing = FastOutSlowInEasing))
         clipSettled = true
+    }
+    // How much of the clip is over the picture, for the top controls' tone.
+    LaunchedEffect(canvas, clipTone) {
+        if (clipTone == null) return@LaunchedEffect
+        clipTone.luminance = null
+        clipTone.showing = 0f
+        if (canvas == null) return@LaunchedEffect
+        snapshotFlow { if (clipRendered) clipIn.value else 0f }.collect { clipTone.showing = it }
     }
     val heroIn by animateFloatAsState(
         targetValue = if (heroLoaded && clipSettled) 1f else 0f,
@@ -2455,6 +2473,9 @@ private fun PageBackground(
                     isPlaying = true,
                     presentationAlpha = { clipIn.value },
                     onRenderedChanged = { clipRendered = it },
+                    // Read again as it plays, so the controls over it follow it.
+                    onFrameCaptured = { frame -> clipTone?.luminance = frame.topBandLuminance(CLIP_TOP_BAND) },
+                    refreshFrameEveryMs = if (clipTone != null) CLIP_TONE_REFRESH_MS else null,
                     modifier = Modifier.matchParentSize(),
                 )
             }
@@ -2495,6 +2516,17 @@ private fun PageBackground(
                 .background(palette.wash),
         )
     }
+}
+
+/**
+ * What a banner's moving clip is showing at its top, for [TopChromeTone]: how
+ * bright the latest frame read off it is there, and how far the clip has
+ * faded in over the still picture.
+ */
+@Stable
+private class BannerClipTone {
+    var luminance by mutableStateOf<Float?>(null)
+    var showing by mutableFloatStateOf(0f)
 }
 
 /** How much darker the foot of a collage page is than its top. */

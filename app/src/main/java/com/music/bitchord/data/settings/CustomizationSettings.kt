@@ -150,8 +150,8 @@ object CustomizationSettings {
     /** How see-through Liquid Glass surfaces are, 0 (opaque fill) to 1 (no fill at all). */
     val glassTransparency = MutableStateFlow(DEFAULT_GLASS_TRANSPARENCY)
 
-    /** The colour washed into Liquid Glass surfaces; [GlassTint.DEFAULT] keeps the theme's. */
-    val glassTint = MutableStateFlow(GlassTint.DEFAULT)
+    /** The colour washed into Liquid Glass surfaces; it ships as the theme's own black or white. */
+    val glassTint = MutableStateFlow(GlassTint.themeNeutral(dark = true))
 
     /** How far the glass's fill is darkened towards black, 0 (not at all) to 1. */
     val glassTintDarkness = MutableStateFlow(0f)
@@ -194,7 +194,7 @@ object CustomizationSettings {
      * Until one is changed it holds what the dark theme's was.
      */
     val glassTransparencyLight = MutableStateFlow(DEFAULT_GLASS_TRANSPARENCY)
-    val glassTintLight = MutableStateFlow(GlassTint.DEFAULT)
+    val glassTintLight = MutableStateFlow(GlassTint.themeNeutral(dark = false))
     val glassTintDarknessLight = MutableStateFlow(0f)
     val glassSaturationLight = MutableStateFlow(DEFAULT_GLASS_SATURATION)
     val glassBlurLight = MutableStateFlow(DEFAULT_GLASS_BLUR)
@@ -298,8 +298,8 @@ object CustomizationSettings {
         ambientBackground.value = p.getBoolean(KEY_AMBIENT_BACKGROUND, true)
         ambientFollowsArtwork.value = p.getBoolean(KEY_AMBIENT_FOLLOWS_ARTWORK, true)
         glassTransparency.value = p.getFloat(KEY_GLASS_TRANSPARENCY, DEFAULT_GLASS_TRANSPARENCY).coerceIn(0f, 1f)
-        glassTint.value = GlassTint.entries
-            .firstOrNull { it.name == p.getString(KEY_GLASS_TINT, null) } ?: GlassTint.DEFAULT
+        glassTint.value = GlassTint.fromSaved(p.getString(KEY_GLASS_TINT, null), dark = true)
+            ?: GlassTint.themeNeutral(dark = true)
         glassTintDarkness.value = p.getFloat(KEY_GLASS_TINT_DARKNESS, 0f).coerceIn(0f, 1f)
         glassBlur.value = p.getFloat(KEY_GLASS_BLUR, DEFAULT_GLASS_BLUR).coerceIn(0f, MAX_GLASS_BLUR)
         glassSaturation.value = p.getFloat(KEY_GLASS_SATURATION, DEFAULT_GLASS_SATURATION).coerceIn(0f, MAX_GLASS_SATURATION)
@@ -309,8 +309,8 @@ object CustomizationSettings {
         clearGlassBlur.value = p.getFloat(KEY_CLEAR_GLASS_BLUR, DEFAULT_CLEAR_GLASS_BLUR).coerceIn(0f, MAX_GLASS_BLUR)
         clearGlassSaturation.value =
             p.getFloat(KEY_CLEAR_GLASS_SATURATION, DEFAULT_CLEAR_GLASS_SATURATION).coerceIn(0f, MAX_GLASS_SATURATION)
-        clearGlassTint.value = GlassTint.entries
-            .firstOrNull { it.name == p.getString(KEY_CLEAR_GLASS_TINT, null) } ?: DEFAULT_CLEAR_GLASS_TINT
+        clearGlassTint.value = GlassTint.fromSaved(p.getString(KEY_CLEAR_GLASS_TINT, null), dark = true)
+            ?: DEFAULT_CLEAR_GLASS_TINT
         clearGlassTintDarkness.value =
             p.getFloat(KEY_CLEAR_GLASS_TINT_DARKNESS, DEFAULT_CLEAR_GLASS_TINT_DARKNESS).coerceIn(0f, 1f)
         clearGlassTintDarknessLight.value =
@@ -318,8 +318,11 @@ object CustomizationSettings {
         // The light theme's set: what the dark theme has, until it is given its own.
         glassTransparencyLight.value =
             p.getFloat(KEY_GLASS_TRANSPARENCY + LIGHT, glassTransparency.value).coerceIn(0f, 1f)
-        glassTintLight.value = GlassTint.entries
-            .firstOrNull { it.name == p.getString(KEY_GLASS_TINT + LIGHT, null) } ?: glassTint.value
+        // A tint the light theme takes over from the dark one is read again
+        // for the light theme, so a retired one lands on the light theme's own.
+        glassTintLight.value = GlassTint.fromSaved(p.getString(KEY_GLASS_TINT + LIGHT, null), dark = false)
+            ?: GlassTint.fromSaved(p.getString(KEY_GLASS_TINT, null), dark = false)
+            ?: GlassTint.themeNeutral(dark = false)
         glassTintDarknessLight.value =
             p.getFloat(KEY_GLASS_TINT_DARKNESS + LIGHT, glassTintDarkness.value).coerceIn(0f, 1f)
         glassBlurLight.value = p.getFloat(KEY_GLASS_BLUR + LIGHT, glassBlur.value).coerceIn(0f, MAX_GLASS_BLUR)
@@ -331,8 +334,9 @@ object CustomizationSettings {
             p.getFloat(KEY_CLEAR_GLASS_BLUR + LIGHT, clearGlassBlur.value).coerceIn(0f, MAX_GLASS_BLUR)
         clearGlassSaturationLight.value =
             p.getFloat(KEY_CLEAR_GLASS_SATURATION + LIGHT, clearGlassSaturation.value).coerceIn(0f, MAX_GLASS_SATURATION)
-        clearGlassTintLight.value = GlassTint.entries
-            .firstOrNull { it.name == p.getString(KEY_CLEAR_GLASS_TINT + LIGHT, null) } ?: clearGlassTint.value
+        clearGlassTintLight.value = GlassTint.fromSaved(p.getString(KEY_CLEAR_GLASS_TINT + LIGHT, null), dark = false)
+            ?: GlassTint.fromSaved(p.getString(KEY_CLEAR_GLASS_TINT, null), dark = false)
+            ?: clearGlassTint.value
         // Written out the first time, so a later change to the dark theme's
         // options does not move the light theme's on the next launch.
         if (!p.contains(KEY_GLASS_TRANSPARENCY + LIGHT)) {
@@ -808,7 +812,7 @@ object CustomizationSettings {
      */
     fun resetGlassOptions(dark: Boolean = true) {
         setGlassTransparency(DEFAULT_GLASS_TRANSPARENCY, dark)
-        setGlassTint(GlassTint.DEFAULT, dark)
+        setGlassTint(GlassTint.themeNeutral(dark), dark)
         setGlassTintDarkness(0f, dark)
         setGlassSaturation(DEFAULT_GLASS_SATURATION, dark)
         setGlassBlur(DEFAULT_GLASS_BLUR, dark)

@@ -200,13 +200,24 @@ private const val AMBIENT_STEP_MS = 80L
 
 /**
  * A surface colour for cards, fields and bars that sit on the page: a thin,
- * see-through frost while the ambient background is on, so the colour behind
+ * see-through veil while the ambient background is on, so the colour behind
  * reads through it, and [fallback] (the usual solid grey) when it is off.
+ *
+ * The veil pulls the page away from the theme's text: darker in the dark
+ * theme, lighter in the light one, by the same [FROSTED_CARD_VEIL] either way,
+ * so the grey subtitles on it stand out from the blobs' colour.
  */
 @Composable
 fun frostedSurfaceColor(fallback: Color): Color {
     val ambient by CustomizationSettings.ambientBackground.collectAsStateWithLifecycle()
     if (!ambient) return fallback
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    return if (dark) Color.White.copy(alpha = 0.075f) else Color.Black.copy(alpha = 0.05f)
+    return frostedCardVeil(dark)
 }
+
+/** How far a card darkens (dark theme) or lightens (light theme) the page under it. */
+internal const val FROSTED_CARD_VEIL = 0.15f
+
+/** The veil [frostedSurfaceColor] lays over the page in the [dark] theme or the light one. */
+internal fun frostedCardVeil(dark: Boolean): Color =
+    (if (dark) Color.Black else Color.White).copy(alpha = FROSTED_CARD_VEIL)

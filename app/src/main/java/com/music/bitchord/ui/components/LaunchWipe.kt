@@ -32,10 +32,14 @@ import com.music.bitchord.R
  * draws the same thing, black with the lit logo where the splash had it, and
  * takes over from it without a seam. Touches pass through: it is never
  * clickable.
+ *
+ * [dark] is which splash the launch opened on (see [SplashTheme]): black with
+ * white squares, or white with black squares in the light theme.
  */
-class LaunchWipeView(context: Context) : View(context) {
+class LaunchWipeView(context: Context, private val dark: Boolean = true) : View(context) {
     private val paint = Paint().apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN) }
-    private val logo: Drawable? = context.getDrawable(R.drawable.splash_logo_lit)
+    private val logo: Drawable? =
+        context.getDrawable(if (dark) R.drawable.splash_logo_lit else R.drawable.splash_logo_lit_light)
     private val logoBox = Rect()
     private var progress = 0f
 
@@ -48,7 +52,7 @@ class LaunchWipeView(context: Context) : View(context) {
         val h = height.toFloat()
         if (w <= 0f || h <= 0f) return
         val layer = canvas.saveLayer(0f, 0f, w, h, null)
-        canvas.drawColor(Color.BLACK)
+        canvas.drawColor(if (dark) Color.BLACK else Color.WHITE)
         if (drawsLogo) logo?.let {
             if (logoBox.isEmpty) centreLogoOn(width / 2, height / 2)
             it.bounds = logoBox

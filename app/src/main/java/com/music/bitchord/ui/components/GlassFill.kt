@@ -18,10 +18,10 @@ internal const val MAX_SHADE = 0.85f
 internal const val SURFACE_OPACITY = 1f - CustomizationSettings.DEFAULT_GLASS_TRANSPARENCY
 
 /**
- * Classic's fill: [base] (the theme's surface, or the caller's own; none
- * under [GlassTint.NONE]), then the user's [tint] and [darkness] laid over it
- * at fixed strengths, all scaled by [transparency]. The default settings give
- * back exactly [base]; at full transparency nothing is left of any of it.
+ * Classic's fill: [base] (the theme's surface, or the caller's own, or none),
+ * then the user's [tint] and [darkness] laid over it at fixed strengths, all
+ * scaled by [transparency]. With no tint and no darkness it gives back exactly
+ * [base]; at full transparency nothing is left of any of it.
  *
  * The tint and the darkening are layers of their own rather than mixed into
  * [base], so they come out the same on every surface. Mixed in, they took on
@@ -39,7 +39,7 @@ internal fun classicGlassFillColor(base: Color?, tint: Color?, darkness: Float, 
 }
 
 /**
- * The New style's fill: its clear [veil] (none under [GlassTint.NONE]), over
+ * The New style's fill: its clear [veil] (if any), over
  * as much of the theme's own surface ([themeSurface], likewise) as
  * [transparency] leaves, with the user's [tint] and [darkness] laid on top.
  * The defaults give back the look it ships with.

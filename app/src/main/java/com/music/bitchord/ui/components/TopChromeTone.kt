@@ -55,3 +55,27 @@ internal fun topChromeOverDark(artLuminance: Float?, washLuminance: Float, artSh
     val under = washLuminance + (artLuminance - washLuminance) * showing
     return under < CHROME_DARK_BELOW
 }
+
+/**
+ * How bright the top of a banner is when a moving clip may be playing over its
+ * still picture: [still] is the picture's top band, [clip] the latest frame's
+ * (null until one has been read) and [clipShowing] how far the clip has faded
+ * in over the picture, 0 to 1. Artist banners are often clips whose opening
+ * frames look nothing like the photo under them.
+ */
+internal fun bannerArtLuminance(still: Float?, clip: Float?, clipShowing: Float): Float? {
+    val showing = clipShowing.coerceIn(0f, 1f)
+    if (clip == null || showing <= 0f) return still
+    if (still == null) return clip
+    return still + (clip - still) * showing
+}
+
+/**
+ * The share of a clip frame's height, from its top, read for [bannerArtLuminance]:
+ * the status bar and the top controls together, on a banner a little over half
+ * the screen tall.
+ */
+internal const val CLIP_TOP_BAND = 0.25f
+
+/** How often a playing banner clip is read again, so the controls follow it as it plays. */
+internal const val CLIP_TONE_REFRESH_MS = 1_000L

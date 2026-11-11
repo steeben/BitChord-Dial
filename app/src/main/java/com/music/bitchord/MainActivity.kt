@@ -563,7 +563,9 @@ class MainActivity : AppCompatActivity() {
                         .withEndAction { view.remove() }
                         .start()
                 } else {
-                    com.music.bitchord.ui.components.LaunchWipeView(this).runOver(decor, view.iconView) { view.remove() }
+                    val splashDark = com.music.bitchord.ui.components.SplashTheme.isDark(this, AppSettings.themeMode.value)
+                    com.music.bitchord.ui.components.LaunchWipeView(this, splashDark)
+                        .runOver(decor, view.iconView) { view.remove() }
                 }
             }
             // Hold the first frame, and so the system splash and its animation,
@@ -595,6 +597,8 @@ class MainActivity : AppCompatActivity() {
         MusicLink.consume(intent)
         setContent {
             val theme by AppSettings.themeMode.collectAsStateWithLifecycle()
+            // The next launch's splash follows the theme picked here.
+            LaunchedEffect(theme) { com.music.bitchord.ui.components.SplashTheme.remember(this@MainActivity, theme) }
             val highPerformance by AppSettings.highPerformanceMode.collectAsStateWithLifecycle()
             val cropThumbnails by CustomizationSettings.cropThumbnails.collectAsStateWithLifecycle()
             val dialTileStyle by CustomizationSettings.dialTileStyle.collectAsStateWithLifecycle()
