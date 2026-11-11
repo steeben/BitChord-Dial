@@ -200,6 +200,9 @@ fun FullArtworkBlurBackdrop(
             animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing),
             label = "fullArtworkScrim",
         )
+        // In the light theme dark ink is picked over sleeves short of white,
+        // and a veil of white lifts the backdrop the rest of the way.
+        val veil = LocalPlayerInkVeil.current
         Canvas(Modifier.fillMaxSize()) {
             val k = scrimScale
             drawRect(
@@ -209,6 +212,7 @@ fun FullArtworkBlurBackdrop(
                     1f to Color.Black.copy(alpha = 0.64f * k),
                 ),
             )
+            if (veil > 0f) drawRect(Color.White.copy(alpha = veil))
         }
     }
 }
@@ -411,6 +415,14 @@ fun ArtworkMeshBackdrop(
         incoming = null
     }
 
+    // The light theme's dark ink stands on the sleeve's own brightness (and a
+    // veil of white), so the scrim kept for white text thins as it does behind
+    // lyrics and the queue.
+    val baseScrim by animateFloatAsState(
+        targetValue = if (LocalPlayerLightTheme.current && LocalPlayerInkDark.current) DARK_INK_SCRIM_SCALE else 1f,
+        animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+        label = "meshScrim",
+    )
     Canvas(
         modifier = modifier
             .fillMaxSize()
@@ -426,6 +438,7 @@ fun ArtworkMeshBackdrop(
             .background(fallback)
             .then(if (canBlur) Modifier.blur(blurRadius) else Modifier),
     ) {
+        val scrim = baseScrim
         val seamY = seam.toPx().coerceIn(0f, size.height)
         shown?.let { drawMesh(it, seamY, alpha = 1f) }
         // Read here rather than in composition: an Animatable read inside a
@@ -439,8 +452,8 @@ fun ArtworkMeshBackdrop(
         drawRect(
             brush = Brush.verticalGradient(
                 colors = listOf(
-                    Color.Black.copy(alpha = 0.06f),
-                    Color.Black.copy(alpha = 0.30f),
+                    Color.Black.copy(alpha = 0.06f * scrim),
+                    Color.Black.copy(alpha = 0.30f * scrim),
                 ),
             ),
         )

@@ -718,7 +718,7 @@ internal fun CircleGlyph(
                 // and the ⋯ beside it: the filled heart says it is liked, and
                 // a brighter disc under it only made the pair look mismatched.
                 if (glass != null) {
-                    glass.surface(sized, CircleShape, darkGround = darkGround)
+                    glass.surface(sized, CircleShape, underlay = playerControlsUnderlay, darkGround = darkGround)
                 } else {
                     sized.clip(CircleShape).background(Color.White.copy(alpha = discAlpha))
                 }
@@ -905,7 +905,12 @@ private fun Pill(
             .height(BOTTOM_ACTION_SIZE)
             .let { sized ->
                 if (glass != null) {
-                    glass.surface(sized, CircleShape, darkGround = !LocalPlayerInkDark.current).clip(CircleShape)
+                    glass.surface(
+                        sized,
+                        CircleShape,
+                        underlay = playerControlsUnderlay,
+                        darkGround = !LocalPlayerInkDark.current,
+                    ).clip(CircleShape)
                 } else {
                     sized.clip(CircleShape).background(Color.White.copy(alpha = 0.12f))
                 }

@@ -137,6 +137,35 @@ internal val LocalPlayerInkLift = compositionLocalOf { 0f }
 internal val LocalPlayerInkDark = compositionLocalOf { false }
 
 /**
+ * How much white is laid under the player's dark ink, 0 to 1, in the light theme
+ * ([lightVeilAlpha]): there the ink goes dark over a band that is bright but short of
+ * white, and the veil lifts that band the rest of the way. The main player draws it where
+ * the dark scrim would be; lyrics and the queue lay it over their backdrop. Always 0 in
+ * the dark theme and under light ink.
+ */
+internal val LocalPlayerInkVeil = compositionLocalOf { 0f }
+
+/** [LocalPlayerInkVeil] as the main player's controls wear it: none with a panel up. */
+internal val LocalPlayerControlsVeil = compositionLocalOf { 0f }
+
+/**
+ * What the player's buttons sit on that their glass does not see: the dark scrim under
+ * light ink or the white veil under dark ink, as a colour to lay under their own fill
+ * (see [PlayerGlass.surface]'s underlay). Without it a button showed the bright sleeve
+ * as it was before the scrim and stood out as a white disc on the darkened band.
+ */
+internal val playerControlsUnderlay: Color
+    @Composable get() {
+        val scrim = LocalPlayerControlsScrim.current
+        val veil = LocalPlayerControlsVeil.current
+        return when {
+            scrim > 0f -> Color.Black.copy(alpha = scrim)
+            veil > 0f -> Color.White.copy(alpha = veil)
+            else -> Color.Transparent
+        }
+    }
+
+/**
  * [PlayerInk] at [alpha], with the faded tone brought up by the ink's lift: as the backdrop
  * dims, a 55% caption moves toward full strength by the same share, so it keeps the
  * contrast it had over the brighter backdrop.
@@ -178,13 +207,16 @@ fun ProvidePlayerInk(
     content: @Composable () -> Unit,
 ) {
     val accent = LocalNowPlayingTint.current ?: MaterialTheme.colorScheme.primary
+    // The app's theme, not the player's own: in the light theme a bright band
+    // takes dark ink on a white veil instead of light ink on a dark scrim.
+    val lightTheme = LocalPlayerLightTheme.current
     // The light or dark verdict reads the main player's band and clip whether or
     // not lyrics or the queue are up, so those screens share it with the player.
     val verdictBand = conditions?.band
     // The band's verdict is held between frames, so a clip hovering around the
     // line doesn't flip the ink back and forth (see [bandInkIsDark]).
     val bandWasDark = remember { mutableStateOf(false) }
-    val bandDark = verdictBand?.let { bandInkIsDark(it, bandWasDark.value) }
+    val bandDark = verdictBand?.let { bandInkIsDark(it, bandWasDark.value, lightTheme) }
     SideEffect { if (bandDark != null) bandWasDark.value = bandDark }
     val dark = playerInkDark(
         forcedDark = conditions?.forcedDark,
@@ -245,7 +277,27 @@ fun ProvidePlayerInk(
         animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing),
         label = "playerControlsScrim",
     )
+    // Dark ink the band itself called for, in the light theme, gets the white
+    // veil. Not a Song fixes pick: that is the listener's call over whatever
+    // is there, and it never had a scrim of either kind.
+    val veilTarget = if (lightTheme && dark && conditions?.forcedDark == null && verdictBand != null) {
+        lightVeilAlpha(verdictBand)
+    } else {
+        0f
+    }
+    val veil by animateFloatAsState(
+        targetValue = veilTarget,
+        animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+        label = "playerInkVeil",
+    )
+    val controlsVeil by animateFloatAsState(
+        targetValue = if (panelOpen) 0f else veilTarget * (1f - 2f * (conditions?.dim ?: 0f)).coerceIn(0f, 1f),
+        animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+        label = "playerControlsVeil",
+    )
     CompositionLocalProvider(
+        LocalPlayerInkVeil provides veil,
+        LocalPlayerControlsVeil provides controlsVeil,
         LocalPlayerInk provides lerp(ink, pole.copy(alpha = ink.alpha), lift),
         LocalPlayerInkLift provides lift,
         LocalPlayerInkDark provides dark,
@@ -278,8 +330,22 @@ private const val CLIP_UNKNOWN_BAND = 0.45f
  * [BAND_DARK_FROM] up, and it stays dark until the band drops below [BAND_LIGHT_BELOW].
  * The gap between the two is what keeps a moving clip from flickering the ink.
  */
-internal fun bandInkIsDark(band: Float, wasDark: Boolean): Boolean =
-    if (wasDark) band >= BAND_LIGHT_BELOW else band >= BAND_DARK_FROM
+internal fun bandInkIsDark(band: Float, wasDark: Boolean, lightTheme: Boolean = false): Boolean = when {
+    lightTheme -> if (wasDark) band >= LIGHT_THEME_BAND_LIGHT_BELOW else band >= LIGHT_THEME_BAND_DARK_FROM
+    else -> if (wasDark) band >= BAND_LIGHT_BELOW else band >= BAND_DARK_FROM
+}
+
+/**
+ * The white veil under dark ink in the light theme, over a band of [band] brightness:
+ * none from [BAND_DARK_FROM] up, where the band is white enough on its own, easing up to
+ * [LIGHT_VEIL_MAX] at [LIGHT_THEME_BAND_DARK_FROM] and below. Rounded as
+ * [controlsScrimAlpha] is.
+ */
+internal fun lightVeilAlpha(band: Float): Float {
+    val t = ((BAND_DARK_FROM - band) / (BAND_DARK_FROM - LIGHT_THEME_BAND_DARK_FROM)).coerceIn(0f, 1f)
+    val eased = t * t * (3f - 2f * t)
+    return (LIGHT_VEIL_MAX * eased * 50f).roundToInt() / 50f
+}
 
 /**
  * The scrim behind light ink over a band of [band] brightness: none over a dark band,
@@ -297,6 +363,23 @@ private const val BAND_DARK_FROM = 0.90f
 
 /** ...and where it hands back to light ink, once it has. */
 private const val BAND_LIGHT_BELOW = 0.80f
+
+/**
+ * In the light theme, where dark ink takes over: a bright band (an sRGB grey of about
+ * 196), not only a near white one. A light app with a pale sleeve should stay light
+ * rather than be darkened until white text reads; the veil ([lightVeilAlpha]) makes up
+ * the brightness the band is short of.
+ */
+private const val LIGHT_THEME_BAND_DARK_FROM = 0.55f
+
+/** ...and where it hands back to light ink there. */
+private const val LIGHT_THEME_BAND_LIGHT_BELOW = 0.45f
+
+/**
+ * The most white the veil lays down. Over a band at [LIGHT_THEME_BAND_DARK_FROM] it
+ * leaves the dark ink at about 4.5:1, the contrast body text is asked for.
+ */
+private const val LIGHT_VEIL_MAX = 0.44f
 
 /** Band brightness below which light ink needs no scrim at all (an sRGB grey of about 125). */
 private const val SCRIM_FROM = 0.20f

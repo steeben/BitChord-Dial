@@ -99,11 +99,12 @@ private val LIGHT_SURFACE = Color(0xFFF7F7F9)
 /**
  * [frostFill] for ground that is [dark] or bright, whatever the theme. A
  * surface text is read off ([carriesText], a drawer) keeps the dense fill; a
- * button on dark ground is lifted instead, see [frostButtonFill].
+ * button is a pale lift over its [underlay] instead, see [frostButtonFill].
  */
-private fun frostFill(dark: Boolean, carriesText: Boolean): Color {
-    val dense = if (dark) DARK_SURFACE.copy(alpha = FROST_FILL_DARK) else LIGHT_SURFACE.copy(alpha = FROST_FILL_LIGHT)
-    return if (carriesText) dense else frostButtonFill(dark, dense)
+private fun frostFill(dark: Boolean, carriesText: Boolean, underlay: Color): Color = when {
+    !carriesText -> frostButtonFill(dark, underlay)
+    dark -> DARK_SURFACE.copy(alpha = FROST_FILL_DARK)
+    else -> LIGHT_SURFACE.copy(alpha = FROST_FILL_LIGHT)
 }
 
 /**
@@ -469,13 +470,14 @@ fun Modifier.liquidGlass(
     if (style == AppStyle.FROST) {
         // A caller's own tint stands; a clear one asks for bare glass, which
         // frost is not.
-        // Not laid over the underlay: the frost is as see-through on a menu
-        // as on the bars, and its fill is dense enough to sit on a dimmed page.
+        // A menu is not laid over the underlay: the frost is as see-through
+        // on it as on the bars, and its fill is dense enough to sit on a
+        // dimmed page. A button told its ground is, see [frostButtonFill].
         val fill = when {
             surfaceTint != null && surfaceTint.alpha > 0f -> surfaceTint
             pageButton -> if (surfaceTint != null) Color.Transparent else frostPageButtonFill(!light)
             dark == null -> frostFill()
-            else -> frostFill(dark, carriesText)
+            else -> frostFill(dark, carriesText, underlay)
         }.let { if (legible) it.legibleOnLight() else it }
         val frostBlurPx = with(LocalDensity.current) { maxOf(minBlurDp, FROST_BLUR_DP).dp.toPx() } *
             GLASS_RESOLUTION_SCALE

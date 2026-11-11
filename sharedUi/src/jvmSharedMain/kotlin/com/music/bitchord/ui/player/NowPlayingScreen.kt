@@ -379,6 +379,8 @@ private fun Modifier.drawControlsScrim(
     alpha: () -> Float,
     rootOrigin: () -> Offset,
     rootSize: () -> IntSize,
+    /** Black for the scrim under light ink, white for the veil under dark. */
+    color: Color = Color.Black,
 ): Modifier = drawBehind {
     val a = alpha().coerceIn(0f, 1f)
     val root = rootSize()
@@ -394,11 +396,11 @@ private fun Modifier.drawControlsScrim(
     val reached = (lead / span).coerceIn(0f, 1f)
     drawRect(
         brush = Brush.verticalGradient(
-            0f to Color.Black.copy(alpha = 0f),
-            reached * 0.5f to Color.Black.copy(alpha = a * 0.35f),
-            reached to Color.Black.copy(alpha = a * 0.85f),
-            (reached + (1f - reached) * 0.25f) to Color.Black.copy(alpha = a),
-            1f to Color.Black.copy(alpha = a),
+            0f to color.copy(alpha = 0f),
+            reached * 0.5f to color.copy(alpha = a * 0.35f),
+            reached to color.copy(alpha = a * 0.85f),
+            (reached + (1f - reached) * 0.25f) to color.copy(alpha = a),
+            1f to color.copy(alpha = a),
             startY = top,
             endY = bottom,
         ),
@@ -4469,6 +4471,8 @@ fun NowPlayingScreen(
                 // and under the deck, from just above it to the foot of the
                 // screen. Gone as the row collapses into the header.
                 val controlsScrim = LocalPlayerControlsScrim.current
+                // The light theme's white veil under dark ink, in its place.
+                val controlsVeil = LocalPlayerControlsVeil.current
                 // Only read while drawing the scrim, so a moving row redraws
                 // it and recomposes nothing.
                 var titleRowOrigin by remember { mutableStateOf(Offset.Zero) }
@@ -4509,6 +4513,12 @@ fun NowPlayingScreen(
                             alpha = { controlsScrim * (1f - p()) },
                             rootOrigin = { titleRowOrigin },
                             rootSize = { titleRootSize },
+                        )
+                        .drawControlsScrim(
+                            alpha = { controlsVeil * (1f - p()) },
+                            rootOrigin = { titleRowOrigin },
+                            rootSize = { titleRootSize },
+                            color = Color.White,
                         )
                         .onGloballyPositioned {
                             titleRowOrigin = it.positionInRoot()
