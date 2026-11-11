@@ -3350,6 +3350,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         } else {
             null
         }
+        // How many rows to hold a place for while it loads: what the last
+        // visit listed, else what its download record lists.
+        val expectedSongs = (detailPageCache[browseId]?.songs as? UiState.Success)?.data?.size?.takeIf { it > 0 }
+            ?: Downloads.collections.value.entries
+                .firstOrNull { it.key.removePrefix("VL") == bare }
+                ?.value?.videoIds?.size?.takeIf { it > 0 }
         _detailStack.value += DetailPage(
             browseId = browseId,
             title = title,
@@ -3357,6 +3363,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             thumbnailUrl = savedCover ?: thumbnailUrl,
             songs = UiState.Loading,
             type = resolved,
+            expectedSongs = expectedSongs,
         )
         viewModelScope.launch {
             loadDetail(browseId, title, subtitle, thumbnailUrl, resolved, albumFromTrack, savedCover)

@@ -182,6 +182,10 @@ import com.music.bitchord.ui.components.libraryGrid
 import com.music.bitchord.ui.components.lightweightLiquidGlass
 import com.music.bitchord.ui.components.thumbnailBorder
 import com.music.bitchord.ui.components.detailSkeleton
+import com.music.bitchord.ui.components.ArtistShelfSkeleton
+import com.music.bitchord.ui.components.ArtistTopSongsSkeleton
+import com.music.bitchord.ui.components.SongRowSkeleton
+import androidx.compose.runtime.State
 import com.music.bitchord.ui.components.ShimmerBox
 import com.music.bitchord.ui.components.topBarContentPadding
 import com.music.bitchord.ui.components.topBarHeight
@@ -315,8 +319,14 @@ private val ARTIST_CONTENT_GUTTER = PAGE_GUTTER
  */
 private val HEADER_DROP = 44.dp
 
-/** How long the header's buttons take to fade in over their placeholders. */
-private const val HEADER_FADE_MS = 260
+/**
+ * How long the header's buttons and their placeholders take to change places:
+ * the placeholders fade out over the same stretch the buttons fade in.
+ */
+private const val HEADER_FADE_MS = 420
+
+/** How strongly a page's placeholders are drawn while it loads. */
+private const val PLACEHOLDER_ALPHA = 0.4f
 
 /** How far below its place something starts when the page brings it in — see [PageEntrance]. */
 private val ENTRANCE_RISE = 22.dp
@@ -334,6 +344,25 @@ private val EntranceEasing = CubicBezierEasing(0.22f, 0.61f, 0.36f, 1f)
  */
 @Composable
 private fun Modifier.pageEntrance(slot: Int, startedAt: Long?): Modifier {
+    val progress = rememberEntrance(slot, startedAt)
+    val rise = with(LocalDensity.current) { ENTRANCE_RISE.toPx() }
+    return graphicsLayer {
+        val shown = progress.value
+        if (shown < 1f) {
+            // Opaque well before it has stopped moving, so the settling is seen.
+            alpha = (shown * 1.6f).coerceAtMost(1f)
+            translationY = (1f - shown) * rise
+        }
+    }
+}
+
+/**
+ * How far along slot [slot] is in the entrance that began at [startedAt]:
+ * 0 until its turn, 1 once settled, and 1 from the start when it has no part
+ * in it (see [PageEntrance.plays]).
+ */
+@Composable
+private fun rememberEntrance(slot: Int, startedAt: Long?): State<Float> {
     val progress = remember {
         Animatable(if (PageEntrance.plays(slot, startedAt, System.currentTimeMillis())) 0f else 1f)
     }
@@ -343,13 +372,69 @@ private fun Modifier.pageEntrance(slot: Int, startedAt: Long?): Modifier {
             progress.animateTo(1f, tween(PageEntrance.DURATION_MS, easing = EntranceEasing))
         }
     }
-    val rise = with(LocalDensity.current) { ENTRANCE_RISE.toPx() }
-    return graphicsLayer {
-        val shown = progress.value
-        if (shown < 1f) {
-            // Opaque well before it has stopped moving, so the settling is seen.
-            alpha = (shown * 1.6f).coerceAtMost(1f)
-            translationY = (1f - shown) * rise
+    return progress.asState()
+}
+
+/**
+ * Brings [content] in as slot [slot] of the page's entrance. When the page
+ * was showing a placeholder where it lands ([placeheld]), the [placeholder]
+ * stays put under it and fades out while the real thing fades in in its
+ * place; otherwise it eases up into place like the rest of the page.
+ */
+@Composable
+private fun PlaceheldEntrance(
+    slot: Int,
+    startedAt: Long?,
+    placeheld: Boolean,
+    placeholder: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    if (!placeheld) {
+        Column(modifier.pageEntrance(slot, startedAt)) { content() }
+        return
+    }
+    val progress = rememberEntrance(slot, startedAt)
+    val fading by remember { derivedStateOf { progress.value < 1f } }
+    Box(modifier) {
+        if (fading) {
+            Box(
+                Modifier
+                    .matchParentSize()
+                    .graphicsLayer { alpha = PLACEHOLDER_ALPHA * (1f - progress.value) },
+            ) { placeholder() }
+        }
+        Column(
+            Modifier.graphicsLayer {
+                val shown = progress.value
+                if (shown < 1f) alpha = shown
+            },
+        ) { content() }
+    }
+}
+
+/**
+ * The placeholder rows a page showed that no song landed on (it was shorter
+ * than expected, or empty): they fade out in their turn rather than vanish.
+ * Takes no room, so nothing under it moves when they are gone.
+ */
+@Composable
+private fun LeftoverPlaceholders(firstRow: Int, count: Int, firstSlot: Int, startedAt: Long?) {
+    val last = rememberEntrance(firstSlot + count - 1, startedAt)
+    val fading by remember { derivedStateOf { last.value < 1f } }
+    if (!fading) return
+    Column(
+        Modifier.layout { measurable, constraints ->
+            val placeable = measurable.measure(constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity))
+            layout(placeable.width, 0) { placeable.place(0, 0) }
+        },
+    ) {
+        repeat(count) { i ->
+            val progress = rememberEntrance(firstSlot + i, startedAt)
+            SongRowSkeleton(
+                index = firstRow + i,
+                modifier = Modifier.graphicsLayer { alpha = PLACEHOLDER_ALPHA * (1f - progress.value) },
+            )
         }
     }
 }
@@ -959,6 +1044,14 @@ fun DetailScreen(
             null
         }
     }
+    // Whether this showing of the page began with placeholders up, and how
+    // many song rows there were: both as they stood while it was loading.
+    val hadPlaceholders = remember(page.browseId) { page.songs is UiState.Loading }
+    val placeholderRows = remember(page.browseId) {
+        PageEntrance.placeholderRows(page.expectedSongs ?: PageEntrance.trackCountIn(page.subtitle))
+    }
+    // The real things take their placeholders' places as part of the entrance.
+    val placeheld = hadPlaceholders && entranceAt != null
 
     AnimatedContent(
         targetState = activeShelf,
@@ -1162,7 +1255,9 @@ fun DetailScreen(
 
             val description = page.description
 
-            if (songs.isNotEmpty() && isArtist) {
+            // Up while the page loads too: the controls hold their place with
+            // placeholders and fade in over them.
+            if (isArtist && (songs.isNotEmpty() || page.songs is UiState.Loading)) {
                 item(key = "actions") {
                     artistActions(
                         Modifier
@@ -1257,7 +1352,7 @@ fun DetailScreen(
             val rowSlot = if (!isArtist && showAbout) 1 else 0
 
             when (val state = page.songs) {
-                is UiState.Loading -> detailSkeleton(isArtist)
+                is UiState.Loading -> detailSkeleton(isArtist, songRows = placeholderRows, alpha = PLACEHOLDER_ALPHA)
                 is UiState.Error -> item { MessageState(state.message) }
                 is UiState.Success -> if (artistSearch) {
                     // The artist's songs that match, one under another.
@@ -1293,7 +1388,12 @@ fun DetailScreen(
                     // on the device is listed whole: it is the listener's own.
                     if (artistSongs.isNotEmpty()) item {
                         val top = if (localOnly) artistSongs else artistSongs.take(MAX_ARTIST_SONGS)
-                        Column(Modifier.pageEntrance(artistSlot, entranceAt)) {
+                        PlaceheldEntrance(
+                            slot = artistSlot,
+                            startedAt = entranceAt,
+                            placeheld = placeheld,
+                            placeholder = { ArtistTopSongsSkeleton() },
+                        ) {
                         SectionHeading(
                             title = stringResource(if (localOnly) R.string.songs else R.string.top_songs),
                             palette = palette,
@@ -1346,7 +1446,14 @@ fun DetailScreen(
                         // The first screenful comes in a row at a time, top to
                         // bottom. Anything after (scrolling, a filter) is
                         // simply there.
-                        Column(Modifier.pageEntrance(rowSlot + position, entranceAt)) {
+                        // A row that lands on a placeholder fades in over it
+                        // as the placeholder fades out.
+                        PlaceheldEntrance(
+                            slot = rowSlot + position,
+                            startedAt = entranceAt,
+                            placeheld = placeheld && position < placeholderRows,
+                            placeholder = { SongRowSkeleton(index = position) },
+                        ) {
                         SongRow(
                             song = if (numbered) {
                                 song
@@ -1385,6 +1492,18 @@ fun DetailScreen(
                                 color = palette.divider,
                             )
                         }
+                        }
+                    }
+                    // Placeholders with no song to land on them go out in turn.
+                    val leftover = placeholderRows - matches.size
+                    if (placeheld && leftover > 0) {
+                        item(key = "placeholders-out") {
+                            LeftoverPlaceholders(
+                                firstRow = matches.size,
+                                count = leftover,
+                                firstSlot = rowSlot + matches.size,
+                                startedAt = entranceAt,
+                            )
                         }
                     }
                 }
@@ -1433,7 +1552,13 @@ fun DetailScreen(
                 val displayItems = remember(shelf.items) {
                     if (canShowAll) shelf.items.take(ARTIST_ROW_MAX_ITEMS) else shelf.items
                 }
-                Column(Modifier.pageEntrance(shelfSlot + shelfIndex, entranceAt).padding(top = 22.dp)) {
+                PlaceheldEntrance(
+                    slot = shelfSlot + shelfIndex,
+                    startedAt = entranceAt,
+                    placeheld = placeheld && shelfIndex == 0,
+                    placeholder = { ArtistShelfSkeleton() },
+                    modifier = Modifier.padding(top = 22.dp),
+                ) {
                     SectionHeading(
                         title = shelf.title,
                         palette = palette,
@@ -1786,7 +1911,7 @@ private fun ReleaseActions(
     AnimatedContent(
         targetState = songs.isNotEmpty(),
         transitionSpec = {
-            fadeIn(tween(HEADER_FADE_MS)) togetherWith fadeOut(tween(HEADER_FADE_MS / 2))
+            fadeIn(tween(HEADER_FADE_MS)) togetherWith fadeOut(tween(HEADER_FADE_MS))
         },
         contentAlignment = Alignment.Center,
         label = "releaseActions",

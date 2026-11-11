@@ -70,4 +70,34 @@ class PageEntranceTest {
         assertTrue(showings.claim(other))
         assertFalse(showings.claim(page))
     }
+
+    @Test
+    fun `placeholder rows follow the known song count`() {
+        assertEquals(1, PageEntrance.placeholderRows(1))
+        assertEquals(5, PageEntrance.placeholderRows(5))
+        assertEquals(PageEntrance.PLACEHOLDER_ROWS_MAX, PageEntrance.placeholderRows(400))
+    }
+
+    @Test
+    fun `there is never no placeholder row`() {
+        assertEquals(1, PageEntrance.placeholderRows(0))
+        assertEquals(1, PageEntrance.placeholderRows(-2))
+        assertEquals(PageEntrance.PLACEHOLDER_ROWS_UNKNOWN, PageEntrance.placeholderRows(null))
+        assertTrue(PageEntrance.PLACEHOLDER_ROWS_UNKNOWN in 1 until PageEntrance.PLACEHOLDER_ROWS_MAX)
+    }
+
+    @Test
+    fun `a subtitle's song count is read`() {
+        assertEquals(12, PageEntrance.trackCountIn("Playlist • 12 songs"))
+        assertEquals(1, PageEntrance.trackCountIn("Some Artist · 1 song"))
+        assertEquals(1204, PageEntrance.trackCountIn("Playlist • 1,204 tracks • 80 hours"))
+        assertEquals(1, PageEntrance.trackCountIn("Single • Some Artist • 2024"))
+    }
+
+    @Test
+    fun `a subtitle without a count gives none`() {
+        assertEquals(null, PageEntrance.trackCountIn(""))
+        assertEquals(null, PageEntrance.trackCountIn("Album • Some Artist • 2019"))
+        assertEquals(null, PageEntrance.trackCountIn("Single Ladies • 2008"))
+    }
 }

@@ -597,6 +597,12 @@ data class DetailPage(
      * fetched with a session; see [SubscriptionState].
      */
     val subscription: SubscriptionState? = null,
+    /**
+     * How many songs the page is expected to list, when something knew before
+     * it loaded (an earlier visit, its download record). Only sizes the
+     * placeholders drawn while [songs] is loading.
+     */
+    val expectedSongs: Int? = null,
 )
 
 /**

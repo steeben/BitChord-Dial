@@ -346,80 +346,59 @@ fun LazyListScope.librarySkeleton() {
     songListSkeleton(count = 7, keyPrefix = "skeleton:library:song")
 }
 
-/** The Play / Shuffle pair, which only appears once there is something to play. */
+/**
+ * The artist page's top songs while they load: the heading and one page of
+ * four rows. Drawn on its own so the page can also hold it under the real
+ * songs while they fade in over it.
+ */
 @Composable
-private fun DetailActionsSkeleton(isArtist: Boolean) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            // Matches the real pair's inset, height and corner, so the header
-            // above them doesn't shift when the track list lands.
-            .padding(horizontal = PAGE_GUTTER + 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(
-            if (isArtist) 12.dp else 10.dp,
-            Alignment.CenterHorizontally,
-        ),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (isArtist) {
-            // Radio, Shuffle, the big Play, the star, the pin — the artist
-            // page's row as it lands.
-            ShimmerBox(Modifier.size(46.dp), CircleShape)
-            ShimmerBox(Modifier.size(46.dp), CircleShape)
-            ShimmerBox(Modifier.size(70.dp), CircleShape)
-            ShimmerBox(Modifier.size(46.dp), CircleShape)
-            ShimmerBox(Modifier.size(46.dp), CircleShape)
-        } else {
-            ShimmerBox(Modifier.size(50.dp), CircleShape)
-            ShimmerBox(Modifier.width(130.dp).height(50.dp), CircleShape)
-            ShimmerBox(Modifier.size(50.dp), CircleShape)
+fun ArtistTopSongsSkeleton() {
+    Column {
+        SectionHeaderSkeleton()
+        // Top songs page four at a time — see [trackColumnWidth] for how
+        // wide a page lands.
+        BoxWithConstraints {
+            val columnWidth = trackColumnWidth(maxWidth)
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = PAGE_GUTTER),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                userScrollEnabled = false,
+            ) {
+                item {
+                    Column(Modifier.width(columnWidth)) {
+                        repeat(4) { index -> CompactSongRowSkeleton(index) }
+                    }
+                }
+            }
         }
     }
+}
+
+/** The artist page's first shelf of releases while it loads. */
+@Composable
+fun ArtistShelfSkeleton() {
+    ShelfSkeleton(index = 2, cardCorner = 10.dp)
 }
 
 /**
  * An album, playlist or artist page below its header — the header itself is
  * drawn from what the row that was tapped already knew, so it never waits.
+ *
+ * A release gets [songRows] rows: as many as it is known to hold, so a single
+ * waits behind one row rather than a screenful. The buttons of either kind of
+ * page are placeheld where the real ones land, by the page itself.
  */
-fun LazyListScope.detailSkeleton(isArtist: Boolean) {
+fun LazyListScope.detailSkeleton(isArtist: Boolean, songRows: Int = 8, alpha: Float = 0.4f) {
     if (isArtist) {
-        item(key = "skeleton:detail:actions") {
-            Column(Modifier.graphicsLayer { alpha = 0.4f }) {
-                DetailActionsSkeleton(isArtist = true)
-                Spacer(Modifier.height(22.dp))
-            }
-        }
         item(key = "skeleton:detail:top") {
-            Column(Modifier.graphicsLayer { alpha = 0.4f }) {
-                SectionHeaderSkeleton()
-                // Top songs page four at a time — see [trackColumnWidth] for how
-                // wide a page lands.
-                BoxWithConstraints {
-                    val columnWidth = trackColumnWidth(maxWidth)
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = PAGE_GUTTER),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        userScrollEnabled = false,
-                    ) {
-                        item {
-                            Column(Modifier.width(columnWidth)) {
-                                repeat(4) { index -> CompactSongRowSkeleton(index) }
-                            }
-                        }
-                    }
-                }
-            }
+            Box(Modifier.graphicsLayer { this.alpha = alpha }) { ArtistTopSongsSkeleton() }
         }
         item(key = "skeleton:detail:sections") {
-            Box(Modifier.graphicsLayer { alpha = 0.4f }) {
-                ShelfSkeleton(index = 2, cardCorner = 10.dp)
-            }
+            Box(Modifier.graphicsLayer { this.alpha = alpha }) { ArtistShelfSkeleton() }
         }
         return
     }
-    // A release's buttons are placeheld inside its header, where the real ones
-    // land; only the rows are drawn here.
-    songListSkeleton(count = 8, keyPrefix = "skeleton:detail:song", alpha = 0.4f)
+    songListSkeleton(count = songRows, keyPrefix = "skeleton:detail:song", alpha = alpha)
 }
 
 /** The tighter row used inside the artist page's top-songs pager. */

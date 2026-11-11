@@ -47,6 +47,36 @@ internal object PageEntrance {
     /** From the first slot starting to the last one settling. */
     val totalMs: Long get() = delayMs(SLOTS - 1) + DURATION_MS
 
+    /** The most song rows a loading page holds a place for: about a screenful. */
+    const val PLACEHOLDER_ROWS_MAX = 8
+
+    /** How many it holds when nothing says how many songs are coming. */
+    const val PLACEHOLDER_ROWS_UNKNOWN = 3
+
+    /**
+     * How many placeholder rows a loading playlist or album shows, given how
+     * many songs it is [known] to hold (null when nothing says). Never none:
+     * a page that is loading always shows that something is coming.
+     */
+    fun placeholderRows(known: Int?): Int =
+        known?.coerceIn(1, PLACEHOLDER_ROWS_MAX) ?: PLACEHOLDER_ROWS_UNKNOWN
+
+    private val countInSubtitle =
+        Regex("""(\d[\d,.\u00A0 ]*)\s*(?:songs?|tracks?|videos?|episodes?)\b""", RegexOption.IGNORE_CASE)
+
+    /**
+     * The song count a page's subtitle states, as the card it was opened from
+     * worded it ("Playlist • 12 songs"), or 1 for something billed as a
+     * single. Null when the subtitle says neither.
+     */
+    fun trackCountIn(subtitle: String): Int? {
+        countInSubtitle.find(subtitle)?.let { match ->
+            match.groupValues[1].filter(Char::isDigit).toIntOrNull()?.let { return it }
+        }
+        val single = subtitle.split("•", "·").any { it.trim().equals("single", ignoreCase = true) }
+        return if (single) 1 else null
+    }
+
     private val shown = FirstShowings()
 
     /**
