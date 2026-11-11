@@ -98,7 +98,7 @@ internal fun rememberGeneratedCollage(page: DetailPage, songs: List<Song>): List
     val turnedOff by CustomizationSettings.playlistBackdropsOff.collectAsStateWithLifecycle()
     val liked = page.isLiked()
     val eligible = enabled && page.type == BrowseType.PLAYLIST &&
-        (liked || page.browseId.startsWith("VL")) &&
+        (liked || playlistTakesGeneratedImage(page.browseId)) &&
         CustomizationSettings.playlistBackdropKey(page.browseId) !in turnedOff
     // The first batch of rows is enough: a long playlist's later pages can
     // take a while, and the picture shouldn't wait for them.
