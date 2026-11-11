@@ -1099,7 +1099,14 @@ private fun BitChordApp(
     // The modal player owns light status glyphs and its own contrast scrim.
     // Every other surface follows the theme; Replay's page and stories remain
     // dark artwork either way.
-    SystemBarIcons(dark = !darkTheme && !showNowPlaying && !showReplay && replayStory == null)
+    // Over an artist, album or playlist banner the status glyphs follow the
+    // banner instead: white on a dark photograph even in the light theme.
+    val barsFollowTheme = !showNowPlaying && !showReplay && replayStory == null
+    SystemBarIcons(
+        dark = !darkTheme && barsFollowTheme,
+        statusDark = barsFollowTheme &&
+            !(com.music.bitchord.ui.components.TopChromeTone.overDark ?: darkTheme),
+    )
 
     val speedDialPins by CustomizationSettings.speedDialPins.collectAsStateWithLifecycle()
     val speedDialPinnedIds = remember(speedDialPins) { speedDialPins.mapNotNullTo(HashSet()) { it.speedDialId } }
@@ -5316,7 +5323,10 @@ private fun BitChordApp(
                 val onArtworkPage = detail != null && !showStats && !showSettings &&
                     !showAccountScrobbling && !showSources && !showListenTogether &&
                     !showEqualizer && !showDiscord && !showHistory && !showReplay
-                CompositionLocalProvider(LocalGlassFollowsOptions provides !onArtworkPage) {
+                CompositionLocalProvider(
+                    LocalGlassFollowsOptions provides !onArtworkPage,
+                    com.music.bitchord.ui.components.LocalOnArtworkPage provides onArtworkPage,
+                ) {
                 FrostedTopBar(
                     title = when {
                         homeRoot -> ""

@@ -133,17 +133,6 @@ fun isGlassSupported(sdkInt: Int = Build.VERSION.SDK_INT): Boolean = sdkInt >= B
 private const val LENS_HEIGHT = 0.5f
 private const val LENS_AMOUNT = 0.5f
 private const val LENS_MAX_DP = 48f
-private const val SURFACE_OPACITY = 1f - CustomizationSettings.DEFAULT_GLASS_TRANSPARENCY
-
-/**
- * How strongly a [GlassTint] is washed over a glass surface at the default
- * transparency. It is laid over the surface's own fill rather than mixed into
- * it, so a faint bar and a dense drawer take on the same amount of colour.
- */
-private const val TINT_WASH = 0.28f
-
-/** How far black the tint darkness slider goes at its top. */
-private const val MAX_SHADE = 0.85f
 
 /**
  * Whether glass composed under it follows the user's Liquid Glass options.
@@ -152,9 +141,15 @@ private const val MAX_SHADE = 0.85f
  */
 val LocalGlassFollowsOptions = staticCompositionLocalOf { true }
 
-/** A colour washed into the glass's fill; [DEFAULT] leaves the theme's own. */
+/**
+ * A colour washed into the glass's fill. [DEFAULT] leaves the theme's own
+ * surface in it and adds nothing; [NONE] takes that out as well, leaving the
+ * glass with no colour of its own at all.
+ */
 enum class GlassTint(val argb: Long?) {
+    NONE(null),
     DEFAULT(null),
+    WHITE(0xFFFFFFFF),
     ACCENT(null),
     SONG(null),
     BLUE(0xFF3D7BFF),
@@ -166,12 +161,12 @@ enum class GlassTint(val argb: Long?) {
     ;
 
     /**
-     * The colour itself, or null for [DEFAULT]. [ACCENT] is the theme's
+     * The colour itself, or null for [NONE] and [DEFAULT]. [ACCENT] is the theme's
      * primary; [SONG] is the playing song's accent, and none while nothing plays.
      */
     @Composable
     fun color(): Color? = when (this) {
-        DEFAULT -> null
+        NONE, DEFAULT -> null
         ACCENT -> MaterialTheme.colorScheme.primary
         SONG -> LocalNowPlayingTint.current
         else -> Color(argb!!)
@@ -179,65 +174,55 @@ enum class GlassTint(val argb: Long?) {
 }
 
 /**
- * The fill a glass surface is washed with: [base] (the theme's tint, or the
- * caller's own), then the user's tint and darkness laid over it at fixed
- * strengths, all scaled by their transparency. The default settings give back
- * exactly [base].
- *
- * The tint and the darkening are layers of their own rather than mixed into
- * [base], so they come out the same on every surface. Mixed in, they took on
- * [base]'s opacity: the nav bar's faint fill barely showed a tint the menus'
- * dense one was flooded with.
+ * Classic's fill for a surface: [base] is the caller's own tint, or null for
+ * the theme's surface ([themeFill]). See [classicGlassFillColor].
  */
 @Composable
-private fun glassFill(base: Color): Color {
-    if (!LocalGlassFollowsOptions.current) return base
+private fun glassFill(base: Color?, themeFill: Color): Color {
+    if (!LocalGlassFollowsOptions.current) return base ?: themeFill
     val options = CustomizationSettings.glassOptions(clear = false, dark = !isLightTheme())
     val transparency by options.transparency.collectAsStateWithLifecycle()
-    val tint = options.tint.collectAsStateWithLifecycle().value.color()
+    val picked by options.tint.collectAsStateWithLifecycle()
     val darkness by options.darkness.collectAsStateWithLifecycle()
     val saturation by options.saturation.collectAsStateWithLifecycle()
-    val density = ((1f - transparency) / SURFACE_OPACITY).coerceAtLeast(0f)
-    var fill = base.copy(alpha = (base.alpha * density).coerceIn(0f, 1f))
     // The saturation slider reaches the tint too, measured from where the
     // glass ships: the tint as picked at the default, grey at 0%.
-    val tinted = tint?.saturated(saturation / CustomizationSettings.DEFAULT_GLASS_SATURATION)
-    if (tinted != null) fill = tinted.copy(alpha = (TINT_WASH * density).coerceIn(0f, 1f)).compositeOver(fill)
-    if (darkness > 0f) fill = Color.Black.copy(alpha = (darkness * MAX_SHADE * density).coerceIn(0f, 1f)).compositeOver(fill)
-    return fill
+    val tint = picked.color()?.saturated(saturation / CustomizationSettings.DEFAULT_GLASS_SATURATION)
+    // No tint takes the theme's surface out; a caller's own colour stands.
+    return classicGlassFillColor(
+        base = base ?: themeFill.takeIf { picked != GlassTint.NONE },
+        tint = tint,
+        darkness = darkness,
+        transparency = transparency,
+    )
 }
 
 /**
- * The New style's fill: its clear [veil], over as much of the theme's own
- * surface ([themeTint]) as its transparency leaves, with the user's tint and
- * darkness laid on top at fixed strengths. The defaults give back [veil].
+ * The New style's fill for a surface: [veil] is the caller's own tint, or
+ * null for the clear glass's ([clearGlassVeil]). See [clearGlassFillColor].
  */
 @Composable
-private fun clearGlassFill(veil: Color, themeTint: Color): Color {
-    if (!LocalGlassFollowsOptions.current) return veil
+private fun clearGlassFill(veil: Color?, themeTint: Color): Color {
+    val own = veil ?: clearGlassVeil()
+    if (!LocalGlassFollowsOptions.current) return own
     val options = CustomizationSettings.glassOptions(clear = true, dark = !isLightTheme())
     val transparency by options.transparency.collectAsStateWithLifecycle()
     val darkness by options.darkness.collectAsStateWithLifecycle()
     val saturation by options.saturation.collectAsStateWithLifecycle()
-    val tint = options.tint.collectAsStateWithLifecycle().value.color()
-    var fill = veil
-    val surface = (1f - transparency).coerceIn(0f, 1f)
-    if (surface > 0f) fill = fill.compositeOver(themeTint.copy(alpha = surface))
-    val tinted = tint?.saturated(saturation / CustomizationSettings.DEFAULT_CLEAR_GLASS_SATURATION)
-    if (tinted != null) fill = tinted.copy(alpha = TINT_WASH).compositeOver(fill)
-    if (darkness > 0f) fill = Color.Black.copy(alpha = (darkness * MAX_SHADE).coerceIn(0f, 1f)).compositeOver(fill)
-    return fill
+    val picked by options.tint.collectAsStateWithLifecycle()
+    val tint = picked.color()?.saturated(saturation / CustomizationSettings.DEFAULT_CLEAR_GLASS_SATURATION)
+    val none = picked == GlassTint.NONE
+    return clearGlassFillColor(
+        veil = veil ?: own.takeIf { !none },
+        themeSurface = themeTint.takeIf { !none },
+        tint = tint,
+        darkness = darkness,
+        transparency = transparency,
+    )
 }
 
 /** This fill laid over [under]; itself when there is nothing under it. */
 private fun Color.over(under: Color): Color = if (under.alpha <= 0f) this else compositeOver(under)
-
-/** This colour with its saturation scaled by [amount]: 0 is its grey, 1 is itself. */
-private fun Color.saturated(amount: Float): Color {
-    val grey = 0.2126f * red + 0.7152f * green + 0.0722f * blue
-    fun channel(c: Float) = (grey + (c - grey) * amount).coerceIn(0f, 1f)
-    return Color(channel(red), channel(green), channel(blue), alpha)
-}
 
 /**
  * Resolution fraction the glass surface records and processes its backdrop at.
@@ -318,7 +303,7 @@ fun Modifier.lightweightLiquidGlass(
 
     return clip(shape)
         .background(
-            color = if (useGlass) glassFill(glassTint.copy(alpha = SURFACE_OPACITY)) else fallbackColor,
+            color = if (useGlass) glassFill(null, glassTint.copy(alpha = SURFACE_OPACITY)) else fallbackColor,
             shape = shape,
         )
         .then(
@@ -458,7 +443,7 @@ fun Modifier.liquidGlass(
             shape = shape,
             backdrop = backdrop,
             exportedBackdrop = exportedBackdrop,
-            surfaceColor = clearGlassFill(surfaceTint ?: clearGlassVeil(), themeTint)
+            surfaceColor = clearGlassFill(surfaceTint, themeTint)
                 .let { if (legible) it.legibleOnLight() else it }
                 .over(underlay),
             blurDp = maxOf(minBlurDp, if (followsOptions) clearBlur else CustomizationSettings.DEFAULT_CLEAR_GLASS_BLUR),
@@ -473,7 +458,7 @@ fun Modifier.liquidGlass(
     val blurPx = with(density) { blurDp.dp.toPx() } * GLASS_RESOLUTION_SCALE
     val lensHeightPx = with(density) { (LENS_HEIGHT * LENS_MAX_DP).dp.toPx() } * GLASS_RESOLUTION_SCALE
     val lensAmountPx = with(density) { (LENS_AMOUNT * LENS_MAX_DP).dp.toPx() } * GLASS_RESOLUTION_SCALE
-    val surfaceTintColor = glassFill(surfaceTint ?: themeTint.copy(alpha = SURFACE_OPACITY))
+    val surfaceTintColor = glassFill(surfaceTint, themeTint.copy(alpha = SURFACE_OPACITY))
         .let { if (legible) it.legibleOnLight() else it }
         .over(underlay)
 

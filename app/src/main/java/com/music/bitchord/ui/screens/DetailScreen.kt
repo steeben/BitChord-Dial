@@ -199,6 +199,10 @@ import com.music.bitchord.ui.icons.BitChordIcons
 import com.music.bitchord.ui.player.CanvasArtworkPlayer
 import com.music.bitchord.ui.theme.ArtworkPalette
 import com.music.bitchord.ui.theme.rememberArtworkPalette
+import com.music.bitchord.ui.theme.rememberArtworkTopBandLuminance
+import com.music.bitchord.ui.components.TopChromeTone
+import com.music.bitchord.ui.components.topChromeOverDark
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -521,6 +525,12 @@ fun DetailScreen(
     // Under a collage the page is the accent's own colour, top to bottom,
     // rather than whatever the front cover's background happens to be.
     val palette = if (collage == null) artPalette else remember(artPalette) { artPalette.collageWashed() }
+    // How bright the top of the banner is, where the top bar's controls and
+    // the status bar sit: they turn white over a dark one. See [TopChromeTone].
+    val bannerTopLuminance by rememberUpdatedState(
+        rememberArtworkTopBandLuminance(appleArt?.heroUrl ?: collage?.firstOrNull() ?: page.thumbnailUrl),
+    )
+    val washLuminance by rememberUpdatedState(palette.wash.luminance())
 
     // Narrowing the running order in place — the release equivalent of the
     // filter box on the Local Music tab, and the one thing a long track list
@@ -928,6 +938,22 @@ fun DetailScreen(
                 // the narrow one it was written for.
                 val artHeight = (maxWidth / if (isArtist) ARTIST_PHOTO_RATIO else SLEEVE_RATIO)
                     .coerceAtMost(maxHeight * 0.6f)
+
+                // Tell the top bar and the status bar what they are over: the
+                // top of the picture while it is up there, the page's own
+                // colour once it has faded or scrolled away.
+                val bannerPx by rememberUpdatedState(with(LocalDensity.current) { artHeight.toPx() })
+                val toneOwner = remember { Any() }
+                LaunchedEffect(toneOwner) {
+                    snapshotFlow {
+                        topChromeOverDark(
+                            artLuminance = bannerTopLuminance,
+                            washLuminance = washLuminance,
+                            artShowing = listState.artUnderTopBar(bannerPx, headerStopScroll()),
+                        )
+                    }.collect { TopChromeTone.set(toneOwner, it) }
+                }
+                DisposableEffect(toneOwner) { onDispose { TopChromeTone.clear(toneOwner) } }
 
                 Box(
                     Modifier
@@ -2526,6 +2552,19 @@ private fun LazyListState.artTop(artHeightPx: Float, stop: Float?): Float {
     val scrolled = if (firstVisibleItemIndex == 0) firstVisibleItemScrollOffset.toFloat() else stop
     return -minOf(scrolled, stop) * HEADER_ART_PARALLAX
 }
+
+/**
+ * How much of the picture is under the top bar: where the header holds it
+ * stays there, fading as [artAlpha]; elsewhere it is there until the list has
+ * carried most of it off the top.
+ */
+private fun LazyListState.artUnderTopBar(artHeightPx: Float, stop: Float?): Float {
+    if (stop != null) return artAlpha(stop)
+    return if (firstVisibleItemIndex == 0 && firstVisibleItemScrollOffset < artHeightPx * ART_UNDER_BAR) 1f else 0f
+}
+
+/** How far down the picture the list can scroll, as a share of its height, with the picture still behind the top bar. */
+private const val ART_UNDER_BAR = 0.6f
 
 /** How much of the picture shows: fading toward [HEADER_ART_HELD_ALPHA] as the header nears its stop. */
 private fun LazyListState.artAlpha(stop: Float?): Float {

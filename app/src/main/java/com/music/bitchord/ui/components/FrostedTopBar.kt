@@ -84,6 +84,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
 import com.music.bitchord.R
+import com.music.bitchord.ui.theme.ChromeTheme
+import androidx.compose.ui.graphics.luminance
 import com.music.bitchord.data.model.Account
 import com.music.bitchord.data.settings.AppSettings
 import dev.chrisbanes.haze.HazeState
@@ -235,6 +237,12 @@ fun FrostedTopBar(
         label = "topBarDivider",
     )
 
+    // Over an artwork page's banner the controls take the banner's tone, not
+    // the theme's: white glyphs on dark glass over a dark photograph, black
+    // over a bright one. See [TopChromeTone].
+    val themeDark = MaterialTheme.colorScheme.surface.luminance() <= 0.5f
+    val chromeDark = (if (LocalOnArtworkPage.current) TopChromeTone.overDark else null) ?: themeDark
+    ChromeTheme(dark = chromeDark) {
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -446,6 +454,7 @@ fun FrostedTopBar(
         }
         HorizontalDivider(thickness = 0.5.dp, color = dividerColor)
         RefreshPuck(refreshing = refreshing, pullFraction = pullFraction)
+    }
     }
 }
 

@@ -8,6 +8,10 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
@@ -114,6 +118,39 @@ fun BitChordTheme(
 }
 
 /**
+ * The app's theme for a strip of chrome that may sit on ground of the other
+ * tone: [dark] picks the dark or the light colours whatever the app's theme
+ * is, and a change crossfades through, so glyphs turn from black to white
+ * rather than cutting.
+ */
+@Composable
+fun ChromeTheme(dark: Boolean, content: @Composable () -> Unit) {
+    val t by animateFloatAsState(
+        targetValue = if (dark) 1f else 0f,
+        animationSpec = tween(CHROME_TONE_MS),
+        label = "chromeTone",
+    )
+    val scheme = when (t) {
+        0f -> LightColors
+        1f -> DarkColors
+        else -> LightColors.copy(
+            primary = lerp(LightColors.primary, DarkColors.primary, t),
+            onPrimary = lerp(LightColors.onPrimary, DarkColors.onPrimary, t),
+            background = lerp(LightColors.background, DarkColors.background, t),
+            onBackground = lerp(LightColors.onBackground, DarkColors.onBackground, t),
+            surface = lerp(LightColors.surface, DarkColors.surface, t),
+            onSurface = lerp(LightColors.onSurface, DarkColors.onSurface, t),
+            surfaceVariant = lerp(LightColors.surfaceVariant, DarkColors.surfaceVariant, t),
+            onSurfaceVariant = lerp(LightColors.onSurfaceVariant, DarkColors.onSurfaceVariant, t),
+            outline = lerp(LightColors.outline, DarkColors.outline, t),
+        )
+    }
+    MaterialTheme(colorScheme = scheme, typography = MaterialTheme.typography, content = content)
+}
+
+private const val CHROME_TONE_MS = 320
+
+/**
  * Draws the status and navigation bar glyphs dark or light.
  *
  * `enableEdgeToEdge()` decides this from the *system* dark-mode setting, which
@@ -124,13 +161,20 @@ fun BitChordTheme(
  * surface follows the theme. Hence a parameter rather than reading it here.
  */
 @Composable
-fun SystemBarIcons(dark: Boolean) {
+fun SystemBarIcons(
+    dark: Boolean,
+    /**
+     * The status bar's glyphs alone, where what is under them is not the
+     * theme's colour: the dark banner of an artist page in the light theme.
+     */
+    statusDark: Boolean = dark,
+) {
     val view = LocalView.current
     if (view.isInEditMode) return
     val window = findWindow(view) ?: return
     SideEffect {
         WindowCompat.getInsetsController(window, view).apply {
-            isAppearanceLightStatusBars = dark
+            isAppearanceLightStatusBars = statusDark
             isAppearanceLightNavigationBars = dark
         }
     }

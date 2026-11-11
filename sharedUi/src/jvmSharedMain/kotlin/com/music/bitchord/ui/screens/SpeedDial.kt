@@ -68,6 +68,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.changedToUp
@@ -1148,7 +1149,8 @@ private fun DimOverlay(dim: () -> Float) {
 /**
  * The "I'm Feeling Lucky" tile: a die of nine squares, like the app's own mark,
  * resting on three, on a dark ground with soft washes of colour drifting in
- * from its edges. Tapped, its lights chase round the edge like a spinner, then
+ * from its edges. In the light theme the ground is light and the lit squares
+ * are dark instead. Tapped, its lights chase round the edge like a spinner, then
  * it lands on a face from one to six. [label] is only read out, not drawn.
  */
 @Composable
@@ -1168,13 +1170,14 @@ private fun LuckyDiceTile(
     val settle = remember { Animatable(1f) }
     var rolling by remember { mutableStateOf(false) }
     val press = rememberTilePress()
+    val look = if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) DICE_LIGHT else DICE_DARK
     Box(
         modifier
             .dialTileOutset()
             .tilePress(press)
             .clip(shape)
             .dialTileBorder(shape)
-            .background(DICE_GROUND)
+            .background(look.ground)
             .clickable(interactionSource = press.interactions, indication = null, onClickLabel = label) {
                 // Pressed in and let out as it starts to roll; the roll itself doesn't wait.
                 press.tap {}
@@ -1214,7 +1217,10 @@ private fun LuckyDiceTile(
                 val center = Offset(w * wash.x, h * wash.y)
                 drawRect(
                     Brush.radialGradient(
-                        colors = listOf(wash.color.copy(alpha = wash.alpha), wash.color.copy(alpha = 0f)),
+                        colors = listOf(
+                            wash.color.copy(alpha = wash.alpha * look.washStrength),
+                            wash.color.copy(alpha = 0f),
+                        ),
                         center = center,
                         radius = size.maxDimension * wash.radius,
                     ),
@@ -1250,7 +1256,7 @@ private fun LuckyDiceTile(
                     // The soft glow round a lit square.
                     drawCircle(
                         Brush.radialGradient(
-                            colors = listOf(Color.White.copy(alpha = 0.45f * level), Color.White.copy(alpha = 0f)),
+                            colors = listOf(look.lit.copy(alpha = look.glow * level), look.lit.copy(alpha = 0f)),
                             center = Offset(cx, cy),
                             radius = side * 1.05f,
                         ),
@@ -1259,7 +1265,7 @@ private fun LuckyDiceTile(
                     )
                 }
                 drawRoundRect(
-                    color = lerp(DICE_UNLIT, Color.White, level),
+                    color = lerp(look.unlit, look.lit, level),
                     topLeft = Offset(cx - side / 2f, cy - side / 2f),
                     size = Size(side, side),
                     cornerRadius = CornerRadius(side * 0.08f),
@@ -1282,7 +1288,29 @@ private val DICE_GROUND = Color(0xFF141414)
 
 /** The history tile's ground: the die's grey at half strength, so what is behind shows through. */
 private val HISTORY_GROUND = DICE_GROUND.copy(alpha = 0.5f)
-private val DICE_UNLIT = Color(0xFF262626)
+
+/**
+ * The die's colours for a theme: its ground, a square unlit and lit, how
+ * strong the glow round a lit square is and how strong the washes are.
+ */
+private class DiceLook(
+    val ground: Color,
+    val unlit: Color,
+    val lit: Color,
+    val glow: Float,
+    val washStrength: Float,
+)
+
+private val DICE_DARK = DiceLook(DICE_GROUND, Color(0xFF262626), Color.White, glow = 0.45f, washStrength = 1f)
+
+/** The light theme's die: dark squares on a near-white ground, the washes a little fuller to show on it. */
+private val DICE_LIGHT = DiceLook(
+    ground = Color(0xFFF4F4F6),
+    unlit = Color(0xFFDCDCE2),
+    lit = Color(0xFF161618),
+    glow = 0.18f,
+    washStrength = 1.25f,
+)
 
 /** The die's squares round its edge, clockwise from the top left (row by row, 0–8). */
 private val DICE_RING = intArrayOf(0, 1, 2, 5, 8, 7, 6, 3)

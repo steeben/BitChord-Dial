@@ -30,5 +30,5 @@ object LaunchGate {
     const val EXIT_FADE_MS = 160L
 
     /** How long the splash takes to sweep off the app, corner to corner; see [LaunchWipeView]. */
-    const val EXIT_WIPE_MS = 650L
+    const val EXIT_WIPE_MS = 1100L
 }

@@ -3282,7 +3282,7 @@ internal fun LiquidGlassOptions() {
                 val chosen = option == tint
                 val label = stringResource(option.labelRes())
                 // No tint is the first swatch: an empty ring with a line through it.
-                val noTint = option == GlassTint.DEFAULT
+                val noTint = option == GlassTint.NONE
                 val swatch = option.color()
                     ?: MaterialTheme.colorScheme.surfaceVariant
                 Box(
@@ -3348,7 +3348,9 @@ internal fun LiquidGlassOptions() {
 }
 
 private fun GlassTint.labelRes(): Int = when (this) {
-    GlassTint.DEFAULT -> R.string.glass_tint_none
+    GlassTint.NONE -> R.string.glass_tint_none
+    GlassTint.DEFAULT -> R.string.glass_tint_default
+    GlassTint.WHITE -> R.string.glass_tint_white
     GlassTint.ACCENT -> R.string.glass_tint_accent
     GlassTint.SONG -> R.string.glass_tint_song
     GlassTint.BLUE -> R.string.glass_tint_blue
