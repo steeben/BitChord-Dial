@@ -374,11 +374,12 @@ internal fun PlaybackQualityLabel(
 }
 
 /**
- * Stats for nerds, on the foot of the sleeve: the measured stream, and under
- * it what Automix's analysis is doing. Nothing at all while the setting is off.
+ * Stats for nerds, among the controls where the volume bar is: the measured
+ * stream, and under it what Automix's analysis is doing. Nothing at all while
+ * the setting is off.
  */
 @Composable
-internal fun SleeveNerdStats(song: Song, modifier: Modifier = Modifier) {
+internal fun PlayerNerdStats(song: Song, modifier: Modifier = Modifier) {
     val showNerdStats by PlayerSettings.showNerdStats.collectAsStateWithLifecycle()
     if (!showNerdStats) return
     val nerdStats by NerdStats.current.collectAsStateWithLifecycle()
@@ -569,6 +570,10 @@ internal fun VolumeRow(
             onValueChangeFinished = onValueChangeFinished,
             idleHeight = 6.dp,
             activeHeight = 10.dp,
+            // The player's own ink, as the seek bar wears: it follows the
+            // accent and the artwork, where the slider's stock white did not.
+            activeColor = playerInk(alpha = 0.92f),
+            inactiveColor = playerInk(alpha = 0.26f),
             modifier = Modifier.weight(1f),
         )
         Spacer(Modifier.width(10.dp))

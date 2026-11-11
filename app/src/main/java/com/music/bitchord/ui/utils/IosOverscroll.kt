@@ -39,6 +39,9 @@ private const val highVelocityThreshold = 5_000f
 private const val normalBounceStiffness = 247f
 private const val fastBounceStiffness = 130f
 
+/** A pull smaller than this is the bounce's tail: close enough to home that a press is a tap. */
+private const val restingPullPx = 24f
+
 /**
  * Converts raw pull distance to UIKit's self-limiting rubber-band curve.
  */
@@ -62,8 +65,19 @@ private class IosOverscrollEffect : OverscrollEffect {
     private var containerWidthPx = 0f
     private var containerHeightPx = 0f
 
-    override val isInProgress: Boolean
+    /** Whether the content is off its resting place at all. */
+    private val pulled: Boolean
         get() = rawPullX.floatValue != 0f || rawPullY.floatValue != 0f
+
+    // A scroll container treats a press as the start of a drag, and so not as
+    // a tap, for as long as this is true. The bounce back is a spring with a
+    // long tail: it is within a few pixels of home in a fifth of a second and
+    // then takes most of a second more to arrive. Counted as in progress the
+    // whole way, a tap on a row just scrolled to (the last rows of the
+    // player's menu, reached by flinging to the end) did nothing, and it took
+    // a second tap. The tail is not counted.
+    override val isInProgress: Boolean
+        get() = abs(rawPullX.floatValue) > restingPullPx || abs(rawPullY.floatValue) > restingPullPx
 
     override fun applyToScroll(
         delta: Offset,
@@ -101,7 +115,7 @@ private class IosOverscrollEffect : OverscrollEffect {
     ) {
         val consumed = performFling(velocity)
         val leftover = velocity - consumed
-        if (!isInProgress && leftover == Velocity.Zero) return
+        if (!pulled && leftover == Velocity.Zero) return
 
         coroutineScope {
             launch { settle(rawPullX, leftover.x) }

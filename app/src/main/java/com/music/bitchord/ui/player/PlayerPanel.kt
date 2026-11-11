@@ -55,7 +55,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.data.AudioOnlyVideos
 import com.music.bitchord.data.model.Song
+import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.CustomizationSettings
+import com.music.bitchord.ui.components.optimizedHazeEffect
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Shape
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
+import dev.chrisbanes.haze.materials.HazeMaterials
 import com.music.bitchord.ui.components.ExplicitSongTitle
 import com.music.bitchord.ui.components.MiniPlayerNextGlyph
 import com.music.bitchord.ui.components.PlayPauseGlyph
@@ -116,6 +123,8 @@ fun PlayerPanel(
     isLoading: Boolean,
     /** Whether the pill underneath is the glass bar's rather than the plain mini player. */
     glass: Boolean,
+    /** The app's pages, for the plain mini player's frosted blur, which the panel wears as the pill does. */
+    hazeState: HazeState,
     /** The playhead, drawn along the pill's edge as the pill draws it; read only when drawing. */
     position: PlaybackPosition?,
     durationMs: Long,
@@ -145,7 +154,7 @@ fun PlayerPanel(
     val material = when {
         covered || !pillVisible -> Modifier
         glass -> Modifier.liquidGlass(shape)
-        else -> Modifier.background(MaterialTheme.colorScheme.surface, shape)
+        else -> Modifier.plainPillSurface(shape, hazeState)
     }
 
     Box(
@@ -259,6 +268,30 @@ fun PlayerPanel(
         }
         overlay()
     }
+}
+
+/**
+ * The plain mini player's surface, as [com.music.bitchord.ui.components.MiniPlayer]
+ * wears it: the pages behind seen through a frosted blur, with a hairline rim.
+ * A solid fill here made the pill turn opaque the moment the panel took over
+ * from it and see-through again the moment it handed back.
+ */
+@OptIn(ExperimentalHazeMaterialsApi::class)
+@Composable
+private fun Modifier.plainPillSurface(shape: Shape, hazeState: HazeState): Modifier {
+    val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
+    return clip(shape)
+        .then(
+            if (reduceDynamicBlur) {
+                Modifier.background(MaterialTheme.colorScheme.surface)
+            } else {
+                Modifier.optimizedHazeEffect(
+                    state = hazeState,
+                    style = HazeMaterials.thin(MaterialTheme.colorScheme.surface),
+                )
+            },
+        )
+        .border(0.5.dp, Color.White.copy(alpha = 0.10f), shape)
 }
 
 /** The container's place this frame: size and position come from the dock. */

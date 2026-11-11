@@ -9,16 +9,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DragHandle
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import com.music.bitchord.ui.components.IosSwitch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -36,6 +33,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.music.bitchord.ui.components.GlassAlert
 import androidx.compose.ui.zIndex
 import com.music.bitchord.R
 import com.music.bitchord.data.settings.NavPage
@@ -68,26 +67,17 @@ internal fun <T : Any> ReorderDialog(
     /** Whether [item] may be switched off, given the list as it stands. */
     canDisable: (List<OrderedToggle<T>>, T) -> Boolean = { _, _ -> true },
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.done)) }
-        },
-        title = { Text(title) },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
-                if (note != null) {
-                    Text(
-                        text = note,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 12.dp),
-                    )
-                }
-                ReorderableToggleList(items, label, onChange, canDisable)
-            }
-        },
-    )
+    GlassAlert(title = title, onDismiss = onDismiss) {
+        if (note != null) {
+            Text(
+                text = note,
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 17.sp),
+                color = LocalContentColor.current.copy(alpha = 0.8f),
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+        }
+        ReorderableToggleList(items, label, onChange, canDisable)
+    }
 }
 
 /** Rows that can be dragged by their handle into a new order, each with a switch. */
@@ -125,7 +115,7 @@ internal fun <T : Any> ReorderableToggleList(
                     Icon(
                         imageVector = Icons.Rounded.DragHandle,
                         contentDescription = stringResource(R.string.drag_to_reorder),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = LocalContentColor.current.copy(alpha = 0.7f),
                         modifier = Modifier
                             .size(40.dp)
                             .padding(8.dp)
@@ -169,7 +159,7 @@ internal fun <T : Any> ReorderableToggleList(
                     Text(
                         text = label(entry.item),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = LocalContentColor.current,
                         modifier = Modifier.weight(1f),
                     )
                     val allowed = !entry.enabled || canDisable(working, entry.item)

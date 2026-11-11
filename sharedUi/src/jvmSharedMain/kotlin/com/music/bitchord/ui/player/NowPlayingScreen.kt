@@ -1101,6 +1101,7 @@ fun NowPlayingScreen(
         onSeek(adjustedLyricsSeekTarget(lineTimeMs, lyricsOffsetMs))
     }
     val hideVolumeBar by PlayerSettings.hideVolumeBar.collectAsStateWithLifecycle()
+    val showNerdStats by PlayerSettings.showNerdStats.collectAsStateWithLifecycle()
     val hideSongStatus by PlayerSettings.hideSongStatus.collectAsStateWithLifecycle()
 
     // Animated cover art: the looping video some labels publish alongside a
@@ -2723,17 +2724,8 @@ fun NowPlayingScreen(
                                 closeLyrics()
                             },
                     ) {
-                        // The stats belong to the player, not to the sleeve, so
-                        // they leave it along with the rest of the player.
-                        SleeveNerdStats(
-                            song = song,
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(horizontal = 10.dp, vertical = 8.dp)
-                                // Faded with the player rather than flown with
-                                // the sleeve: the cover in the bar has none.
-                                .graphicsLayer { alpha = if (panelOpen) 0f else dockFade() },
-                        )
+                        // Stats for nerds are with the controls now, where
+                        // the volume bar is: see the main pane below.
                     }
                 },
                 actions = { playerActions { 0f } },
@@ -2812,15 +2804,22 @@ fun NowPlayingScreen(
                                 compact = compact,
                             )
                         },
-                        volume = if (hideVolumeBar) {
+                        // Stats for nerds sit where the volume bar does: above
+                        // it when it is shown, in its place when it is not.
+                        volume = if (hideVolumeBar && !showNerdStats) {
                             null
                         } else {
                             {
-                                VolumeRow(
-                                    value = { volume.level.value },
-                                    onValueChange = onVolumeChange,
-                                    onValueChangeFinished = onVolumeChangeFinished,
-                                )
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    PlayerNerdStats(song = song, modifier = Modifier.padding(horizontal = 10.dp))
+                                    if (!hideVolumeBar) {
+                                        VolumeRow(
+                                            value = { volume.level.value },
+                                            onValueChange = onVolumeChange,
+                                            onValueChangeFinished = onVolumeChangeFinished,
+                                        )
+                                    }
+                                }
                             }
                         },
                     )
@@ -4311,20 +4310,8 @@ fun NowPlayingScreen(
                         ),
                     contentAlignment = Alignment.Center,
                 ) {
-                    // Measured stats stay on the sleeve's bottom centre. They
-                    // fade away with Spotify's lower control deck rather than
-                    // following the compact credits to the bottom edge.
-                    WhileShown({ !collapsePastHalf }) {
-                        SleeveNerdStats(
-                            song = song,
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(horizontal = 10.dp, vertical = 8.dp)
-                                .graphicsLayer {
-                                    alpha = (1f - p() * 2f) * spotifyChromeAlpha
-                                },
-                        )
-                    }
+                    // Stats for nerds are in the control deck now, where the
+                    // volume bar is.
                 }
 
                 // The music video, across the player's whole width — the
@@ -4949,6 +4936,20 @@ fun NowPlayingScreen(
             }
 
             Spacer(Modifier.height(12.dp + controlSpread / 2).collapseBy { deckCompact() })
+
+            // Stats for nerds sit where the volume bar does: between the
+            // transport and the bar when it is shown, in its place when it is
+            // not. They fold away with the bar when the queue comes up, and
+            // take no room at all while the setting is off.
+            Box(
+                Modifier.fillMaxWidth().collapseBy { deckCompact() },
+                contentAlignment = Alignment.Center,
+            ) {
+                PlayerNerdStats(
+                    song = song,
+                    modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = if (hideVolumeBar) 10.dp else 4.dp),
+                )
+            }
 
             // Hidden in Settings, the volume bar takes no room at all: the
             // artwork and the gaps above take up the height instead.

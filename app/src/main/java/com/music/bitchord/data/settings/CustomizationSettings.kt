@@ -78,7 +78,7 @@ object CustomizationSettings {
      * A second dial under the speed dial, of artists: the ones pinned to it,
      * then the most played. Off, artists are pinned to the speed dial itself.
      */
-    val artistDial = MutableStateFlow(true)
+    val artistDial = MutableStateFlow(false)
 
     /** A die on the speed dial that starts a radio off a random personal pick. */
     val feelingLucky = MutableStateFlow(true)
@@ -107,7 +107,7 @@ object CustomizationSettings {
     /** How the dials' tiles are edged: the plain hairline, a contoured rim, or a glass rim. */
     val dialTileStyle = MutableStateFlow(DialTileStyle.GLASS)
 
-    val miniPlayerShape = MutableStateFlow(MiniPlayerShape.CIRCULAR)
+    val miniPlayerShape = MutableStateFlow(MiniPlayerShape.SQUARED)
 
     /** Where the speed dial's unpinned tiles come from; see [SpeedDialSource]. */
     val speedDialSource = MutableStateFlow(SpeedDialSource.YOUTUBE)
@@ -145,7 +145,7 @@ object CustomizationSettings {
     val ambientBackground = MutableStateFlow(true)
 
     /** Whether those blobs take the playing song's artwork colour. */
-    val ambientFollowsArtwork = MutableStateFlow(false)
+    val ambientFollowsArtwork = MutableStateFlow(true)
 
     /** How see-through Liquid Glass surfaces are, 0 (opaque fill) to 1 (no fill at all). */
     val glassTransparency = MutableStateFlow(DEFAULT_GLASS_TRANSPARENCY)
@@ -221,7 +221,7 @@ object CustomizationSettings {
         generatePlaylistImages.value = p.getBoolean(KEY_GENERATE_PLAYLIST_IMAGES, true)
         playlistBackdropsOff.value = p.getStringSet(KEY_PLAYLIST_BACKDROPS_OFF, null)?.toSet().orEmpty()
         speedDials.value = p.getBoolean(KEY_SPEED_DIALS, true)
-        artistDial.value = p.getBoolean(KEY_ARTIST_DIAL, true)
+        artistDial.value = p.getBoolean(KEY_ARTIST_DIAL, false)
         feelingLucky.value = p.getBoolean(KEY_FEELING_LUCKY, true)
         mixesDial.value = p.getBoolean(KEY_MIXES_DIAL, true)
         speedDialSource.value = SpeedDialSource.entries
@@ -229,7 +229,7 @@ object CustomizationSettings {
         speedDialRows.value = p.getInt(KEY_SPEED_DIAL_ROWS, DEFAULT_SPEED_DIAL_ROWS).takeIf { it in 3..4 }
             ?: DEFAULT_SPEED_DIAL_ROWS
         miniPlayerShape.value = MiniPlayerShape.entries
-            .firstOrNull { it.name == p.getString(KEY_MINI_PLAYER_SHAPE, null) } ?: MiniPlayerShape.CIRCULAR
+            .firstOrNull { it.name == p.getString(KEY_MINI_PLAYER_SHAPE, null) } ?: MiniPlayerShape.SQUARED
         compactCanvasControls.value = p.getBoolean(KEY_COMPACT_CANVAS_CONTROLS, true)
         // Before the picker there were two switches. Only a deliberate "both off" carries over
         // (as Plain); everyone else moves to the new default, Glow.
@@ -245,7 +245,7 @@ object CustomizationSettings {
             ?.takeIf { it.size == DEFAULT_TAB_VIEWS.size }
             ?: DEFAULT_TAB_VIEWS
         ambientBackground.value = p.getBoolean(KEY_AMBIENT_BACKGROUND, true)
-        ambientFollowsArtwork.value = p.getBoolean(KEY_AMBIENT_FOLLOWS_ARTWORK, false)
+        ambientFollowsArtwork.value = p.getBoolean(KEY_AMBIENT_FOLLOWS_ARTWORK, true)
         glassTransparency.value = p.getFloat(KEY_GLASS_TRANSPARENCY, DEFAULT_GLASS_TRANSPARENCY).coerceIn(0f, 1f)
         glassTint.value = GlassTint.entries
             .firstOrNull { it.name == p.getString(KEY_GLASS_TINT, null) } ?: GlassTint.DEFAULT
@@ -270,6 +270,10 @@ object CustomizationSettings {
         lastSpeedDial.value = readPins(p.getString(KEY_LAST_SPEED_DIAL, null))
         lastDialNewReleases.value = p.getStringSet(KEY_LAST_DIAL_NEW_RELEASES, emptySet())?.toSet().orEmpty()
         artistDialPins.value = readPins(p.getString(KEY_ARTIST_DIAL_PINS, null))
+        // The artist dial used to be on unless switched off. Someone who never
+        // touched the switch but pinned artists to that dial keeps it, rather
+        // than having those pins left on a page that is no longer shown.
+        if (!p.contains(KEY_ARTIST_DIAL) && artistDialPins.value.isNotEmpty()) artistDial.value = true
         hiddenFromDial.value = p.getStringSet(KEY_HIDDEN_FROM_DIAL, emptySet())?.toSet().orEmpty()
         dialHiddenLabels.value = p.getStringSet(KEY_DIAL_HIDDEN_LABELS, emptySet())?.toSet().orEmpty()
         dialPinIcon.value = p.getBoolean(KEY_DIAL_PIN_ICON, true)

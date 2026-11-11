@@ -185,12 +185,12 @@ object AppSettings {
 
     /**
      * Quality ceilings, one per kind of connection — the point of the split is
-     * that Wi-Fi can stay on Lossless while mobile data is capped. Both
-     * default to Lossless; the mobile plan is the user's to budget, not ours
-     * to assume.
+     * that Wi-Fi can stay on Lossless while mobile data is capped. Wi-Fi
+     * defaults to Lossless and mobile data to Medium, so a fresh install does
+     * not spend a data plan before its owner has seen the setting.
      */
     val audioQualityWifi = MutableStateFlow(AudioQuality.LOSSLESS)
-    val audioQualityCellular = MutableStateFlow(AudioQuality.LOSSLESS)
+    val audioQualityCellular = MutableStateFlow(AudioQuality.MEDIUM)
 
     /** Allowed duration difference when replacing a playing stream with one from a source. */
     val upgradeLengthSlackSeconds = MutableStateFlow(DEFAULT_UPGRADE_LENGTH_SLACK_SECONDS)
@@ -458,10 +458,10 @@ object AppSettings {
     val stopOnTaskRemoved = MutableStateFlow(false)
 
     /** Hides the volume slider on the main player, leaving the rest of the layout to reflow. */
-    val hideVolumeBar = MutableStateFlow(false)
+    val hideVolumeBar = MutableStateFlow(true)
 
     /** Hides the "Playing from" / "Played by" caption at the top of the main player. */
-    val hideSongStatus = MutableStateFlow(false)
+    val hideSongStatus = MutableStateFlow(true)
 
     /** The queue lists what has already played above the playing track. On by default in this fork. */
     val showQueueHistory = MutableStateFlow(true)
@@ -478,7 +478,7 @@ object AppSettings {
     val reduceDynamicBlur = MutableStateFlow(false)
 
     /** Real backdrop-sampled glass (blur, lens refraction) on the floating nav bar, Android 12+ only. */
-    val liquidGlass = MutableStateFlow(false)
+    val liquidGlass = MutableStateFlow(true)
 
     /** Blurs unfocused lyric lines, keeping the active line sharp. */
     val lyricsBlur = MutableStateFlow(true)
@@ -660,7 +660,7 @@ object AppSettings {
     val prioritizeSyllableSync = MutableStateFlow(true)
 
     /** Treat an answer of two lines or fewer as no answer: almost always a stub or a wrong match. */
-    val ignoreShortLyrics = MutableStateFlow(false)
+    val ignoreShortLyrics = MutableStateFlow(true)
 
     /** User-issued credential required by api.paxsenix.org. */
     val paxSenixApiKey = MutableStateFlow("")
@@ -962,7 +962,7 @@ object AppSettings {
         migrateSingleQuality()
         CustomizationSettings.init(prefs)
         audioQualityWifi.value = readQuality(KEY_QUALITY_WIFI)
-        audioQualityCellular.value = readQuality(KEY_QUALITY_CELLULAR)
+        audioQualityCellular.value = readQuality(KEY_QUALITY_CELLULAR, AudioQuality.MEDIUM)
         upgradeLengthSlackSeconds.value = prefs.getInt(
             KEY_UPGRADE_LENGTH_SLACK_SECONDS,
             DEFAULT_UPGRADE_LENGTH_SLACK_SECONDS,
@@ -1026,13 +1026,13 @@ object AppSettings {
             prefs.getInt(KEY_PERFORMANCE_REFRESH_RATE, DEFAULT_PERFORMANCE_REFRESH_RATE),
         )
         stopOnTaskRemoved.value = prefs.getBoolean(KEY_STOP_ON_TASK_REMOVED, false)
-        hideVolumeBar.value = prefs.getBoolean(KEY_HIDE_VOLUME_BAR, false)
-        hideSongStatus.value = prefs.getBoolean(KEY_HIDE_SONG_STATUS, false)
+        hideVolumeBar.value = prefs.getBoolean(KEY_HIDE_VOLUME_BAR, true)
+        hideSongStatus.value = prefs.getBoolean(KEY_HIDE_SONG_STATUS, true)
         showQueueHistory.value = prefs.getBoolean(KEY_SHOW_QUEUE_HISTORY, true)
         dontRepeatSuggestions.value = prefs.getBoolean(KEY_DONT_REPEAT_SUGGESTIONS, false)
         smartVersionAlignment.value = prefs.getBoolean(KEY_SMART_VERSION_ALIGNMENT, true)
         reduceDynamicBlur.value = prefs.getBoolean(KEY_REDUCE_BLUR, false)
-        liquidGlass.value = prefs.getBoolean(KEY_LIQUID_GLASS, false)
+        liquidGlass.value = prefs.getBoolean(KEY_LIQUID_GLASS, true)
         lyricsBlur.value = prefs.getBoolean(KEY_LYRICS_BLUR, true)
         lyricsOffsetMs.value = prefs.getInt(KEY_LYRICS_OFFSET_MS, 0)
             .coerceIn(MIN_LYRICS_OFFSET_MS, MAX_LYRICS_OFFSET_MS)
@@ -1090,7 +1090,7 @@ object AppSettings {
         lyricsSourceOrder.value = readLyricsSourceOrder()
         instrumentalTracks.value = prefs.getStringSet(KEY_INSTRUMENTAL_TRACKS, null)?.toSet().orEmpty()
         prioritizeSyllableSync.value = prefs.getBoolean(KEY_PRIORITIZE_SYLLABLE_SYNC, true)
-        ignoreShortLyrics.value = prefs.getBoolean(KEY_IGNORE_SHORT_LYRICS, false)
+        ignoreShortLyrics.value = prefs.getBoolean(KEY_IGNORE_SHORT_LYRICS, true)
         paxSenixApiKey.value = prefs.getString(KEY_PAXSENIX_API_KEY, "").orEmpty()
         com.music.bitchord.data.lyrics.PaxSenix.setApiKey(paxSenixApiKey.value)
         audioCacheLimitBytes.value = clampCacheLimit(prefs.getLong(KEY_CACHE_LIMIT, DEFAULT_CACHE_LIMIT_BYTES))
@@ -1203,9 +1203,9 @@ object AppSettings {
             .apply()
     }
 
-    private fun readQuality(key: String): AudioQuality {
-        val stored = prefs.getString(key, null) ?: return AudioQuality.LOSSLESS
-        return runCatching { AudioQuality.valueOf(stored) }.getOrDefault(AudioQuality.LOSSLESS)
+    private fun readQuality(key: String, default: AudioQuality = AudioQuality.LOSSLESS): AudioQuality {
+        val stored = prefs.getString(key, null) ?: return default
+        return runCatching { AudioQuality.valueOf(stored) }.getOrDefault(default)
     }
 
     /**

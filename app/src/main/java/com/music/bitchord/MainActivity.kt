@@ -6619,6 +6619,7 @@ private fun BitChordApp(
                     isPlaying = player.isPlaying,
                     isLoading = playPauseBusy,
                     glass = glassActive,
+                    hazeState = hazeState,
                     position = player.position,
                     durationMs = player.durationMs,
                     scrimAlpha = PLAYER_SCRIM_ALPHA,
@@ -7895,6 +7896,9 @@ private fun BitChordApp(
                 onDismiss = { showAccountSelector = false },
             )
         }
+
+        // ---- Options windows opened with GlassAlert, from Settings and Home ----
+        com.music.bitchord.ui.components.GlassAlertHost(hazeState)
 
         if (showAppLanguage) {
             BackHandler { showAppLanguage = false }

@@ -61,7 +61,7 @@ import androidx.compose.material.icons.rounded.Contrast
 import androidx.compose.material.icons.rounded.Opacity
 import androidx.compose.material.icons.rounded.CropSquare
 import androidx.compose.material.icons.rounded.Crop
-import androidx.compose.material.icons.rounded.SkipNext
+import com.music.bitchord.sharedui.resources.ic_player_next
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Palette
@@ -1552,7 +1552,10 @@ fun SettingsScreen(
             val miniNextTitle = stringResource(R.string.mini_player_next_button)
             row(miniNextTitle, "mini player", "skip", "next", "button") {
                 SettingsRow(
-                    icon = Icons.Rounded.SkipNext,
+                    // The glyph the mini player itself shows.
+                    iconPainter = org.jetbrains.compose.resources.painterResource(
+                        com.music.bitchord.sharedui.resources.Res.drawable.ic_player_next,
+                    ),
                     title = miniNextTitle,
                     subtitle = stringResource(R.string.mini_player_next_button_subtitle),
                     trailing = {

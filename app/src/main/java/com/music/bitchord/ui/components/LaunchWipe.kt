@@ -13,6 +13,9 @@ import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
 import android.graphics.Shader
 import android.graphics.drawable.Drawable
+import android.os.Build
+import android.view.SurfaceControl
+import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.PathInterpolator
@@ -35,6 +38,9 @@ class LaunchWipeView(context: Context) : View(context) {
     private val logo: Drawable? = context.getDrawable(R.drawable.splash_logo_lit)
     private val logoBox = Rect()
     private var progress = 0f
+
+    /** Off while the splash's own logo is still showing on top of this view. */
+    private var drawsLogo = true
     private var onFirstDraw: (() -> Unit)? = null
 
     override fun onDraw(canvas: Canvas) {
@@ -43,7 +49,7 @@ class LaunchWipeView(context: Context) : View(context) {
         if (w <= 0f || h <= 0f) return
         val layer = canvas.saveLayer(0f, 0f, w, h, null)
         canvas.drawColor(Color.BLACK)
-        logo?.let {
+        if (drawsLogo) logo?.let {
             if (logoBox.isEmpty) centreLogoOn(width / 2, height / 2)
             it.bounds = logoBox
             it.draw(canvas)
@@ -91,12 +97,19 @@ class LaunchWipeView(context: Context) : View(context) {
             this,
             ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT),
         )
-        // The splash goes only once this has been drawn over it and that frame
-        // has had time to reach the screen. The splash's logo is on a surface
-        // of its own that goes the moment it is removed, a frame before a view
-        // added in the same breath is first drawn: taken away at once, the
-        // logo blinked off for that frame.
-        onFirstDraw = {
+        // The splash's animated logo is on a surface of its own that sits above
+        // the whole window, this view included, and lets what is under it
+        // show through. A logo drawn here while that one is still up is seen
+        // twice over, and the dim squares, a fifth lit, came out nearly twice
+        // as bright for those frames: a flicker. Taken away the moment the
+        // splash is removed, a frame before this view's next draw, the logo
+        // blinked off instead. So where the system allows it this view starts
+        // as plain black under the splash's logo, then hides that surface in
+        // the very frame its own logo is first drawn.
+        val iconSurface = iconSurfaceOf(icon)
+        drawsLogo = iconSurface == null
+        val handOver = {
+            // Two frames for the covering frame to reach the screen.
             postOnAnimation {
                 postOnAnimation {
                     onCovered()
@@ -104,9 +117,39 @@ class LaunchWipeView(context: Context) : View(context) {
                 }
             }
         }
+        onFirstDraw = {
+            if (iconSurface == null) {
+                handOver()
+            } else {
+                postOnAnimation {
+                    drawsLogo = true
+                    hideWithNextDraw(iconSurface)
+                    invalidate()
+                    handOver()
+                }
+            }
+        }
         invalidate()
         // Whatever happens to the first draw, the splash is not left up.
         postDelayed({ firstDrawn() }, FIRST_DRAW_WAIT_MS)
+    }
+
+    /**
+     * The surface the splash shows its animated logo on, when it can be hidden
+     * in step with one of this view's frames (Android 13 and up).
+     */
+    private fun iconSurfaceOf(icon: View?): SurfaceControl? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return null
+        return runCatching { (icon as? SurfaceView)?.surfaceControl?.takeIf { it.isValid } }.getOrNull()
+    }
+
+    /** Hides [surface] in the same frame as this view's next draw. */
+    private fun hideWithNextDraw(surface: SurfaceControl) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        runCatching {
+            val hide = SurfaceControl.Transaction().setAlpha(surface, 0f)
+            if (rootSurfaceControl?.applyTransactionOnDraw(hide) != true) hide.apply()
+        }
     }
 
     private fun firstDrawn() {
