@@ -21,6 +21,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.fadeIn
@@ -317,11 +318,41 @@ private val HEADER_DROP = 44.dp
 /** How long the header's buttons take to fade in over their placeholders. */
 private const val HEADER_FADE_MS = 260
 
-/** The first rows of a list that has just loaded come in one after another, this far apart. */
-private const val ROW_REVEAL_STEP_MS = 35L
-private const val ROW_REVEAL_MS = 260
-private const val ROW_REVEAL_COUNT = 14
-private const val ROW_REVEAL_WINDOW_MS = 800L
+/** How far below its place something starts when the page brings it in — see [PageEntrance]. */
+private val ENTRANCE_RISE = 22.dp
+
+/** Quick to set off and long to settle, with nothing abrupt at either end. */
+private val EntranceEasing = CubicBezierEasing(0.22f, 0.61f, 0.36f, 1f)
+
+/**
+ * Brings this in as part of the page's entrance: after the slots above it,
+ * easing up into place while it fades in. [startedAt] is when the entrance
+ * began, null when this showing of the page has none.
+ *
+ * Decided once, when the item is first drawn. One drawn later — scrolled to,
+ * or left standing by a filter — is past the entrance and is simply there.
+ */
+@Composable
+private fun Modifier.pageEntrance(slot: Int, startedAt: Long?): Modifier {
+    val progress = remember {
+        Animatable(if (PageEntrance.plays(slot, startedAt, System.currentTimeMillis())) 0f else 1f)
+    }
+    LaunchedEffect(progress) {
+        if (progress.value < 1f) {
+            delay(PageEntrance.delayMs(slot))
+            progress.animateTo(1f, tween(PageEntrance.DURATION_MS, easing = EntranceEasing))
+        }
+    }
+    val rise = with(LocalDensity.current) { ENTRANCE_RISE.toPx() }
+    return graphicsLayer {
+        val shown = progress.value
+        if (shown < 1f) {
+            // Opaque well before it has stopped moving, so the settling is seen.
+            alpha = (shown * 1.6f).coerceAtMost(1f)
+            translationY = (1f - shown) * rise
+        }
+    }
+}
 
 /** How far the artist name/logo and everything under it sit above the usual [HEADER_DROP]. */
 private val ARTIST_HEADER_LIFT = 64.dp
@@ -915,13 +946,18 @@ fun DetailScreen(
         }
     }
 
-    // When the track list lands while the page is up (rather than being in
-    // hand when it opened), the moment it did — its first rows fade in from
-    // then, one after another.
-    val openedLoading = remember(page.browseId) { page.songs is UiState.Loading }
+    // The moment what is under the header was first there to draw, whether
+    // it was in hand when the page opened or landed while it was up. The
+    // page's entrance runs from then, top to bottom — once per opening: not
+    // again on coming back to the page, nor when a refresh reloads it.
     val songsLoaded = page.songs is UiState.Success
-    val rowsRevealAt = remember(page.browseId, songsLoaded) {
-        if (songsLoaded && openedLoading) System.currentTimeMillis() else null
+    val reduceAnimation by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
+    val entranceAt = remember(page.browseId, songsLoaded) {
+        if (songsLoaded && !reduceAnimation && PageEntrance.claim(listState)) {
+            System.currentTimeMillis()
+        } else {
+            null
+        }
     }
 
     AnimatedContent(
@@ -1148,6 +1184,7 @@ fun DetailScreen(
             val topRelease = if (isArtist && !artistSearch) shownSections.topRelease() else null
             if (topRelease != null) {
                 item(key = "top-release") {
+                    Box(Modifier.pageEntrance(0, entranceAt)) {
                     TopReleaseCard(
                         item = topRelease,
                         palette = palette,
@@ -1158,8 +1195,11 @@ fun DetailScreen(
                             topRelease.browseId?.let { id -> { toggle(id) } }
                         },
                     )
+                    }
                 }
             }
+            // Where the artist's songs and shelves start, under the card when there is one.
+            val artistSlot = if (topRelease != null) 1 else 0
 
             // YouTube's own editorial blurb — an album or an artist only, per
             // [DetailPage.description]. A playlist never carries one, and the
@@ -1175,11 +1215,11 @@ fun DetailScreen(
             val aboutSignature = if (isArtist && appleArt?.logoUrl != null) signature else null
             val showAbout = (!description.isNullOrBlank() &&
                 (page.type == BrowseType.ALBUM || isArtist)) || hasStats || aboutSignature != null
-            fun LazyListScope.aboutItem() {
+            fun LazyListScope.aboutItem(slot: Int) {
                 if (!showAbout) return
                 item(key = "about") {
                     // Clear of the last shelf above it.
-                    Box(Modifier.padding(top = if (isArtist) 28.dp else 0.dp)) {
+                    Box(Modifier.pageEntrance(slot, entranceAt).padding(top = if (isArtist) 28.dp else 0.dp)) {
                     AboutSection(
                         title = stringResource(
                             if (isArtist) R.string.about_artist else R.string.about_album,
@@ -1212,7 +1252,9 @@ fun DetailScreen(
                     }
                 }
             }
-            if (!isArtist) aboutItem()
+            if (!isArtist) aboutItem(0)
+            // A release's rows follow its blurb, when it has one.
+            val rowSlot = if (!isArtist && showAbout) 1 else 0
 
             when (val state = page.songs) {
                 is UiState.Loading -> detailSkeleton(isArtist)
@@ -1251,6 +1293,7 @@ fun DetailScreen(
                     // on the device is listed whole: it is the listener's own.
                     if (artistSongs.isNotEmpty()) item {
                         val top = if (localOnly) artistSongs else artistSongs.take(MAX_ARTIST_SONGS)
+                        Column(Modifier.pageEntrance(artistSlot, entranceAt)) {
                         SectionHeading(
                             title = stringResource(if (localOnly) R.string.songs else R.string.top_songs),
                             palette = palette,
@@ -1282,6 +1325,7 @@ fun DetailScreen(
                                 }
                             }
                         }
+                        }
                     }
                 } else {
                     // Every row on an album carries the same sleeve, which is
@@ -1299,21 +1343,10 @@ fun DetailScreen(
                     ) { position, entry ->
                         val song = entry.value
                         val isCurrent = song.isSameTrackAs(currentSong)
-                        // Just landed: the first screenful fades in a row at a
-                        // time, top to bottom. Anything after (scrolling, a
-                        // filter) is simply there.
-                        val reveal = remember {
-                            val fresh = rowsRevealAt != null && position < ROW_REVEAL_COUNT &&
-                                System.currentTimeMillis() - rowsRevealAt < ROW_REVEAL_WINDOW_MS
-                            Animatable(if (fresh) 0f else 1f)
-                        }
-                        LaunchedEffect(reveal) {
-                            if (reveal.value < 1f) {
-                                delay(position * ROW_REVEAL_STEP_MS)
-                                reveal.animateTo(1f, tween(ROW_REVEAL_MS))
-                            }
-                        }
-                        Column(Modifier.graphicsLayer { alpha = reveal.value }) {
+                        // The first screenful comes in a row at a time, top to
+                        // bottom. Anything after (scrolling, a filter) is
+                        // simply there.
+                        Column(Modifier.pageEntrance(rowSlot + position, entranceAt)) {
                         SongRow(
                             song = if (numbered) {
                                 song
@@ -1360,13 +1393,18 @@ fun DetailScreen(
             // Tracks YouTube offers to round the playlist out, never folded
             // into the list above — see [DetailPage.suggestedSongs].
             if (suggested.isNotEmpty()) {
+                // Under the rows, so only a short playlist has these in its entrance.
+                val suggestedSlot = rowSlot + matches.size
                 item(key = "suggested-heading") {
-                    SectionHeading(stringResource(R.string.suggested), palette)
+                    Box(Modifier.pageEntrance(suggestedSlot, entranceAt)) {
+                        SectionHeading(stringResource(R.string.suggested), palette)
+                    }
                 }
                 itemsIndexed(
                     suggested,
                     key = { _, song -> "suggested-${song.videoId}" },
                 ) { index, song ->
+                    Column(Modifier.pageEntrance(suggestedSlot + 1 + index, entranceAt)) {
                     SuggestedSongRow(
                         song = song,
                         palette = palette,
@@ -1384,16 +1422,18 @@ fun DetailScreen(
                             color = palette.divider,
                         )
                     }
+                    }
                 }
             }
 
             // Albums / Singles & EPs carousels (artist pages).
-            items(if (artistSearch) emptyList() else shownSections) { shelf ->
+            val shelfSlot = artistSlot + if (artistSongs.isNotEmpty()) 1 else 0
+            itemsIndexed(if (artistSearch) emptyList() else shownSections) { shelfIndex, shelf ->
                 val canShowAll = shelf.items.size > ARTIST_ROW_MAX_ITEMS
                 val displayItems = remember(shelf.items) {
                     if (canShowAll) shelf.items.take(ARTIST_ROW_MAX_ITEMS) else shelf.items
                 }
-                Column(Modifier.padding(top = 22.dp)) {
+                Column(Modifier.pageEntrance(shelfSlot + shelfIndex, entranceAt).padding(top = 22.dp)) {
                     SectionHeading(
                         title = shelf.title,
                         palette = palette,
@@ -1419,7 +1459,7 @@ fun DetailScreen(
                     }
                 }
             }
-            if (isArtist && !artistSearch) aboutItem()
+            if (isArtist && !artistSearch) aboutItem(shelfSlot + shownSections.size)
             // Room under a short list, so opening the search can still carry
             // its field all the way up under the bar.
             if (searchUsed) {
