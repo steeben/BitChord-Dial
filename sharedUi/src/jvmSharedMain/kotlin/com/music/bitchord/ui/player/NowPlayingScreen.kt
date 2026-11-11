@@ -382,6 +382,8 @@ private fun Modifier.drawControlsScrim(
     alpha: () -> Float,
     rootOrigin: () -> Offset,
     rootSize: () -> IntSize,
+    /** Black for the scrim under light ink, white for the veil under dark. */
+    color: Color = Color.Black,
     /** The docking this frame, for a player that has a mini player to dock into. */
     dockFrame: DockFrame? = null,
     /** How far open the player is, 1 when it is not docking. */
@@ -391,7 +393,8 @@ private fun Modifier.drawControlsScrim(
     val root = rootSize()
     // Read whatever comes of it, so a docking frame redraws this.
     val open = dockT()
-    dockFrame?.scrimAlpha = 0f
+    val veil = color == Color.White
+    dockFrame?.worn(veil, 0f)
     if (a <= 0.004f || root.width == 0 || root.height == 0) return@drawBehind
     val origin = rootOrigin()
     val lead = CONTROLS_SCRIM_LEAD.toPx()
@@ -402,7 +405,7 @@ private fun Modifier.drawControlsScrim(
     val width = root.width.toFloat()
     val host = dockFrame?.host?.takeIf { open < 1f && it.isAttached }?.positionInRoot()
     if (dockFrame == null || host == null) {
-        drawControlsScrimBand(a, left, top, width, bottom, lead)
+        drawControlsScrimBand(a, left, top, width, bottom, lead, color)
         return@drawBehind
     }
     // On its way to and from the mini player the sleeve is drawn over
@@ -413,7 +416,7 @@ private fun Modifier.drawControlsScrim(
     // this one gives up exactly that much, so wherever the sleeve is see-through
     // the two add up to the one scrim.
     val row = origin - host
-    dockFrame.scrimAlpha = a
+    dockFrame.worn(veil, a)
     dockFrame.scrimLeft = row.x + left
     dockFrame.scrimTop = row.y + top
     dockFrame.scrimWidth = width
@@ -422,10 +425,10 @@ private fun Modifier.drawControlsScrim(
     val sleeve = dockFrame.sleeveInPlayer().translate(-row.x, -row.y)
     val share = dockScrimShare(open)
     clipRect(sleeve.left, sleeve.top, sleeve.right, sleeve.bottom, ClipOp.Difference) {
-        drawControlsScrimBand(a, left, top, width, bottom, lead)
+        drawControlsScrimBand(a, left, top, width, bottom, lead, color)
     }
     clipRect(sleeve.left, sleeve.top, sleeve.right, sleeve.bottom) {
-        drawControlsScrimBand(a, left, top, width, bottom, lead) { scrimUnderCover(it, it * share) }
+        drawControlsScrimBand(a, left, top, width, bottom, lead, color) { scrimUnderCover(it, it * share) }
     }
 }
 
@@ -441,6 +444,7 @@ private inline fun DrawScope.drawControlsScrimBand(
     width: Float,
     bottom: Float,
     lead: Float,
+    color: Color = Color.Black,
     tone: (Float) -> Float = { it },
 ) {
     val span = bottom - top
@@ -448,11 +452,11 @@ private inline fun DrawScope.drawControlsScrimBand(
     val reached = (lead / span).coerceIn(0f, 1f)
     drawRect(
         brush = Brush.verticalGradient(
-            0f to Color.Black.copy(alpha = 0f),
-            reached * 0.5f to Color.Black.copy(alpha = tone(alpha * 0.35f)),
-            reached to Color.Black.copy(alpha = tone(alpha * 0.85f)),
-            (reached + (1f - reached) * 0.25f) to Color.Black.copy(alpha = tone(alpha)),
-            1f to Color.Black.copy(alpha = tone(alpha)),
+            0f to color.copy(alpha = 0f),
+            reached * 0.5f to color.copy(alpha = tone(alpha * 0.35f)),
+            reached to color.copy(alpha = tone(alpha * 0.85f)),
+            (reached + (1f - reached) * 0.25f) to color.copy(alpha = tone(alpha)),
+            1f to color.copy(alpha = tone(alpha)),
             startY = top,
             endY = bottom,
         ),
@@ -746,6 +750,11 @@ private class DockFrame {
      * [drawControlsScrim]. No strength with no scrim, or none under a sleeve.
      */
     var scrimAlpha = 0f
+    /** The same, for the light theme's white veil, which shares its place. */
+    var veilAlpha = 0f
+    fun worn(veil: Boolean, alpha: Float) {
+        if (veil) veilAlpha = alpha else scrimAlpha = alpha
+    }
     var scrimLeft = 0f
     var scrimTop = 0f
     var scrimWidth = 0f
@@ -2575,19 +2584,24 @@ fun NowPlayingScreen(
                 // The sleeve's share of the controls scrim, which it is drawn
                 // over for the trip: on by degrees as it nears its place, so
                 // the scrim is already on its foot when it lands under it.
-                val scrim = dockFrame.scrimAlpha
                 val share = dockScrimShare(dockT())
-                if (scrim > 0.004f && share > 0f && dockFrame.portalScale == 1f) {
+                if (share > 0f && dockFrame.portalScale == 1f) {
                     val sleeve = dockFrame.sleeveInPlayer()
                     clipRect(sleeve.left, sleeve.top, sleeve.right, sleeve.bottom) {
-                        drawControlsScrimBand(
-                            alpha = scrim,
-                            left = dockFrame.scrimLeft,
-                            top = dockFrame.scrimTop,
-                            width = dockFrame.scrimWidth,
-                            bottom = dockFrame.scrimBottom,
-                            lead = dockFrame.scrimLead,
-                        ) { it * share }
+                        for (veil in 0..1) {
+                            val worn = if (veil == 1) dockFrame.veilAlpha else dockFrame.scrimAlpha
+                            if (worn > 0.004f) {
+                                drawControlsScrimBand(
+                                    alpha = worn,
+                                    left = dockFrame.scrimLeft,
+                                    top = dockFrame.scrimTop,
+                                    width = dockFrame.scrimWidth,
+                                    bottom = dockFrame.scrimBottom,
+                                    lead = dockFrame.scrimLead,
+                                    color = if (veil == 1) Color.White else Color.Black,
+                                ) { it * share }
+                            }
+                        }
                     }
                 }
             }
@@ -4554,6 +4568,8 @@ fun NowPlayingScreen(
                 // and under the deck, from just above it to the foot of the
                 // screen. Gone as the row collapses into the header.
                 val controlsScrim = LocalPlayerControlsScrim.current
+                // The light theme's white veil under dark ink, in its place.
+                val controlsVeil = LocalPlayerControlsVeil.current
                 // Only read while drawing the scrim, so a moving row redraws
                 // it and recomposes nothing.
                 var titleRowOrigin by remember { mutableStateOf(Offset.Zero) }
@@ -4594,6 +4610,14 @@ fun NowPlayingScreen(
                             alpha = { controlsScrim * (1f - p()) },
                             rootOrigin = { titleRowOrigin },
                             rootSize = { titleRootSize },
+                            dockFrame = dockFrame.takeIf { dock != null },
+                            dockT = dockT,
+                        )
+                        .drawControlsScrim(
+                            alpha = { controlsVeil * (1f - p()) },
+                            rootOrigin = { titleRowOrigin },
+                            rootSize = { titleRootSize },
+                            color = Color.White,
                             dockFrame = dockFrame.takeIf { dock != null },
                             dockT = dockT,
                         )

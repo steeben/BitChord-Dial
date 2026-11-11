@@ -6586,6 +6586,8 @@ private fun BitChordApp(
                         // as its ⋯ menu below and every other menu do.
                         com.music.bitchord.ui.player.LocalPlayerGlass provides playerGlass.takeIf { glassSamplesBackdrop },
                         com.music.bitchord.ui.player.LocalPlayerSleeveTone provides playerSleeveTone,
+                        com.music.bitchord.ui.player.LocalPlayerLightTheme provides
+                            (com.music.bitchord.ui.components.LocalAppThemeDark.current == false),
                     ) {
                         nowPlaying(playerSong)
                     }

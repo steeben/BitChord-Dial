@@ -218,7 +218,7 @@ class GlassOptionsTest {
     @Test
     fun `a frosted button on dark ground is a pale lift, not the dense dark fill`() {
         val dense = Color(0xFF0D0D0F).copy(alpha = 0.65f)
-        val fill = frostButtonFill(dark = true, dense = dense)
+        val fill = frostButtonFill(dark = true)
         // Over a mid-dark sleeve it comes out brighter than the sleeve, where
         // the dense fill came out darker.
         val sleeve = Color(0xFF3A3A22)
@@ -227,9 +227,28 @@ class GlassOptionsTest {
     }
 
     @Test
-    fun `a frosted button on bright ground keeps the pale dense fill`() {
+    fun `a frosted button on bright ground is a veil, not the dense light fill`() {
         val dense = Color(0xFFF7F7F9).copy(alpha = 0.6f)
-        assertEquals(dense, frostButtonFill(dark = false, dense = dense))
+        assertTrue(frostButtonFill(dark = false).alpha < dense.alpha)
+        assertEquals(frostPageButtonFill(dark = false), frostButtonFill(dark = false))
+    }
+
+    @Test
+    fun `a frosted button on a scrimmed sleeve is the scrimmed sleeve lifted`() {
+        // A bright sleeve under the player's dark scrim: the button's backdrop
+        // holds the sleeve alone, so the scrim has to come with the fill.
+        val sleeve = Color(0xFFE0E0E0)
+        val scrim = Color.Black.copy(alpha = 0.56f)
+        val ground = scrim.compositeOver(sleeve)
+        val bare = frostButtonFill(dark = true).compositeOver(sleeve)
+        val button = frostButtonFill(dark = true, underlay = scrim).compositeOver(sleeve)
+        // Still a lift over the ground it is on, but a slight one, where
+        // without the scrim it was the bright sleeve showing through.
+        assertTrue(button.luminance() > ground.luminance())
+        assertTrue(button.luminance() - ground.luminance() < 0.1f)
+        assertTrue(bare.luminance() - ground.luminance() > 0.4f)
+        // No underlay leaves the plain lift.
+        assertEquals(frostButtonFill(dark = true), frostButtonFill(dark = true, underlay = Color.Transparent))
     }
 
     @Test

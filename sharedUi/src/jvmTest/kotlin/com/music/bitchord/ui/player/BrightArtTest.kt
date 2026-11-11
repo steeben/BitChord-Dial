@@ -42,6 +42,32 @@ class BrightArtTest {
     }
 
     @Test
+    fun lightThemeBandInkGoesDarkOverABrightBand() {
+        // A pale grey sleeve (0.6 to 0.75) is light ink on a scrim in the dark
+        // theme and dark ink in the light one.
+        assertEquals(false, bandInkIsDark(0.62f, wasDark = false))
+        assertEquals(true, bandInkIsDark(0.62f, wasDark = false, lightTheme = true))
+        assertEquals(true, bandInkIsDark(0.55f, wasDark = false, lightTheme = true))
+        // A mid-toned band keeps light ink there as well.
+        assertEquals(false, bandInkIsDark(0.54f, wasDark = false, lightTheme = true))
+        assertEquals(false, bandInkIsDark(0.30f, wasDark = false, lightTheme = true))
+        // And it holds across its own gap.
+        assertEquals(true, bandInkIsDark(0.45f, wasDark = true, lightTheme = true))
+        assertEquals(false, bandInkIsDark(0.44f, wasDark = true, lightTheme = true))
+    }
+
+    @Test
+    fun lightVeilMakesUpWhatTheBandIsShortOfWhite() {
+        // White enough already: no veil.
+        assertEquals(0f, lightVeilAlpha(0.95f), 0.0001f)
+        assertEquals(0f, lightVeilAlpha(0.90f), 0.0001f)
+        val mid = lightVeilAlpha(0.72f)
+        assertTrue("mid was $mid", mid > 0.1f && mid < 0.4f)
+        assertEquals(0.44f, lightVeilAlpha(0.55f), 0.0001f)
+        assertEquals(0.44f, lightVeilAlpha(0.45f), 0.0001f)
+    }
+
+    @Test
     fun inkStaysLightOverAClipUnlessPicked() {
         // Over a clip: light, even when the band or the sleeve says dark.
         assertEquals(false, playerInkDark(null, overClip = true, bandDark = true, artLuminance = 0.9f))

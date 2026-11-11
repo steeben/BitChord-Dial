@@ -21,15 +21,21 @@ internal const val MAX_SHADE = 0.85f
 internal const val FROST_BUTTON_LIFT = 0.16f
 
 /**
- * The Frost style's fill for a button on ground that is [dark] or bright,
- * where [dense] is the fill a menu gets there. On dark ground the theme's
- * near-black surface made the buttons black holes in a sleeve that is a
- * colour, not black, so they are a pale lift of the blurred sleeve instead,
- * like the frost everywhere else. On bright ground the pale dense fill is
- * already that.
+ * The Frost style's fill for a button on ground that is [dark] or bright: the
+ * player's heart, ⋯ and bottom pill. On dark ground the theme's near-black
+ * surface made the buttons black holes in a sleeve that is a colour, not
+ * black, and on bright ground its near-white one made them white discs, so
+ * they are a pale lift of the blurred sleeve instead, like the page buttons
+ * ([frostPageButtonFill]).
+ *
+ * [underlay] is the scrim or veil the button sits on that its backdrop does
+ * not hold. It goes under the lift, so the button is the darkened (or
+ * lightened) band lifted, not the bare sleeve showing through a hole in it.
  */
-internal fun frostButtonFill(dark: Boolean, dense: Color): Color =
-    if (dark) Color.White.copy(alpha = FROST_BUTTON_LIFT) else dense
+internal fun frostButtonFill(dark: Boolean, underlay: Color = Color.Transparent): Color {
+    val lift = Color.White.copy(alpha = if (dark) FROST_BUTTON_LIFT else FROST_PAGE_BUTTON_VEIL)
+    return if (underlay.alpha <= 0f) lift else lift.compositeOver(underlay)
+}
 
 /**
  * How much white a frosted button lays over a light page: enough to stand

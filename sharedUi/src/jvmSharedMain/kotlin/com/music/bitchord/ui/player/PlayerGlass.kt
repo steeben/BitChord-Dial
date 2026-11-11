@@ -58,3 +58,10 @@ class PlayerSleeveTone {
 }
 
 val LocalPlayerSleeveTone = staticCompositionLocalOf<PlayerSleeveTone?> { null }
+
+/**
+ * Whether the app is in its light theme, told by the app. The player picks its
+ * ink off the sleeve in either theme, but in the light one a bright sleeve is
+ * left bright under dark text sooner than it is darkened for light text.
+ */
+val LocalPlayerLightTheme = staticCompositionLocalOf { false }
