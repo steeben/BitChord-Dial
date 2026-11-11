@@ -66,7 +66,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 /*
  * "Let Dial Generate Playlist Image": every playlist page gets a moving
@@ -123,6 +125,12 @@ private val heldCollages = HashMap<String, List<String>>()
 private const val THUMB_PX = 360
 private const val MAIN_PX = 600
 private const val MAIN_SHAPE = 4
+
+/** How long the covers take to come in. */
+private const val ENTER_MS = 700
+
+/** How long the front cover waits for the floating ones before coming in without them. */
+private const val TILES_WAIT_MS = 2_500L
 
 /**
  * How far down the picture the front cover's centre sits: the middle of
@@ -219,22 +227,36 @@ internal fun PlaylistCollageArt(covers: List<String>, modifier: Modifier = Modif
     val geometry = remember { CollageGeometry() }
     val borderPx = with(LocalDensity.current) { 1.dp.toPx() }
     val enter = remember { Animatable(0f) }
+    val tilesEnter = remember { Animatable(0f) }
     val context = LocalContext.current
 
-    LaunchedEffect(covers.firstOrNull()) {
+    // Nothing is drawn until every cover is decoded, so the picture arrives
+    // as one movement. Loaded apart, the floating covers used to land after
+    // the front cover's entrance had already run, and so appeared at full
+    // strength with no entrance of their own.
+    LaunchedEffect(covers) {
         val url = covers.firstOrNull() ?: return@LaunchedEffect
-        state.main = withContext(Dispatchers.Default) { loadCover(context, url, MAIN_PX) }
-        enter.animateTo(1f, tween(500, easing = FastOutSlowInEasing))
-    }
-    LaunchedEffect(covers.drop(1)) {
-        val urls = covers.drop(1).take(SLOTS.size)
-        state.tiles = withContext(Dispatchers.Default) {
-            coroutineScope {
-                urls.map { url ->
-                    // Sharp at every depth: distance is shown by size and
-                    // dimming alone, never by a smeared low-res copy.
-                    async { loadCover(context, url, THUMB_PX) }
-                }.awaitAll()
+        enter.snapTo(0f)
+        tilesEnter.snapTo(0f)
+        coroutineScope {
+            val main = async(Dispatchers.Default) { loadCover(context, url, MAIN_PX) }
+            val tiles = async(Dispatchers.Default) {
+                // Sharp at every depth: distance is shown by size and
+                // dimming alone, never by a smeared low-res copy.
+                covers.drop(1).take(SLOTS.size).map { async { loadCover(context, it, THUMB_PX) } }.awaitAll()
+            }
+            state.main = main.await()
+            // A cover that is slow to arrive doesn't hold the front one back
+            // for long: the rest then make their own entrance when they come.
+            val ready = withTimeoutOrNull(TILES_WAIT_MS) { tiles.await() }
+            if (ready != null) {
+                state.tiles = ready
+                launch { tilesEnter.animateTo(1f, tween(ENTER_MS, easing = FastOutSlowInEasing)) }
+                enter.animateTo(1f, tween(ENTER_MS, easing = FastOutSlowInEasing))
+            } else {
+                launch { enter.animateTo(1f, tween(ENTER_MS, easing = FastOutSlowInEasing)) }
+                state.tiles = tiles.await()
+                tilesEnter.animateTo(1f, tween(ENTER_MS, easing = FastOutSlowInEasing))
             }
         }
     }
@@ -246,7 +268,7 @@ internal fun PlaylistCollageArt(covers: List<String>, modifier: Modifier = Modif
                 val v = c.isAttached && c.boundsInWindow().let { !it.isEmpty && it.bottom > 0f }
                 if (v != state.visible) state.visible = v
             }
-            .drawBehind { drawCollage(state, geometry, enter.value, borderPx) },
+            .drawBehind { drawCollage(state, geometry, enter.value, tilesEnter.value, borderPx) },
     )
 }
 
@@ -291,15 +313,16 @@ private fun DrawScope.drawCollage(
     state: CollageState,
     geo: CollageGeometry,
     enter: Float,
+    tilesEnter: Float,
     borderPx: Float,
     centreY: Float = MAIN_CENTRE_Y,
 ) {
     val w = size.width
     val h = size.height.coerceAtLeast(1f)
     geo.ensure(w, h)
-    if (enter <= 0.01f) return
+    if (enter <= 0.01f && tilesEnter <= 0.01f) return
     val t = state.seconds
-    val tiles = state.tiles
+    val tiles = if (tilesEnter > 0.01f) state.tiles else emptyList()
 
     for (i in DRAW_ORDER) {
         val img = tiles.getOrNull(i) ?: continue
@@ -309,10 +332,10 @@ private fun DrawScope.drawCollage(
         val dy = (s.ampY * w * s.depth * sin(omega * 0.83 * t + s.phase * 1.7 + 1.1)).toFloat()
         val rot = s.rot + (s.ampR * sin(omega * 0.61 * t + s.phase * 0.9)).toFloat()
         val sc = 1f + 0.03f * sin(omega * 1.2 * t + s.phase * 2.3).toFloat()
-        drawTile(img, geo.paths[i], geo.sides[i], s.x * w + dx, s.y * h + dy, rot, sc, enter, (1f - s.depth) * 0.45f, borderPx)
+        drawTile(img, geo.paths[i], geo.sides[i], s.x * w + dx, s.y * h + dy, rot, sc * (0.94f + 0.06f * tilesEnter), tilesEnter, (1f - s.depth) * 0.45f, borderPx)
     }
 
-    val main = state.main ?: return
+    val main = state.main?.takeIf { enter > 0.01f } ?: return
     val om = 2.0 * PI / 26.0
     val rot = -7f + (1.6 * sin(om * t)).toFloat()
     val cx = w / 2f + (0.012 * w * sin(om * 0.7 * t + 1.0)).toFloat()
@@ -451,7 +474,7 @@ internal fun renderCollageCover(draft: CollageCoverDraft, background: Color, px:
         androidx.compose.ui.geometry.Size(px.toFloat(), px.toFloat()),
     ) {
         drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(background, bottom)))
-        drawCollage(state, CollageGeometry(), enter = 1f, borderPx = px / 400f, centreY = 0.5f)
+        drawCollage(state, CollageGeometry(), enter = 1f, tilesEnter = 1f, borderPx = px / 400f, centreY = 0.5f)
     }
     return out
 }
