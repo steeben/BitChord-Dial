@@ -596,7 +596,6 @@ class MainActivity : AppCompatActivity() {
         setContent {
             val theme by AppSettings.themeMode.collectAsStateWithLifecycle()
             val highPerformance by AppSettings.highPerformanceMode.collectAsStateWithLifecycle()
-            val liquidGlassEnabled by AppSettings.liquidGlass.collectAsStateWithLifecycle()
             val cropThumbnails by CustomizationSettings.cropThumbnails.collectAsStateWithLifecycle()
             val dialTileStyle by CustomizationSettings.dialTileStyle.collectAsStateWithLifecycle()
             val iosOverscrollFactory = rememberIosOverscrollFactory()
@@ -645,10 +644,10 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     Color.Black.copy(alpha = 0.05f)
                 }
-                // Text fields go frosted under liquid glass too, not only over
-                // the coloured background: a solid grey field on glass looked
-                // like a hole in it.
-                val frostedFields = frosted ?: if (liquidGlassEnabled && isGlassSupported()) {
+                // Text fields go frosted on the glass-shaped surfaces too, not
+                // only over the coloured background: a solid grey field on
+                // glass or frost looked like a hole in it.
+                val frostedFields = frosted ?: if (isGlassSupported()) {
                     if (darkTheme) Color.White.copy(alpha = 0.09f) else Color.Black.copy(alpha = 0.06f)
                 } else {
                     null
@@ -657,7 +656,9 @@ class MainActivity : AppCompatActivity() {
                     com.music.bitchord.ui.components.LocalFrostedSurface provides frosted,
                     com.music.bitchord.ui.components.LocalFrostedFields provides frostedFields,
                     LocalOverscrollFactory provides iosOverscrollFactory,
-                    LocalLiquidGlassEnabled provides liquidGlassEnabled,
+                    // Glass, Frost and Solid share one layout; the app style
+                    // only decides what its surfaces are made of.
+                    LocalLiquidGlassEnabled provides true,
                     LocalAppBackdrop provides appBackdrop,
                     com.music.bitchord.ui.components.LocalCropThumbnails provides cropThumbnails,
                     com.music.bitchord.ui.components.LocalDialTileStyle provides dialTileStyle,
@@ -800,6 +801,10 @@ private fun BitChordApp(
     // and the page is a sibling of the bar rather than a child.
     val navTabConfig by CustomizationSettings.navTabs.collectAsStateWithLifecycle()
     val keepNavBarExpanded by CustomizationSettings.keepNavBarExpanded.collectAsStateWithLifecycle()
+    // The folding bar, with Search apart from the other tabs, is the animated
+    // navigation bar, in every app style. With that setting off the tabs sit
+    // together on one bar under the mini player.
+    val foldingNavBar = glassActive && !keepNavBarExpanded
     val navBarScroll = rememberFloatingTabBarScrollConnection(
         inlineBehavior = if (keepNavBarExpanded) {
             FloatingTabBarInlineBehavior.Never
@@ -5859,7 +5864,7 @@ private fun BitChordApp(
                     }
                 }
 
-                if (glassActive) Column(
+                if (foldingNavBar) Column(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         // Down out of the way while the player grows out of its pill.
@@ -5869,7 +5874,7 @@ private fun BitChordApp(
                         .onSizeChanged { floatingBarsHeight.intValue = it.height },
                 ) {
                     QueueActionNoticeHost(queueNotice)
-                    // Liquid glass replaces the two stacked bars with the single
+                    // The animated bar replaces the two stacked bars with the single
                     // component they are stacked to imitate: the now playing
                     // controls dock into the tab bar rather than riding above it,
                     // and the pair folds together on scroll. See [GlassNavBar].
@@ -6550,7 +6555,7 @@ private fun BitChordApp(
                 // (the app's would show the pages behind its window).
                 val playerBackdrop = rememberLayerBackdrop()
                 val playerGlass = remember(playerBackdrop) {
-                    com.music.bitchord.ui.player.AppPlayerGlass(playerBackdrop)
+                    com.music.bitchord.ui.player.AppPlayerGlass(playerBackdrop, overDarkGround = true)
                 }
                 // The whole player as it is drawn, controls, title and
                 // sleeve included, for the ⋯ menu's glass below. The
@@ -6572,16 +6577,21 @@ private fun BitChordApp(
                 // The player's ⋯ menu, drawn with the player so
                 // it is over the player, on the player's glass. Outside the
                 // provider above: the menu follows the Liquid Glass options
-                // as every other menu does.
-                IosMenuPopover(
-                    item = songActions?.takeIf {
-                        menuFromPlayer && songMenuOrigin == null && dialMenuItem == null
-                    },
-                    anchor = MenuNav.songMenuAnchor,
-                    onDismiss = { songActions = null },
-                    backdrop = playerMenuBackdrop.takeIf { glassSamplesBackdrop },
-                ) { song ->
-                    songMenuBody(song, SongActionsPresentation.Menu)
+                // as every other menu does. In the dark theme's colours
+                // whatever the app's theme: the player under it is dark in
+                // both, and the light theme's black labels could not be read
+                // through glass over it.
+                BitChordTheme(darkTheme = true) {
+                    IosMenuPopover(
+                        item = songActions?.takeIf {
+                            menuFromPlayer && songMenuOrigin == null && dialMenuItem == null
+                        },
+                        anchor = MenuNav.songMenuAnchor,
+                        onDismiss = { songActions = null },
+                        backdrop = playerMenuBackdrop.takeIf { glassSamplesBackdrop },
+                    ) { song ->
+                        songMenuBody(song, SongActionsPresentation.Menu)
+                    }
                 }
             }
             if (!reducePlayerMotion) {
@@ -6618,7 +6628,7 @@ private fun BitChordApp(
                     song = playerSong,
                     isPlaying = player.isPlaying,
                     isLoading = playPauseBusy,
-                    glass = glassActive,
+                    glass = foldingNavBar,
                     hazeState = hazeState,
                     position = player.position,
                     durationMs = player.durationMs,

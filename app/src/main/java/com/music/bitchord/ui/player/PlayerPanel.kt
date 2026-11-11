@@ -66,7 +66,11 @@ import dev.chrisbanes.haze.materials.HazeMaterials
 import com.music.bitchord.ui.components.ExplicitSongTitle
 import com.music.bitchord.ui.components.MiniPlayerNextGlyph
 import com.music.bitchord.ui.components.PlayPauseGlyph
+import androidx.compose.foundation.shape.CornerBasedShape
+import com.music.bitchord.ui.components.GLASS_EDGE_WIDTH
 import com.music.bitchord.ui.components.glassContentColor
+import com.music.bitchord.ui.components.isGlassSupported
+import com.music.bitchord.ui.components.surfaceEdgeColor
 import com.music.bitchord.ui.components.liquidGlass
 import com.music.bitchord.ui.components.miniPlayerProgress
 import com.music.bitchord.ui.components.pageAccent
@@ -278,20 +282,23 @@ fun PlayerPanel(
  */
 @OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
-private fun Modifier.plainPillSurface(shape: Shape, hazeState: HazeState): Modifier {
+private fun Modifier.plainPillSurface(shape: CornerBasedShape, hazeState: HazeState): Modifier {
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     return clip(shape)
         .then(
-            if (reduceDynamicBlur) {
-                Modifier.background(MaterialTheme.colorScheme.surface)
-            } else {
-                Modifier.optimizedHazeEffect(
-                    state = hazeState,
-                    style = HazeMaterials.thin(MaterialTheme.colorScheme.surface),
-                )
+            when {
+                isGlassSupported() -> Modifier.liquidGlass(shape)
+                reduceDynamicBlur -> Modifier
+                    .background(MaterialTheme.colorScheme.surface)
+                    .border(GLASS_EDGE_WIDTH, surfaceEdgeColor(), shape)
+                else -> Modifier
+                    .optimizedHazeEffect(
+                        state = hazeState,
+                        style = HazeMaterials.thin(MaterialTheme.colorScheme.surface),
+                    )
+                    .border(GLASS_EDGE_WIDTH, surfaceEdgeColor(), shape)
             },
         )
-        .border(0.5.dp, Color.White.copy(alpha = 0.10f), shape)
 }
 
 /** The container's place this frame: size and position come from the dock. */

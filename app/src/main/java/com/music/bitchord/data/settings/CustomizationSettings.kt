@@ -188,6 +188,57 @@ object CustomizationSettings {
     val clearGlassTintDarkness = MutableStateFlow(DEFAULT_CLEAR_GLASS_TINT_DARKNESS)
     val clearGlassTintDarknessLight = MutableStateFlow(DEFAULT_CLEAR_GLASS_TINT_DARKNESS_LIGHT)
 
+    /**
+     * The light theme's own copy of every glass option above (the ones above
+     * are the dark theme's), so the glass can be set up for each theme apart.
+     * Until one is changed it holds what the dark theme's was.
+     */
+    val glassTransparencyLight = MutableStateFlow(DEFAULT_GLASS_TRANSPARENCY)
+    val glassTintLight = MutableStateFlow(GlassTint.DEFAULT)
+    val glassTintDarknessLight = MutableStateFlow(0f)
+    val glassSaturationLight = MutableStateFlow(DEFAULT_GLASS_SATURATION)
+    val glassBlurLight = MutableStateFlow(DEFAULT_GLASS_BLUR)
+    val clearGlassTransparencyLight = MutableStateFlow(DEFAULT_CLEAR_GLASS_TRANSPARENCY)
+    val clearGlassBlurLight = MutableStateFlow(DEFAULT_CLEAR_GLASS_BLUR)
+    val clearGlassSaturationLight = MutableStateFlow(DEFAULT_CLEAR_GLASS_SATURATION)
+    val clearGlassTintLight = MutableStateFlow(DEFAULT_CLEAR_GLASS_TINT)
+
+    /** One theme's glass options for one style, Classic or New. */
+    class GlassOptionSet(
+        val transparency: MutableStateFlow<Float>,
+        val blur: MutableStateFlow<Float>,
+        val saturation: MutableStateFlow<Float>,
+        val tint: MutableStateFlow<GlassTint>,
+        val darkness: MutableStateFlow<Float>,
+    )
+
+    private val classicDarkGlass by lazy {
+        GlassOptionSet(glassTransparency, glassBlur, glassSaturation, glassTint, glassTintDarkness)
+    }
+    private val classicLightGlass by lazy {
+        GlassOptionSet(glassTransparencyLight, glassBlurLight, glassSaturationLight, glassTintLight, glassTintDarknessLight)
+    }
+    private val clearDarkGlass by lazy {
+        GlassOptionSet(clearGlassTransparency, clearGlassBlur, clearGlassSaturation, clearGlassTint, clearGlassTintDarkness)
+    }
+    private val clearLightGlass by lazy {
+        GlassOptionSet(
+            clearGlassTransparencyLight,
+            clearGlassBlurLight,
+            clearGlassSaturationLight,
+            clearGlassTintLight,
+            clearGlassTintDarknessLight,
+        )
+    }
+
+    /** The glass options for the New ([clear]) or Classic style, in the [dark] or the light theme. */
+    fun glassOptions(clear: Boolean, dark: Boolean): GlassOptionSet = when {
+        clear && dark -> clearDarkGlass
+        clear -> clearLightGlass
+        dark -> classicDarkGlass
+        else -> classicLightGlass
+    }
+
     /** The library last picked from the Library page's logo; remembered across launches. */
     val librarySource = MutableStateFlow(LibrarySource.ALL)
 
@@ -264,6 +315,39 @@ object CustomizationSettings {
             p.getFloat(KEY_CLEAR_GLASS_TINT_DARKNESS, DEFAULT_CLEAR_GLASS_TINT_DARKNESS).coerceIn(0f, 1f)
         clearGlassTintDarknessLight.value =
             p.getFloat(KEY_CLEAR_GLASS_TINT_DARKNESS_LIGHT, DEFAULT_CLEAR_GLASS_TINT_DARKNESS_LIGHT).coerceIn(0f, 1f)
+        // The light theme's set: what the dark theme has, until it is given its own.
+        glassTransparencyLight.value =
+            p.getFloat(KEY_GLASS_TRANSPARENCY + LIGHT, glassTransparency.value).coerceIn(0f, 1f)
+        glassTintLight.value = GlassTint.entries
+            .firstOrNull { it.name == p.getString(KEY_GLASS_TINT + LIGHT, null) } ?: glassTint.value
+        glassTintDarknessLight.value =
+            p.getFloat(KEY_GLASS_TINT_DARKNESS + LIGHT, glassTintDarkness.value).coerceIn(0f, 1f)
+        glassBlurLight.value = p.getFloat(KEY_GLASS_BLUR + LIGHT, glassBlur.value).coerceIn(0f, MAX_GLASS_BLUR)
+        glassSaturationLight.value =
+            p.getFloat(KEY_GLASS_SATURATION + LIGHT, glassSaturation.value).coerceIn(0f, MAX_GLASS_SATURATION)
+        clearGlassTransparencyLight.value =
+            p.getFloat(KEY_CLEAR_GLASS_TRANSPARENCY + LIGHT, clearGlassTransparency.value).coerceIn(0f, 1f)
+        clearGlassBlurLight.value =
+            p.getFloat(KEY_CLEAR_GLASS_BLUR + LIGHT, clearGlassBlur.value).coerceIn(0f, MAX_GLASS_BLUR)
+        clearGlassSaturationLight.value =
+            p.getFloat(KEY_CLEAR_GLASS_SATURATION + LIGHT, clearGlassSaturation.value).coerceIn(0f, MAX_GLASS_SATURATION)
+        clearGlassTintLight.value = GlassTint.entries
+            .firstOrNull { it.name == p.getString(KEY_CLEAR_GLASS_TINT + LIGHT, null) } ?: clearGlassTint.value
+        // Written out the first time, so a later change to the dark theme's
+        // options does not move the light theme's on the next launch.
+        if (!p.contains(KEY_GLASS_TRANSPARENCY + LIGHT)) {
+            p.edit()
+                .putFloat(KEY_GLASS_TRANSPARENCY + LIGHT, glassTransparencyLight.value)
+                .putString(KEY_GLASS_TINT + LIGHT, glassTintLight.value.name)
+                .putFloat(KEY_GLASS_TINT_DARKNESS + LIGHT, glassTintDarknessLight.value)
+                .putFloat(KEY_GLASS_BLUR + LIGHT, glassBlurLight.value)
+                .putFloat(KEY_GLASS_SATURATION + LIGHT, glassSaturationLight.value)
+                .putFloat(KEY_CLEAR_GLASS_TRANSPARENCY + LIGHT, clearGlassTransparencyLight.value)
+                .putFloat(KEY_CLEAR_GLASS_BLUR + LIGHT, clearGlassBlurLight.value)
+                .putFloat(KEY_CLEAR_GLASS_SATURATION + LIGHT, clearGlassSaturationLight.value)
+                .putString(KEY_CLEAR_GLASS_TINT + LIGHT, clearGlassTintLight.value.name)
+                .apply()
+        }
         librarySource.value = LibrarySource.entries
             .firstOrNull { it.name == p.getString(KEY_LIBRARY_SOURCE, null) } ?: LibrarySource.ALL
         speedDialPins.value = readPins(p.getString(KEY_SPEED_DIAL_PINS, null))
@@ -630,62 +714,56 @@ object CustomizationSettings {
         prefs?.edit()?.putBoolean(KEY_AMBIENT_FOLLOWS_ARTWORK, value)?.apply()
     }
 
-    fun setGlassTransparency(value: Float) {
-        val clamped = value.coerceIn(0f, 1f)
-        glassTransparency.value = clamped
-        prefs?.edit()?.putFloat(KEY_GLASS_TRANSPARENCY, clamped)?.apply()
-    }
+    /*
+     * Each glass setter writes the dark theme's option, or the light theme's
+     * when [dark] is false. The light theme's keys are the dark one's plus
+     * [LIGHT], and are always written out, a reset included: left out, a
+     * light option reads back as whatever the dark theme's is.
+     */
 
-    fun setGlassTint(value: GlassTint) {
-        glassTint.value = value
-        prefs?.edit()?.putString(KEY_GLASS_TINT, value.name)?.apply()
-    }
+    fun setGlassTransparency(value: Float, dark: Boolean = true) =
+        putGlass(glassOptions(clear = false, dark).transparency, KEY_GLASS_TRANSPARENCY, dark, value.coerceIn(0f, 1f))
 
-    fun setGlassTintDarkness(value: Float) {
-        val clamped = value.coerceIn(0f, 1f)
-        glassTintDarkness.value = clamped
-        prefs?.edit()?.putFloat(KEY_GLASS_TINT_DARKNESS, clamped)?.apply()
-    }
+    fun setGlassTint(value: GlassTint, dark: Boolean = true) =
+        putGlassTint(glassOptions(clear = false, dark).tint, KEY_GLASS_TINT, dark, value)
 
-    fun setGlassBlur(value: Float) {
-        val clamped = value.coerceIn(0f, MAX_GLASS_BLUR)
-        glassBlur.value = clamped
-        prefs?.edit()?.putFloat(KEY_GLASS_BLUR, clamped)?.apply()
-    }
+    fun setGlassTintDarkness(value: Float, dark: Boolean = true) =
+        putGlass(glassOptions(clear = false, dark).darkness, KEY_GLASS_TINT_DARKNESS, dark, value.coerceIn(0f, 1f))
 
-    fun setGlassSaturation(value: Float) {
-        val clamped = value.coerceIn(0f, MAX_GLASS_SATURATION)
-        glassSaturation.value = clamped
-        prefs?.edit()?.putFloat(KEY_GLASS_SATURATION, clamped)?.apply()
-    }
+    fun setGlassBlur(value: Float, dark: Boolean = true) =
+        putGlass(glassOptions(clear = false, dark).blur, KEY_GLASS_BLUR, dark, value.coerceIn(0f, MAX_GLASS_BLUR))
+
+    fun setGlassSaturation(value: Float, dark: Boolean = true) = putGlass(
+        glassOptions(clear = false, dark).saturation,
+        KEY_GLASS_SATURATION,
+        dark,
+        value.coerceIn(0f, MAX_GLASS_SATURATION),
+    )
 
     fun setClearGlassStyle(value: Boolean) {
         clearGlassStyle.value = value
         prefs?.edit()?.putBoolean(KEY_CLEAR_GLASS_STYLE, value)?.apply()
     }
 
-    fun setClearGlassTransparency(value: Float) {
-        val clamped = value.coerceIn(0f, 1f)
-        clearGlassTransparency.value = clamped
-        prefs?.edit()?.putFloat(KEY_CLEAR_GLASS_TRANSPARENCY, clamped)?.apply()
-    }
+    fun setClearGlassTransparency(value: Float, dark: Boolean = true) = putGlass(
+        glassOptions(clear = true, dark).transparency,
+        KEY_CLEAR_GLASS_TRANSPARENCY,
+        dark,
+        value.coerceIn(0f, 1f),
+    )
 
-    fun setClearGlassBlur(value: Float) {
-        val clamped = value.coerceIn(0f, MAX_GLASS_BLUR)
-        clearGlassBlur.value = clamped
-        prefs?.edit()?.putFloat(KEY_CLEAR_GLASS_BLUR, clamped)?.apply()
-    }
+    fun setClearGlassBlur(value: Float, dark: Boolean = true) =
+        putGlass(glassOptions(clear = true, dark).blur, KEY_CLEAR_GLASS_BLUR, dark, value.coerceIn(0f, MAX_GLASS_BLUR))
 
-    fun setClearGlassSaturation(value: Float) {
-        val clamped = value.coerceIn(0f, MAX_GLASS_SATURATION)
-        clearGlassSaturation.value = clamped
-        prefs?.edit()?.putFloat(KEY_CLEAR_GLASS_SATURATION, clamped)?.apply()
-    }
+    fun setClearGlassSaturation(value: Float, dark: Boolean = true) = putGlass(
+        glassOptions(clear = true, dark).saturation,
+        KEY_CLEAR_GLASS_SATURATION,
+        dark,
+        value.coerceIn(0f, MAX_GLASS_SATURATION),
+    )
 
-    fun setClearGlassTint(value: GlassTint) {
-        clearGlassTint.value = value
-        prefs?.edit()?.putString(KEY_CLEAR_GLASS_TINT, value.name)?.apply()
-    }
+    fun setClearGlassTint(value: GlassTint, dark: Boolean = true) =
+        putGlassTint(glassOptions(clear = true, dark).tint, KEY_CLEAR_GLASS_TINT, dark, value)
 
     /** Sets the New style's tint darkness for the dark theme, or the light one's when [dark] is false. */
     fun setClearGlassTintDarkness(value: Float, dark: Boolean = true) {
@@ -699,38 +777,41 @@ object CustomizationSettings {
         }
     }
 
-    /** Puts the New style's transparency, tint, darkness, saturation and blur back to how it ships. */
-    fun resetClearGlassOptions() {
-        clearGlassTransparency.value = DEFAULT_CLEAR_GLASS_TRANSPARENCY
-        clearGlassBlur.value = DEFAULT_CLEAR_GLASS_BLUR
-        clearGlassSaturation.value = DEFAULT_CLEAR_GLASS_SATURATION
-        clearGlassTint.value = DEFAULT_CLEAR_GLASS_TINT
-        clearGlassTintDarkness.value = DEFAULT_CLEAR_GLASS_TINT_DARKNESS
-        clearGlassTintDarknessLight.value = DEFAULT_CLEAR_GLASS_TINT_DARKNESS_LIGHT
-        prefs?.edit()
-            ?.remove(KEY_CLEAR_GLASS_TRANSPARENCY)
-            ?.remove(KEY_CLEAR_GLASS_BLUR)
-            ?.remove(KEY_CLEAR_GLASS_SATURATION)
-            ?.remove(KEY_CLEAR_GLASS_TINT)
-            ?.remove(KEY_CLEAR_GLASS_TINT_DARKNESS)
-            ?.remove(KEY_CLEAR_GLASS_TINT_DARKNESS_LIGHT)
-            ?.apply()
+    private fun putGlass(flow: MutableStateFlow<Float>, key: String, dark: Boolean, value: Float) {
+        flow.value = value
+        prefs?.edit()?.putFloat(if (dark) key else key + LIGHT, value)?.apply()
     }
 
-    /** Puts transparency, tint, its darkness, saturation and blur back to how the glass ships. */
-    fun resetGlassOptions() {
-        glassTransparency.value = DEFAULT_GLASS_TRANSPARENCY
-        glassTint.value = GlassTint.DEFAULT
-        glassTintDarkness.value = 0f
-        glassSaturation.value = DEFAULT_GLASS_SATURATION
-        glassBlur.value = DEFAULT_GLASS_BLUR
-        prefs?.edit()
-            ?.remove(KEY_GLASS_SATURATION)
-            ?.remove(KEY_GLASS_TRANSPARENCY)
-            ?.remove(KEY_GLASS_TINT)
-            ?.remove(KEY_GLASS_TINT_DARKNESS)
-            ?.remove(KEY_GLASS_BLUR)
-            ?.apply()
+    private fun putGlassTint(flow: MutableStateFlow<GlassTint>, key: String, dark: Boolean, value: GlassTint) {
+        flow.value = value
+        prefs?.edit()?.putString(if (dark) key else key + LIGHT, value.name)?.apply()
+    }
+
+    /**
+     * Puts the New style's transparency, tint, darkness, saturation and blur
+     * back to how it ships, for the [dark] theme or the light one.
+     */
+    fun resetClearGlassOptions(dark: Boolean = true) {
+        setClearGlassTransparency(DEFAULT_CLEAR_GLASS_TRANSPARENCY, dark)
+        setClearGlassBlur(DEFAULT_CLEAR_GLASS_BLUR, dark)
+        setClearGlassSaturation(DEFAULT_CLEAR_GLASS_SATURATION, dark)
+        setClearGlassTint(DEFAULT_CLEAR_GLASS_TINT, dark)
+        setClearGlassTintDarkness(
+            if (dark) DEFAULT_CLEAR_GLASS_TINT_DARKNESS else DEFAULT_CLEAR_GLASS_TINT_DARKNESS_LIGHT,
+            dark,
+        )
+    }
+
+    /**
+     * Puts Classic's transparency, tint, its darkness, saturation and blur
+     * back to how the glass ships, for the [dark] theme or the light one.
+     */
+    fun resetGlassOptions(dark: Boolean = true) {
+        setGlassTransparency(DEFAULT_GLASS_TRANSPARENCY, dark)
+        setGlassTint(GlassTint.DEFAULT, dark)
+        setGlassTintDarkness(0f, dark)
+        setGlassSaturation(DEFAULT_GLASS_SATURATION, dark)
+        setGlassBlur(DEFAULT_GLASS_BLUR, dark)
     }
 
     fun setProgressBarStyle(style: ProgressBarStyle) {
@@ -848,6 +929,8 @@ object CustomizationSettings {
     private const val KEY_AMBIENT_BACKGROUND = "custom_ambient_background"
     private const val KEY_LIBRARY_TAB_VIEWS = "custom_library_tab_views"
     private const val KEY_AMBIENT_FOLLOWS_ARTWORK = "custom_ambient_follows_artwork"
+    /** What a glass option's key ends in for the light theme's copy of it. */
+    private const val LIGHT = "_light"
     private const val KEY_GLASS_TRANSPARENCY = "custom_glass_transparency"
     private const val KEY_GLASS_TINT = "custom_glass_tint"
     private const val KEY_GLASS_BLUR = "custom_glass_blur"

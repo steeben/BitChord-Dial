@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.graphics.compositeOver
 import com.music.bitchord.data.settings.AppSettings
+import com.music.bitchord.data.settings.AppStyle
 import com.music.bitchord.data.settings.CustomizationSettings
 import com.music.bitchord.ui.components.backdrop.Backdrop
 import com.music.bitchord.ui.theme.LocalNowPlayingTint
@@ -51,8 +52,52 @@ import com.music.bitchord.ui.components.backdrop.shadow.Shadow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 
-/** Whether the liquid glass nav bar is turned on — see [AppSettings.liquidGlass]. */
+/**
+ * Whether the app draws its bars, menus and buttons as glass-shaped surfaces:
+ * the floating bar, the floating top controls, the menus that grow out of
+ * them. True in every app style; what those surfaces are made of is the
+ * style's ([AppStyle]), and [liquidGlass] is where that is decided: liquid
+ * glass, the frost, or a solid fill.
+ */
 val LocalLiquidGlassEnabled = staticCompositionLocalOf { false }
+
+/** The app style in force: what [liquidGlass] surfaces are made of. */
+@Composable
+fun appStyle(): AppStyle {
+    val liquidGlass by AppSettings.liquidGlass.collectAsStateWithLifecycle()
+    val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
+    return AppStyle.of(liquidGlass, reduceDynamicBlur)
+}
+
+/** Whether the theme in force is the light one. */
+@Composable
+private fun isLightTheme(): Boolean = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+
+/**
+ * The Frost style's material, the look the frosted mini player and tab bar
+ * always had: the page behind blurred [FROST_BLUR_DP], under the theme's
+ * surface at [FROST_FILL_LIGHT] or [FROST_FILL_DARK], inside a hairline.
+ */
+private const val FROST_BLUR_DP = 24f
+private const val FROST_FILL_LIGHT = 0.6f
+private const val FROST_FILL_DARK = 0.65f
+
+/** The Frost style's fill: the theme's surface, see-through. */
+@Composable
+internal fun frostFill(): Color = MaterialTheme.colorScheme.surface.copy(
+    alpha = if (isLightTheme()) FROST_FILL_LIGHT else FROST_FILL_DARK,
+)
+
+/** The dark theme's [frostFill], for frost over ground that is dark in both themes: the player. */
+internal val DarkFrostFill = Color(0xFF0D0D0F).copy(alpha = FROST_FILL_DARK)
+
+/**
+ * The hairline around a frosted or solid surface: a trace of white on a dark
+ * theme, of black on a light one, where white would not show at all.
+ */
+@Composable
+internal fun surfaceEdgeColor(): Color =
+    if (isLightTheme()) Color.Black.copy(alpha = 0.10f) else GLASS_EDGE_COLOR
 
 /** The backdrop content (app UI) that a liquid glass surface samples from. */
 val LocalAppBackdrop = staticCompositionLocalOf<Backdrop> { error("No AppBackdrop provided") }
@@ -147,10 +192,11 @@ enum class GlassTint(val argb: Long?) {
 @Composable
 private fun glassFill(base: Color): Color {
     if (!LocalGlassFollowsOptions.current) return base
-    val transparency by CustomizationSettings.glassTransparency.collectAsStateWithLifecycle()
-    val tint = CustomizationSettings.glassTint.collectAsStateWithLifecycle().value.color()
-    val darkness by CustomizationSettings.glassTintDarkness.collectAsStateWithLifecycle()
-    val saturation by CustomizationSettings.glassSaturation.collectAsStateWithLifecycle()
+    val options = CustomizationSettings.glassOptions(clear = false, dark = !isLightTheme())
+    val transparency by options.transparency.collectAsStateWithLifecycle()
+    val tint = options.tint.collectAsStateWithLifecycle().value.color()
+    val darkness by options.darkness.collectAsStateWithLifecycle()
+    val saturation by options.saturation.collectAsStateWithLifecycle()
     val density = ((1f - transparency) / SURFACE_OPACITY).coerceAtLeast(0f)
     var fill = base.copy(alpha = (base.alpha * density).coerceIn(0f, 1f))
     // The saturation slider reaches the tint too, measured from where the
@@ -169,12 +215,11 @@ private fun glassFill(base: Color): Color {
 @Composable
 private fun clearGlassFill(veil: Color, themeTint: Color): Color {
     if (!LocalGlassFollowsOptions.current) return veil
-    val transparency by CustomizationSettings.clearGlassTransparency.collectAsStateWithLifecycle()
-    val darkDarkness by CustomizationSettings.clearGlassTintDarkness.collectAsStateWithLifecycle()
-    val lightDarkness by CustomizationSettings.clearGlassTintDarknessLight.collectAsStateWithLifecycle()
-    val darkness = if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) lightDarkness else darkDarkness
-    val saturation by CustomizationSettings.clearGlassSaturation.collectAsStateWithLifecycle()
-    val tint = CustomizationSettings.clearGlassTint.collectAsStateWithLifecycle().value.color()
+    val options = CustomizationSettings.glassOptions(clear = true, dark = !isLightTheme())
+    val transparency by options.transparency.collectAsStateWithLifecycle()
+    val darkness by options.darkness.collectAsStateWithLifecycle()
+    val saturation by options.saturation.collectAsStateWithLifecycle()
+    val tint = options.tint.collectAsStateWithLifecycle().value.color()
     var fill = veil
     val surface = (1f - transparency).coerceIn(0f, 1f)
     if (surface > 0f) fill = fill.compositeOver(themeTint.copy(alpha = surface))
@@ -262,7 +307,8 @@ fun Modifier.lightweightLiquidGlass(
     shape: CornerBasedShape,
     fallbackColor: Color,
 ): Modifier {
-    val useGlass = LocalLiquidGlassEnabled.current && isGlassSupported()
+    val style = appStyle()
+    val useGlass = LocalLiquidGlassEnabled.current && isGlassSupported() && style == AppStyle.GLASS
     val glassTint = if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) {
         Color(0xFFFAFAFA)
     } else {
@@ -297,7 +343,7 @@ fun Modifier.lightweightLiquidGlass(
  */
 @Composable
 fun Modifier.glassSheen(shape: CornerBasedShape): Modifier {
-    val useGlass = LocalLiquidGlassEnabled.current && isGlassSupported()
+    val useGlass = LocalLiquidGlassEnabled.current && isGlassSupported() && appStyle() == AppStyle.GLASS
     val shapeProvider = ShapeProvider { shape }
     return clip(shape)
         .drawWithContent {
@@ -331,11 +377,13 @@ private val GLASS_SHEEN = Brush.verticalGradient(
  * without RenderEffect support — callers should still gate on [isGlassSupported]
  * to fall back to the regular Haze treatment there.
  *
- * Under "reduce dynamic blur" the surface is filled solid instead, which is what
- * that setting promises everywhere else in the app. It is checked here rather
- * than at each call site so there is one answer to it: [MainActivity] also stops
- * recording the backdrop layer when it is on, and a surface that still tried to
- * sample would be sampling a layer nothing is drawing into.
+ * That is the Glass app style. In the Frost style the same surface is the
+ * frost instead: the backdrop blurred, with no bend and no rim light, under a
+ * see-through fill and a hairline (see [frostFill]). In the Solid style it is
+ * filled solid. The style is checked here rather than at each call site so
+ * there is one answer to it: [MainActivity] also stops recording the backdrop
+ * layer in the Solid style, and a surface that still tried to sample would be
+ * sampling a layer nothing is drawing into.
  *
  * [shape] is restricted to [CornerBasedShape] because the backdrop's lens effect
  * throws for any other shape type.
@@ -357,43 +405,77 @@ fun Modifier.liquidGlass(
      * cut through the blur around it.
      */
     minBlurDp: Float = 0f,
+    /**
+     * Whether the theme's text is read off this surface: a menu, a popup, an
+     * options window. In the light theme its fill is then kept dense enough
+     * for black text whatever is behind the glass; see [LEGIBLE_LIGHT_FILL].
+     */
+    carriesText: Boolean = false,
 ): Modifier {
     if (!isGlassSupported()) return this
-    val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
-    if (reduceDynamicBlur) {
+    val style = appStyle()
+    if (style == AppStyle.SOLID) {
         return background(MaterialTheme.colorScheme.surface, shape)
-            .border(GLASS_EDGE_WIDTH, GLASS_EDGE_COLOR, shape)
+            .border(GLASS_EDGE_WIDTH, surfaceEdgeColor(), shape)
+    }
+    val light = isLightTheme()
+    val legible = carriesText && light
+    if (style == AppStyle.FROST) {
+        // A caller's own tint stands (the player's drawers are the sleeve's
+        // colour); a clear one asks for bare glass, which frost is not.
+        // Not laid over the underlay: the frost is as see-through on a menu
+        // as on the bars, and its fill is dense enough to sit on a dimmed page.
+        val fill = (surfaceTint?.takeIf { it.alpha > 0f } ?: frostFill())
+            .let { if (legible) it.legibleOnLight() else it }
+        val frostBlurPx = with(LocalDensity.current) { maxOf(minBlurDp, FROST_BLUR_DP).dp.toPx() } *
+            GLASS_RESOLUTION_SCALE
+        return drawBackdrop(
+            backdrop = backdrop,
+            shape = { shape },
+            effects = { blur(frostBlurPx) },
+            highlight = null,
+            shadow = null,
+            onDrawSurface = { drawRect(color = fill, size = size) },
+            exportedBackdrop = exportedBackdrop,
+            backdropScale = GLASS_RESOLUTION_SCALE,
+        ).border(GLASS_EDGE_WIDTH, surfaceEdgeColor(), shape)
     }
     // Test style: see ClearLiquidGlass.kt.
     val followsOptions = LocalGlassFollowsOptions.current
-    val themeTint = if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) {
+    val themeTint = if (light) {
         Color(0xFFFAFAFA)
     } else {
         Color(0xFF121212)
     }
-    // The New style: see ClearLiquidGlass.kt. It has its own set of options.
+    // The New style: see ClearLiquidGlass.kt. It has its own set of options,
+    // one for each theme.
     val clearStyle by CustomizationSettings.clearGlassStyle.collectAsStateWithLifecycle()
+    val options = CustomizationSettings.glassOptions(clear = clearStyle, dark = !light)
     if (clearStyle) {
-        val clearBlur by CustomizationSettings.clearGlassBlur.collectAsStateWithLifecycle()
-        val clearSaturation by CustomizationSettings.clearGlassSaturation.collectAsStateWithLifecycle()
+        val clearBlur by options.blur.collectAsStateWithLifecycle()
+        val clearSaturation by options.saturation.collectAsStateWithLifecycle()
         return clearLiquidGlass(
             shape = shape,
             backdrop = backdrop,
             exportedBackdrop = exportedBackdrop,
-            surfaceColor = clearGlassFill(surfaceTint ?: clearGlassVeil(), themeTint).over(underlay),
+            surfaceColor = clearGlassFill(surfaceTint ?: clearGlassVeil(), themeTint)
+                .let { if (legible) it.legibleOnLight() else it }
+                .over(underlay),
             blurDp = maxOf(minBlurDp, if (followsOptions) clearBlur else CustomizationSettings.DEFAULT_CLEAR_GLASS_BLUR),
             saturation = if (followsOptions) clearSaturation else CustomizationSettings.DEFAULT_CLEAR_GLASS_SATURATION,
         )
     }
     val density = LocalDensity.current
-    val userBlurDp by CustomizationSettings.glassBlur.collectAsStateWithLifecycle()
+    val userBlurDp by options.blur.collectAsStateWithLifecycle()
     val blurDp = maxOf(minBlurDp, if (followsOptions) userBlurDp else CustomizationSettings.DEFAULT_GLASS_BLUR)
-    val userSaturation by CustomizationSettings.glassSaturation.collectAsStateWithLifecycle()
+    val userSaturation by options.saturation.collectAsStateWithLifecycle()
     val saturation = if (followsOptions) userSaturation else CustomizationSettings.DEFAULT_GLASS_SATURATION
     val blurPx = with(density) { blurDp.dp.toPx() } * GLASS_RESOLUTION_SCALE
     val lensHeightPx = with(density) { (LENS_HEIGHT * LENS_MAX_DP).dp.toPx() } * GLASS_RESOLUTION_SCALE
     val lensAmountPx = with(density) { (LENS_AMOUNT * LENS_MAX_DP).dp.toPx() } * GLASS_RESOLUTION_SCALE
-    val surfaceTintColor = glassFill(surfaceTint ?: themeTint.copy(alpha = SURFACE_OPACITY)).over(underlay)
+    val surfaceTintColor = glassFill(surfaceTint ?: themeTint.copy(alpha = SURFACE_OPACITY))
+        .let { if (legible) it.legibleOnLight() else it }
+        .over(underlay)
 
     return drawBackdrop(
         backdrop = backdrop,

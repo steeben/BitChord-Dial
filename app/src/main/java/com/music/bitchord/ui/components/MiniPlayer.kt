@@ -465,17 +465,23 @@ fun MiniPlayer(
                 swipe = swipe,
             )
             .clip(shape)
+            // The app style's material, as the tab bar under it wears it:
+            // glass, frost or solid (see [liquidGlass]). The page's haze
+            // stands in where the device cannot draw that.
             .then(
-                if (reduceDynamicBlur) {
-                    Modifier.background(MaterialTheme.colorScheme.surface)
-                } else {
-                    Modifier.optimizedHazeEffect(
-                        state = hazeState,
-                        style = HazeMaterials.thin(MaterialTheme.colorScheme.surface),
-                    )
+                when {
+                    isGlassSupported() -> Modifier.liquidGlass(shape)
+                    reduceDynamicBlur -> Modifier
+                        .background(MaterialTheme.colorScheme.surface)
+                        .border(GLASS_EDGE_WIDTH, surfaceEdgeColor(), shape)
+                    else -> Modifier
+                        .optimizedHazeEffect(
+                            state = hazeState,
+                            style = HazeMaterials.thin(MaterialTheme.colorScheme.surface),
+                        )
+                        .border(GLASS_EDGE_WIDTH, surfaceEdgeColor(), shape)
                 },
             )
-            .border(0.5.dp, Color.White.copy(alpha = 0.10f), shape)
             // A thin line in the accent colour along the bottom, inside the bar.
             .miniPlayerProgress(
                 position = position,

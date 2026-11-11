@@ -151,7 +151,12 @@ fun Modifier.iosMenuPanel(
     val glass = LocalLiquidGlassEnabled.current && isGlassSupported() && !reduceDynamicBlur && backdrop != null
     val shadowed = if (castsShadow && !glass) iosMenuShadow() else this
     return when {
-        glass -> shadowed.clip(IosMenuShape).liquidGlass(IosMenuShape, backdrop = backdrop!!, underlay = underlay)
+        glass -> shadowed.clip(IosMenuShape).liquidGlass(
+            IosMenuShape,
+            backdrop = backdrop!!,
+            underlay = underlay,
+            carriesText = true,
+        )
         !reduceDynamicBlur && hazeState != null -> shadowed
             .clip(IosMenuShape)
             .optimizedHazeEffect(

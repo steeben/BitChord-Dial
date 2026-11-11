@@ -115,7 +115,9 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.music.bitchord.data.settings.AppStyle
 import com.music.bitchord.data.settings.AppSettings
+import com.music.bitchord.ui.components.appStyle
 import com.music.bitchord.ui.components.GlassSpring
 import com.music.bitchord.ui.components.LocalGlassExport
 import com.music.bitchord.ui.components.backdrop.backdrops.layerBackdrop
@@ -773,9 +775,10 @@ private fun SharedTransitionScope.ExpandedTabs(
     val coroutineScope = rememberCoroutineScope()
     val pill = remember { GlassPillMotion(coroutineScope, selectedTabIndex.coerceAtLeast(0)) }
     pill.reduceMotion = reduceAnimation
-    // The lens samples the recorded page, and "reduce dynamic blur" stops that
-    // recording. There the flat pill carries the whole motion on its own.
-    val glassPill = isGlassSupported() && !reduceDynamicBlur
+    // The lens is liquid glass's own. The Frost style bends nothing, and the
+    // Solid style records no page for a lens to sample: in both the flat pill
+    // carries the whole motion on its own.
+    val glassPill = isGlassSupported() && appStyle() == AppStyle.GLASS
     val barGlass = rememberLayerBackdrop()
     val tabRow = rememberLayerBackdrop()
 

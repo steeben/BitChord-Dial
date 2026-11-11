@@ -757,7 +757,7 @@ internal fun GlassMenuPanel(
         contentColor = if (glass) glassContentColor() else MaterialTheme.colorScheme.onSurface,
         surface = {
             if (isGlassSupported()) {
-                Modifier.clip(shape).liquidGlass(shape)
+                Modifier.clip(shape).liquidGlass(shape, carriesText = true)
             } else {
                 Modifier.popupSurface(shape, hazeState)
             }

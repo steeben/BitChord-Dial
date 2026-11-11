@@ -37,6 +37,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.music.bitchord.data.settings.AppStyle
 import com.music.bitchord.data.settings.CustomizationSettings
 import com.music.bitchord.ui.theme.LocalNowPlayingTint
 import com.music.bitchord.ui.haptics.Haptic
@@ -171,8 +172,10 @@ fun IosSwitch(
  */
 @Composable
 internal fun rememberFrostedGlassDensity(): Float {
-    val transparency by CustomizationSettings.glassTransparency.collectAsStateWithLifecycle()
-    return if (LocalLiquidGlassEnabled.current && LocalGlassFollowsOptions.current) {
+    val dark = MaterialTheme.colorScheme.surface.luminance() <= 0.5f
+    val transparency by CustomizationSettings.glassOptions(clear = false, dark = dark).transparency
+        .collectAsStateWithLifecycle()
+    return if (appStyle() == AppStyle.GLASS && LocalGlassFollowsOptions.current) {
         ((1f - transparency) / (1f - CustomizationSettings.DEFAULT_GLASS_TRANSPARENCY)).coerceIn(0.55f, 1.3f)
     } else {
         1f

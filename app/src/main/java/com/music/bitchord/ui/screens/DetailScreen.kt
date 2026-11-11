@@ -2483,7 +2483,10 @@ private fun Color.darkened(by: Float): Color =
  * and the Play pill still read on it.
  */
 internal fun ArtworkPalette.collageWashed(): ArtworkPalette {
-    val dark = wash.luminance() < 0.5f
+    // By the text the palette was built for, not by how bright the wash is:
+    // a light theme's red or blue wash measures under half luminance, and was
+    // taken for a dark page, which put the theme's black text on near-black red.
+    val dark = collagePageIsDark(onBackground)
     val ground = if (dark) Color.Black else Color.White
     val share = if (dark) 0.42f else 0.30f
     val newWash = androidx.compose.ui.graphics.lerp(ground, accent, share)
@@ -2493,6 +2496,9 @@ internal fun ArtworkPalette.collageWashed(): ArtworkPalette {
         elevated = androidx.compose.ui.graphics.lerp(newWash, accent, 0.2f),
     )
 }
+
+/** Whether a palette whose body text is [onBackground] is a dark page's: light text means a dark page. */
+internal fun collagePageIsDark(onBackground: Color): Boolean = onBackground.luminance() > 0.5f
 
 /** How tall the page-colour strip laid over the artwork's bottom edge is. */
 private val HEADER_SEAM_COVER = 4.dp

@@ -137,7 +137,7 @@ fun SlideDownBottomSheet(
                     // Over the sheet's scrim, which the backdrop doesn't
                     // record, and frosted at least enough that the page's
                     // text doesn't come through sharp behind the rows.
-                    .liquidGlass(SheetShape, underlay = scrim, minBlurDp = SHEET_MIN_BLUR_DP)
+                    .liquidGlass(SheetShape, underlay = scrim, minBlurDp = SHEET_MIN_BLUR_DP, carriesText = true)
                     .then(if (dark) Modifier.background(DarkSheetTint) else Modifier)
                     .windowInsetsPadding(BottomSheetDefaults.windowInsets),
             ) {

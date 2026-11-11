@@ -3,6 +3,7 @@ package com.music.bitchord.ui.components
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -181,8 +182,8 @@ private val POPUP_CORNER_HINT = 28.dp
 
 /**
  * The material a popup card is made of, matching the rest of the app: liquid
- * glass when that is on, the navbar's frosted blur when it is not, and solid
- * under "reduce dynamic blur".
+ * glass, the frost or a solid fill, as the app style has it, always inside a
+ * hairline.
  */
 @OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
@@ -191,12 +192,19 @@ fun Modifier.popupSurface(shape: CornerBasedShape, hazeState: HazeState): Modifi
     val glass = LocalLiquidGlassEnabled.current && isGlassSupported()
     return clip(shape).then(
         when {
-            reduceDynamicBlur -> Modifier.background(MaterialTheme.colorScheme.surface)
-            glass -> Modifier.liquidGlass(shape)
-            else -> Modifier.optimizedHazeEffect(
-                state = hazeState,
-                style = HazeMaterials.thin(MaterialTheme.colorScheme.surface),
-            )
+            // Glass, frost or solid, as the app style has it; see [liquidGlass].
+            glass -> Modifier.liquidGlass(shape, carriesText = true)
+            reduceDynamicBlur -> Modifier
+                .background(MaterialTheme.colorScheme.surface)
+                .border(GLASS_EDGE_WIDTH, surfaceEdgeColor(), shape)
+            // Where the device cannot draw the glass pipeline: the same frost,
+            // from the page's haze, inside the same hairline.
+            else -> Modifier
+                .optimizedHazeEffect(
+                    state = hazeState,
+                    style = HazeMaterials.thin(MaterialTheme.colorScheme.surface),
+                )
+                .border(GLASS_EDGE_WIDTH, surfaceEdgeColor(), shape)
         },
     )
 }

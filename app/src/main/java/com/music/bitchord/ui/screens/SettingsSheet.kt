@@ -5,6 +5,7 @@ import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material.icons.rounded.MoreHoriz
+import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.Build
 import androidx.annotation.StringRes
 import android.content.Context
@@ -3059,46 +3060,57 @@ private fun BitPerfectModeSheet(
 @Composable
 internal fun LiquidGlassOptions() {
     val haptics = LocalHapticFeedback.current
-    val classicTint by CustomizationSettings.glassTint.collectAsStateWithLifecycle()
-    val newTint by CustomizationSettings.clearGlassTint.collectAsStateWithLifecycle()
     val clearStyle by CustomizationSettings.clearGlassStyle.collectAsStateWithLifecycle()
-    // New keeps a darkness for each theme; the slider shows the one in use.
+    // Each theme keeps a set of options of its own. The drawer opens on the
+    // theme in use, whose changes show on the drawer as they are made; the
+    // other theme's can be set from here too, to be seen once it is switched to.
     val darkTheme = MaterialTheme.colorScheme.surface.luminance() <= 0.5f
-    // Classic and New keep a set of options each; the sliders show the
-    // picked style's, and the reset puts back that style's.
-    val classicTransparency by CustomizationSettings.glassTransparency.collectAsStateWithLifecycle()
-    val classicDarkness by CustomizationSettings.glassTintDarkness.collectAsStateWithLifecycle()
-    val classicBlur by CustomizationSettings.glassBlur.collectAsStateWithLifecycle()
-    val classicSaturation by CustomizationSettings.glassSaturation.collectAsStateWithLifecycle()
-    val newTransparency by CustomizationSettings.clearGlassTransparency.collectAsStateWithLifecycle()
-    val newDarkDarkness by CustomizationSettings.clearGlassTintDarkness.collectAsStateWithLifecycle()
-    val newLightDarkness by CustomizationSettings.clearGlassTintDarknessLight.collectAsStateWithLifecycle()
-    val newDarkness = if (darkTheme) newDarkDarkness else newLightDarkness
-    val newBlur by CustomizationSettings.clearGlassBlur.collectAsStateWithLifecycle()
-    val newSaturation by CustomizationSettings.clearGlassSaturation.collectAsStateWithLifecycle()
-    val tint = if (clearStyle) newTint else classicTint
-    val setTint: (GlassTint) -> Unit =
-        if (clearStyle) CustomizationSettings::setClearGlassTint else CustomizationSettings::setGlassTint
-    val transparency = if (clearStyle) newTransparency else classicTransparency
-    val darkness = if (clearStyle) newDarkness else classicDarkness
-    val blur = if (clearStyle) newBlur else classicBlur
-    val saturation = if (clearStyle) newSaturation else classicSaturation
-    val setTransparency: (Float) -> Unit =
-        if (clearStyle) CustomizationSettings::setClearGlassTransparency else CustomizationSettings::setGlassTransparency
-    val setDarkness: (Float) -> Unit =
+    var editDark by rememberSaveable { mutableStateOf(darkTheme) }
+    // Classic and New keep a set of options each as well; the sliders show
+    // the picked style's, and the reset puts back that style's, for the
+    // theme being edited.
+    val options = CustomizationSettings.glassOptions(clear = clearStyle, dark = editDark)
+    val tint by options.tint.collectAsStateWithLifecycle()
+    val transparency by options.transparency.collectAsStateWithLifecycle()
+    val darkness by options.darkness.collectAsStateWithLifecycle()
+    val blur by options.blur.collectAsStateWithLifecycle()
+    val saturation by options.saturation.collectAsStateWithLifecycle()
+    val setTint: (GlassTint) -> Unit = {
+        if (clearStyle) CustomizationSettings.setClearGlassTint(it, editDark) else CustomizationSettings.setGlassTint(it, editDark)
+    }
+    val setTransparency: (Float) -> Unit = {
         if (clearStyle) {
-            { CustomizationSettings.setClearGlassTintDarkness(it, dark = darkTheme) }
+            CustomizationSettings.setClearGlassTransparency(it, editDark)
         } else {
-            CustomizationSettings::setGlassTintDarkness
+            CustomizationSettings.setGlassTransparency(it, editDark)
         }
-    val setBlur: (Float) -> Unit =
-        if (clearStyle) CustomizationSettings::setClearGlassBlur else CustomizationSettings::setGlassBlur
-    val setSaturation: (Float) -> Unit =
-        if (clearStyle) CustomizationSettings::setClearGlassSaturation else CustomizationSettings::setGlassSaturation
+    }
+    val setDarkness: (Float) -> Unit = {
+        if (clearStyle) {
+            CustomizationSettings.setClearGlassTintDarkness(it, editDark)
+        } else {
+            CustomizationSettings.setGlassTintDarkness(it, editDark)
+        }
+    }
+    val setBlur: (Float) -> Unit = {
+        if (clearStyle) CustomizationSettings.setClearGlassBlur(it, editDark) else CustomizationSettings.setGlassBlur(it, editDark)
+    }
+    val setSaturation: (Float) -> Unit = {
+        if (clearStyle) {
+            CustomizationSettings.setClearGlassSaturation(it, editDark)
+        } else {
+            CustomizationSettings.setGlassSaturation(it, editDark)
+        }
+    }
     val isDefault = if (clearStyle) {
-        newTint == CustomizationSettings.DEFAULT_CLEAR_GLASS_TINT &&
-            newDarkDarkness == CustomizationSettings.DEFAULT_CLEAR_GLASS_TINT_DARKNESS &&
-            newLightDarkness == CustomizationSettings.DEFAULT_CLEAR_GLASS_TINT_DARKNESS_LIGHT &&
+        tint == CustomizationSettings.DEFAULT_CLEAR_GLASS_TINT &&
+            darkness == (
+                if (editDark) {
+                    CustomizationSettings.DEFAULT_CLEAR_GLASS_TINT_DARKNESS
+                } else {
+                    CustomizationSettings.DEFAULT_CLEAR_GLASS_TINT_DARKNESS_LIGHT
+                }
+                ) &&
             transparency == CustomizationSettings.DEFAULT_CLEAR_GLASS_TRANSPARENCY &&
             saturation == CustomizationSettings.DEFAULT_CLEAR_GLASS_SATURATION &&
             blur == CustomizationSettings.DEFAULT_CLEAR_GLASS_BLUR
@@ -3168,6 +3180,51 @@ internal fun LiquidGlassOptions() {
             ),
         )
         HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
+        // Which theme's options the rows below are: each theme has its own.
+        Row(
+            modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, top = 16.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Contrast,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.size(ICON_SIZE),
+            )
+            Spacer(Modifier.width(ICON_GAP))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.glass_options_theme),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+                // Only while the other theme's are being set: nothing on screen moves then.
+                if (editDark != darkTheme) {
+                    Text(
+                        text = stringResource(
+                            if (editDark) R.string.glass_options_theme_dark_note else R.string.glass_options_theme_light_note,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+        SegmentedControl(
+            options = listOf(
+                stringResource(R.string.glass_options_theme_dark),
+                stringResource(R.string.glass_options_theme_light),
+            ),
+            selectedIndex = if (editDark) 0 else 1,
+            onSelect = { editDark = it == 0 },
+            glass = true,
+            modifier = Modifier.padding(
+                start = ROW_INSET + ICON_SIZE + ICON_GAP,
+                end = ROW_INSET,
+                bottom = 12.dp,
+            ),
+        )
+        HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
         SliderRow(
             icon = Icons.Rounded.Opacity,
             title = stringResource(R.string.glass_transparency),
@@ -3224,13 +3281,15 @@ internal fun LiquidGlassOptions() {
             GlassTint.entries.forEach { option ->
                 val chosen = option == tint
                 val label = stringResource(option.labelRes())
+                // No tint is the first swatch: an empty ring with a line through it.
+                val noTint = option == GlassTint.DEFAULT
                 val swatch = option.color()
                     ?: MaterialTheme.colorScheme.surfaceVariant
                 Box(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(swatch, CircleShape)
+                        .background(if (noTint) Color.Transparent else swatch, CircleShape)
                         .border(
                             width = if (chosen) 2.dp else 0.5.dp,
                             color = if (chosen) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.outline,
@@ -3245,7 +3304,14 @@ internal fun LiquidGlassOptions() {
                 ) {
                     // The playing song's swatch says what it is, since its
                     // colour changes from one song to the next.
-                    if (chosen || option == GlassTint.SONG) {
+                    if (noTint) {
+                        Icon(
+                            Icons.Rounded.Block,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = if (chosen) 1f else 0.6f),
+                            modifier = Modifier.size(22.dp),
+                        )
+                    } else if (chosen || option == GlassTint.SONG) {
                         Icon(
                             if (chosen) Icons.Rounded.Check else Icons.Rounded.MusicNote,
                             contentDescription = null,
@@ -3272,9 +3338,9 @@ internal fun LiquidGlassOptions() {
             onClick = {
                 haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 if (clearStyle) {
-                    CustomizationSettings.resetClearGlassOptions()
+                    CustomizationSettings.resetClearGlassOptions(editDark)
                 } else {
-                    CustomizationSettings.resetGlassOptions()
+                    CustomizationSettings.resetGlassOptions(editDark)
                 }
             },
         )
@@ -3282,7 +3348,7 @@ internal fun LiquidGlassOptions() {
 }
 
 private fun GlassTint.labelRes(): Int = when (this) {
-    GlassTint.DEFAULT -> R.string.glass_tint_default
+    GlassTint.DEFAULT -> R.string.glass_tint_none
     GlassTint.ACCENT -> R.string.glass_tint_accent
     GlassTint.SONG -> R.string.glass_tint_song
     GlassTint.BLUE -> R.string.glass_tint_blue
