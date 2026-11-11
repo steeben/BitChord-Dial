@@ -907,7 +907,7 @@ private fun SpeedDialTile(
             )
         }
         if (source != null) {
-            MixSourceTag(source, Modifier.align(Alignment.TopStart))
+            MixSourceTag(source, item.thumbnailUrl, Modifier.align(Alignment.TopStart))
         } else if (newRelease != null) {
             NewReleaseTag(newRelease, Modifier.align(Alignment.TopStart))
         }
