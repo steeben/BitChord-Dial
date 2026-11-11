@@ -61,21 +61,20 @@ import androidx.compose.ui.Modifier
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.lerp
 import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.request.ImageRequest
@@ -189,6 +188,11 @@ internal fun LandscapePlayerLayout(
     videoLyrics: (@Composable () -> Unit)? = null,
     /** A tap on the video while [videoLyrics] is up: the way back out of the lyrics. */
     onVideoTap: () -> Unit = {},
+    /**
+     * Laid over the whole screen under [videoLyrics], and faded in and out
+     * with it: the blur the video dissolves into behind the lyrics.
+     */
+    videoLyricsBackdrop: (@Composable (Modifier) -> Unit)? = null,
 ) {
     val chromeAlpha by animateFloatAsState(
         targetValue = if (chromeHidden || videoLyrics != null) 0f else 1f,
@@ -333,13 +337,14 @@ internal fun LandscapePlayerLayout(
                     // Nothing faded out under this can be touched through it.
                     .pointerInput(Unit) { detectTapGestures { } },
             ) {
-                val video = landscapeVideoPane(maxWidth, maxHeight)
+                val videoWidth = landscapeVideoPaneWidth(maxWidth)
                 val compactPane = maxHeight < LANDSCAPE_COMPACT_HEIGHT
+                videoLyricsBackdrop?.invoke(Modifier.fillMaxSize())
                 Row(Modifier.fillMaxSize()) {
                     // The video itself is the backdrop's; this is the tap on it.
                     Box(
                         Modifier
-                            .width(video.width)
+                            .width(videoWidth)
                             .fillMaxHeight()
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
@@ -379,19 +384,75 @@ private class HeldContent {
 /** How much of the window's width the music video takes beside the lyrics. */
 private const val LANDSCAPE_VIDEO_SPLIT = 0.56f
 
-/** How long the video takes to draw aside for the lyrics, and to come back. */
+/** How long the video takes to dissolve under the lyrics, and to come back. */
 private const val LANDSCAPE_VIDEO_SPLIT_MS = 380
 
 /**
- * The music video's place beside the lyrics, in a window [maxWidth] by
- * [maxHeight]: the left of the screen, top to bottom on a phone. On a
- * squarer window it stops at a square, centred, rather than cropping a wide
- * picture down to a tall sliver.
+ * Where, across the window's width, the music video starts to dissolve into
+ * the blur and the dim under the lyrics, and where it has finished: a soft
+ * run either side of [LANDSCAPE_VIDEO_SPLIT] rather than a line down it,
+ * done just before the lyrics' own left edge.
  */
-internal fun landscapeVideoPane(maxWidth: Dp, maxHeight: Dp): DpSize {
-    val width = maxWidth * LANDSCAPE_VIDEO_SPLIT
-    return DpSize(width, minOf(maxHeight, width))
+private const val LANDSCAPE_VIDEO_BLEND_START = 0.40f
+private const val LANDSCAPE_VIDEO_BLEND_END = 0.60f
+
+/** Enough stops that the dissolve reads as a curve and does not band. */
+private const val LANDSCAPE_VIDEO_BLEND_STOPS = 9
+
+/**
+ * The dim over the video under the lyrics beside it. Lighter than the dim of
+ * an ordinary open pane: the picture here is blurred as well, and is meant to
+ * be seen carrying on behind the lines.
+ */
+private const val LANDSCAPE_VIDEO_LYRICS_DIM = 0.60f
+
+/** The blur the video dissolves into behind the lyrics beside it. */
+internal val LANDSCAPE_VIDEO_LYRICS_BLUR = 28.dp
+
+/**
+ * How wide the sharp, undimmed part of the music video is beside the lyrics,
+ * in a window [maxWidth] wide: what a tap on the video covers, and where the
+ * lyrics begin.
+ */
+internal fun landscapeVideoPaneWidth(maxWidth: Dp): Dp = maxWidth * LANDSCAPE_VIDEO_SPLIT
+
+/**
+ * The dissolve from the music video into what lies under the lyrics, as
+ * gradient stops across the window's width: [from] over the video, easing to
+ * [to] under the lyrics. [mirrored] for a right to left layout, where the
+ * video has the right of the screen.
+ */
+internal fun landscapeVideoBlendStops(
+    from: Float,
+    to: Float,
+    mirrored: Boolean = false,
+): Array<Pair<Float, Float>> {
+    val last = LANDSCAPE_VIDEO_BLEND_STOPS - 1
+    val ramp = List(LANDSCAPE_VIDEO_BLEND_STOPS) { i ->
+        val t = i / last.toFloat()
+        val eased = t * t * (3f - 2f * t)
+        val at = LANDSCAPE_VIDEO_BLEND_START +
+            (LANDSCAPE_VIDEO_BLEND_END - LANDSCAPE_VIDEO_BLEND_START) * t
+        at to from + (to - from) * eased
+    }
+    val stops = listOf(0f to from) + ramp + listOf(1f to to)
+    return if (mirrored) {
+        stops.asReversed().map { (at, value) -> (1f - at) to value }.toTypedArray()
+    } else {
+        stops.toTypedArray()
+    }
 }
+
+/**
+ * The mask for the blur laid over the music video with the lyrics beside it:
+ * nothing over the video, all of it under the lyrics, on the same curve as
+ * the dim (see [LandscapeCanvasBackdrop]) so the two arrive together.
+ */
+internal fun landscapeVideoBlendMask(mirrored: Boolean): Brush = Brush.horizontalGradient(
+    colorStops = landscapeVideoBlendStops(0f, 1f, mirrored)
+        .map { (at, value) -> at to Color.Black.copy(alpha = value) }
+        .toTypedArray(),
+)
 
 /**
  * The right of the screen with the lyrics beside the music video: the sheet,
@@ -575,9 +636,11 @@ internal fun LandscapeCanvasBackdrop(
     /** The clip is being watched full screen, with no player over it to read. */
     fullscreen: Boolean = false,
     /**
-     * The lyrics are up beside a music video: the picture draws aside to the
-     * left of the screen (see [landscapeVideoPane]), sharp and undimmed, and
-     * the cover's blur shows, dimmed, under the lyrics on the right.
+     * The lyrics are up beside a music video. The picture stays where it
+     * is, cropped to fill the whole window so no bars show on any side: sharp
+     * and undimmed on the left (see [landscapeVideoPaneWidth]), and dimmed
+     * more and more as it runs on under the lyrics on the right. The caller
+     * lays the blur over that half (see [landscapeVideoBlendMask]).
      */
     split: Boolean = false,
 ) {
@@ -599,12 +662,10 @@ internal fun LandscapeCanvasBackdrop(
         animationSpec = tween(LANDSCAPE_VIDEO_SPLIT_MS, easing = FastOutSlowInEasing),
         label = "landscapeVideoSplit",
     )
-    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-        // The same player throughout, resized: the picture carries on playing
-        // as it draws aside and as it comes back.
-        val pane = landscapeVideoPane(maxWidth, maxHeight)
-        val videoWidth = lerp(maxWidth, pane.width, splitT)
-        val videoHeight = lerp(maxHeight, pane.height, splitT)
+    val mirrored = LocalLayoutDirection.current == LayoutDirection.Rtl
+    Box(modifier = modifier.fillMaxSize()) {
+        // The same player throughout, never resized: the picture fills the
+        // window whether the lyrics are beside it or not.
         CanvasArtworkPlayer(
             canvas = canvas,
             isPlaying = isPlaying,
@@ -613,29 +674,30 @@ internal fun LandscapeCanvasBackdrop(
             presentationAlpha = presentationAlpha,
             onRenderedChanged = onRenderedChange,
             modifier = Modifier
-                .align(Alignment.CenterStart)
-                .size(videoWidth, videoHeight)
+                .fillMaxSize()
                 .then(if (blurRadius > 0.dp) Modifier.blur(blurRadius) else Modifier),
         )
         Box(
             Modifier
                 .fillMaxSize()
                 .drawBehind {
-                    // Lifted off the picture as it draws aside, and left on
-                    // what shows beside it.
-                    val shade = dim * presentationAlpha()
-                    val edge = videoWidth.toPx().coerceAtMost(size.width)
-                    if (splitT < 1f) {
+                    // Lifted off the picture as the lyrics come up beside it,
+                    // and eased back on towards them, so there is no line
+                    // where the video stops.
+                    val fade = presentationAlpha()
+                    val overVideo = (dim * (1f - splitT) * fade).coerceIn(0f, 1f)
+                    val underLyrics = (
+                        (dim + (LANDSCAPE_VIDEO_LYRICS_DIM - dim) * splitT) * fade
+                        ).coerceIn(0f, 1f)
+                    if (splitT <= 0f) {
+                        drawRect(Color.Black.copy(alpha = overVideo))
+                    } else {
                         drawRect(
-                            Color.Black.copy(alpha = (shade * (1f - splitT)).coerceIn(0f, 1f)),
-                            size = Size(edge, size.height),
-                        )
-                    }
-                    if (edge < size.width) {
-                        drawRect(
-                            Color.Black.copy(alpha = shade.coerceIn(0f, 1f)),
-                            topLeft = Offset(edge, 0f),
-                            size = Size(size.width - edge, size.height),
+                            Brush.horizontalGradient(
+                                colorStops = landscapeVideoBlendStops(overVideo, underLyrics, mirrored)
+                                    .map { (at, alpha) -> at to Color.Black.copy(alpha = alpha) }
+                                    .toTypedArray(),
+                            ),
                         )
                     }
                 },
