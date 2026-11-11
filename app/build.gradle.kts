@@ -99,8 +99,16 @@ android {
         abi {
             isEnable = true
             reset()
-            include("armeabi-v7a", "arm64-v8a", "x86_64")
-            isUniversalApk = true
+            // -Parm64Only is the CI test build's: the one APK that is tested,
+            // which is quicker to build and a third of the download. Releases
+            // leave it off and get every ABI plus the universal APK.
+            if (project.hasProperty("arm64Only")) {
+                include("arm64-v8a")
+                isUniversalApk = false
+            } else {
+                include("armeabi-v7a", "arm64-v8a", "x86_64")
+                isUniversalApk = true
+            }
         }
     }
 

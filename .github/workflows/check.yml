@@ -56,17 +56,18 @@ jobs:
       # runtime and runs Compose several times slower than the app really does,
       # which made every scroll and launch feel laggier than it is. Release lint
       # is skipped: it stops on translation leftovers in the upstream strings.
+      # arm64 only (-Parm64Only): it is the one APK the test builds are tried on.
       - name: Build the dev APK
         run: |
           set -o pipefail
           if [ -n "$SHARED_KEYSTORE" ]; then
-            ./gradlew assembleDevBenchmark -x lintVitalDevBenchmark -PnoBenchmarkSuffix \
+            ./gradlew assembleDevBenchmark -x lintVitalDevBenchmark -PnoBenchmarkSuffix -Parm64Only \
               -Pandroid.injected.signing.store.file="$SHARED_KEYSTORE" \
               -Pandroid.injected.signing.store.password=android \
               -Pandroid.injected.signing.key.alias=androiddebugkey \
               -Pandroid.injected.signing.key.password=android 2>&1 | tee -a "$RUNNER_TEMP/gradle.log"
           else
-            ./gradlew assembleDevBenchmark -x lintVitalDevBenchmark -PnoBenchmarkSuffix 2>&1 | tee -a "$RUNNER_TEMP/gradle.log"
+            ./gradlew assembleDevBenchmark -x lintVitalDevBenchmark -PnoBenchmarkSuffix -Parm64Only 2>&1 | tee -a "$RUNNER_TEMP/gradle.log"
           fi
 
       - name: Upload the dev APK
