@@ -321,5 +321,30 @@ internal fun panelWideEase(t: Float): Float {
     return 1f - (1f - x) * (1f - x)
 }
 
+/** How far open the player is before the flying cover takes any of the controls' scrim. */
+internal const val DOCK_SCRIM_FROM = 0.6f
+
+/**
+ * How much of the scrim behind the controls the flying cover wears, for an
+ * open fraction of [open]: none for most of the trip, where the cover is
+ * crossing the controls and would only be dimmed by it, then eased in until
+ * the player is fully open, where the cover sits under the whole of it.
+ */
+internal fun dockScrimShare(open: Float): Float {
+    val x = ((open - DOCK_SCRIM_FROM) / (1f - DOCK_SCRIM_FROM)).coerceIn(0f, 1f)
+    return x * x * (3f - 2f * x)
+}
+
+/**
+ * What is left for the scrim under the flying cover to draw, when the cover
+ * wears [over] of a scrim of [alpha]: one drawn over the other comes to
+ * [alpha] exactly, so nothing seen through the cover is darkened twice.
+ */
+internal fun scrimUnderCover(alpha: Float, over: Float): Float {
+    val a = alpha.coerceIn(0f, 1f)
+    val o = over.coerceIn(0f, a)
+    return if (o >= 1f) 0f else ((a - o) / (1f - o)).coerceIn(0f, 1f)
+}
+
 /** The [PlayerDock] around the player, if its host has a mini player to dock into. */
 val LocalPlayerDock = staticCompositionLocalOf<PlayerDock?> { null }

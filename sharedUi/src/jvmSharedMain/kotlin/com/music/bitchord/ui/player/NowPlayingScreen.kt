@@ -113,6 +113,9 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.lerp
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
@@ -379,31 +382,82 @@ private fun Modifier.drawControlsScrim(
     alpha: () -> Float,
     rootOrigin: () -> Offset,
     rootSize: () -> IntSize,
+    /** The docking this frame, for a player that has a mini player to dock into. */
+    dockFrame: DockFrame? = null,
+    /** How far open the player is, 1 when it is not docking. */
+    dockT: () -> Float = { 1f },
 ): Modifier = drawBehind {
     val a = alpha().coerceIn(0f, 1f)
     val root = rootSize()
+    // Read whatever comes of it, so a docking frame redraws this.
+    val open = dockT()
+    dockFrame?.scrimAlpha = 0f
     if (a <= 0.004f || root.width == 0 || root.height == 0) return@drawBehind
     val origin = rootOrigin()
     val lead = CONTROLS_SCRIM_LEAD.toPx()
     val top = -lead
     val bottom = root.height - origin.y
     if (bottom <= top) return@drawBehind
+    val left = -origin.x
+    val width = root.width.toFloat()
+    val host = dockFrame?.host?.takeIf { open < 1f && it.isAttached }?.positionInRoot()
+    if (dockFrame == null || host == null) {
+        drawControlsScrimBand(a, left, top, width, bottom, lead)
+        return@drawBehind
+    }
+    // On its way to and from the mini player the sleeve is drawn over
+    // everything, this scrim included, and its foot came out from under the
+    // scrim only as it landed: a soft dark band arriving on the cover all at
+    // once. The flying sleeve wears its share of the scrim instead (see the
+    // player's own draw), growing as it nears its place, and under the sleeve
+    // this one gives up exactly that much, so wherever the sleeve is see-through
+    // the two add up to the one scrim.
+    val row = origin - host
+    dockFrame.scrimAlpha = a
+    dockFrame.scrimLeft = row.x + left
+    dockFrame.scrimTop = row.y + top
+    dockFrame.scrimWidth = width
+    dockFrame.scrimBottom = row.y + bottom
+    dockFrame.scrimLead = lead
+    val sleeve = dockFrame.sleeveInPlayer().translate(-row.x, -row.y)
+    val share = dockScrimShare(open)
+    clipRect(sleeve.left, sleeve.top, sleeve.right, sleeve.bottom, ClipOp.Difference) {
+        drawControlsScrimBand(a, left, top, width, bottom, lead)
+    }
+    clipRect(sleeve.left, sleeve.top, sleeve.right, sleeve.bottom) {
+        drawControlsScrimBand(a, left, top, width, bottom, lead) { scrimUnderCover(it, it * share) }
+    }
+}
+
+/**
+ * The controls scrim itself: eased in over [lead], so there is no edge to see
+ * where it starts, and at full strength from the title down. [tone] is what
+ * each of its strengths is drawn at.
+ */
+private inline fun DrawScope.drawControlsScrimBand(
+    alpha: Float,
+    left: Float,
+    top: Float,
+    width: Float,
+    bottom: Float,
+    lead: Float,
+    tone: (Float) -> Float = { it },
+) {
     val span = bottom - top
-    // Eased in over the lead, so there is no edge to see where it starts,
-    // and at full strength from the title down.
+    if (span <= 0f) return
     val reached = (lead / span).coerceIn(0f, 1f)
     drawRect(
         brush = Brush.verticalGradient(
             0f to Color.Black.copy(alpha = 0f),
-            reached * 0.5f to Color.Black.copy(alpha = a * 0.35f),
-            reached to Color.Black.copy(alpha = a * 0.85f),
-            (reached + (1f - reached) * 0.25f) to Color.Black.copy(alpha = a),
-            1f to Color.Black.copy(alpha = a),
+            reached * 0.5f to Color.Black.copy(alpha = tone(alpha * 0.35f)),
+            reached to Color.Black.copy(alpha = tone(alpha * 0.85f)),
+            (reached + (1f - reached) * 0.25f) to Color.Black.copy(alpha = tone(alpha)),
+            1f to Color.Black.copy(alpha = tone(alpha)),
             startY = top,
             endY = bottom,
         ),
-        topLeft = Offset(-origin.x, top),
-        size = Size(root.width.toFloat(), span),
+        topLeft = Offset(left, top),
+        size = Size(width, span),
     )
 }
 
@@ -684,6 +738,19 @@ private class DockFrame {
      * landscape one keeps its layout and is scaled down onto the cover.
      */
     var portalScale = 1f
+    /** The portrait sleeve where it is drawn in the player, this frame. */
+    fun sleeveInPlayer(): Rect = Rect(Offset(portalLeft, portalTop), sleeve.size)
+    /**
+     * The controls scrim as the title row drew it this frame, in the player's
+     * own pixels, for the flying sleeve to wear its share of — see
+     * [drawControlsScrim]. No strength with no scrim, or none under a sleeve.
+     */
+    var scrimAlpha = 0f
+    var scrimLeft = 0f
+    var scrimTop = 0f
+    var scrimWidth = 0f
+    var scrimBottom = 0f
+    var scrimLead = 0f
     /** The player itself, for placing the landscape sleeve within it. */
     var host: LayoutCoordinates? = null
     /** The landscape sleeve, as last placed. */
@@ -2504,6 +2571,24 @@ fun NowPlayingScreen(
                 translate(dockFrame.portalLeft, dockFrame.portalTop) {
                     val portalScale = dockFrame.portalScale
                     scale(portalScale, portalScale, pivot = Offset.Zero) { drawLayer(sleeveLayer) }
+                }
+                // The sleeve's share of the controls scrim, which it is drawn
+                // over for the trip: on by degrees as it nears its place, so
+                // the scrim is already on its foot when it lands under it.
+                val scrim = dockFrame.scrimAlpha
+                val share = dockScrimShare(dockT())
+                if (scrim > 0.004f && share > 0f && dockFrame.portalScale == 1f) {
+                    val sleeve = dockFrame.sleeveInPlayer()
+                    clipRect(sleeve.left, sleeve.top, sleeve.right, sleeve.bottom) {
+                        drawControlsScrimBand(
+                            alpha = scrim,
+                            left = dockFrame.scrimLeft,
+                            top = dockFrame.scrimTop,
+                            width = dockFrame.scrimWidth,
+                            bottom = dockFrame.scrimBottom,
+                            lead = dockFrame.scrimLead,
+                        ) { it * share }
+                    }
                 }
             }
         }
@@ -4509,6 +4594,8 @@ fun NowPlayingScreen(
                             alpha = { controlsScrim * (1f - p()) },
                             rootOrigin = { titleRowOrigin },
                             rootSize = { titleRootSize },
+                            dockFrame = dockFrame.takeIf { dock != null },
+                            dockT = dockT,
                         )
                         .onGloballyPositioned {
                             titleRowOrigin = it.positionInRoot()
