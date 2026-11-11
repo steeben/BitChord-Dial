@@ -5,7 +5,7 @@ import androidx.compose.ui.graphics.compositeOver
 import com.music.bitchord.data.settings.CustomizationSettings
 
 /**
- * How strongly a [GlassTint] is washed over a glass surface at the default
+ * How strongly a [GlassTint] is washed over a glass surface at the reference
  * transparency. It is laid over the surface's own fill rather than mixed into
  * it, so a faint bar and a dense drawer take on the same amount of colour.
  */
@@ -14,8 +14,8 @@ internal const val TINT_WASH = 0.28f
 /** How far black the tint darkness slider goes at its top. */
 internal const val MAX_SHADE = 0.85f
 
-/** Classic's fill opacity at its default transparency. */
-internal const val SURFACE_OPACITY = 1f - CustomizationSettings.DEFAULT_GLASS_TRANSPARENCY
+/** Classic's fill opacity at the transparency its fill is measured against. */
+internal const val SURFACE_OPACITY = 1f - CustomizationSettings.GLASS_REFERENCE_TRANSPARENCY
 
 /**
  * Classic's fill: [base] (the theme's surface, or the caller's own, or none),
@@ -42,9 +42,8 @@ internal fun classicGlassFillColor(base: Color?, tint: Color?, darkness: Float, 
  * The New style's fill: its clear [veil] (if any), over
  * as much of the theme's own surface ([themeSurface], likewise) as
  * [transparency] leaves, with the user's [tint] and [darkness] laid on top.
- * The defaults give back the look it ships with.
  *
- * The veil, the tint and the darkening are at full strength up to the default
+ * The veil, the tint and the darkening are at full strength up to the reference
  * transparency and fade out from there, so that at full transparency no
  * colour is left on the glass whichever tint is picked.
  */
@@ -56,7 +55,7 @@ internal fun clearGlassFillColor(
     transparency: Float,
 ): Color {
     val surface = (1f - transparency).coerceIn(0f, 1f)
-    val strength = (surface / (1f - CustomizationSettings.DEFAULT_CLEAR_GLASS_TRANSPARENCY)).coerceIn(0f, 1f)
+    val strength = clearGlassStrength(transparency)
     var fill = veil?.let { it.copy(alpha = it.alpha * strength) } ?: Color.Transparent
     if (themeSurface != null && surface > 0f) fill = fill.compositeOver(themeSurface.copy(alpha = surface))
     if (tint != null) fill = tint.copy(alpha = TINT_WASH * strength).compositeOver(fill)
@@ -65,6 +64,13 @@ internal fun clearGlassFillColor(
     }
     return fill
 }
+
+/**
+ * How much of the New style's veil, tint, shade and caustic is left at
+ * [transparency]: all of it up to the reference transparency, none at 100%.
+ */
+internal fun clearGlassStrength(transparency: Float): Float =
+    ((1f - transparency) / (1f - CustomizationSettings.CLEAR_GLASS_REFERENCE_TRANSPARENCY)).coerceIn(0f, 1f)
 
 /** This colour with its saturation scaled by [amount]: 0 is its grey, 1 is itself. */
 internal fun Color.saturated(amount: Float): Color {

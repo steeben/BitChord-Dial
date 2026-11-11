@@ -65,4 +65,23 @@ class MixesDialTest {
         val deals = (1..5).map { seed -> MixesDial.pick(yt, emptyList(), Random(seed)) }.toSet()
         assertTrue(deals.size > 1)
     }
+
+    @Test
+    fun sleepMixesAreForTheNightHours() {
+        fun at(hour: Int, minute: Int) = MixesDial.isSleepTime(java.time.LocalTime.of(hour, minute))
+        assertFalse(at(21, 29))
+        assertTrue(at(21, 30))
+        assertTrue(at(23, 59))
+        assertTrue(at(0, 0))
+        assertTrue(at(4, 0))
+        assertFalse(at(4, 1))
+        assertFalse(at(12, 0))
+    }
+
+    @Test
+    fun aSleepMixGoesByItsName() {
+        assertTrue(MixesDial.isSleepMix(playlist("VLRDTMAK1", "Sleep Mix")))
+        assertTrue(MixesDial.isSleepMix(playlist("VLRDTMAK2", "Deep sleep supermix")))
+        assertFalse(MixesDial.isSleepMix(playlist("VLRDTMAK3", "Chill Mix")))
+    }
 }

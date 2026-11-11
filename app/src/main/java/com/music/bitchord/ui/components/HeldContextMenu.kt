@@ -401,7 +401,7 @@ private fun Modifier.menuGround(
     hairline: Color,
     underlay: Color,
 ): Modifier = if (glass) {
-    liquidGlass(shape, underlay = underlay, minBlurDp = MENU_BACKDROP_BLUR.value, carriesText = true)
+    glassMenu(shape, underlay = underlay, minBlurDp = MENU_BACKDROP_BLUR.value)
 } else {
     background(plate).border(0.5.dp, hairline, shape)
 }

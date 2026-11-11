@@ -88,16 +88,39 @@ internal fun frostFill(): Color = MaterialTheme.colorScheme.surface.copy(
     alpha = if (isLightTheme()) FROST_FILL_LIGHT else FROST_FILL_DARK,
 )
 
-/** The dark theme's [frostFill], for frost over ground that is dark in both themes: the player. */
-internal val DarkFrostFill = Color(0xFF0D0D0F).copy(alpha = FROST_FILL_DARK)
+/**
+ * The themes' own surfaces, for a surface told what ground it is on rather
+ * than left to the theme: the player's buttons, over a sleeve that is dark or
+ * bright whatever the app's theme.
+ */
+private val DARK_SURFACE = Color(0xFF0D0D0F)
+private val LIGHT_SURFACE = Color(0xFFF7F7F9)
+
+/** [frostFill] for ground that is [dark] or bright, whatever the theme. */
+private fun frostFill(dark: Boolean): Color =
+    if (dark) DARK_SURFACE.copy(alpha = FROST_FILL_DARK) else LIGHT_SURFACE.copy(alpha = FROST_FILL_LIGHT)
 
 /**
  * The hairline around a frosted or solid surface: a trace of white on a dark
  * theme, of black on a light one, where white would not show at all.
  */
 @Composable
-internal fun surfaceEdgeColor(): Color =
-    if (isLightTheme()) Color.Black.copy(alpha = 0.10f) else GLASS_EDGE_COLOR
+internal fun surfaceEdgeColor(): Color = surfaceEdgeColor(!isLightTheme())
+
+private fun surfaceEdgeColor(dark: Boolean): Color =
+    if (dark) GLASS_EDGE_COLOR else Color.Black.copy(alpha = 0.10f)
+
+/**
+ * Whether the app's theme is the dark one, for glass composed under a theme
+ * of its own: the player's ⋯ menu is drawn in the dark theme's colours over
+ * the player, and still wears the glass options of the theme the app is in.
+ * Null where nothing provides it, which leaves it to the theme in force.
+ */
+val LocalAppThemeDark = staticCompositionLocalOf<Boolean?> { null }
+
+/** Whether the glass options in force are the dark theme's. */
+@Composable
+private fun glassOptionsDark(): Boolean = LocalAppThemeDark.current ?: !isLightTheme()
 
 /** The backdrop content (app UI) that a liquid glass surface samples from. */
 val LocalAppBackdrop = staticCompositionLocalOf<Backdrop> { error("No AppBackdrop provided") }
@@ -136,8 +159,9 @@ private const val LENS_MAX_DP = 48f
 
 /**
  * Whether glass composed under it follows the user's Liquid Glass options.
- * False on surfaces that take their colours from artwork — the album, playlist
- * and artist pages and the player — so the stock glass is drawn there instead.
+ * False on pages that take their colours from artwork — the album, playlist
+ * and artist pages — so the stock glass is drawn there instead. The player
+ * follows the options, as every menu does.
  */
 val LocalGlassFollowsOptions = staticCompositionLocalOf { true }
 
@@ -192,14 +216,15 @@ enum class GlassTint(val argb: Long?) {
 @Composable
 private fun glassFill(base: Color?, themeFill: Color): Color {
     if (!LocalGlassFollowsOptions.current) return base ?: themeFill
-    val options = CustomizationSettings.glassOptions(clear = false, dark = !isLightTheme())
+    val options = CustomizationSettings.glassOptions(clear = false, dark = glassOptionsDark())
     val transparency by options.transparency.collectAsStateWithLifecycle()
     val picked by options.tint.collectAsStateWithLifecycle()
     val darkness by options.darkness.collectAsStateWithLifecycle()
     val saturation by options.saturation.collectAsStateWithLifecycle()
-    // The saturation slider reaches the tint too, measured from where the
-    // glass ships: the tint as picked at the default, grey at 0%.
-    val tint = picked.color()?.saturated(saturation / CustomizationSettings.DEFAULT_GLASS_SATURATION)
+    // The saturation slider reaches the tint too: the tint as picked at the
+    // reference saturation, grey at 0%.
+    val tint = picked.color()
+        ?.saturated(saturation / CustomizationSettings.GLASS_REFERENCE_SATURATION)
     return classicGlassFillColor(
         base = base ?: themeFill,
         tint = tint,
@@ -213,15 +238,16 @@ private fun glassFill(base: Color?, themeFill: Color): Color {
  * null for the clear glass's ([clearGlassVeil]). See [clearGlassFillColor].
  */
 @Composable
-private fun clearGlassFill(veil: Color?, themeTint: Color): Color {
-    val own = veil ?: clearGlassVeil()
+private fun clearGlassFill(veil: Color?, themeTint: Color, dark: Boolean): Color {
+    val own = veil ?: clearGlassVeil(dark)
     if (!LocalGlassFollowsOptions.current) return own
-    val options = CustomizationSettings.glassOptions(clear = true, dark = !isLightTheme())
+    val options = CustomizationSettings.glassOptions(clear = true, dark = glassOptionsDark())
     val transparency by options.transparency.collectAsStateWithLifecycle()
     val darkness by options.darkness.collectAsStateWithLifecycle()
     val saturation by options.saturation.collectAsStateWithLifecycle()
     val picked by options.tint.collectAsStateWithLifecycle()
-    val tint = picked.color()?.saturated(saturation / CustomizationSettings.DEFAULT_CLEAR_GLASS_SATURATION)
+    val tint = picked.color()
+        ?.saturated(saturation / CustomizationSettings.CLEAR_GLASS_REFERENCE_SATURATION)
     return clearGlassFillColor(
         veil = own,
         themeSurface = themeTint,
@@ -403,24 +429,35 @@ fun Modifier.liquidGlass(
     /**
      * Whether the theme's text is read off this surface: a menu, a popup, an
      * options window. In the light theme its fill is then kept dense enough
-     * for black text whatever is behind the glass; see [LEGIBLE_LIGHT_FILL].
+     * for black text whatever is behind the glass, and in the dark theme
+     * for white text; see [LEGIBLE_LIGHT_FILL]. Every menu passes it, through
+     * [glassMenu].
      */
     carriesText: Boolean = false,
+    /**
+     * Whether the ground it is on is dark, where that is not the theme's to
+     * say: the player's buttons sit on the sleeve's colours, dark or bright
+     * in either theme. It picks the material's dark or light form (the
+     * frost's fill, the glass's own surface, its rim and caustic); the
+     * options followed are still the app theme's. Null leaves it to the theme.
+     */
+    dark: Boolean? = null,
 ): Modifier {
     if (!isGlassSupported()) return this
     val style = appStyle()
+    val light = dark?.not() ?: isLightTheme()
     if (style == AppStyle.SOLID) {
-        return background(MaterialTheme.colorScheme.surface, shape)
-            .border(GLASS_EDGE_WIDTH, surfaceEdgeColor(), shape)
+        val solid = if (dark == null) MaterialTheme.colorScheme.surface else if (dark) DARK_SURFACE else LIGHT_SURFACE
+        return background(solid, shape)
+            .border(GLASS_EDGE_WIDTH, surfaceEdgeColor(!light), shape)
     }
-    val light = isLightTheme()
     val legible = carriesText && light
     if (style == AppStyle.FROST) {
-        // A caller's own tint stands (the player's drawers are the sleeve's
-        // colour); a clear one asks for bare glass, which frost is not.
+        // A caller's own tint stands; a clear one asks for bare glass, which
+        // frost is not.
         // Not laid over the underlay: the frost is as see-through on a menu
         // as on the bars, and its fill is dense enough to sit on a dimmed page.
-        val fill = (surfaceTint?.takeIf { it.alpha > 0f } ?: frostFill())
+        val fill = (surfaceTint?.takeIf { it.alpha > 0f } ?: if (dark == null) frostFill() else frostFill(dark))
             .let { if (legible) it.legibleOnLight() else it }
         val frostBlurPx = with(LocalDensity.current) { maxOf(minBlurDp, FROST_BLUR_DP).dp.toPx() } *
             GLASS_RESOLUTION_SCALE
@@ -433,7 +470,7 @@ fun Modifier.liquidGlass(
             onDrawSurface = { drawRect(color = fill, size = size) },
             exportedBackdrop = exportedBackdrop,
             backdropScale = GLASS_RESOLUTION_SCALE,
-        ).border(GLASS_EDGE_WIDTH, surfaceEdgeColor(), shape)
+        ).border(GLASS_EDGE_WIDTH, surfaceEdgeColor(!light), shape)
     }
     // Test style: see ClearLiquidGlass.kt.
     val followsOptions = LocalGlassFollowsOptions.current
@@ -445,7 +482,7 @@ fun Modifier.liquidGlass(
     // The New style: see ClearLiquidGlass.kt. It has its own set of options,
     // one for each theme.
     val clearStyle by CustomizationSettings.clearGlassStyle.collectAsStateWithLifecycle()
-    val options = CustomizationSettings.glassOptions(clear = clearStyle, dark = !light)
+    val options = CustomizationSettings.glassOptions(clear = clearStyle, dark = glassOptionsDark())
     // The floor under a menu's text gives way as the glass is made more
     // see-through, and is gone at 100%: no colour shows then, menus included.
     val userTransparency by options.transparency.collectAsStateWithLifecycle()
@@ -454,8 +491,21 @@ fun Modifier.liquidGlass(
     } else {
         legibleFloor(
             userTransparency,
-            if (clearStyle) CustomizationSettings.DEFAULT_CLEAR_GLASS_TRANSPARENCY else CustomizationSettings.DEFAULT_GLASS_TRANSPARENCY,
+            if (clearStyle) {
+                CustomizationSettings.CLEAR_GLASS_REFERENCE_TRANSPARENCY
+            } else {
+                CustomizationSettings.GLASS_REFERENCE_TRANSPARENCY
+            },
         )
+    }
+    // Black text gets a pale floor, white text a dark one: a menu's labels
+    // are read off it whatever is behind the glass.
+    val legibly: Color.() -> Color = {
+        when {
+            !carriesText -> this
+            light -> legibleOnLight(floor)
+            else -> legibleOnDark(floor)
+        }
     }
     if (clearStyle) {
         val clearBlur by options.blur.collectAsStateWithLifecycle()
@@ -464,11 +514,15 @@ fun Modifier.liquidGlass(
             shape = shape,
             backdrop = backdrop,
             exportedBackdrop = exportedBackdrop,
-            surfaceColor = clearGlassFill(surfaceTint, themeTint)
-                .let { if (legible) it.legibleOnLight(floor) else it }
+            surfaceColor = clearGlassFill(surfaceTint, themeTint, dark = !light)
+                .legibly()
                 .over(underlay),
             blurDp = maxOf(minBlurDp, if (followsOptions) clearBlur else CustomizationSettings.DEFAULT_CLEAR_GLASS_BLUR),
             saturation = if (followsOptions) clearSaturation else CustomizationSettings.DEFAULT_CLEAR_GLASS_SATURATION,
+            dark = !light,
+            // The light bundled under the lens is white laid on the glass,
+            // so it goes as the fill does: none of it at 100% transparency.
+            caustic = if (followsOptions) clearGlassStrength(userTransparency) else 1f,
         )
     }
     val density = LocalDensity.current
@@ -480,7 +534,7 @@ fun Modifier.liquidGlass(
     val lensHeightPx = with(density) { (LENS_HEIGHT * LENS_MAX_DP).dp.toPx() } * GLASS_RESOLUTION_SCALE
     val lensAmountPx = with(density) { (LENS_AMOUNT * LENS_MAX_DP).dp.toPx() } * GLASS_RESOLUTION_SCALE
     val surfaceTintColor = glassFill(surfaceTint, themeTint.copy(alpha = SURFACE_OPACITY))
-        .let { if (legible) it.legibleOnLight(floor) else it }
+        .legibly()
         .over(underlay)
 
     return drawBackdrop(
@@ -507,6 +561,46 @@ fun Modifier.liquidGlass(
         backdropScale = GLASS_RESOLUTION_SCALE,
     )
 }
+
+/**
+ * The one material every menu is made of: the ⋯ and ⋮ menus, the held menu,
+ * the top bar's cards, the drawers and the sheets, on the app's pages and on
+ * the player alike. It is [liquidGlass] as the app style and the Liquid Glass
+ * options have it, with a menu's text read off it, and nothing else: no wash
+ * of the caller's own, so two menus side by side are the same glass.
+ *
+ * What may differ is only what the menu is over: [backdrop] (the pages, or
+ * the player), the scrim it sits on ([underlay]), how far that page is
+ * already blurred ([minBlurDp]) and whether that ground is [dark].
+ */
+@Composable
+fun Modifier.glassMenu(
+    shape: CornerBasedShape,
+    backdrop: Backdrop = LocalAppBackdrop.current,
+    underlay: Color = LocalGlassUnderlay.current,
+    minBlurDp: Float = 0f,
+    dark: Boolean? = null,
+): Modifier = liquidGlass(
+    shape,
+    backdrop = backdrop,
+    exportedBackdrop = null,
+    underlay = underlay,
+    minBlurDp = minBlurDp,
+    carriesText = true,
+    dark = dark,
+)
+
+/**
+ * The dim under a menu hung off a button: the page goes darker behind it in
+ * the dark theme and paler in the light one, where a dark wash made a bright
+ * page look dirty.
+ */
+@Composable
+fun menuScrimColor(): Color =
+    if (isLightTheme()) Color.White.copy(alpha = MENU_SCRIM_LIGHT) else Color.Black.copy(alpha = MENU_SCRIM_DARK)
+
+private const val MENU_SCRIM_LIGHT = 0.45f
+private const val MENU_SCRIM_DARK = 0.32f
 
 /** The rim the dial's glass tiles wear: a little wider than a panel's, for their size. */
 private val DIAL_TILE_HIGHLIGHT = Highlight(width = 1.dp)

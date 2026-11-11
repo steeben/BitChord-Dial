@@ -46,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -142,10 +143,12 @@ fun PlayerDrawer(
      */
     handlesBack: Boolean = false,
     /**
-     * The drawer's ground: the wash over its glass, and the fill under it
-     * where there is no glass. Dark for the player's white rows by default; a
-     * page's menu drawn in the theme's own colours passes the theme's, and
-     * null leaves the glass its own fill, as the app's bars wear it.
+     * Whether the drawer is a menu: non-null, its glass is the one every menu
+     * in the app is made of, following the Liquid Glass options with a floor
+     * under its text; null, it is the bare glass the app's bars wear (the
+     * options drawer, which previews them). The colour itself is no longer
+     * washed over the glass: every menu had its own, and none matched.
+     * [surfaceColor] is the fill where there is no glass.
      */
     glassTint: Color? = DRAWER_GLASS_TINT,
     surfaceColor: Color = DRAWER_SURFACE,
@@ -281,9 +284,8 @@ fun PlayerDrawer(
                 .onSizeChanged { height = it.height }
                 .offset { IntOffset(0, (offset + backSwipe.value * height * BACK_SWIPE_TRAVEL).roundToInt()) },
         ) {
-        // The player's liquid glass, as its buttons wear, when the app has it
-        // on — washed darker than theirs, because this is a panel of white
-        // text rather than a glyph on a disc. Drawn behind the rows rather than
+        // The app's menu glass over the player's backdrop, when the app has
+        // glass on. Drawn behind the rows rather than
         // on them, and run on past the bottom of the screen, so the glass rim
         // shows along the top and down the sides but never across the bottom
         // edge the drawer rests on.
@@ -301,7 +303,15 @@ fun PlayerDrawer(
                         )
                         layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(0, 0) }
                     }
-                    .then(glass.surface(Modifier, DRAWER_SHAPE, tint = glassTint, underlay = scrimColor)),
+                    .then(
+                        glass.surface(
+                            Modifier,
+                            DRAWER_SHAPE,
+                            underlay = scrimColor,
+                            menu = glassTint != null,
+                            darkGround = contentColor.luminance() > 0.5f,
+                        ),
+                    ),
             )
         }
         Column(

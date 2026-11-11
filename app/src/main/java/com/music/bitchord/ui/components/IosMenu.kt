@@ -151,12 +151,7 @@ fun Modifier.iosMenuPanel(
     val glass = LocalLiquidGlassEnabled.current && isGlassSupported() && !reduceDynamicBlur && backdrop != null
     val shadowed = if (castsShadow && !glass) iosMenuShadow() else this
     return when {
-        glass -> shadowed.clip(IosMenuShape).liquidGlass(
-            IosMenuShape,
-            backdrop = backdrop!!,
-            underlay = underlay,
-            carriesText = true,
-        )
+        glass -> shadowed.clip(IosMenuShape).glassMenu(IosMenuShape, backdrop = backdrop!!, underlay = underlay)
         !reduceDynamicBlur && hazeState != null -> shadowed
             .clip(IosMenuShape)
             .optimizedHazeEffect(
@@ -420,8 +415,8 @@ fun <T : Any> IosMenuPopover(
     // — inside the player's sheet too, rather than taking the player down.
     BackHandler(enabled = open, onBack = onDismiss)
 
-    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val scrim = Color.Black.copy(alpha = if (dark) 0.30f else 0.14f)
+    // Darker behind the menu in the dark theme, paler in the light one.
+    val scrim = menuScrimColor()
     val insets = WindowInsets.safeDrawing
     var overlayOffset by remember { mutableStateOf(Offset.Zero) }
 

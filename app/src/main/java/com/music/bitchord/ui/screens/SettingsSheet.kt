@@ -3113,7 +3113,13 @@ internal fun LiquidGlassOptions() {
         }
     }
     val isDefault = if (clearStyle) {
-        tint == CustomizationSettings.DEFAULT_CLEAR_GLASS_TINT &&
+        tint == (
+            if (editDark) {
+                CustomizationSettings.DEFAULT_CLEAR_GLASS_TINT
+            } else {
+                CustomizationSettings.DEFAULT_CLEAR_GLASS_TINT_LIGHT
+            }
+            ) &&
             darkness == (
                 if (editDark) {
                     CustomizationSettings.DEFAULT_CLEAR_GLASS_TINT_DARKNESS
@@ -3125,7 +3131,14 @@ internal fun LiquidGlassOptions() {
             saturation == CustomizationSettings.DEFAULT_CLEAR_GLASS_SATURATION &&
             blur == CustomizationSettings.DEFAULT_CLEAR_GLASS_BLUR
     } else {
-        tint == GlassTint.themeNeutral(editDark) && darkness == 0f &&
+        tint == GlassTint.themeNeutral(editDark) &&
+            darkness == (
+                if (editDark) {
+                    CustomizationSettings.DEFAULT_GLASS_TINT_DARKNESS
+                } else {
+                    CustomizationSettings.DEFAULT_GLASS_TINT_DARKNESS_LIGHT
+                }
+                ) &&
             transparency == CustomizationSettings.DEFAULT_GLASS_TRANSPARENCY &&
             saturation == CustomizationSettings.DEFAULT_GLASS_SATURATION &&
             blur == CustomizationSettings.DEFAULT_GLASS_BLUR

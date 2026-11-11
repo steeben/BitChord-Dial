@@ -663,6 +663,7 @@ class MainActivity : AppCompatActivity() {
                     // Glass, Frost and Solid share one layout; the app style
                     // only decides what its surfaces are made of.
                     LocalLiquidGlassEnabled provides true,
+                    com.music.bitchord.ui.components.LocalAppThemeDark provides darkTheme,
                     LocalAppBackdrop provides appBackdrop,
                     com.music.bitchord.ui.components.LocalCropThumbnails provides cropThumbnails,
                     com.music.bitchord.ui.components.LocalDialTileStyle provides dialTileStyle,
@@ -6569,7 +6570,7 @@ private fun BitChordApp(
                 // (the app's would show the pages behind its window).
                 val playerBackdrop = rememberLayerBackdrop()
                 val playerGlass = remember(playerBackdrop) {
-                    com.music.bitchord.ui.player.AppPlayerGlass(playerBackdrop, overDarkGround = true)
+                    com.music.bitchord.ui.player.AppPlayerGlass(playerBackdrop)
                 }
                 // The whole player as it is drawn, controls, title and
                 // sleeve included, for the ⋯ menu's glass below. The
@@ -6580,10 +6581,9 @@ private fun BitChordApp(
                 Box(if (glassSamplesBackdrop) Modifier.layerBackdrop(playerMenuBackdrop) else Modifier) {
                     CompositionLocalProvider(
                         LocalPlayerDock provides activeDock,
+                        // The player's glass follows the Liquid Glass options,
+                        // as its ⋯ menu below and every other menu do.
                         com.music.bitchord.ui.player.LocalPlayerGlass provides playerGlass.takeIf { glassSamplesBackdrop },
-                        // The player is coloured by the artwork, as the album
-                        // and artist pages are, so its glass keeps the stock look.
-                        LocalGlassFollowsOptions provides false,
                     ) {
                         nowPlaying(playerSong)
                     }

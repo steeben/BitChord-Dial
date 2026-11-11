@@ -71,7 +71,7 @@ import kotlinx.coroutines.withContext
 /*
  * "Let Dial Generate Playlist Image": every playlist page gets a moving
  * collage behind it, one cover in front and others floating round it, made of
- * its most recently added songs. A playlist's ⋯ menu can turn it off for that
+ * songs picked at random from the first batch of the list to load. A playlist's ⋯ menu can turn it off for that
  * one. A custom cover set on this device doesn't stop it: the cover shows
  * in lists, and the page keeps its moving collage.
  */
@@ -84,8 +84,9 @@ private fun DetailPage.isLiked(): Boolean =
  *
  * Every playlist gets one while the setting is on, unless its "..." menu has
  * turned it off for that playlist; a cover of the user's own doesn't count,
- * as the collage is drawn from the songs, not the cover. Decided from the first batch of rows the first time the page
- * is opened, and then held: later pages of the list arriving and pulls to
+ * as the collage is drawn from the songs, not the cover. Its covers are picked
+ * at random from the first batch of rows the first time the page is opened,
+ * and then held: later pages of the list arriving and pulls to
  * refresh keep the picture it opened with. Kept by page for the life of the
  * process, so reopening one starts on it.
  */
@@ -103,7 +104,8 @@ internal fun rememberGeneratedCollage(page: DetailPage, songs: List<Song>): List
     var shown by remember(page.browseId) { mutableStateOf(heldCollages[page.browseId]) }
     LaunchedEffect(page.browseId, eligible, settled) {
         if (!eligible || !settled || page.browseId in heldCollages) return@LaunchedEffect
-        val next = collageCovers(songs, newestFirst = liked).takeIf { it.isNotEmpty() } ?: return@LaunchedEffect
+        val next = collageCovers(songs, newestFirst = liked, shuffle = kotlin.random.Random(System.nanoTime()))
+            .takeIf { it.isNotEmpty() } ?: return@LaunchedEffect
         shown = next
         heldCollages[page.browseId] = next
     }

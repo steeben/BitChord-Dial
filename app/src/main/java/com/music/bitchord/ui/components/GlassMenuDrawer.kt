@@ -20,8 +20,8 @@ import dev.chrisbanes.haze.HazeState
  * off the bottom edge as the Audio output drawer — see [PlayerDrawer].
  *
  * The glass bends the app's pages ([backdrop], null when nothing records them:
- * glass off, or "Reduce dynamic blur" on), and is washed in the theme's own
- * background so the menu's rows keep the theme's colours in light and dark.
+ * glass off, or "Reduce dynamic blur" on), and is the same glass every other
+ * menu is made of; see [glassMenu].
  */
 @Composable
 fun GlassMenuDrawer(

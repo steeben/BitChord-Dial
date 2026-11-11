@@ -7,7 +7,9 @@ import com.music.bitchord.ui.components.GlassTint
 import com.music.bitchord.ui.components.LEGIBLE_LIGHT_FILL
 import com.music.bitchord.ui.components.classicGlassFillColor
 import com.music.bitchord.ui.components.clearGlassFillColor
+import com.music.bitchord.ui.components.clearGlassStrength
 import com.music.bitchord.ui.components.legibleFloor
+import com.music.bitchord.ui.components.legibleOnDark
 import com.music.bitchord.ui.components.legibleOnLight
 import com.music.bitchord.ui.screens.collagePageIsDark
 import org.junit.After
@@ -66,6 +68,46 @@ class GlassOptionsTest {
         assertEquals(0.5f, dark.darkness.value, 0f)
         assertEquals(GlassTint.WHITE, light.tint.value)
         assertEquals(0f, light.darkness.value, 0f)
+    }
+
+    @Test
+    fun theGlassShipsAsAsked() {
+        for (clear in listOf(true, false)) {
+            CustomizationSettings.resetClearGlassOptions(dark = true)
+            CustomizationSettings.resetClearGlassOptions(dark = false)
+            CustomizationSettings.resetGlassOptions(dark = true)
+            CustomizationSettings.resetGlassOptions(dark = false)
+            val dark = CustomizationSettings.glassOptions(clear = clear, dark = true)
+            val light = CustomizationSettings.glassOptions(clear = clear, dark = false)
+            for (set in listOf(dark, light)) {
+                assertEquals(0.9f, set.transparency.value, 0f)
+                assertEquals(4f, set.blur.value, 0f)
+                assertEquals(0.9f, set.saturation.value, 0f)
+            }
+            assertEquals(GlassTint.BLACK, dark.tint.value)
+            assertEquals(0.3f, dark.darkness.value, 0f)
+            assertEquals(GlassTint.WHITE, light.tint.value)
+            assertEquals(0f, light.darkness.value, 0f)
+        }
+    }
+
+    @Test
+    fun whiteTextGetsADarkFloorAsBlackTextGetsAPaleOne() {
+        val faint = Color.White.copy(alpha = 0.03f)
+        val floored = faint.legibleOnDark()
+        assertEquals(LEGIBLE_LIGHT_FILL, floored.alpha, 0.01f)
+        assertTrue(floored.red < 0.25f)
+        val dense = Color(0xFF121212).copy(alpha = 0.8f)
+        assertEquals(dense, dense.legibleOnDark())
+        assertEquals(0f, Color.Transparent.legibleOnDark(0f).alpha, 0f)
+    }
+
+    @Test
+    fun theCausticGoesAsTheFillDoes() {
+        assertEquals(1f, clearGlassStrength(0.5f), 0f)
+        assertEquals(1f, clearGlassStrength(CustomizationSettings.CLEAR_GLASS_REFERENCE_TRANSPARENCY), 0f)
+        assertEquals(0.5f, clearGlassStrength(0.9f), 0.001f)
+        assertEquals(0f, clearGlassStrength(1f), 0f)
     }
 
     @Test
@@ -128,12 +170,12 @@ class GlassOptionsTest {
             .compositeOver(veil.compositeOver(surface.copy(alpha = 0.2f)))
         val now = clearGlassFillColor(
             veil, surface, Color.Black, darkness = 0f,
-            transparency = CustomizationSettings.DEFAULT_CLEAR_GLASS_TRANSPARENCY,
+            transparency = CustomizationSettings.CLEAR_GLASS_REFERENCE_TRANSPARENCY,
         )
         assertEquals(shipped.alpha, now.alpha, 0.001f)
         assertEquals(shipped.red, now.red, 0.001f)
         val base = surface.copy(alpha = 0.4f)
-        assertEquals(base, classicGlassFillColor(base, null, 0f, CustomizationSettings.DEFAULT_GLASS_TRANSPARENCY))
+        assertEquals(base, classicGlassFillColor(base, null, 0f, CustomizationSettings.GLASS_REFERENCE_TRANSPARENCY))
     }
 
     @Test
@@ -160,7 +202,7 @@ class GlassOptionsTest {
 
     @Test
     fun theMenuFloorIsGoneAtFullTransparency() {
-        val shipped = CustomizationSettings.DEFAULT_CLEAR_GLASS_TRANSPARENCY
+        val shipped = CustomizationSettings.CLEAR_GLASS_REFERENCE_TRANSPARENCY
         assertEquals(LEGIBLE_LIGHT_FILL, legibleFloor(shipped, shipped), 0f)
         assertEquals(LEGIBLE_LIGHT_FILL, legibleFloor(0.2f, shipped), 0f)
         assertEquals(0f, legibleFloor(1f, shipped), 0f)

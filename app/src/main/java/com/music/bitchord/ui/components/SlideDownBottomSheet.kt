@@ -53,8 +53,7 @@ import kotlinx.coroutines.launch
  *
  * While Liquid Glass is on the sheet is made of it, like the app's menus,
  * rather than a slab of [containerColor]: it bends and frosts the page behind
- * it, with a 20% black film over the glass in dark mode so the rows on it stay
- * easy to read. [containerColor] is the fill again with glass off, unsupported
+ * it, as every menu does (see [glassMenu]). [containerColor] is the fill again with glass off, unsupported
  * or under "reduce dynamic blur". The glass samples the app's pages, so a sheet
  * that opens over something that is not one of them (the player, the Replay
  * story) passes [glass] false and keeps its solid fill.
@@ -71,7 +70,6 @@ fun SlideDownBottomSheet(
 ) {
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     val useGlass = glass && LocalLiquidGlassEnabled.current && isGlassSupported() && !reduceDynamicBlur
-    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val scrim = BottomSheetDefaults.ScrimColor
     val scope = rememberCoroutineScope()
     val dismiss by rememberUpdatedState(onDismissRequest)
@@ -137,8 +135,7 @@ fun SlideDownBottomSheet(
                     // Over the sheet's scrim, which the backdrop doesn't
                     // record, and frosted at least enough that the page's
                     // text doesn't come through sharp behind the rows.
-                    .liquidGlass(SheetShape, underlay = scrim, minBlurDp = SHEET_MIN_BLUR_DP, carriesText = true)
-                    .then(if (dark) Modifier.background(DarkSheetTint) else Modifier)
+                    .glassMenu(SheetShape, underlay = scrim, minBlurDp = SHEET_MIN_BLUR_DP)
                     .windowInsetsPadding(BottomSheetDefaults.windowInsets),
             ) {
                 if (dragHandle != null) {
@@ -154,9 +151,6 @@ fun SlideDownBottomSheet(
 
 /** M3's own sheet shape, as a [RoundedCornerShape]: the glass's lens needs a corner-based one. */
 private val SheetShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-
-/** The film over a glass sheet in dark mode, so its rows read clearly whatever is behind. */
-private val DarkSheetTint = Color.Black.copy(alpha = 0.2f)
 
 /** The least frost a glass sheet gives the page behind it, in dp. */
 private const val SHEET_MIN_BLUR_DP = 16f

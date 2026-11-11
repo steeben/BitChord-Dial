@@ -101,7 +101,7 @@ import com.music.bitchord.ui.components.SquareLogo
 import com.music.bitchord.ui.components.TopBarContentHeight
 import com.music.bitchord.ui.components.glassContentColor
 import com.music.bitchord.ui.components.isGlassSupported
-import com.music.bitchord.ui.components.liquidGlass
+import com.music.bitchord.ui.components.glassMenu
 import com.music.bitchord.ui.components.longPressMenuClickable
 import com.music.bitchord.ui.components.popupSurface
 import com.music.bitchord.ui.components.thumbnailBorder
@@ -757,7 +757,7 @@ internal fun GlassMenuPanel(
         contentColor = if (glass) glassContentColor() else MaterialTheme.colorScheme.onSurface,
         surface = {
             if (isGlassSupported()) {
-                Modifier.clip(shape).liquidGlass(shape, carriesText = true)
+                Modifier.clip(shape).glassMenu(shape)
             } else {
                 Modifier.popupSurface(shape, hazeState)
             }

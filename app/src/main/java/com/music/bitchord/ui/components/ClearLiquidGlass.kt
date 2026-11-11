@@ -15,11 +15,9 @@ package com.music.bitchord.ui.components
 
 import android.os.Build
 import androidx.compose.foundation.shape.CornerBasedShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -46,13 +44,9 @@ private const val ARC_SHAPE = 0.4f
 /** The CSS shadow colour, oklch(0.24 0.05 236.8). */
 private val CLEAR_SHADOW_COLOR = Color(0xFF13252F)
 
-@Composable
-private fun isDarkGlass(): Boolean = MaterialTheme.colorScheme.surface.luminance() <= 0.5f
-
 /** The clear glass's own fill: a trace of white over light pages, less over dark ones. */
-@Composable
-internal fun clearGlassVeil(): Color =
-    Color.White.copy(alpha = if (isDarkGlass()) 0.03f else 0.14f)
+internal fun clearGlassVeil(dark: Boolean): Color =
+    Color.White.copy(alpha = if (dark) 0.03f else 0.14f)
 
 /**
  * [liquidGlass] in the New style. Called from [liquidGlass] only, after
@@ -69,8 +63,12 @@ internal fun Modifier.clearLiquidGlass(
     /** The frost under the glass; it ships at barely any, so the middle stays 1:1. */
     blurDp: Float,
     saturation: Float,
+    /** Whether the ground under it is dark: the rim and the shadow have a form for each. */
+    dark: Boolean,
+    /** How much of the light theme's caustic is drawn, 0 to 1; see the shader. */
+    caustic: Float,
 ): Modifier {
-    val darkF = if (isDarkGlass()) 1f else 0f
+    val darkF = if (dark) 1f else 0f
     val shadowAlpha = 0.35f * (1f - darkF) * 0.6f
 
     return drawBackdrop(
@@ -112,6 +110,7 @@ internal fun Modifier.clearLiquidGlass(
                     setFloatUniform("cornerRadii", tl, tr, br, bl)
                     setFloatUniform("unit", unit)
                     setFloatUniform("dark", darkF)
+                    setFloatUniform("caustic", caustic.coerceIn(0f, 1f))
                     setFloatUniform("tilt", REFR_TILT * straight)
                     setFloatUniform("arcScale", ax, by)
                 }
@@ -144,6 +143,7 @@ uniform float2 offset;
 uniform float4 cornerRadii;
 uniform float unit;
 uniform float dark;
+uniform float caustic;
 uniform float tilt;
 uniform float2 arcScale;
 
@@ -226,7 +226,7 @@ half4 main(float2 coord) {
     // Caustic: light bundled under the lens, a soft ring of the outline
     // shrunk to 86% and dropped 12 units, strongest top right and bottom left.
     // It sits behind the glass, so it is looked up where the glass samples.
-    float light = 1.0 - dark;
+    float light = (1.0 - dark) * caustic;
     if (light > 0.0) {
         float2 sp = samplePos + offset - hs;
         float2 pc = (sp - float2(0.0, 12.0 * unit)) / 0.86;

@@ -64,7 +64,7 @@ fun PopupLayer(
     contentColor: Color,
     surface: @Composable () -> Modifier,
     fullWidth: Boolean = false,
-    scrim: Color = MaterialTheme.colorScheme.scrim.copy(alpha = .48f),
+    scrim: Color = menuScrimColor(),
     card: @Composable () -> Unit,
 ) {
     // The pill this opening was a tap on, kept through the close so the card
@@ -193,7 +193,7 @@ fun Modifier.popupSurface(shape: CornerBasedShape, hazeState: HazeState): Modifi
     return clip(shape).then(
         when {
             // Glass, frost or solid, as the app style has it; see [liquidGlass].
-            glass -> Modifier.liquidGlass(shape, carriesText = true)
+            glass -> Modifier.glassMenu(shape)
             reduceDynamicBlur -> Modifier
                 .background(MaterialTheme.colorScheme.surface)
                 .border(GLASS_EDGE_WIDTH, surfaceEdgeColor(), shape)

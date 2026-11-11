@@ -11,15 +11,24 @@ import androidx.compose.ui.graphics.compositeOver
 internal const val LEGIBLE_LIGHT_FILL = 0.6f
 
 /** This fill, brought up to [floor] with the light theme's own white where it is fainter. */
-internal fun Color.legibleOnLight(floor: Float = LEGIBLE_LIGHT_FILL): Color {
+internal fun Color.legibleOnLight(floor: Float = LEGIBLE_LIGHT_FILL): Color = legibleOver(Color(0xFFFAFAFA), floor)
+
+/**
+ * The same for white text: brought up to [floor] with the dark theme's own
+ * near-black, so a dark menu over a white sleeve or a bright page keeps
+ * something under its labels.
+ */
+internal fun Color.legibleOnDark(floor: Float = LEGIBLE_LIGHT_FILL): Color = legibleOver(Color(0xFF121212), floor)
+
+private fun Color.legibleOver(ground: Color, floor: Float): Color {
     if (alpha >= floor || floor <= 0f) return this
     val under = (floor - alpha) / (1f - alpha)
-    return compositeOver(Color(0xFFFAFAFA).copy(alpha = under))
+    return compositeOver(ground.copy(alpha = under))
 }
 
 /**
- * The floor [legibleOnLight] keeps at [transparency], when the glass ships at
- * [defaultTransparency]: all of [LEGIBLE_LIGHT_FILL] up to the default, fading
+ * The floor [legibleOnLight] keeps at [transparency], when the glass's fill is
+ * measured against [defaultTransparency]: all of [LEGIBLE_LIGHT_FILL] up to it, fading
  * to none at 100%. Full transparency means no colour at all on the glass, a
  * menu's included; the text over it is then the user's to judge.
  */

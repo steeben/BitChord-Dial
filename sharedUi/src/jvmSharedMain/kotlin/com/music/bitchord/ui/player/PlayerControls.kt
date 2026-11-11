@@ -706,17 +706,19 @@ internal fun CircleGlyph(
         label = "glyphDisc",
     )
     val glass = LocalPlayerGlass.current
+    // The sleeve decides the ground, not the theme: dark ink means a bright one.
+    val darkGround = !LocalPlayerInkDark.current
     val interaction = remember { MutableInteractionSource() }
     Box(
         modifier = Modifier
             .size(34.dp)
             .pressPulse(interaction, color = PlayerInk, spread = 1.7f)
             .let { sized ->
-                // Liquid glass when it is on, with the old disc's tint over it
-                // only while active, so a liked heart still reads as on.
+                // The app's glass when it is on, the same disc for the heart
+                // and the ⋯ beside it: the filled heart says it is liked, and
+                // a brighter disc under it only made the pair look mismatched.
                 if (glass != null) {
-                    glass.surface(sized, CircleShape)
-                        .background(Color.White.copy(alpha = (discAlpha - 0.18f).coerceAtLeast(0f)), CircleShape)
+                    glass.surface(sized, CircleShape, darkGround = darkGround)
                 } else {
                     sized.clip(CircleShape).background(Color.White.copy(alpha = discAlpha))
                 }
@@ -903,7 +905,7 @@ private fun Pill(
             .height(BOTTOM_ACTION_SIZE)
             .let { sized ->
                 if (glass != null) {
-                    glass.surface(sized, CircleShape).clip(CircleShape)
+                    glass.surface(sized, CircleShape, darkGround = !LocalPlayerInkDark.current).clip(CircleShape)
                 } else {
                     sized.clip(CircleShape).background(Color.White.copy(alpha = 0.12f))
                 }
@@ -925,7 +927,7 @@ private fun PillDivider() {
         Modifier
             .width(1.dp)
             .fillMaxHeight()
-            .background(Color.White.copy(alpha = 0.20f)),
+            .background(PlayerInk.copy(alpha = 0.20f)),
     )
 }
 
@@ -1165,7 +1167,7 @@ private fun PillSegment(
         modifier = Modifier
             .width(width)
             .height(BOTTOM_ACTION_SIZE)
-            .background(if (highlighted) Color.White.copy(alpha = 0.14f) else Color.Transparent)
+            .background(if (highlighted) PlayerInk.copy(alpha = 0.14f) else Color.Transparent)
             // Inside the capsule's clip, so it glows within its own segment.
             .pressPulse(interaction, color = PlayerInk)
             .combinedClickable(

@@ -11,6 +11,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
+import java.time.LocalTime
 import kotlin.random.Random
 
 /**
@@ -19,6 +20,9 @@ import kotlin.random.Random
  * you" page; Spotify's, while an account is signed in, are the playlists
  * Spotify made for it (Daily Mixes, Discover Weekly and the like) that are in
  * its library. The two are dealt in turn, so neither fills the page alone.
+ *
+ * Sleep mixes are dealt only at night, between [SLEEP_FROM] and [SLEEP_UNTIL]
+ * by the phone's clock; see [isSleepTime].
  */
 object MixesDial {
 
@@ -40,12 +44,26 @@ object MixesDial {
         "time capsule",
     )
 
-    /** A fresh deal: YouTube Music's mixes and, with [spotify], Spotify's, shuffled together. */
+    /** When sleep mixes start being dealt, and when they stop, by the phone's clock. */
+    val SLEEP_FROM: LocalTime = LocalTime.of(21, 30)
+    val SLEEP_UNTIL: LocalTime = LocalTime.of(4, 0)
+
+    /** Whether [time] is in the night hours sleep mixes are dealt in: 9:30pm to 4:00am. */
+    fun isSleepTime(time: LocalTime = LocalTime.now()): Boolean = !time.isBefore(SLEEP_FROM) || !time.isAfter(SLEEP_UNTIL)
+
+    /** A mix for falling asleep to, going by its name: "Sleep Mix", "Deep Sleep", "Sleepy Mix". */
+    fun isSleepMix(item: ShelfItem): Boolean = item.title.contains("sleep", ignoreCase = true)
+
+    /**
+     * A fresh deal: YouTube Music's mixes and, with [spotify], Spotify's,
+     * shuffled together. Sleep mixes are left out unless it is [sleepTime].
+     */
     suspend fun deal(
         homeShelves: List<HomeShelf>,
         spotify: Boolean,
         hidden: Set<String>,
         random: Random = Random(System.nanoTime()),
+        sleepTime: Boolean = isSleepTime(),
     ): List<ShelfItem> = coroutineScope {
         val fromSpotify = async { if (spotify) spotifyMixes() else emptyList() }
         val fromHome = homeShelves.flatMap { it.items }.filter(::isYouTubeMix)
@@ -57,9 +75,10 @@ object MixesDial {
             Log.w(TAG, "Mixed for you unavailable: ${error.message}")
             emptyList()
         }
+        val dealt: (ShelfItem) -> Boolean = { key(it) !in hidden && (sleepTime || !isSleepMix(it)) }
         pick(
-            youTube = (fromHome + mixedForYou).filterNot { key(it) in hidden },
-            spotify = fromSpotify.await().filterNot { key(it) in hidden },
+            youTube = (fromHome + mixedForYou).filter(dealt),
+            spotify = fromSpotify.await().filter(dealt),
             random = random,
         ).also { Log.d(TAG, "dealt ${it.size} mixes") }
     }

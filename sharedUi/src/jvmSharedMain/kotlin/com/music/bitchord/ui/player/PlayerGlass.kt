@@ -22,17 +22,23 @@ interface PlayerGlass {
     fun source(modifier: Modifier): Modifier
 
     /**
-     * A glass surface in [shape] on [modifier], washed with [tint] in place of
-     * the theme's own when one is given. [underlay] is a scrim the surface sits
-     * on that the backdrop does not record, laid over what the glass samples
-     * so the glass is no brighter than the dimmed page around it.
+     * A glass surface in [shape] on [modifier], as the app's glass options
+     * have it. [underlay] is a scrim the surface sits on that the backdrop
+     * does not record, laid over what the glass samples so the glass is no
+     * brighter than the dimmed page around it.
+     *
+     * [menu] is for a surface text is read off, a drawer: it is then the
+     * same glass every menu in the app is made of. [darkGround] says whether
+     * what it sits on is dark, which on the player is the sleeve's to say
+     * and not the theme's; null leaves it to the theme.
      */
     @Composable
     fun surface(
         modifier: Modifier,
         shape: CornerBasedShape,
-        tint: Color? = null,
         underlay: Color = Color.Transparent,
+        menu: Boolean = false,
+        darkGround: Boolean? = null,
     ): Modifier
 }
 

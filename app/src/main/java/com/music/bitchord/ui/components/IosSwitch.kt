@@ -176,7 +176,7 @@ internal fun rememberFrostedGlassDensity(): Float {
     val transparency by CustomizationSettings.glassOptions(clear = false, dark = dark).transparency
         .collectAsStateWithLifecycle()
     return if (appStyle() == AppStyle.GLASS && LocalGlassFollowsOptions.current) {
-        ((1f - transparency) / (1f - CustomizationSettings.DEFAULT_GLASS_TRANSPARENCY)).coerceIn(0.55f, 1.3f)
+        ((1f - transparency) / (1f - CustomizationSettings.GLASS_REFERENCE_TRANSPARENCY)).coerceIn(0.55f, 1.3f)
     } else {
         1f
     }
