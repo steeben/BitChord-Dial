@@ -38,10 +38,12 @@ val LocalOnArtworkPage = staticCompositionLocalOf { false }
 
 /**
  * Relative luminance (WCAG, 0..1) under which white glyphs are used over a
- * banner. Black and white read equally well at about 0.18; a little above
- * that, since the controls' glass lifts what is behind it.
+ * banner. White is the rule and black the exception: the glyphs only go black
+ * over a banner that is very bright (a white or cream sleeve, a pale sky),
+ * where white would be lost. A mid-bright photograph (sunlit grass, about
+ * 0.4) keeps white, which reads well on it; the earlier 0.30 flipped there.
  */
-internal const val CHROME_DARK_BELOW = 0.30f
+internal const val CHROME_DARK_BELOW = 0.60f
 
 /**
  * Whether what is under the top controls is dark. [artLuminance] is the top
