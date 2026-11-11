@@ -1488,6 +1488,12 @@ object AppSettings {
         editor.apply()
     }
 
+    /** Sets what the app's surfaces are made of: both switches behind [AppStyle] at once. */
+    fun setAppStyle(style: AppStyle) {
+        setLiquidGlass(style == AppStyle.GLASS)
+        setReduceDynamicBlur(style == AppStyle.SOLID)
+    }
+
     fun setLiquidGlass(value: Boolean) {
         liquidGlass.value = value
         prefs.edit().putBoolean(KEY_LIQUID_GLASS, value).apply()

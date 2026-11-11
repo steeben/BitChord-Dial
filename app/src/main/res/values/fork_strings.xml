@@ -19,6 +19,14 @@
     <string name="fork_notice">This app is a fork of BitChord.</string>
     <string name="fork_obtainx">I suggest using ObtainX for automatic updates.</string>
     <string name="fork_releases">Get updates from this fork\'s releases page</string>
+    <string name="app_style">App style</string>
+    <string name="app_style_glass">Glass</string>
+    <string name="app_style_frost">Frost</string>
+    <string name="app_style_solid">Solid</string>
+    <string name="adjust_glass_effect">Adjust Glass effect</string>
+    <string name="adjust_glass_effect_subtitle">Transparency, tint and blur of the Glass style</string>
+    <string name="animated_nav_bar">Animated navigation bar</string>
+    <string name="animated_nav_bar_subtitle">The mini player tucks into the bar as you scroll down</string>
     <string name="keep_nav_bar_expanded">Keep navigation bar expanded</string>
     <string name="keep_nav_bar_expanded_subtitle">Stops the bar from shrinking while you scroll</string>
     <string name="layout_settings">Layout</string>

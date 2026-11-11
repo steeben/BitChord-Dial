@@ -51,7 +51,7 @@ import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Backup
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.BlurOff
+import com.music.bitchord.data.settings.AppStyle
 import androidx.compose.material.icons.rounded.BlurOn
 import androidx.compose.material.icons.rounded.Brightness4
 import androidx.compose.material.icons.rounded.Cached
@@ -1124,21 +1124,6 @@ fun SettingsScreen(
                     onClick = { AppSettings.setReduceAnimation(!reduceAnimation) },
                 )
             }
-            val reduceDynamicBlurTitle = stringResource(R.string.reduce_dynamic_blur)
-            row(reduceDynamicBlurTitle, "blur", "performance") {
-                SettingsRow(
-                    icon = Icons.Rounded.BlurOff,
-                    title = reduceDynamicBlurTitle,
-                    subtitle = stringResource(R.string.reduce_dynamic_blur_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = reduceDynamicBlur,
-                            onCheckedChange = AppSettings::setReduceDynamicBlur,
-                        )
-                    },
-                    onClick = { AppSettings.setReduceDynamicBlur(!reduceDynamicBlur) },
-                )
-            }
             val listenTogetherButtonTitle = stringResource(R.string.show_listen_together_button)
             row(listenTogetherButtonTitle, "party", "jam", "output", "headphones", "player") {
                 SettingsRow(
@@ -1154,28 +1139,53 @@ fun SettingsScreen(
                     onClick = { AppSettings.setShowListenTogetherButton(!listenTogetherButton) },
                 )
             }
-            val liquidGlassTitle = stringResource(R.string.liquid_glass)
-            row(liquidGlassTitle, "glass", "blur") {
-                SettingsRow(
-                    icon = Icons.Rounded.AutoAwesome,
-                    title = liquidGlassTitle,
-                    subtitle = stringResource(
-                        if (liquidGlassSupported) {
-                            R.string.liquid_glass_subtitle
-                        } else {
-                            R.string.liquid_glass_unavailable
-                        },
-                    ),
-                    enabled = liquidGlassSupported,
-                    trailing = {
-                        IosSwitch(
-                            checked = liquidGlass,
-                            onCheckedChange = AppSettings::setLiquidGlass,
-                            enabled = liquidGlassSupported,
+            // One choice for what the app's bars, menus and cards are made of,
+            // in place of the Liquid Glass and "reduce dynamic blur" switches.
+            val appStyleTitle = stringResource(R.string.app_style)
+            val appStyle = AppStyle.of(liquidGlass && liquidGlassSupported, reduceDynamicBlur)
+            row(appStyleTitle, "glass", "frost", "solid", "blur", "liquid", "performance") {
+                SettingsRow(icon = Icons.Rounded.AutoAwesome, title = appStyleTitle)
+                // Glass needs Android 12; older devices choose between the other two.
+                val styles = if (liquidGlassSupported) AppStyle.entries else listOf(AppStyle.FROST, AppStyle.SOLID)
+                SegmentedControl(
+                    options = styles.map {
+                        stringResource(
+                            when (it) {
+                                AppStyle.GLASS -> R.string.app_style_glass
+                                AppStyle.FROST -> R.string.app_style_frost
+                                AppStyle.SOLID -> R.string.app_style_solid
+                            },
                         )
                     },
-                    // The switch turns it on and off; the row opens its options.
+                    selectedIndex = styles.indexOf(appStyle),
+                    onSelect = { AppSettings.setAppStyle(styles[it]) },
+                    modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, bottom = 14.dp),
+                )
+            }
+            val adjustGlassTitle = stringResource(R.string.adjust_glass_effect)
+            row(adjustGlassTitle, "glass", "liquid", "tint", "transparency", "blur") {
+                SettingsRow(
+                    icon = Icons.Rounded.Tune,
+                    title = adjustGlassTitle,
+                    subtitle = stringResource(R.string.adjust_glass_effect_subtitle),
+                    enabled = appStyle == AppStyle.GLASS,
+                    trailing = { Chevron() },
                     onClick = onLiquidGlassOptions,
+                )
+            }
+            val animatedNavTitle = stringResource(R.string.animated_nav_bar)
+            row(animatedNavTitle, "navigation", "bar", "minimize", "shrink", "collapse", "scroll", "mini player") {
+                SettingsRow(
+                    icon = Icons.Rounded.UnfoldMore,
+                    title = animatedNavTitle,
+                    subtitle = stringResource(R.string.animated_nav_bar_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = !keepNavBarExpanded,
+                            onCheckedChange = { CustomizationSettings.setKeepNavBarExpanded(!it) },
+                        )
+                    },
+                    onClick = { CustomizationSettings.setKeepNavBarExpanded(!keepNavBarExpanded) },
                 )
             }
             val ambientTitle = stringResource(R.string.ambient_background)
@@ -1533,21 +1543,6 @@ fun SettingsScreen(
                         canDisable = { list, _ -> list.count { it.enabled } > 1 },
                     )
                 }
-            }
-            val keepExpandedTitle = stringResource(R.string.keep_nav_bar_expanded)
-            row(keepExpandedTitle, "navigation", "bar", "minimize", "shrink", "collapse", "scroll") {
-                SettingsRow(
-                    icon = Icons.Rounded.UnfoldMore,
-                    title = keepExpandedTitle,
-                    subtitle = stringResource(R.string.keep_nav_bar_expanded_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = keepNavBarExpanded,
-                            onCheckedChange = CustomizationSettings::setKeepNavBarExpanded,
-                        )
-                    },
-                    onClick = { CustomizationSettings.setKeepNavBarExpanded(!keepNavBarExpanded) },
-                )
             }
             val miniNextTitle = stringResource(R.string.mini_player_next_button)
             row(miniNextTitle, "mini player", "skip", "next", "button") {
