@@ -1324,6 +1324,7 @@ private fun HeroCard(
             model = item.thumbnailUrl.artworkAt(HEADER_ART_PX),
             contentDescription = null,
             contentScale = ContentScale.Crop,
+            onState = { launch?.shows(it) },
             modifier = Modifier.fillMaxSize(),
         )
         if (isCurrent && isPlaying) SearchPlayingBars(Modifier.align(Alignment.Center))
@@ -1565,6 +1566,7 @@ internal fun ShelfCard(
                         model = item.thumbnailUrl.artworkAt(CARD_ART_PX),
                         contentDescription = null,
                         contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        onState = { launch?.shows(it) },
                         modifier = Modifier.fillMaxSize(),
                     )
                     if (isCurrent && isPlaying) SearchPlayingBars(Modifier.align(Alignment.Center))

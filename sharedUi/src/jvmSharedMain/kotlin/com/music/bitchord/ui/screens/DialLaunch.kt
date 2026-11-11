@@ -56,7 +56,9 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.painter.Painter
 import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
 import coil3.compose.LocalPlatformContext
 
 /**
@@ -85,6 +87,12 @@ class DialOrigin(
     val rowOffset: Int = 0,
     /** Whether it is a card on a shelf ([shelfTitle]) rather than a dial tile. */
     val card: Boolean = false,
+    /**
+     * The picture it was showing, as loaded: what its page's banner starts as,
+     * held here so it is on screen from the page's first frame whatever has
+     * become of the image cache since.
+     */
+    val art: Painter? = null,
 ) : Launched {
     /**
      * Whether the tapped tile's page has come up in its place. The tile hides
@@ -405,6 +413,12 @@ class CardLaunch internal constructor(
     internal var corner: Dp = 0.dp
     internal var row: LaunchRow? = null
     internal var coordinates: LayoutCoordinates? = null
+    internal var art: Painter? = null
+
+    /** Told what the card's artwork is showing, to keep the picture once it has loaded. */
+    fun shows(state: AsyncImagePainter.State) {
+        if (state is AsyncImagePainter.State.Success) art = state.painter
+    }
 
     /** Opens the card's page with [action], out of the artwork as it is drawn now. */
     fun open(action: () -> Unit) {
@@ -424,6 +438,7 @@ class CardLaunch internal constructor(
                     rowIndex = row?.state?.firstVisibleItemIndex ?: 0,
                     rowOffset = row?.state?.firstVisibleItemScrollOffset ?: 0,
                     card = true,
+                    art = art,
                 )
             }
             action()
