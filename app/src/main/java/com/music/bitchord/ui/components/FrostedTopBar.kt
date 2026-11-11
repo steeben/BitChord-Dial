@@ -242,7 +242,11 @@ fun FrostedTopBar(
     // the theme's: white glyphs on dark glass over a dark photograph, black
     // over a bright one. See [TopChromeTone].
     val themeDark = MaterialTheme.colorScheme.surface.luminance() <= 0.5f
-    val chromeDark = (if (LocalOnArtworkPage.current) TopChromeTone.overDark else null) ?: themeDark
+    val chromeDark = topControlsDark(
+        style = appStyle(),
+        overDark = if (LocalOnArtworkPage.current) TopChromeTone.overDark else null,
+        themeDark = themeDark,
+    )
     // In the light theme, while the glyphs are black, the bar's glass over a
     // banner wears the theme's own glass (its slight white tint) like the
     // rest of the app, rather than the stock glass of an artwork page.

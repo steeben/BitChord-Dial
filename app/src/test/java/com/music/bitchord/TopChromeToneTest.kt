@@ -1,6 +1,8 @@
 package com.music.bitchord
 
+import com.music.bitchord.data.settings.AppStyle
 import com.music.bitchord.ui.components.TopChromeTone
+import com.music.bitchord.ui.components.topControlsDark
 import com.music.bitchord.ui.components.bannerArtLuminance
 import com.music.bitchord.ui.components.topChromeOverDark
 import org.junit.Assert.assertEquals
@@ -81,5 +83,18 @@ class TopChromeToneTest {
         // A clip up before the photo has been read.
         assertEquals(0.01f, bannerArtLuminance(still = null, clip = 0.01f, clipShowing = 1f)!!, 0.0001f)
         assertNull(bannerArtLuminance(still = null, clip = null, clipShowing = 1f))
+    }
+
+    @Test
+    fun onlyLiquidGlassTakesTheBannersTone() {
+        // Light theme over a dark banner: glass goes white, frost and solid keep their own light pill.
+        assertEquals(true, topControlsDark(AppStyle.GLASS, overDark = true, themeDark = false))
+        assertEquals(false, topControlsDark(AppStyle.FROST, overDark = true, themeDark = false))
+        assertEquals(false, topControlsDark(AppStyle.SOLID, overDark = true, themeDark = false))
+        // Dark theme over a very bright banner: the same the other way about.
+        assertEquals(false, topControlsDark(AppStyle.GLASS, overDark = false, themeDark = true))
+        assertEquals(true, topControlsDark(AppStyle.FROST, overDark = false, themeDark = true))
+        // Nothing read yet: the theme stands.
+        assertEquals(true, topControlsDark(AppStyle.GLASS, overDark = null, themeDark = true))
     }
 }

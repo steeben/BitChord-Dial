@@ -1,6 +1,7 @@
 package com.music.bitchord.ui.components
 
 import androidx.compose.runtime.getValue
+import com.music.bitchord.data.settings.AppStyle
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -72,6 +73,17 @@ internal fun topChromeOverDark(
     val under = washLuminance + (artLuminance - washLuminance) * showing
     return under < if (themeDark) CHROME_DARK_BELOW else CHROME_DARK_BELOW_LIGHT_THEME
 }
+
+/**
+ * Whether the top bar's controls are drawn in their dark form (white glyphs).
+ * Only liquid glass takes the banner's tone ([overDark]): it is see-through,
+ * so its glyphs are read against the picture. Frost and Solid put a fill of
+ * the theme's own behind the glyphs, which is contrast enough over any
+ * banner, so they stay as [themeDark] has them. The status bar's glyphs have
+ * nothing behind them in any style and keep following the banner.
+ */
+internal fun topControlsDark(style: AppStyle, overDark: Boolean?, themeDark: Boolean): Boolean =
+    if (style == AppStyle.GLASS) overDark ?: themeDark else themeDark
 
 /**
  * How bright the top of a banner is when a moving clip may be playing over its
