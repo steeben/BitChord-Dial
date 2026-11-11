@@ -16,10 +16,16 @@ import kotlin.random.Random
 
 /**
  * The Mixes Dial: a page to the left of the speed dial's first page, of mixes
- * dealt at random. YouTube Music's come from Home's feed and its "Mixed for
- * you" page; Spotify's, while an account is signed in, are the playlists
- * Spotify made for it (Daily Mixes, Discover Weekly and the like) that are in
- * its library. The two are dealt in turn, so neither fills the page alone.
+ * dealt at random. YouTube Music's come from Home's feed, its "Mixed for
+ * you" page and its "From the community" shelf; Spotify's, while an account
+ * is signed in, are the playlists Spotify made for it (Daily Mixes, Discover
+ * Weekly and the like) that are in its library, and those on its home page's
+ * "Your top mixes" shelf. The two are dealt in turn, so neither fills the
+ * page alone. What room is left goes to YouTube Music's "Trending community
+ * playlists".
+ *
+ * Only one mix of a kind is dealt: one "Feel Good Mix" whichever app it is
+ * from, and one of "Chill Mix 01" and "Chill Mix 02"; see [mixType].
  *
  * Sleep mixes are dealt only at night, between [SLEEP_FROM] and [SLEEP_UNTIL]
  * by the phone's clock; see [isSleepTime].
@@ -32,6 +38,13 @@ object MixesDial {
     const val SIZE = 12
 
     private const val SPOTIFY_TIMEOUT_MS = 15_000L
+
+    /** Home's shelves of other listeners' playlists, by title: the first is dealt with the mixes, the second only fills what is left. */
+    const val FROM_THE_COMMUNITY = "From the community"
+    const val TRENDING_COMMUNITY = "Trending community playlists"
+
+    /** How many more pages of Home are read looking for [FROM_THE_COMMUNITY], when the pages Home has loaded lack it. */
+    private const val COMMUNITY_PAGES = 4
 
     /** Spotify's own playlists made for one listener, by name, besides those called a mix. */
     private val SPOTIFY_PERSONAL = setOf(
@@ -75,34 +88,114 @@ object MixesDial {
             Log.w(TAG, "Mixed for you unavailable: ${error.message}")
             emptyList()
         }
+        val community = communityShelves(homeShelves)
+        val fromCommunity = shelfPlaylists(community, FROM_THE_COMMUNITY)
+        val trending = shelfPlaylists(community, TRENDING_COMMUNITY)
         val dealt: (ShelfItem) -> Boolean = { key(it) !in hidden && (sleepTime || !isSleepMix(it)) }
         pick(
-            youTube = (fromHome + mixedForYou).filter(dealt),
+            youTube = (fromHome + mixedForYou + fromCommunity).filter(dealt),
             spotify = fromSpotify.await().filter(dealt),
             random = random,
-        ).also { Log.d(TAG, "dealt ${it.size} mixes") }
+            filler = trending.filter(dealt),
+        ).also {
+            Log.d(TAG, "dealt ${it.size} mixes (community ${fromCommunity.size}, trending ${trending.size})")
+        }
     }
 
     /**
      * Up to [limit] mixes: each source shuffled, then taken from in turn, so
-     * the page has both while both have some. Duplicates go.
+     * the page has both while both have some. Duplicates go, and so does a
+     * second mix of a kind already dealt ([mixType]). [filler] is only dealt
+     * from once both sources have run out.
      */
-    fun pick(youTube: List<ShelfItem>, spotify: List<ShelfItem>, random: Random, limit: Int = SIZE): List<ShelfItem> {
+    fun pick(
+        youTube: List<ShelfItem>,
+        spotify: List<ShelfItem>,
+        random: Random,
+        limit: Int = SIZE,
+        filler: List<ShelfItem> = emptyList(),
+    ): List<ShelfItem> {
         val yt = youTube.distinctBy(::key).shuffled(random)
         val sp = spotify.distinctBy(::key).shuffled(random)
         val dealt = ArrayList<ShelfItem>(limit)
-        val seen = HashSet<String>()
+        val ids = HashSet<String>()
+        val types = HashSet<String>()
+        // Whether [item] is new to the page, by id and by kind; noted as dealt when it is.
+        fun fresh(item: ShelfItem): Boolean {
+            val type = mixType(item.title)
+            if (key(item) in ids || type in types) return false
+            ids += key(item)
+            types += type
+            return true
+        }
         // Which source leads is chosen at random too.
         val sources = if (random.nextBoolean()) listOf(yt, sp) else listOf(sp, yt)
         var i = 0
         while (dealt.size < limit && i < maxOf(yt.size, sp.size)) {
             for (source in sources) {
                 val item = source.getOrNull(i) ?: continue
-                if (dealt.size < limit && seen.add(key(item))) dealt += item
+                if (dealt.size < limit && fresh(item)) dealt += item
             }
             i++
         }
+        for (item in filler.shuffled(random)) {
+            if (dealt.size >= limit) break
+            if (fresh(item)) dealt += item
+        }
         return dealt
+    }
+
+    /**
+     * The kind of mix a title names: the title without case, spacing,
+     * punctuation or a number at its end. "Chill Mix 01" and "Chill Mix 02"
+     * are one kind, as are "Sleep Supermix" and "Sleep super mix", "My Mix 1"
+     * and "My Mix 4", and "Your Top Songs 2023" and "Your Top Songs 2022".
+     */
+    fun mixType(title: String): String {
+        val words = title.lowercase().split(NOT_A_WORD).filter { it.isNotEmpty() }
+        return words.dropLastWhile { word -> word.all(Char::isDigit) }.joinToString("")
+            .ifEmpty { words.joinToString("").ifEmpty { title.trim().lowercase() } }
+    }
+
+    private val NOT_A_WORD = Regex("[^\\p{L}\\p{N}]+")
+
+    /** A playlist of any kind, as the community shelves hold: not a song, album or artist. */
+    fun isYouTubePlaylist(item: ShelfItem): Boolean {
+        if (item.videoId != null) return false
+        val id = item.browseId?.removePrefix("VL") ?: return false
+        return id.startsWith("PL") || id.startsWith("RD") || id.startsWith("OLAK")
+    }
+
+    /** The playlists of the shelf called [title] among [shelves]. */
+    fun shelfPlaylists(shelves: List<HomeShelf>, title: String): List<ShelfItem> =
+        shelves.filter { it.title.trim().equals(title, ignoreCase = true) }
+            .flatMap { it.items }
+            .filter(::isYouTubePlaylist)
+
+    /**
+     * Home's shelves to look for the community's playlists in. They sit far
+     * down Home, usually past what it has loaded by the time the mixes are
+     * dealt, so when [loaded] has no "From the community" the feed is read
+     * from the top, a few pages on, until it turns up.
+     */
+    private suspend fun communityShelves(loaded: List<HomeShelf>): List<HomeShelf> {
+        if (shelfPlaylists(loaded, FROM_THE_COMMUNITY).isNotEmpty()) return loaded
+        val read = ArrayList<HomeShelf>()
+        try {
+            var feed = YtMusicRepository.home().getOrNull()
+            var pages = 0
+            while (feed != null) {
+                read += feed.shelves
+                if (shelfPlaylists(read, FROM_THE_COMMUNITY).isNotEmpty()) break
+                val more = feed.continuation?.takeIf { pages++ < COMMUNITY_PAGES } ?: break
+                feed = YtMusicRepository.moreHome(more).getOrNull()
+            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            Log.w(TAG, "Community playlists unavailable: ${error.message}")
+        }
+        return loaded + read
     }
 
     /**
@@ -135,14 +228,20 @@ object MixesDial {
         browseId = SPOTIFY_PAGE_PREFIX + playlist.id,
     )
 
-    private suspend fun spotifyMixes(): List<ShelfItem> = try {
-        withTimeoutOrNull(SPOTIFY_TIMEOUT_MS) {
-            SpotifyLibrary.playlists().filter(::isSpotifyMix).map(::tile)
-        }.orEmpty()
+    /** The library's mixes and the home page's "Your top mixes", each read on its own so one failing leaves the other. */
+    private suspend fun spotifyMixes(): List<ShelfItem> = coroutineScope {
+        val library = async { spotifyRead("library") { SpotifyLibrary.playlists().filter(::isSpotifyMix) } }
+        val topMixes = async { spotifyRead("top mixes") { SpotifyLibrary.topMixes() } }
+        (library.await() + topMixes.await()).map(::tile)
+    }
+
+    private suspend fun spotifyRead(what: String, read: suspend () -> List<SpotifyPlaylist>): List<SpotifyPlaylist> = try {
+        withTimeoutOrNull(SPOTIFY_TIMEOUT_MS) { read() }.orEmpty()
+            .also { Log.d(TAG, "Spotify $what: ${it.size}") }
     } catch (cancelled: CancellationException) {
         throw cancelled
     } catch (error: Exception) {
-        Log.w(TAG, "Spotify mixes unavailable: ${error.message}")
+        Log.w(TAG, "Spotify $what unavailable: ${error.message}")
         emptyList()
     }
 

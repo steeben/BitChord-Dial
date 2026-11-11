@@ -638,6 +638,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexedShelves(
                                     // A mix's art already carries its name.
                                     showLabels = false,
                                     showPinIcon = false,
+                                    sourceTags = true,
                                 )
                             },
                             speedDial = speedDial,
