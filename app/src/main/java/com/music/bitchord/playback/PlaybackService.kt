@@ -2985,7 +2985,7 @@ class PlaybackService : MediaLibraryService() {
             while (isActive && boundedContextToken == contextToken) {
                 val request = boundedContextRegistry.claimContinuation(contextToken) ?: return@launch
                 val page = withContext(Dispatchers.IO) {
-                    YtMusicRepository.moreSongs(request.continuationToken).getOrNull()
+                    YtMusicRepository.moreSongs(request.continuationToken, request.browseId).getOrNull()
                 }
                 if (page == null) {
                     // fail() leaves the token claimable. A single dropped
