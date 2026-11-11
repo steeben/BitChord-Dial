@@ -88,4 +88,19 @@ class SpotifyLibraryTest {
         assertEquals("LP", track.album)
         assertEquals(200000, track.durationMs)
     }
+
+    @Test
+    fun readsAPlaylistsOldestEntriesByTheirPlace() {
+        val root = Json.parseToJsonElement(
+            """{"data":{"playlistV2":{"content":{"totalCount":120,"items":[
+                {"uid":"u1","itemV2":{"data":{"uri":"spotify:track:a","name":"A"}}},
+                {"uid":"u2","itemV2":{"data":{"_uri":"spotify:track:b"}}},
+                {"itemV2":{"data":{"uri":"spotify:track:c"}}}
+            ]}}}}""",
+        ).jsonObject
+        assertEquals(
+            120 to listOf("u1" to "spotify:track:a", "u2" to "spotify:track:b"),
+            parsePlaylistHead(root),
+        )
+    }
 }

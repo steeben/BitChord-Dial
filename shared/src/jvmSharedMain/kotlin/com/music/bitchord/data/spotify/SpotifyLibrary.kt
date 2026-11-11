@@ -90,6 +90,21 @@ object SpotifyLibrary {
         libraryPlaylists().firstOrNull { it.name == name }?.id
     }
 
+    /**
+     * How many songs a playlist holds, and its first [limit] entries as uid to song uri: the
+     * oldest, in a playlist that is only ever added to at the end.
+     */
+    suspend fun playlistHead(playlistId: String, limit: Int): Pair<Int, List<Pair<String, String>>> =
+        withContext(Dispatchers.IO) {
+            val variables = buildJsonObject {
+                put("uri", "spotify:playlist:$playlistId")
+                put("offset", 0)
+                put("limit", limit)
+                put("enableWatchFeedEntrypoint", false)
+            }
+            parsePlaylistHead(gql("fetchPlaylist", PLAYLIST, variables, authHeaders()))
+        }
+
     private suspend fun libraryPlaylists(): List<SpotifyPlaylist> {
         val headers = authHeaders()
         val collected = mutableListOf<SpotifyPlaylist>()
@@ -300,6 +315,20 @@ internal fun parseTrackPage(root: JsonObject): Triple<List<SpotifyTrack>, Int, I
         )
     }
     return Triple(items, content.int("totalCount") ?: rawItems.size, rawItems.size)
+}
+
+/** The playlist's total, and each entry of the page as its uid (its place in the playlist) to its song's uri. */
+internal fun parsePlaylistHead(root: JsonObject): Pair<Int, List<Pair<String, String>>> {
+    val content = root.obj("data")?.obj("playlistV2")?.obj("content")
+        ?: throw IllegalStateException("Spotify playlist response was empty")
+    val rawItems = content.arr("items").orEmpty()
+    val entries = rawItems.mapNotNull { element ->
+        val entry = element.jsonObject
+        val uid = entry.str("uid")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+        val data = entry.obj("itemV2")?.obj("data")
+        uid to (data?.str("uri") ?: data?.str("_uri")).orEmpty()
+    }
+    return (content.int("totalCount") ?: rawItems.size) to entries
 }
 
 /** The song hits of a `searchDesktop` answer, in Spotify's order. */

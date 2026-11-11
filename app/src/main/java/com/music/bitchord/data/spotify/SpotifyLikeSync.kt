@@ -97,11 +97,24 @@ object SpotifyLikeSync {
     // ---- Finding the track ---------------------------------------------
 
     internal fun findTrack(title: String, artist: String, token: String): String? =
-        searchViaPathfinder(title, artist, token) ?: searchViaRest(title, artist, token)
+        search(title, artist, token).uri
 
-    private fun searchViaPathfinder(title: String, artist: String, token: String): String? {
+    /**
+     * The matching track's [uri], and whether Spotify [answered] at all: a
+     * search that was turned away says nothing about the song being there.
+     */
+    internal class Search(val uri: String?, val answered: Boolean)
+
+    internal fun search(title: String, artist: String, token: String): Search {
+        val web = searchViaPathfinder(title, artist, token)
+        if (web.uri != null) return web
+        val rest = searchViaRest(title, artist, token)
+        return Search(rest.uri, web.answered || rest.answered)
+    }
+
+    private fun searchViaPathfinder(title: String, artist: String, token: String): Search {
         val headers = headers(token)
-        if ("Client-Token" !in headers) return null
+        if ("Client-Token" !in headers) return Search(null, answered = false)
         val variables = buildJsonObject {
             put("searchTerm", "$title $artist")
             put("offset", 0)
@@ -124,12 +137,14 @@ object SpotifyLikeSync {
         val (code, body) = canvasGetWithStatus(url, headers + ("App-platform" to "WebPlayer"))
         if (body == null) {
             Log.w(TAG, "pathfinder search failed, http $code")
-            return null
+            return Search(null, answered = false)
         }
-        return SpotifyLikeMirror.bestMatch(SpotifyLikeMirror.pathfinderCandidates(body), title, artist)?.uri
+        // An answer with no tracks in it is as likely a stale query as a song nobody has.
+        val candidates = SpotifyLikeMirror.pathfinderCandidates(body)
+        return Search(SpotifyLikeMirror.bestMatch(candidates, title, artist)?.uri, answered = candidates.isNotEmpty())
     }
 
-    private fun searchViaRest(title: String, artist: String, token: String): String? {
+    private fun searchViaRest(title: String, artist: String, token: String): Search {
         val url = REST_SEARCH.toHttpUrl().newBuilder()
             .addQueryParameter("q", "$title $artist")
             .addQueryParameter("type", "track")
@@ -138,9 +153,9 @@ object SpotifyLikeSync {
         val (code, body) = canvasGetWithStatus(url, headers(token))
         if (body == null) {
             Log.w(TAG, "rest search failed, http $code")
-            return null
+            return Search(null, answered = false)
         }
-        return SpotifyLikeMirror.bestMatch(SpotifyLikeMirror.restCandidates(body), title, artist)?.uri
+        return Search(SpotifyLikeMirror.bestMatch(SpotifyLikeMirror.restCandidates(body), title, artist)?.uri, answered = true)
     }
 
     // ---- Saving / removing ---------------------------------------------

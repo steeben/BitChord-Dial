@@ -14,6 +14,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.R
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.spotify.SpotifyPlayedList
+import com.music.bitchord.data.spotify.SpotifyPlayedSync
 import com.music.bitchord.ui.components.GlassAlert
 
 /**
@@ -23,6 +24,7 @@ import com.music.bitchord.ui.components.GlassAlert
 @Composable
 internal fun PlayedInDialDialog(onDismiss: () -> Unit) {
     val keep by AppSettings.spotifyPlayedKeep.collectAsStateWithLifecycle()
+    val status by SpotifyPlayedSync.status.collectAsStateWithLifecycle()
     GlassAlert(title = stringResource(R.string.spotify_played_playlist), onDismiss = onDismiss) {
         val contentColor = LocalContentColor.current
         Text(
@@ -47,5 +49,28 @@ internal fun PlayedInDialDialog(onDismiss: () -> Unit) {
             color = contentColor.copy(alpha = 0.7f),
             modifier = Modifier.padding(top = 8.dp),
         )
+        // Whether it is working, and why not when it isn't: there is nowhere else to see this.
+        Text(
+            text = statusLine(status),
+            style = MaterialTheme.typography.bodySmall,
+            color = contentColor.copy(alpha = 0.7f),
+            modifier = Modifier.padding(top = 14.dp),
+        )
     }
+}
+
+@Composable
+private fun statusLine(status: SpotifyPlayedList.Status?): String {
+    if (status == null) return stringResource(R.string.spotify_played_status_none)
+    val time = android.text.format.DateUtils.getRelativeTimeSpanString(
+        status.atMs,
+        System.currentTimeMillis(),
+        android.text.format.DateUtils.MINUTE_IN_MILLIS,
+    ).toString()
+    val text = when (status.kind) {
+        SpotifyPlayedList.Status.Kind.ADDED -> R.string.spotify_played_status_added
+        SpotifyPlayedList.Status.Kind.NO_MATCH -> R.string.spotify_played_status_no_match
+        SpotifyPlayedList.Status.Kind.FAILED -> R.string.spotify_played_status_failed
+    }
+    return stringResource(text, status.detail, time)
 }

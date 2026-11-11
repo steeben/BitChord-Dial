@@ -72,6 +72,10 @@
     <string name="spotify_played_playlist_summary">Tap for details and how many songs to keep</string>
     <string name="spotify_played_keep">Songs to keep</string>
     <string name="spotify_played_keep_note">Once the playlist is full, the oldest songs are removed as new ones are added.</string>
+    <string name="spotify_played_status_none">Nothing has been added yet. A song is added once it counts as a play: half of it, or 30 seconds for a short one.</string>
+    <string name="spotify_played_status_added">Last song added: %1$s (%2$s)</string>
+    <string name="spotify_played_status_no_match">Not found on Spotify, so left out: %1$s (%2$s)</string>
+    <string name="spotify_played_status_failed">Spotify turned the last song away (%2$s). %1$s</string>
     <string name="spotify_like_sync">Like songs on Spotify too</string>
     <string name="spotify_like_sync_subtitle">Liking or un-liking a song here also saves or removes it from your Spotify Liked Songs, using the sp_dc cookie below</string>
     <string name="spotify_canvas_compact_controls_subtitle">Instead of hiding, the controls shrink to the bottom of the screen, keeping the song, live lyrics and play controls</string>
