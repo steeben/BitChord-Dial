@@ -334,6 +334,7 @@ internal fun LandscapePlayerLayout(
                     .pointerInput(Unit) { detectTapGestures { } },
             ) {
                 val video = landscapeVideoPane(maxWidth, maxHeight)
+                val compactPane = maxHeight < LANDSCAPE_COMPACT_HEIGHT
                 Row(Modifier.fillMaxSize()) {
                     // The video itself is the backdrop's; this is the tap on it.
                     Box(
@@ -359,7 +360,7 @@ internal fun LandscapePlayerLayout(
                                 start = PLAYER_GUTTER,
                                 end = PLAYER_GUTTER,
                                 top = 8.dp,
-                                bottom = if (maxHeight < LANDSCAPE_COMPACT_HEIGHT) 4.dp else 16.dp,
+                                bottom = if (compactPane) 4.dp else 16.dp,
                             ),
                     ) {
                         held.content?.invoke()
