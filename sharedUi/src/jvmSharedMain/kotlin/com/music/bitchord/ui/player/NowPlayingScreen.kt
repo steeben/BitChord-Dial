@@ -126,6 +126,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerInputChange
@@ -2816,6 +2818,39 @@ fun NowPlayingScreen(
                     haptics.play(Haptic.Tap)
                     closeLyrics()
                 },
+                // The video runs on under the lyrics, blurred: sampled from
+                // the backdrop below, clip and dim together, and masked so it
+                // comes in gradually from the video's side. Without the blur
+                // (reduced, or before Android 12) the dim alone carries the
+                // dissolve.
+                videoLyricsBackdrop = { backdropModifier ->
+                    val reduceDynamicBlur by PlayerSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
+                    if (!reduceDynamicBlur && renderEffectBlurSupported) {
+                        val mirrored = LocalLayoutDirection.current == LayoutDirection.Rtl
+                        val blendMask = remember(mirrored) { landscapeVideoBlendMask(mirrored) }
+                        Box(
+                            backdropModifier
+                                .graphicsLayer { alpha = dockFade() }
+                                .optimizedHazeEffect(
+                                    state = playerHaze,
+                                    style = HazeStyle(
+                                        backgroundColor = Color.Transparent,
+                                        tints = emptyList(),
+                                        blurRadius = LANDSCAPE_VIDEO_LYRICS_BLUR,
+                                        noiseFactor = 0f,
+                                        fallbackTint = HazeTint(Color.Transparent),
+                                    ),
+                                ) {
+                                    // As for the portrait banner's blur: at
+                                    // this radius a tenth of the resolution
+                                    // is all that survives it.
+                                    inputScale = HazeInputScale.Fixed(0.10f)
+                                    canDrawArea = { true }
+                                    mask = blendMask
+                                },
+                        )
+                    }
+                },
                 pane = when {
                     lyricsOpen -> PlayerPane.Lyrics
                     queueOpen -> PlayerPane.Queue
@@ -3004,8 +3039,10 @@ fun NowPlayingScreen(
                                 compact = compact,
                             )
                         },
-                        // Stats for nerds sit where the volume bar does: above
-                        // it when it is shown, in its place when it is not.
+                        // The Automix line of Stats for nerds sits where the
+                        // volume bar does: above it when it is shown, in its
+                        // place when it is not. The codec line is the output
+                        // caption's, under the action row.
                         volume = if (hideVolumeBar && !showNerdStats) {
                             null
                         } else {
@@ -5106,10 +5143,11 @@ fun NowPlayingScreen(
 
             Spacer(Modifier.height(12.dp + controlSpread / 2).collapseBy { deckCompact() })
 
-            // Stats for nerds sit where the volume bar does: between the
-            // transport and the bar when it is shown, in its place when it is
-            // not. They fold away with the bar when the queue comes up, and
-            // take no room at all while the setting is off.
+            // The Automix line of Stats for nerds sits where the volume bar
+            // does: between the transport and the bar when it is shown, in its
+            // place when it is not. It folds away with the bar when the queue
+            // comes up, and takes no room at all while the setting or Automix
+            // is off. The codec line is the output caption's, at the foot.
             Box(
                 Modifier.fillMaxWidth().collapseBy { deckCompact() },
                 contentAlignment = Alignment.Center,

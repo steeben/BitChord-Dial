@@ -61,6 +61,7 @@ import com.music.bitchord.data.model.artworkAt
 import com.music.bitchord.download.DownloadState
 import com.music.bitchord.download.Downloads
 import com.music.bitchord.ui.icons.BitChordIcons
+import com.music.bitchord.ui.screens.playlistTakesGeneratedImage
 import java.util.Locale
 
 /**
@@ -419,7 +420,7 @@ fun BrowseActionsSheet(
             }
             // The page's animated backdrop, on or off for this playlist alone.
             val backdropId = target.browseId?.takeIf {
-                target.type == BrowseType.PLAYLIST && (it.startsWith("VL") || it == "LM")
+                target.type == BrowseType.PLAYLIST && (playlistTakesGeneratedImage(it) || it == "LM")
             }
             val backdropsOn by CustomizationSettings.generatePlaylistImages.collectAsStateWithLifecycle()
             val backdropsOff by CustomizationSettings.playlistBackdropsOff.collectAsStateWithLifecycle()
