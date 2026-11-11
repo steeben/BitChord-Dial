@@ -195,6 +195,8 @@ fun HomeScreen(
     mixesDialOn: Boolean = false,
     mixesDial: List<ShelfItem>? = null,
     mixesDialEmptyLabel: String = "",
+    /** Mixes Dial tiles (by browse id) that show their name: the community's playlists, whose art doesn't carry it. */
+    mixesDialNamed: Set<String> = emptySet(),
     /**
      * The saved section layout, for the loading placeholders: whether the speed
      * dial leads Home, and whether Recents is shown at all.
@@ -414,6 +416,7 @@ fun HomeScreen(
                         mixesDialOn = mixesDialOn,
                         mixesDial = mixesDial,
                         mixesDialEmptyLabel = mixesDialEmptyLabel,
+                        mixesDialNamed = mixesDialNamed,
                         afterLead = {
                             if (dialLeads && !holdSpeedDial) bannerItem()
                             topPicksItem()
@@ -532,6 +535,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexedShelves(
     mixesDialOn: Boolean = false,
     mixesDial: List<ShelfItem>? = null,
     mixesDialEmptyLabel: String = "",
+    mixesDialNamed: Set<String> = emptySet(),
     /** Items to put straight after the lead page (or pages: the dials). */
     afterLead: (androidx.compose.foundation.lazy.LazyListScope.() -> Unit)? = null,
     /**
@@ -635,8 +639,10 @@ private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexedShelves(
                                     onReorder = null,
                                     currentSong = currentSong,
                                     isPlaying = isPlaying,
-                                    // A mix's art already carries its name.
+                                    // A mix's art already carries its name;
+                                    // a community playlist's does not.
                                     showLabels = false,
+                                    labelOverrides = mixesDialNamed,
                                     showPinIcon = false,
                                     sourceTags = true,
                                 )

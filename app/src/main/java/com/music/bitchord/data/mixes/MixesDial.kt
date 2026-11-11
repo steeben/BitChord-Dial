@@ -10,6 +10,7 @@ import com.music.bitchord.data.spotify.SpotifyPlaylist
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalTime
 import kotlin.random.Random
@@ -22,7 +23,8 @@ import kotlin.random.Random
  * Weekly and the like) that are in its library, and those on its home page's
  * "Your top mixes" shelf. The two are dealt in turn, so neither fills the
  * page alone. What room is left goes to YouTube Music's "Trending community
- * playlists".
+ * playlists". A tile from either community shelf shows its playlist's name
+ * ([named]): a mix's art carries its name, a listener's playlist's does not.
  *
  * Only one mix of a kind is dealt: one "Feel Good Mix" whichever app it is
  * from, and one of "Chill Mix 01" and "Chill Mix 02"; see [mixType].
@@ -42,6 +44,16 @@ object MixesDial {
     /** Home's shelves of other listeners' playlists, by title: the first is dealt with the mixes, the second only fills what is left. */
     const val FROM_THE_COMMUNITY = "From the community"
     const val TRENDING_COMMUNITY = "Trending community playlists"
+
+    /**
+     * The tiles (by id) that show their name on the page: those of the last
+     * deal that are from [FROM_THE_COMMUNITY] or [TRENDING_COMMUNITY].
+     */
+    val named = MutableStateFlow<Set<String>>(emptySet())
+
+    /** The ids of the playlists on the community's shelves among [shelves]: see [named]. */
+    fun communityIds(shelves: List<HomeShelf>): Set<String> =
+        (shelfPlaylists(shelves, FROM_THE_COMMUNITY) + shelfPlaylists(shelves, TRENDING_COMMUNITY)).mapTo(HashSet(), ::key)
 
     /** How many more pages of Home are read looking for [FROM_THE_COMMUNITY], when the pages Home has loaded lack it. */
     private const val COMMUNITY_PAGES = 4
@@ -98,6 +110,7 @@ object MixesDial {
             random = random,
             filler = trending.filter(dealt),
         ).also {
+            named.value = communityIds(community)
             Log.d(TAG, "dealt ${it.size} mixes (community ${fromCommunity.size}, trending ${trending.size})")
         }
     }

@@ -179,6 +179,7 @@ import com.music.bitchord.ui.components.HomeDialMenu
 import com.music.bitchord.ui.components.tourAnchor
 import com.music.bitchord.ui.components.rememberDealtDialPicks
 import com.music.bitchord.ui.components.rememberMixesDial
+import com.music.bitchord.data.mixes.MixesDial
 import com.music.bitchord.ui.components.dialTileGlassEdge
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextOverflow
@@ -4612,6 +4613,7 @@ private fun BitChordApp(
                             speedDialNewReleases = homeFeed.newReleaseIds,
                             mixesDialOn = homeFeed.mixesDialOn,
                             mixesDial = homeFeed.mixes,
+                            mixesDialNamed = homeFeed.mixesNamed,
                             mixesDialEmptyLabel = stringResource(R.string.mixes_dial_empty),
                             newReleaseLabel = stringResource(R.string.dial_new_release),
                             onSpeedDialHistory = {
@@ -8687,6 +8689,8 @@ private class HomeFeed(
     val mixesDialOn: Boolean,
     /** The Mixes Dial's tiles: null until the first deal is in. */
     val mixes: List<ShelfItem>?,
+    /** The Mixes Dial's tiles that show their name: the community's playlists. */
+    val mixesNamed: Set<String>,
 )
 
 /**
@@ -8728,6 +8732,7 @@ private fun rememberHomeFeed(
     val mixes = rememberMixesDial(mixesDialOn, dialRound, dealReady, spotifyToken.isNotBlank(), hiddenFromDial) {
         (homeState as? UiState.Success)?.data.orEmpty()
     }
+    val mixesNamed by MixesDial.named.collectAsStateWithLifecycle()
     val holdSavedDial = speedDialsOn && (!homeFresh || !dealt) && lastSpeedDial.isNotEmpty()
     // A track from the library has started: YouTube's history won't move for
     // it, so the dial is built again here instead.
@@ -8866,7 +8871,7 @@ private fun rememberHomeFeed(
         CustomizationSettings.setLastSpeedDial(dial, newReleaseIds)
     }
     return HomeFeed(
-        arrangedHomeState, holdSavedDial, artistDialPinnedIds, speedDialsOn, newReleaseIds, mixesDialOn, mixes,
+        arrangedHomeState, holdSavedDial, artistDialPinnedIds, speedDialsOn, newReleaseIds, mixesDialOn, mixes, mixesNamed,
     )
 }
 

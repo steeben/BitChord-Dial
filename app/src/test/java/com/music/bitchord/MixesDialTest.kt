@@ -138,6 +138,8 @@ class MixesDialTest {
         )
         assertEquals(listOf("VLPLb"), MixesDial.shelfPlaylists(shelves, MixesDial.FROM_THE_COMMUNITY).map { it.browseId })
         assertEquals(listOf("VLPLc"), MixesDial.shelfPlaylists(shelves, MixesDial.TRENDING_COMMUNITY).map { it.browseId })
+        // Both shelves' playlists show their names on the page; nothing else does.
+        assertEquals(setOf("VLPLb", "VLPLc"), MixesDial.communityIds(shelves))
     }
 
     @Test
