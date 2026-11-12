@@ -513,6 +513,9 @@ private const val QUEUE_FLICK_VELOCITY = 450f
 private val DISMISS_STRIP_HEIGHT = 32.dp
 /** The breathing room above the sleeve, needed twice: once to apply, once to measure past. */
 private val ART_BOX_TOP_PAD = 8.dp
+
+/** Between the foot of the artwork block, or of a panel, and the control deck. */
+private val PANEL_DECK_GAP = 18.dp
 /**
  * How far below the sleeve's top edge the video/audio pill floats.
  *
@@ -897,6 +900,7 @@ private fun SlidingPlayerDeck(
     visible: Boolean,
     reveal: Animatable<Float, AnimationVector1D>,
     modifier: Modifier = Modifier,
+    contentAlignment: Alignment = Alignment.TopStart,
     fadeIn: () -> Boolean = { false },
     content: @Composable () -> Unit,
 ) {
@@ -956,6 +960,7 @@ private fun SlidingPlayerDeck(
                         placeable.placeRelative(0, 0)
                     }
                 },
+            contentAlignment = contentAlignment,
         ) {
             content()
         }
@@ -2247,6 +2252,29 @@ fun NowPlayingScreen(
     // Where the control deck starts on screen, for the swipe down over it that
     // puts the queue or the lyrics away.
     var deckTop by remember { mutableFloatStateOf(Float.MAX_VALUE) }
+    // The lyrics and the queue run on under the control deck, out of focus,
+    // in Glass and Frost (see PanelUnderDeck.kt). Solid blurs nothing, and
+    // there the list still ends at the deck.
+    val underDeckReduceBlur by PlayerSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
+    val underDeckStyle = when {
+        underDeckReduceBlur || !renderEffectBlurSupported -> null
+        LocalPlayerGlass.current != null -> GlassUnderDeck
+        else -> FrostUnderDeck
+    }
+    // The deck's height as it stands, sliding included. Written when the deck
+    // is measured, which is before the panel above it in the same column.
+    var deckHeightPx by remember { mutableIntStateOf(0) }
+    val panelDeckGapPx = with(density) { PANEL_DECK_GAP.roundToPx() }
+    // What a panel has below the room it is given: the gap, then the deck.
+    val underDeckPx: () -> Int = { panelDeckGapPx + deckHeightPx }
+    // The same for the queue's list, which keeps its last rows clear of it.
+    val queueUnderDeck: (() -> Dp)? = remember(density, panelDeckGapPx, underDeckStyle != null) {
+        if (underDeckStyle != null) {
+            { with(density) { (panelDeckGapPx + deckHeightPx).toDp() } }
+        } else {
+            null
+        }
+    }
     // The suppressing Column's own coordinates, to put a pointer's local
     // position into the same space as the two edges above.
     var dismissBandSpace by remember { mutableStateOf<LayoutCoordinates?>(null) }
@@ -3783,7 +3811,7 @@ fun NowPlayingScreen(
                     .weight(1f)
                     .widthIn(max = PLAYER_MAX_WIDTH)
                     .fillMaxWidth()
-                    .padding(top = ART_BOX_TOP_PAD, bottom = 18.dp),
+                    .padding(top = ART_BOX_TOP_PAD, bottom = PANEL_DECK_GAP),
             ) {
                 if (spotifyCanvasPresentation && playerDeckSettledOpen &&
                     maxHeight != spotifyCanvasExpandedTopHeight
@@ -4820,6 +4848,9 @@ fun NowPlayingScreen(
                 // panel, and doesn't then listen for the sleeve leaving the
                 // header — which is its first frame of moving.
                 val lyricsPanelVisible = lyricsOpen && collapseDone
+                // Only with lines to run under it: the "no lyrics" notice and
+                // the skeleton are centred in the room above the deck.
+                val lyricsUnderDeck = underDeckStyle.takeIf { !lyrics.isNullOrEmpty() }
                 if (lyricsPanelVisible || playerPrewarmStage >= 2) {
                         LyricsTranslationMotion(
                             trigger = lyricsTranslation.transition,
@@ -4827,6 +4858,10 @@ fun NowPlayingScreen(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(top = HEADER_HEIGHT)
+                                .then(
+                                    if (lyricsUnderDeck != null) Modifier.runsUnderDeck(underDeckPx)
+                                    else Modifier,
+                                )
                                 // Keep the prepared list measured but completely
                                 // outside hit-testing/drawing until it is needed.
                                 .offset {
@@ -4839,7 +4874,8 @@ fun NowPlayingScreen(
                                 // two places on screen at once, and composing them
                                 // there was what made the collapse stutter.
                                 .graphicsLayer { alpha = if (lyricsPanelVisible) panelFade.value else 0f }
-                                .panelBackSwipe(panelBack.progress),
+                                .panelBackSwipe(panelBack.progress)
+                                .softUnderDeck(lyricsUnderDeck, { deckHeightPx }, PLAYER_GUTTER),
                         ) { particleProgress ->
                             LyricsPanel(
                                 lines = lyrics.orEmpty(),
@@ -4945,6 +4981,10 @@ fun NowPlayingScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(top = HEADER_HEIGHT)
+                            .then(
+                                if (underDeckStyle != null) Modifier.runsUnderDeck(underDeckPx)
+                                else Modifier,
+                            )
                             .offset {
                                 if (queuePanelVisible) IntOffset.Zero else IntOffset(100_000, 0)
                             }
@@ -4961,7 +5001,8 @@ fun NowPlayingScreen(
                                 } else {
                                     0f
                                 }
-                            },
+                            }
+                            .softUnderDeck(underDeckStyle, { deckHeightPx }, PLAYER_GUTTER),
                     ) {
                         InlineQueue(
                             queue = queue,
@@ -4980,6 +5021,7 @@ fun NowPlayingScreen(
                             // The header above the list is the playing track.
                             showNowPlaying = false,
                             recenter = queueRecenter,
+                            underDeck = queueUnderDeck,
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -4991,7 +5033,35 @@ fun NowPlayingScreen(
             // of the player. Whatever is left over above it is the artwork's,
             // which is what keeps this row of controls in the same place on
             // every screen instead of being shoved off the bottom of a tall one.
+            // The wash the deck stands on while a panel runs under it, up and
+            // gone with that panel: the same fade the panel itself is drawn at.
+            val underDeckWash = (if (LocalPlayerInkDark.current) Color.White else Color.Black)
+                .copy(alpha = underDeckStyle?.wash ?: 0f)
+            val underDeckWashAlpha: () -> Float = {
+                when {
+                    underDeckStyle == null -> 0f
+                    lyricsOpen -> if (collapseDone && !lyrics.isNullOrEmpty()) panelFade.value else 0f
+                    queueDragging -> ((queueSlide.floatValue - 0.45f) / 0.55f).coerceIn(0f, 1f)
+                    queueOpen && queueShowing && collapseDone -> panelFade.value
+                    else -> 0f
+                }
+            }
             SlidingPlayerDeck(
+                modifier = if (underDeckStyle != null) {
+                    Modifier
+                        .fillMaxWidth()
+                        .onSizeChanged { deckHeightPx = it.height }
+                        .underDeckWash(underDeckWash, underDeckWashAlpha)
+                        // The panel under the deck is not to be reached through
+                        // it: a press between the controls, or in the gutters
+                        // beside them, stops here and is the deck's as before.
+                        .bleedHorizontally(PLAYER_GUTTER)
+                        .pointerInput(Unit) {}
+                        .padding(horizontal = PLAYER_GUTTER)
+                } else {
+                    Modifier
+                },
+                contentAlignment = Alignment.TopCenter,
                 // A pick owns the screen: the transport is hidden for as long
                 // as it is on, and a scroll that would reveal it is refused
                 // (see [LyricsPanel]'s bottom-half tap), so nothing brings the

@@ -75,6 +75,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Velocity
 import coil3.compose.AsyncImage
@@ -254,6 +255,11 @@ internal fun InlineQueue(
     showNowPlaying: Boolean = true,
     /** Lets the player scroll the list back to where it opened. */
     recenter: QueueRecenter? = null,
+    /**
+     * How much of the list's foot lies under the player's control deck, where
+     * the list runs on under it (see [runsUnderDeck]). Null where it does not.
+     */
+    underDeck: (() -> Dp)? = null,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -337,7 +343,11 @@ internal fun InlineQueue(
                     // drag on itself and slides the whole player away.
                     .nestedScroll(keepScroll)
                     .then(if (collapsePlayerOnScroll) Modifier.nestedScroll(controlsOnScroll) else Modifier),
-                contentPadding = PaddingValues(horizontal = PLAYER_GUTTER),
+                contentPadding = if (underDeck != null) {
+                    remember(underDeck) { underDeckPadding(PLAYER_GUTTER, underDeck) }
+                } else {
+                    PaddingValues(horizontal = PLAYER_GUTTER)
+                },
             ) {
                 if (tracks.history.isNotEmpty()) {
                     item(key = "header-history") {
