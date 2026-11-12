@@ -34,6 +34,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
@@ -89,7 +90,6 @@ import com.music.bitchord.data.model.ROW_ART_PX
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.model.isMatchPending
 import com.music.bitchord.data.model.isMatchMissing
-import androidx.compose.ui.draw.alpha
 import androidx.compose.material3.CircularProgressIndicator
 import com.music.bitchord.data.model.artworkAt
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -564,10 +564,24 @@ private fun SongRowContent(
     // has no match: shown, but not something a tap or a menu can act on.
     val matching = song.isMatchPending
     val unavailable = song.isMatchMissing
+    // 1 while the row waits on its match, easing to 0 once it has one: the
+    // spinner fades out as the track's length and the ⋮ fade in where it was.
+    // A row first drawn already matched starts at 0 and plays nothing.
+    val waiting = animateFloatAsState(
+        targetValue = if (matching) 1f else 0f,
+        animationSpec = tween(MATCH_FADE_MS),
+        label = "song row match",
+    )
+    val spinning by remember { derivedStateOf { waiting.value > 0f } }
+    val dim by animateFloatAsState(
+        targetValue = if (unavailable) 0.45f else 1f,
+        animationSpec = tween(MATCH_FADE_MS),
+        label = "song row unavailable",
+    )
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .alpha(if (unavailable) 0.45f else 1f)
+            .graphicsLayer { alpha = dim }
             .background(activeBackground)
             .longPressMenuClickable(onClick = onClick, onLongClick = onLongPress)
             .contextClick(onMore ?: onLongPress)
@@ -672,33 +686,47 @@ private fun SongRowContent(
                 modifier = Modifier.size(20.dp),
             )
         }
-        if (matching) {
-            Spacer(Modifier.width(8.dp))
-            CircularProgressIndicator(
-                modifier = Modifier.size(16.dp),
-                strokeWidth = 2.dp,
-                color = subtitleColor,
-            )
-        } else {
-            song.durationText?.takeIf { showDuration }?.let {
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.labelMedium,
+        // What ends the row once it is playable is laid out from the start,
+        // unseen under the spinner, so nothing in the row moves when the
+        // match lands.
+        Box(contentAlignment = Alignment.CenterEnd) {
+            Row(
+                modifier = Modifier.graphicsLayer { alpha = 1f - waiting.value },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                song.durationText?.takeIf { showDuration }?.let {
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = subtitleColor,
+                    )
+                }
+                if (trailing != null && !matching && !unavailable && !selectionMode) {
+                    Spacer(Modifier.width(4.dp))
+                    trailing()
+                }
+                // Same sheet the long-press opens, for anyone who doesn't think to hold.
+                if (onMore != null && !unavailable && !selectionMode) {
+                    RowMoreButton(onClick = onMore, enabled = !matching)
+                }
+            }
+            if (spinning) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .padding(start = 8.dp)
+                        .graphicsLayer { alpha = waiting.value }
+                        .size(16.dp),
+                    strokeWidth = 2.dp,
                     color = subtitleColor,
                 )
             }
         }
-        if (trailing != null && !matching && !unavailable && !selectionMode) {
-            Spacer(Modifier.width(4.dp))
-            trailing()
-        }
-        // Same sheet the long-press opens, for anyone who doesn't think to hold.
-        if (onMore != null && !matching && !unavailable && !selectionMode) {
-            RowMoreButton(onClick = onMore)
-        }
     }
 }
+
+/** How long a matched row takes to trade its spinner for its length and ⋮. */
+private const val MATCH_FADE_MS = 320
 
 /**
  * The tick box at the left of a row in a list that is selecting. It opens
@@ -753,6 +781,8 @@ fun RowMoreButton(
     modifier: Modifier = Modifier,
     tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     iconSize: Dp = 20.dp,
+    /** False while the row has nothing to open yet: drawn, but not a button. */
+    enabled: Boolean = true,
 ) {
     Box(
         modifier = modifier
@@ -760,7 +790,7 @@ fun RowMoreButton(
             .size(36.dp)
             .menuAnchor()
             .clip(CircleShape)
-            .clickable(onClick = onClick),
+            .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(

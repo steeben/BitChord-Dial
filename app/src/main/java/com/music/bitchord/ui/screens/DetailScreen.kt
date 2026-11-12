@@ -160,6 +160,7 @@ import com.music.bitchord.data.model.HomeShelf
 import com.music.bitchord.data.model.ShelfItem
 import com.music.bitchord.data.settings.SongSort
 import com.music.bitchord.data.model.Song
+import com.music.bitchord.data.spotify.SPOTIFY_PAGE_PREFIX
 import com.music.bitchord.data.model.SubscriptionState
 import com.music.bitchord.data.model.UiState
 import com.music.bitchord.data.model.artworkAt
@@ -572,6 +573,13 @@ fun DetailScreen(
 ) {
     val rawSongs = (page.songs as? UiState.Success)?.data.orEmpty()
     val songs = remember(rawSongs, songSort) { rawSongs.sortedForDetail(songSort) }
+    // A Spotify playlist swaps each row for its match as it is found. The row
+    // stays the same row through that, artwork included (see [HeldRowArt]).
+    val swapsInPlace = page.browseId.startsWith(SPOTIFY_PAGE_PREFIX)
+    val heldRowArt = remember(page.browseId) { HeldRowArt() }
+    val rowArt = remember(rawSongs, swapsInPlace) {
+        if (swapsInPlace) heldRowArt.over(rawSongs) else emptyMap()
+    }
     // What a numbered row shows regardless of [songSort] — an album's track
     // numbers are the sleeve's own and must not relabel themselves to match
     // wherever a sort put the row.
@@ -1471,7 +1479,7 @@ fun DetailScreen(
                     }
                     itemsIndexed(
                         items = matches,
-                        key = { _, entry -> "${entry.index}_${entry.value.videoId}" },
+                        key = { _, entry -> songRowKey(entry.index, entry.value.videoId, swapsInPlace) },
                     ) { position, entry ->
                         val song = entry.value
                         val isCurrent = song.isSameTrackAs(currentSong)
@@ -1490,7 +1498,9 @@ fun DetailScreen(
                             song = if (numbered) {
                                 song
                             } else {
-                                song.copy(thumbnailUrl = song.thumbnailUrl ?: page.thumbnailUrl)
+                                song.copy(
+                                    thumbnailUrl = rowArt[song.videoId] ?: song.thumbnailUrl ?: page.thumbnailUrl,
+                                )
                             },
                             onClick = {
                                 if (selecting) toggleSelected(song) else onSongClick(queue, position)
