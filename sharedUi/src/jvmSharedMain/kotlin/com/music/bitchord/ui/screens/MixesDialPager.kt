@@ -133,6 +133,10 @@ internal fun MixesDialPager(
         state = state,
         verticalAlignment = Alignment.Top,
         key = { it },
+        // The page out of view is kept made up beside the one in view, so the
+        // mixes' covers and tags are loaded before the swipe that shows them
+        // rather than coming in one by one as the page slides over.
+        beyondViewportPageCount = 1,
         modifier = Modifier.fillMaxWidth(),
     ) { page ->
         // Between the dials and this pager: see [DialFlingHandoff].
