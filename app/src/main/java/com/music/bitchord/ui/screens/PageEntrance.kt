@@ -44,6 +44,41 @@ internal object PageEntrance {
     fun plays(slot: Int, startedAtMs: Long?, nowMs: Long): Boolean =
         startedAtMs != null && slot in 0 until SLOTS && nowMs - startedAtMs in 0 until JOIN_WINDOW_MS
 
+    /**
+     * One playing of the entrance, begun at [startedAtMs], and when each of
+     * its slots sets off.
+     *
+     * A slot keeps the time it was given however many times it is asked: the
+     * row standing in it can be replaced while it is still coming in (a
+     * Spotify track swapped for its YouTube Music match is a new row to the
+     * list), and what replaces it carries on from where the first had got to
+     * rather than starting over.
+     */
+    class Run(val startedAtMs: Long) {
+        private val starts = HashMap<Int, Long>()
+
+        /**
+         * When the item in [slot], drawn at [nowMs], sets off, or null when
+         * it has no part in this entrance and is simply there (see [plays]).
+         */
+        @Synchronized
+        fun startOf(slot: Int, nowMs: Long): Long? {
+            starts[slot]?.let { return it }
+            if (!plays(slot, startedAtMs, nowMs)) return null
+            return (nowMs + delayMs(slot)).also { starts[slot] = it }
+        }
+    }
+
+    /**
+     * How far through its [DURATION_MS] a slot that sets off at [startAtMs]
+     * is at [nowMs], from 0 to 1 before any easing. A slot with no start has
+     * no part in the entrance and is all the way in.
+     */
+    fun fraction(startAtMs: Long?, nowMs: Long): Float {
+        if (startAtMs == null) return 1f
+        return ((nowMs - startAtMs).toFloat() / DURATION_MS).coerceIn(0f, 1f)
+    }
+
     /** From the first slot starting to the last one settling. */
     val totalMs: Long get() = delayMs(SLOTS - 1) + DURATION_MS
 

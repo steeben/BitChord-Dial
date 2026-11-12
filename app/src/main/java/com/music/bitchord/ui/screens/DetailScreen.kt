@@ -339,15 +339,15 @@ private val EntranceEasing = CubicBezierEasing(0.22f, 0.61f, 0.36f, 1f)
 
 /**
  * Brings this in as part of the page's entrance: after the slots above it,
- * easing up into place while it fades in. [startedAt] is when the entrance
- * began, null when this showing of the page has none.
+ * easing up into place while it fades in. [run] is the entrance it
+ * belongs to, null when this showing of the page has none.
  *
  * Decided once, when the item is first drawn. One drawn later — scrolled to,
  * or left standing by a filter — is past the entrance and is simply there.
  */
 @Composable
-private fun Modifier.pageEntrance(slot: Int, startedAt: Long?): Modifier {
-    val progress = rememberEntrance(slot, startedAt)
+private fun Modifier.pageEntrance(slot: Int, run: PageEntrance.Run?): Modifier {
+    val progress = rememberEntrance(slot, run)
     val rise = with(LocalDensity.current) { ENTRANCE_RISE.toPx() }
     return graphicsLayer {
         val shown = progress.value
@@ -360,22 +360,34 @@ private fun Modifier.pageEntrance(slot: Int, startedAt: Long?): Modifier {
 }
 
 /**
- * How far along slot [slot] is in the entrance that began at [startedAt]:
- * 0 until its turn, 1 once settled, and 1 from the start when it has no part
- * in it (see [PageEntrance.plays]).
+ * How far along slot [slot] is in the entrance [run]: 0 until its turn, 1
+ * once settled, and 1 from the start when it has no part in it (see
+ * [PageEntrance.Run.startOf]).
+ *
+ * Read off the run's own clock rather than counted from when this was first
+ * drawn, so a row that is swapped for another while it is coming in — a
+ * Spotify track giving way to its match — carries on from where the first
+ * had got to instead of coming in a second time.
  */
 @Composable
-private fun rememberEntrance(slot: Int, startedAt: Long?): State<Float> {
+private fun rememberEntrance(slot: Int, run: PageEntrance.Run?): State<Float> {
+    val startAt = remember { run?.startOf(slot, System.currentTimeMillis()) }
     val progress = remember {
-        Animatable(if (PageEntrance.plays(slot, startedAt, System.currentTimeMillis())) 0f else 1f)
+        mutableFloatStateOf(entranceShown(startAt, System.currentTimeMillis()))
     }
     LaunchedEffect(progress) {
-        if (progress.value < 1f) {
-            delay(PageEntrance.delayMs(slot))
-            progress.animateTo(1f, tween(PageEntrance.DURATION_MS, easing = EntranceEasing))
+        while (progress.floatValue < 1f) {
+            withFrameNanos { }
+            progress.floatValue = entranceShown(startAt, System.currentTimeMillis())
         }
     }
-    return progress.asState()
+    return progress
+}
+
+/** How much of a slot that sets off at [startAt] is in at [now], eased. */
+private fun entranceShown(startAt: Long?, now: Long): Float {
+    val fraction = PageEntrance.fraction(startAt, now)
+    return if (fraction >= 1f) 1f else EntranceEasing.transform(fraction)
 }
 
 /**
@@ -387,17 +399,17 @@ private fun rememberEntrance(slot: Int, startedAt: Long?): State<Float> {
 @Composable
 private fun PlaceheldEntrance(
     slot: Int,
-    startedAt: Long?,
+    run: PageEntrance.Run?,
     placeheld: Boolean,
     placeholder: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     if (!placeheld) {
-        Column(modifier.pageEntrance(slot, startedAt)) { content() }
+        Column(modifier.pageEntrance(slot, run)) { content() }
         return
     }
-    val progress = rememberEntrance(slot, startedAt)
+    val progress = rememberEntrance(slot, run)
     val fading by remember { derivedStateOf { progress.value < 1f } }
     Box(modifier) {
         if (fading) {
@@ -422,8 +434,8 @@ private fun PlaceheldEntrance(
  * Takes no room, so nothing under it moves when they are gone.
  */
 @Composable
-private fun LeftoverPlaceholders(firstRow: Int, count: Int, firstSlot: Int, startedAt: Long?) {
-    val last = rememberEntrance(firstSlot + count - 1, startedAt)
+private fun LeftoverPlaceholders(firstRow: Int, count: Int, firstSlot: Int, run: PageEntrance.Run?) {
+    val last = rememberEntrance(firstSlot + count - 1, run)
     val fading by remember { derivedStateOf { last.value < 1f } }
     if (!fading) return
     Column(
@@ -433,7 +445,7 @@ private fun LeftoverPlaceholders(firstRow: Int, count: Int, firstSlot: Int, star
         },
     ) {
         repeat(count) { i ->
-            val progress = rememberEntrance(firstSlot + i, startedAt)
+            val progress = rememberEntrance(firstSlot + i, run)
             SongRowSkeleton(
                 index = firstRow + i,
                 modifier = Modifier.graphicsLayer { alpha = PLACEHOLDER_ALPHA * (1f - progress.value) },
@@ -1046,9 +1058,9 @@ fun DetailScreen(
     // again on coming back to the page, nor when a refresh reloads it.
     val songsLoaded = page.songs is UiState.Success
     val reduceAnimation by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
-    val entranceAt = remember(page.browseId, songsLoaded) {
+    val entrance = remember(page.browseId, songsLoaded) {
         if (songsLoaded && !reduceAnimation && PageEntrance.claim(listState)) {
-            System.currentTimeMillis()
+            PageEntrance.Run(System.currentTimeMillis())
         } else {
             null
         }
@@ -1060,7 +1072,7 @@ fun DetailScreen(
         PageEntrance.placeholderRows(page.expectedSongs ?: PageEntrance.trackCountIn(page.subtitle))
     }
     // The real things take their placeholders' places as part of the entrance.
-    val placeheld = hadPlaceholders && entranceAt != null
+    val placeheld = hadPlaceholders && entrance != null
 
     AnimatedContent(
         targetState = activeShelf,
@@ -1290,7 +1302,7 @@ fun DetailScreen(
             val topRelease = if (isArtist && !artistSearch) shownSections.topRelease() else null
             if (topRelease != null) {
                 item(key = "top-release") {
-                    Box(Modifier.pageEntrance(0, entranceAt)) {
+                    Box(Modifier.pageEntrance(0, entrance)) {
                     TopReleaseCard(
                         item = topRelease,
                         palette = palette,
@@ -1325,7 +1337,7 @@ fun DetailScreen(
                 if (!showAbout) return
                 item(key = "about") {
                     // Clear of the last shelf above it.
-                    Box(Modifier.pageEntrance(slot, entranceAt).padding(top = if (isArtist) 28.dp else 0.dp)) {
+                    Box(Modifier.pageEntrance(slot, entrance).padding(top = if (isArtist) 28.dp else 0.dp)) {
                     AboutSection(
                         title = stringResource(
                             if (isArtist) R.string.about_artist else R.string.about_album,
@@ -1401,7 +1413,7 @@ fun DetailScreen(
                         val top = if (localOnly) artistSongs else artistSongs.take(MAX_ARTIST_SONGS)
                         PlaceheldEntrance(
                             slot = artistSlot,
-                            startedAt = entranceAt,
+                            run = entrance,
                             placeheld = placeheld,
                             placeholder = { ArtistTopSongsSkeleton() },
                         ) {
@@ -1461,7 +1473,7 @@ fun DetailScreen(
                         // as the placeholder fades out.
                         PlaceheldEntrance(
                             slot = rowSlot + position,
-                            startedAt = entranceAt,
+                            run = entrance,
                             placeheld = placeheld && position < placeholderRows,
                             placeholder = { SongRowSkeleton(index = position) },
                         ) {
@@ -1513,7 +1525,7 @@ fun DetailScreen(
                                 firstRow = matches.size,
                                 count = leftover,
                                 firstSlot = rowSlot + matches.size,
-                                startedAt = entranceAt,
+                                run = entrance,
                             )
                         }
                     }
@@ -1526,7 +1538,7 @@ fun DetailScreen(
                 // Under the rows, so only a short playlist has these in its entrance.
                 val suggestedSlot = rowSlot + matches.size
                 item(key = "suggested-heading") {
-                    Box(Modifier.pageEntrance(suggestedSlot, entranceAt)) {
+                    Box(Modifier.pageEntrance(suggestedSlot, entrance)) {
                         SectionHeading(stringResource(R.string.suggested), palette)
                     }
                 }
@@ -1534,7 +1546,7 @@ fun DetailScreen(
                     suggested,
                     key = { _, song -> "suggested-${song.videoId}" },
                 ) { index, song ->
-                    Column(Modifier.pageEntrance(suggestedSlot + 1 + index, entranceAt)) {
+                    Column(Modifier.pageEntrance(suggestedSlot + 1 + index, entrance)) {
                     SuggestedSongRow(
                         song = song,
                         palette = palette,
@@ -1565,7 +1577,7 @@ fun DetailScreen(
                 }
                 PlaceheldEntrance(
                     slot = shelfSlot + shelfIndex,
-                    startedAt = entranceAt,
+                    run = entrance,
                     placeheld = placeheld && shelfIndex == 0,
                     placeholder = { ArtistShelfSkeleton() },
                     modifier = Modifier.padding(top = 22.dp),

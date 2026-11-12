@@ -100,4 +100,39 @@ class PageEntranceTest {
         assertEquals(null, PageEntrance.trackCountIn("Album • Some Artist • 2019"))
         assertEquals(null, PageEntrance.trackCountIn("Single Ladies • 2008"))
     }
+
+    @Test
+    fun `a row swapped for another mid entrance carries on rather than starting over`() {
+        val run = PageEntrance.Run(startedAtMs = 1_000)
+        val first = run.startOf(slot = 2, nowMs = 1_010)
+        assertEquals(1_010 + PageEntrance.delayMs(2), first)
+        // The Spotify row gives way to its match while still coming in.
+        assertEquals(first, run.startOf(slot = 2, nowMs = 1_300))
+        assertTrue(PageEntrance.fraction(first, 1_300) > 0f)
+    }
+
+    @Test
+    fun `a row swapped after the entrance is over is simply there`() {
+        val run = PageEntrance.Run(startedAtMs = 1_000)
+        val first = run.startOf(slot = 0, nowMs = 1_000)
+        val later = run.startOf(slot = 0, nowMs = 1_000 + PageEntrance.totalMs + 5_000)
+        assertEquals(first, later)
+        assertEquals(1f, PageEntrance.fraction(later, 1_000 + PageEntrance.totalMs + 5_000))
+    }
+
+    @Test
+    fun `a slot first drawn after the entrance has no part in it`() {
+        val run = PageEntrance.Run(startedAtMs = 1_000)
+        assertEquals(null, run.startOf(slot = 3, nowMs = 1_000 + PageEntrance.JOIN_WINDOW_MS))
+        assertEquals(null, run.startOf(slot = PageEntrance.SLOTS, nowMs = 1_000))
+        assertEquals(1f, PageEntrance.fraction(null, 1_000))
+    }
+
+    @Test
+    fun `a slot waits its turn then runs its length`() {
+        val start = PageEntrance.Run(1_000).startOf(slot = 4, nowMs = 1_000)!!
+        assertEquals(0f, PageEntrance.fraction(start, 1_000))
+        assertEquals(0.5f, PageEntrance.fraction(start, start + PageEntrance.DURATION_MS / 2))
+        assertEquals(1f, PageEntrance.fraction(start, start + PageEntrance.DURATION_MS))
+    }
 }
