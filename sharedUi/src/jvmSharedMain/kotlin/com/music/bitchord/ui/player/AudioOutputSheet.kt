@@ -37,7 +37,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -75,11 +78,14 @@ internal fun AudioOutputSheet(
     hazeState: HazeState,
     accountName: String?,
     onDismiss: () -> Unit,
-    onOpenPipeline: () -> Unit,
+    /** Handed where the row is on screen, for the pipeline's window to grow out of. */
+    onOpenPipeline: (Offset?) -> Unit,
     onOpenCast: () -> Unit,
     modifier: Modifier = Modifier,
     /** See [PlayerDrawer]'s: false while the pipeline or the cast picker is up over it. */
     handlesBack: Boolean = true,
+    /** See [PlayerDrawer]'s: true while the pipeline or the cast picker is up over it. */
+    hidden: Boolean = false,
 ) {
     val outputs = rememberAudioOutputs()
     val cast by PlayerPlatform.host.castState.collectAsStateWithLifecycle()
@@ -90,6 +96,7 @@ internal fun AudioOutputSheet(
         onDismiss = onDismiss,
         modifier = modifier,
         handlesBack = handlesBack,
+        hidden = hidden,
     ) {
         // Flat, with the playing one marked, rather than folded behind a
         // chevron. There are two outputs on a phone most of the time; one
@@ -127,14 +134,16 @@ internal fun AudioOutputSheet(
  * before anyone taps in for the rest of the chain.
  */
 @Composable
-private fun AudioPipelineRow(onClick: () -> Unit) {
+private fun AudioPipelineRow(onClick: (Offset?) -> Unit) {
     val haptics = rememberHaptics()
+    var rowCenter by remember { mutableStateOf<Offset?>(null) }
     val outputFormat by PlayerPlatform.host.outputFormat.collectAsStateWithLifecycle()
     val subtitle = outputFormat.summary
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .onGloballyPositioned { rowCenter = it.boundsInWindow().center }
             .clip(ROW_SHAPE)
             .background(Color.White.copy(alpha = 0.05f))
             .clickable(
@@ -142,7 +151,7 @@ private fun AudioPipelineRow(onClick: () -> Unit) {
                 indication = null,
             ) {
                 haptics.play(Haptic.Select)
-                onClick()
+                onClick(rowCenter)
             }
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,

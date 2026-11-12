@@ -6607,17 +6607,19 @@ private fun BitChordApp(
                 // The player's own backdrop, for its buttons' liquid glass
                 // (the app's would show the pages behind its window).
                 val playerBackdrop = rememberLayerBackdrop()
-                val playerGlass = remember(playerBackdrop) {
-                    com.music.bitchord.ui.player.AppPlayerGlass(playerBackdrop)
-                }
                 // The whole player as it is drawn, controls, title and
-                // sleeve included, for the ⋯ menu's glass below. The
-                // buttons' own backdrop holds only what is behind them,
-                // so without a Canvas the menu bent a blurred wash of
-                // the background and read as solid.
+                // sleeve included, for the ⋯ menu's glass below and for the
+                // player's own drawers and popups. The buttons' own backdrop
+                // holds only what is behind them, so without a Canvas a menu
+                // bent a blurred wash of the background and read as solid.
+                // Recorded by the player itself, around everything but its
+                // drawers: they bend it, so they cannot be in it.
                 val playerMenuBackdrop = rememberLayerBackdrop()
+                val playerGlass = remember(playerBackdrop, playerMenuBackdrop) {
+                    com.music.bitchord.ui.player.AppPlayerGlass(playerBackdrop, playerMenuBackdrop)
+                }
                 val playerSleeveTone = remember { com.music.bitchord.ui.player.PlayerSleeveTone() }
-                Box(if (glassSamplesBackdrop) Modifier.layerBackdrop(playerMenuBackdrop) else Modifier) {
+                Box {
                     CompositionLocalProvider(
                         LocalPlayerDock provides activeDock,
                         // The player's glass follows the Liquid Glass options,

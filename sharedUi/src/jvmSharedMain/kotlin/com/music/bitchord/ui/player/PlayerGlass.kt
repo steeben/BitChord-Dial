@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 
 /**
@@ -23,6 +24,15 @@ import androidx.compose.ui.graphics.Color
 interface PlayerGlass {
     /** Records what is drawn by [modifier]'s node, for [surface] to see through. */
     fun source(modifier: Modifier): Modifier
+
+    /**
+     * Records the whole player as it is drawn by [modifier]'s node, controls,
+     * title and sleeve included, for a [surface] that is a menu to see
+     * through. [source] holds only what is behind the buttons, so a drawer
+     * bending that showed a wash of the background with the controls gone.
+     * The drawers themselves are drawn outside the node, never inside it.
+     */
+    fun menuSource(modifier: Modifier): Modifier = modifier
 
     /**
      * A glass surface in [shape] on [modifier], as the app's glass options
@@ -46,6 +56,17 @@ interface PlayerGlass {
 }
 
 val LocalPlayerGlass = staticCompositionLocalOf<PlayerGlass?> { null }
+
+/** [PlayerGlass.menuSource] on this node, where the player has glass at all. */
+@Composable
+internal fun Modifier.playerMenuSource(): Modifier = LocalPlayerGlass.current?.menuSource(this) ?: this
+
+/**
+ * Where on screen (window coordinates) the thing that opened a popup over the
+ * player was tapped, for the popup to grow out of and shrink back into. Null
+ * when there is no such place: the popup then grows from its own middle.
+ */
+val LocalPlayerPopupOrigin = staticCompositionLocalOf<Offset?> { null }
 
 /**
  * Whether the player's sleeve is bright enough that its text went dark

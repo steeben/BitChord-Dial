@@ -13,8 +13,18 @@ import com.music.bitchord.ui.components.liquidGlass
  * The app's liquid glass, aimed at the player's own backdrop rather than the
  * pages behind the player's window. See [PlayerGlass].
  */
-class AppPlayerGlass(private val backdrop: LayerBackdrop) : PlayerGlass {
+class AppPlayerGlass(
+    private val backdrop: LayerBackdrop,
+    /**
+     * The whole player, for its drawers and popups: [backdrop] is only what
+     * is behind the buttons. Null where there is one backdrop for both.
+     */
+    private val menuBackdrop: LayerBackdrop? = null,
+) : PlayerGlass {
     override fun source(modifier: Modifier): Modifier = modifier.layerBackdrop(backdrop)
+
+    override fun menuSource(modifier: Modifier): Modifier =
+        if (menuBackdrop != null) modifier.layerBackdrop(menuBackdrop) else modifier
 
     @Composable
     override fun surface(
@@ -24,7 +34,7 @@ class AppPlayerGlass(private val backdrop: LayerBackdrop) : PlayerGlass {
         menu: Boolean,
         darkGround: Boolean?,
     ): Modifier = if (menu) {
-        modifier.glassMenu(shape, backdrop = backdrop, underlay = underlay, dark = darkGround)
+        modifier.glassMenu(shape, backdrop = menuBackdrop ?: backdrop, underlay = underlay, dark = darkGround)
     } else {
         modifier.liquidGlass(
             shape,
