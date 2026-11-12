@@ -55,6 +55,7 @@ import androidx.media3.session.MediaController
 import com.music.bitchord.R
 import com.music.bitchord.data.CanvasAudioFixes
 import com.music.bitchord.data.LocalLinks
+import com.music.bitchord.data.SongDetailChoices
 import com.music.bitchord.data.SongMetadataFixes
 import com.music.bitchord.data.VideoCanvases
 import com.music.bitchord.data.YtMusicRepository
@@ -341,43 +342,68 @@ fun SongFixHost(
                 }
                 onNotice(context.getString(R.string.song_fix_song_picked))
             }
-            SongFixRequests.Kind.DETAILS -> SearchPicker(
-                title = stringResource(R.string.song_fix_find_details),
-                about = stringResource(R.string.song_fix_find_details_about),
-                song = open.song,
-                current = SongMetadataFixes.fixOf(open.song)?.details?.matchedVideoId,
-                search = YtMusicRepository::searchSongs,
-            ) { picked ->
-                dismiss()
-                scope.launch {
-                    // A search row can leave off the album and artist ids that
-                    // Open album and Open artist need.
-                    val match = runCatching { LocalLinks.withIds(picked) }.getOrDefault(picked)
-                    val c = playing(open.song)
-                    val base = c?.currentMediaItem?.toSong() ?: open.song
-                    val renamed = SongMetadataFixes.fix(base, match) ?: return@launch
-                    // A file is tied to the track too, which is what its menu's
-                    // Open artist and Open album follow.
-                    if (LocalLinks.keyOf(open.song) != null) LocalLinks.link(open.song, match)
-                    c?.retagCurrent(renamed)
-                    val file = FileRetagger.fileOf(base).takeIf { AppSettings.writeSongFixToFile.value }
-                    if (file == null) {
-                        onNotice(context.getString(R.string.song_fix_details_picked))
-                        return@launch
-                    }
-                    val outcome = FileRetagger.write(context, file, renamed, match.thumbnailUrl)
-                    if (outcome is FileRetagger.Outcome.NeedsAccess) {
-                        awaitingAccess?.let { FileRetagger.discard(it.first) }
-                        awaitingAccess = outcome.pending to renamed
-                        runCatching {
-                            askAccess.launch(IntentSenderRequest.Builder(outcome.sender).build())
-                        }.onFailure {
-                            awaitingAccess = null
-                            FileRetagger.discard(outcome.pending)
-                            report(FileRetagger.Outcome.Denied, renamed)
+            SongFixRequests.Kind.DETAILS -> {
+                // The song picked from the search, while its details are
+                // compared with the file's own.
+                var comparing by remember(open) { mutableStateOf<Song?>(null) }
+                val found = comparing
+                if (found == null) {
+                    SearchPicker(
+                        title = stringResource(R.string.song_fix_find_details),
+                        about = stringResource(R.string.song_fix_find_details_about),
+                        song = open.song,
+                        current = SongMetadataFixes.fixOf(open.song)?.details?.matchedVideoId,
+                        search = YtMusicRepository::searchSongs,
+                    ) { picked -> comparing = picked }
+                } else {
+                    val base = playing(open.song)?.currentMediaItem?.toSong() ?: open.song
+                    SongDetailCompare(
+                        // A song fixed before is compared as it read before that.
+                        initial = remember(found) {
+                            SongDetailChoices.of(
+                                SongMetadataFixes.fixOf(base)?.original ?: SongMetadataFixes.Details.of(base),
+                                found,
+                            )
+                        },
+                        fromFile = FileRetagger.fileOf(base) != null,
+                        canSaveToFile = FileRetagger.fileOf(base) != null,
+                        onBack = { comparing = null },
+                    ) { choices ->
+                        dismiss()
+                        scope.launch {
+                            // A search row can leave off the album and artist ids that
+                            // Open album and Open artist need.
+                            val match = runCatching { LocalLinks.withIds(found) }.getOrDefault(found)
+                            val c = playing(open.song)
+                            val playingNow = c?.currentMediaItem?.toSong() ?: open.song
+                            val renamed = SongMetadataFixes.fix(playingNow, choices.resolve(match)) ?: return@launch
+                            // A file is tied to the track too, which is what its menu's
+                            // Open artist and Open album follow.
+                            if (LocalLinks.keyOf(open.song) != null) LocalLinks.link(open.song, match)
+                            c?.retagCurrent(renamed)
+                            val file = FileRetagger.fileOf(playingNow).takeIf { AppSettings.writeSongFixToFile.value }
+                            if (file == null) {
+                                onNotice(context.getString(R.string.song_fix_details_picked))
+                                return@launch
+                            }
+                            // Only the found cover is fetched and written: keeping the
+                            // file's own leaves the picture in it alone.
+                            val cover = match.thumbnailUrl.takeIf { choices.useFoundCover }
+                            val outcome = FileRetagger.write(context, file, renamed, cover)
+                            if (outcome is FileRetagger.Outcome.NeedsAccess) {
+                                awaitingAccess?.let { FileRetagger.discard(it.first) }
+                                awaitingAccess = outcome.pending to renamed
+                                runCatching {
+                                    askAccess.launch(IntentSenderRequest.Builder(outcome.sender).build())
+                                }.onFailure {
+                                    awaitingAccess = null
+                                    FileRetagger.discard(outcome.pending)
+                                    report(FileRetagger.Outcome.Denied, renamed)
+                                }
+                            } else {
+                                report(outcome, renamed)
+                            }
                         }
-                    } else {
-                        report(outcome, renamed)
                     }
                 }
             }
