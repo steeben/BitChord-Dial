@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -32,6 +33,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -300,6 +302,12 @@ fun SongFixHost(
     val dismiss = { SongFixRequests.request.value = null }
     SlideDownBottomSheet(
         onDismissRequest = dismiss,
+        // Straight to its full height: with a half-open stop the sheet opened
+        // small, and fell back to it when a pick changed what it held.
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        // The searches and the compare page take the screen; the short list of
+        // sources stays as tall as it is.
+        fullScreen = open.kind != SongFixRequests.Kind.SOURCE,
         containerColor = MaterialTheme.colorScheme.background,
         // Opened from the player's menu as often as from a page: glass would
         // show the page behind the player rather than the player.
@@ -448,7 +456,7 @@ private fun SearchPicker(
         found = null
         found = runCatching { search(asked).getOrThrow() }
     }
-    Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+    Column(Modifier.fillMaxSize().padding(bottom = 24.dp)) {
         Header(title, about)
         PillTextField(
             value = query,
@@ -464,7 +472,7 @@ private fun SearchPicker(
             result.isFailure || result.getOrNull().isNullOrEmpty() -> Message(
                 stringResource(if (result.isFailure) R.string.song_fix_search_failed else R.string.song_fix_search_none),
             )
-            else -> Column(Modifier.heightIn(max = 480.dp).verticalScroll(rememberScrollState())) {
+            else -> Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                 result.getOrThrow().forEach { row ->
                     SongRow(
                         song = row,

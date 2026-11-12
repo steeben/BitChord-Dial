@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -132,7 +133,7 @@ internal fun SongDetailCompare(
         if (choice.useFound == foundSide) edit(field, foundSide) else set(field, choice.pick(foundSide))
     }
 
-    Column(Modifier.fillMaxWidth().imePadding().padding(bottom = 24.dp)) {
+    Column(Modifier.fillMaxSize().imePadding().padding(bottom = 24.dp)) {
         Row(
             Modifier.fillMaxWidth().padding(start = 4.dp, end = PAGE_GUTTER),
             verticalAlignment = Alignment.CenterVertically,
@@ -167,7 +168,8 @@ internal fun SongDetailCompare(
         )
         Column(
             Modifier
-                .weight(1f, fill = false)
+                // The rest of the screen, so the switch and the button stay at the foot.
+                .weight(1f)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = PAGE_GUTTER),
         ) {

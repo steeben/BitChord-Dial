@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.BottomSheetDefaults
@@ -31,7 +32,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.findRootCoordinates
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.data.settings.AppSettings
@@ -66,6 +69,9 @@ fun SlideDownBottomSheet(
     containerColor: Color = BottomSheetDefaults.ContainerColor,
     dragHandle: @Composable (() -> Unit)? = { BottomSheetDefaults.DragHandle() },
     glass: Boolean = true,
+    // A sheet that is always the whole screen below the status bar, however
+    // much it holds. Give it a [sheetState] that skips the half-open stop.
+    fullScreen: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
@@ -79,6 +85,28 @@ fun SlideDownBottomSheet(
     // sheet actually on screen can be told from the part below the fold.
     var windowHeight by remember { mutableIntStateOf(0) }
     var sheetHeight by remember { mutableIntStateOf(0) }
+    // Read out here, in the app's own window, where the bar is always reported.
+    val statusBarTop = WindowInsets.statusBars.getTop(LocalDensity.current)
+    // The handle and the insets go inside the sheet when it draws its own
+    // surface to the full height, as they do on glass.
+    val ownChrome = useGlass || fullScreen
+    // Exactly the window less the status bar. A sheet left to its content
+    // changes height as the content does: near full height its top slips
+    // under the status bar and back, and M3 re-seats it on every change.
+    val fill = if (fullScreen) {
+        Modifier.layout { measurable, constraints ->
+            if (!constraints.hasBoundedHeight) {
+                val placeable = measurable.measure(constraints)
+                layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+            } else {
+                val height = (constraints.maxHeight - statusBarTop).coerceAtLeast(0)
+                val placeable = measurable.measure(constraints.copy(minHeight = height, maxHeight = height))
+                layout(placeable.width, height) { placeable.place(0, 0) }
+            }
+        }
+    } else {
+        Modifier
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
@@ -94,8 +122,8 @@ fun SlideDownBottomSheet(
         scrimColor = scrim,
         // On glass the handle and the insets move inside the glass, so the
         // glass runs the sheet's whole height, under the navigation bar too.
-        dragHandle = if (useGlass) null else dragHandle,
-        contentWindowInsets = if (useGlass) {
+        dragHandle = if (ownChrome) null else dragHandle,
+        contentWindowInsets = if (ownChrome) {
             { WindowInsets(0, 0, 0, 0) }
         } else {
             { BottomSheetDefaults.windowInsets }
@@ -128,14 +156,21 @@ fun SlideDownBottomSheet(
                 throw cancelled
             }
         }
-        if (useGlass) {
+        if (ownChrome) {
             Column(
                 Modifier
                     .fillMaxWidth()
-                    // Over the sheet's scrim, which the backdrop doesn't
-                    // record, and frosted at least enough that the page's
-                    // text doesn't come through sharp behind the rows.
-                    .glassMenu(SheetShape, underlay = scrim, minBlurDp = SHEET_MIN_BLUR_DP)
+                    .then(fill)
+                    .then(
+                        if (useGlass) {
+                            // Over the sheet's scrim, which the backdrop doesn't
+                            // record, and frosted at least enough that the page's
+                            // text doesn't come through sharp behind the rows.
+                            Modifier.glassMenu(SheetShape, underlay = scrim, minBlurDp = SHEET_MIN_BLUR_DP)
+                        } else {
+                            Modifier
+                        },
+                    )
                     .windowInsetsPadding(BottomSheetDefaults.windowInsets),
             ) {
                 if (dragHandle != null) {
