@@ -4905,9 +4905,9 @@ private fun BitChordApp(
                                 SegmentedControl(
                                     options = listOf(
                                         stringResource(R.string.search_source_youtube),
+                                        stringResource(R.string.spotify),
                                         stringResource(R.string.library),
                                         stringResource(R.string.search_source_addons),
-                                        stringResource(R.string.spotify),
                                     ),
                                     selectedIndex = searchSource.ordinal,
                                     onSelect = { index -> onSearchSourceChange(SearchSource.entries[index]) },
@@ -4916,6 +4916,8 @@ private fun BitChordApp(
                             },
                             searchingLibrary = searchSource == SearchSource.LIBRARY,
                             libraryResults = libraryResults,
+                            libraryArtists = viewModel.libraryArtistResults.collectAsStateWithLifecycle().value,
+                            onLibraryArtistClick = viewModel::openLibraryArtist,
                             searchingAddons = searchSource == SearchSource.ADDONS,
                             addonResults = addonResults,
                             searchingSpotify = searchSource == SearchSource.SPOTIFY,

@@ -168,6 +168,9 @@ fun SearchScreen(
     spotifyResults: UiState<List<Song>>? = null,
     /** The Library source's tracks for [query]; null while nothing is typed. */
     libraryResults: UiState<List<Song>>? = null,
+    /** The Library source's artists for [query], listed above its tracks; see [onLibraryArtistClick]. */
+    libraryArtists: List<BrowseItem> = emptyList(),
+    onLibraryArtistClick: (BrowseItem) -> Unit = {},
     /** Files on the device are a running order to play through, not a station seed. */
     onLibrarySongClick: (List<Song>, Int) -> Unit = onSongClick,
     /**
@@ -273,6 +276,8 @@ fun SearchScreen(
                         searchingAddons -> addonResults
                         else -> libraryResults
                     },
+                    artists = if (searchingLibrary && !searchingAddons && !searchingSpotify) libraryArtists else emptyList(),
+                    onArtistClick = onLibraryArtistClick,
                     addons = searchingAddons,
                     spotify = searchingSpotify,
                     addonHistory = addonHistory,
@@ -433,13 +438,16 @@ private fun searchSections(rows: List<SearchResult>, filter: SearchFilter): List
 }
 
 /**
- * The Library source's page: the Local Music folder's tracks that match, as
- * plain song rows. An artist or album hit needs no row of its own — every
- * track under that name matches too, so they are already here.
+ * The Library source's page: the Local Music folder's artists whose name
+ * matches, each opening their page, then its tracks that match as plain song
+ * rows. An album hit needs no row of its own — every track on it matches too,
+ * so they are already here. The Addons and Spotify sources pass no [artists].
  */
 private fun LazyListScope.librarySearchResults(
     query: String,
     results: UiState<List<Song>>?,
+    artists: List<BrowseItem> = emptyList(),
+    onArtistClick: (BrowseItem) -> Unit = {},
     addons: Boolean,
     spotify: Boolean = false,
     addonHistory: List<String>,
@@ -483,6 +491,20 @@ private fun LazyListScope.librarySearchResults(
         } else {
             val tracks = results.data
             val isCurrentRow = playingRowMatcher(tracks, currentSong)
+            if (artists.isNotEmpty()) {
+                item(key = "library:artists-header") { LibrarySectionTitle("Artists") }
+                itemsIndexed(artists, key = { _, artist -> "library_artist_${artist.browseId}" }) { index, artist ->
+                    BrowseRow(item = artist, onClick = { onArtistClick(artist) })
+                    if (index < artists.lastIndex) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = ROW_DIVIDER_INSET),
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outline,
+                        )
+                    }
+                }
+                item(key = "library:songs-header") { LibrarySectionTitle("Songs") }
+            }
             itemsIndexed(tracks, key = { index, song ->
                 val prefix = when {
                     spotify -> "spotify"
@@ -514,7 +536,17 @@ private fun LazyListScope.librarySearchResults(
     }
 }
 
-/** The All response carries its highest-confidence music hit as a promoted card. */
+/** A section's name in the Library source's results, set as YouTube's sections are. */
+@Composable
+private fun LibrarySectionTitle(title: String) {
+    Text(
+        text = title,
+        modifier = Modifier.padding(start = PAGE_GUTTER, end = PAGE_GUTTER, top = 16.dp, bottom = 6.dp),
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.onSurface,
+    )
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TopResultCard(

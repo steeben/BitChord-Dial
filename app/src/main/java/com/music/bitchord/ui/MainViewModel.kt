@@ -121,6 +121,10 @@ import com.music.bitchord.data.AlbumArtChoices
 import com.music.bitchord.data.DuplicateGroup
 import com.music.bitchord.data.ArtistOnDevice
 import com.music.bitchord.data.DeviceArtists
+import com.music.bitchord.data.LibraryArtists
+import com.music.bitchord.data.canvas.AppleArtistArtRepository
+import com.music.bitchord.data.model.BrowseItem
+import kotlinx.coroutines.flow.map
 import com.music.bitchord.data.LibraryDuplicates
 import com.music.bitchord.data.LocalLinks
 import com.music.bitchord.data.settings.LibrarySource
@@ -134,7 +138,7 @@ import java.util.concurrent.atomic.AtomicLong
  * What the Search tab searches: YouTube Music, the Local Music folder on this
  * device, the enabled addons, or Spotify's catalogue (played via YouTube Music).
  */
-enum class SearchSource { YOUTUBE, LIBRARY, ADDONS, SPOTIFY }
+enum class SearchSource { YOUTUBE, SPOTIFY, LIBRARY, ADDONS }
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -329,6 +333,45 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }.flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /**
+     * The Library source's artists for the current query: everyone in the
+     * Local Music folder whose name matches, each a row above the songs that
+     * opens their page. Empty while the field is.
+     */
+    private val libraryArtistHits: StateFlow<List<Pair<String, List<Song>>>> =
+        combine(_librarySongs, _query) { state, query ->
+            if (state is UiState.Success) LibraryArtists.search(state.data, query) else emptyList()
+        }.flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** [libraryArtistHits] as the rows the search page draws. */
+    val libraryArtistResults: StateFlow<List<BrowseItem>> = libraryArtistHits.map { hits ->
+        val resources = getApplication<Application>().resources
+        hits.map { (name, tracks) ->
+            BrowseItem(
+                browseId = libraryGroupId(BrowseType.ARTIST, name),
+                title = name,
+                subtitle = resources.getQuantityString(R.plurals.song_count_plural, tracks.size, tracks.size),
+                thumbnailUrl = AppleArtistArtRepository.cached(name)?.heroUrl
+                    ?: tracks.firstNotNullOfOrNull { it.thumbnailUrl },
+                type = BrowseType.ARTIST,
+            )
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Opens the page of a [libraryArtistResults] row, as the Library's own artist list does. */
+    fun openLibraryArtist(item: BrowseItem) {
+        val tracks = libraryArtistHits.value.firstOrNull { it.first == item.title }?.second ?: return
+        openSongGroup(
+            browseId = item.browseId,
+            title = item.title,
+            subtitle = "",
+            thumbnailUrl = null,
+            type = BrowseType.ARTIST,
+            songs = tracks,
+        )
+    }
 
     // The search pipeline's own state. Declared here, above [init], because
     // that is where the collector is started from and a property declared
