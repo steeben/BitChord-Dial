@@ -398,6 +398,18 @@ fun FrostedTopBar(
             if (popReturns) popGeneration++
             popWasWanted[0] = popWanted
             val accessoryPop = remember(popGeneration) { MutableTransitionState(popReturns) }
+            // The actions change with the page too (an album's save, sort and
+            // more against a folder's lone photo), and their pill easing to its
+            // new width would stretch the returning accessory along with it.
+            // So the pill takes its width at once for the frames that settles in.
+            var actionsSettle by remember { mutableStateOf(false) }
+            if (popReturns) actionsSettle = true
+            androidx.compose.runtime.LaunchedEffect(popGeneration) {
+                if (actionsSettle) {
+                    repeat(3) { androidx.compose.runtime.withFrameNanos { } }
+                    actionsSettle = false
+                }
+            }
             accessoryPop.targetState = popWanted
             val popSlot = !(accessory != null && !accessoryPopsIn) &&
                 (accessoryPop.currentState || accessoryPop.targetState) &&
@@ -469,7 +481,11 @@ fun FrostedTopBar(
                 }
                 if (actionsShown) {
                     if (useFloatingChrome) {
-                        ArtworkPageActions(hazeState = backButtonHazeState, content = actions)
+                        ArtworkPageActions(
+                            hazeState = backButtonHazeState,
+                            animateSize = !actionsSettle,
+                            content = actions,
+                        )
                     } else {
                         Row(Modifier.menuAnchor(), verticalAlignment = Alignment.CenterVertically) { actions() }
                     }
@@ -518,6 +534,8 @@ private fun ArtworkPageBackButton(
 private fun ArtworkPageActions(
     hazeState: HazeState?,
     modifier: Modifier = Modifier,
+    /** False to take a new width at once rather than easing to it. */
+    animateSize: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     Row(
@@ -532,12 +550,18 @@ private fun ArtworkPageActions(
             // Anchored at the end, so the profile photo stays exactly where it
             // is while an action to its left comes and goes: the surface grows
             // and shrinks around it instead of the photo being carried along.
-            .animateContentSize(
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessMediumLow,
-                ),
-                alignment = Alignment.CenterEnd,
+            .then(
+                if (animateSize) {
+                    Modifier.animateContentSize(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMediumLow,
+                        ),
+                        alignment = Alignment.CenterEnd,
+                    )
+                } else {
+                    Modifier
+                },
             )
             // One 48dp profile target with no inset is a true 48x48 circle.
             // Once another action exists, restore the navbar's PILL_INSET at
