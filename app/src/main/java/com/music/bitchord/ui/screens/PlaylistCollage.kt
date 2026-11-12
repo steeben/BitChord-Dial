@@ -385,6 +385,11 @@ internal fun PlaylistCollageArt(
     val enter = remember { Animatable(0f) }
     val tilesEnter = remember { Animatable(0f) }
     val context = LocalContext.current
+    // The page going back to the tile it was opened from, under a back swipe
+    // or for good: the playlist's own picture goes back with it, to filling
+    // the banner as the tile shows it, so the page lands as its tile's picture
+    // and not as a small tilted copy of it.
+    val launchClose = LocalLaunchClose.current
 
     // Nothing is drawn until every cover is decoded, so the picture arrives
     // as one movement. Loaded apart, the floating covers used to land after
@@ -426,7 +431,10 @@ internal fun PlaylistCollageArt(
                 val v = c.isAttached && c.boundsInWindow().let { !it.isEmpty && it.bottom > 0f }
                 if (v != state.visible) state.visible = v
             }
-            .drawBehind { drawCollage(state, geometry, enter.value, tilesEnter.value, borderPx, fromBanner = ownFront) },
+            .drawBehind {
+                val back = if (ownFront) launchClose.placed else 1f
+                drawCollage(state, geometry, enter.value * back, tilesEnter.value, borderPx, fromBanner = ownFront)
+            },
     )
 }
 

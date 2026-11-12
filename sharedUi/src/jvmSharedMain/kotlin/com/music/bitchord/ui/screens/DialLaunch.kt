@@ -33,6 +33,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
@@ -263,6 +264,14 @@ fun DialLaunchPage(
     // Where this page sits on screen, to turn the tile's root position into one on the page.
     val pageAt = remember { mutableStateOf(Offset.Zero) }
     val ground = MaterialTheme.colorScheme.background
+    // Read where it is drawn, not here: a frame of the close redraws the
+    // picture and recomposes nothing.
+    // Not only while closing: a back swipe let go of early runs the page back
+    // out as an opening, and the picture has to follow it out, not jump.
+    val zoomed = origin != null
+    val closeProgress = remember { LaunchClose() }
+    val readProgress = remember(visibility) { { progress } }
+    SideEffect { closeProgress.read = if (zoomed) readProgress else null }
     if (origin != null && closing) {
         LaunchedEffect(origin) {
             snapshotFlow { progress }.first { it <= LAND_AT }
@@ -346,7 +355,10 @@ fun DialLaunchPage(
             ),
         propagateMinConstraints = true,
     ) {
-        CompositionLocalProvider(LocalCardLaunch provides cardLaunch) { content() }
+        CompositionLocalProvider(
+            LocalCardLaunch provides cardLaunch,
+            LocalLaunchClose provides closeProgress,
+        ) { content() }
         if (origin != null) {
             // The tile itself over the top of the page, fading into the
             // page's banner as it opens, and back in as it closes: wholly the
@@ -384,6 +396,21 @@ fun DialLaunchPage(
         }
     }
 }
+
+/**
+ * A launched page's way back to its tile, for what is on the page to take
+ * part in: [placed] is 1 on the open page and falls to 0 as it shrinks (under
+ * a back swipe included), see [closePlaced]. Meant to be read while drawing.
+ */
+@Stable
+class LaunchClose {
+    internal var read: (() -> Float)? by mutableStateOf(null)
+
+    val placed: Float get() = read?.let { closePlaced(it()) } ?: 1f
+}
+
+/** The close of the launched page this is on: never closing, for a page that wasn't launched from a tile. */
+val LocalLaunchClose = staticCompositionLocalOf { LaunchClose() }
 
 /** How close to its tile a closing page is (in progress) when the tile itself comes back. */
 private const val LAND_AT = 0.04f

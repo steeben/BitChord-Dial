@@ -53,3 +53,20 @@ val CLOSE_DIP: Float = exp(-CLOSE_DAMPING * PI.toFloat() / sqrt(1f - CLOSE_DAMPI
  */
 fun launchEdge(tile: Float, page: Float, centre: Float, progress: Float): Float =
     if (progress >= 0f) tile + (page - tile) * progress else centre + (tile - centre) * (1f + progress)
+
+/**
+ * How far into its own place on the page a picture that came out of the
+ * page's banner still is (1 in place, 0 filling the banner again, as the tile
+ * shows it), for a page closing back to its tile at launch [progress] (1 open,
+ * 0 at the tile, below 0 in the bounce).
+ *
+ * It goes back in step with the page's shrinking, so under a back swipe it
+ * follows the finger, and is whole again by [RETURNED_AT]: before the tile's
+ * own picture has come in over the page to any degree, so the two meet as the
+ * same picture rather than a small tilted one under a full one.
+ */
+fun closePlaced(progress: Float): Float =
+    ((progress - RETURNED_AT) / (1f - RETURNED_AT)).coerceIn(0f, 1f)
+
+/** The launch progress by which a closing page's picture is back filling its banner. */
+const val RETURNED_AT = 0.3f

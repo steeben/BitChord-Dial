@@ -1,7 +1,9 @@
 package com.music.bitchord
 
 import com.music.bitchord.ui.screens.CLOSE_DIP
+import com.music.bitchord.ui.screens.RETURNED_AT
 import com.music.bitchord.ui.screens.closeCurve
+import com.music.bitchord.ui.screens.closePlaced
 import com.music.bitchord.ui.screens.launchEdge
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -67,5 +69,23 @@ class DialLaunchMotionTest {
         }
         // At rest the page is as wide as the card, not as the half of it in view.
         assertEquals(300f, launchEdge(right, 1080f, centre, 0f) - launchEdge(left, 0f, centre, 0f), 0f)
+    }
+
+    @Test
+    fun aPictureIsInPlaceOnAnOpenPageAndFillsTheBannerBeforeTheTileComesIn() {
+        assertEquals(1f, closePlaced(1f), 0f)
+        assertEquals(0f, closePlaced(RETURNED_AT), 0f)
+        // Through the rest of the close and its bounce it stays filling the banner.
+        assertEquals(0f, closePlaced(0f), 0f)
+        assertEquals(0f, closePlaced(-CLOSE_DIP), 0f)
+    }
+
+    @Test
+    fun aPictureGoesBackInStepWithThePage() {
+        val placed = steps.map { closePlaced(1f - it) }
+        assertTrue(placed.zipWithNext().all { (a, b) -> b <= a })
+        // A full back swipe takes the page 60% of the way: most of the way back, not yet all.
+        assertTrue(closePlaced(0.4f) in 0.05f..0.25f)
+        assertEquals(0.5f, closePlaced((1f + RETURNED_AT) / 2f), 1e-6f)
     }
 }
