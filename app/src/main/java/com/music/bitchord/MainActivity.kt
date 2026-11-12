@@ -5284,6 +5284,11 @@ private fun BitChordApp(
                         settingsSubScreen == null && !showAccountScrobbling && !showSources &&
                         !showListenTogether && !showEqualizer && !showSettings && !showReplay && !showStats
                 }
+                // The folder showing again because the page opened over it
+                // closed, rather than the folder being opened.
+                val lastDetailDepth = remember { intArrayOf(0) }
+                val folderReturns = folderSearchId != null && detailStack.size < lastDetailDepth[0]
+                androidx.compose.runtime.SideEffect { lastDetailDepth[0] = detailStack.size }
                 val folderSearch: (@Composable () -> Unit)? = folderSearchId?.let { folderId ->
                     @Composable {
                         LibraryFolderTabPill(
@@ -5516,6 +5521,9 @@ private fun BitChordApp(
                     },
                     // A folder's tabs pop in with its back button.
                     accessoryPopsIn = folderSearchId != null,
+                    // Back from an album or artist opened out of the folder,
+                    // they are simply there again, like the back button.
+                    accessoryReturns = folderReturns,
                     actions = {
                         // This is intentionally scoped to Listen together: the
                         // round-trip time is meaningful while coordinating a
