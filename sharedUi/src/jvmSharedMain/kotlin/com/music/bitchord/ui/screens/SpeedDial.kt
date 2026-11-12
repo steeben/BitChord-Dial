@@ -115,7 +115,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.ImageBitmap
@@ -878,7 +878,15 @@ private fun SpeedDialTile(
                 onClick = {
                     press.tap {
                         val snapshot = runCatching { drawn.toImageBitmap() }.getOrNull()
-                        onClick(spot.coordinates?.takeIf { it.isAttached }?.boundsInRoot(), press.scale, snapshot)
+                        // The whole of it, not what its page's bounds leave of
+                        // it: a tile reaches a little past its cell (see
+                        // [dialTileOutset]), so on the top and bottom rows past
+                        // the page it is on, and measured cut off there its
+                        // page closed onto a tile short of that edge, which
+                        // then jumped out as the tile itself came back.
+                        val bounds = spot.coordinates?.takeIf { it.isAttached }
+                            ?.let { it.findRootCoordinates().localBoundingBoxOf(it, clipBounds = false) }
+                        onClick(bounds, press.scale, snapshot)
                     }
                 },
                 onLongClick = onLongPress,
