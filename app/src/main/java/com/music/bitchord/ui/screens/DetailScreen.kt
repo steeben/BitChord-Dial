@@ -654,15 +654,24 @@ fun DetailScreen(
         }
     }
     // A playlist gets a collage of its songs' covers, its own picture in
-    // front when it has one, and takes its colours from the front one.
+    // front when it has one. Its colours stay the ones the page opened with,
+    // off the playlist's picture: read off the collage's front cover, they
+    // changed under the reader's eyes as the collage came in.
     val collage = if (isArtist) null else rememberGeneratedCollage(page, rawSongs)
     val artPalette = rememberArtworkPalette(
-        imageUrl = appleArt?.heroUrl ?: collage?.firstOrNull() ?: page.thumbnailUrl,
+        imageUrl = pageColourSource(appleArt?.heroUrl, page.thumbnailUrl, collage?.firstOrNull()),
         keyColors = appleArt?.keyColors(),
     )
     // Under a collage the page is the accent's own colour, top to bottom,
-    // rather than whatever the front cover's background happens to be.
-    val palette = if (collage == null) artPalette else remember(artPalette) { artPalette.collageWashed() }
+    // rather than whatever the picture's background happens to be. Eased in
+    // when the collage turns up on an open page; there from the start on one
+    // reopened with its collage already settled.
+    val collageWash by animateFloatAsState(
+        targetValue = if (collage != null) 1f else 0f,
+        animationSpec = tween(ART_CROSSFADE_MS, easing = FastOutSlowInEasing),
+        label = "collageWash",
+    )
+    val palette = artPalette.collageWashed(collageWash)
     // How bright the top of the banner is, where the top bar's controls and
     // the status bar sit: they turn white over a dark one. See [TopChromeTone].
     val washLuminance by rememberUpdatedState(palette.wash.luminance())
@@ -2770,6 +2779,18 @@ internal fun ArtworkPalette.collageWashed(): ArtworkPalette {
         background = androidx.compose.ui.graphics.lerp(ground, accent, share * 0.8f),
         wash = newWash,
         elevated = androidx.compose.ui.graphics.lerp(newWash, accent, 0.2f),
+    )
+}
+
+/** This palette [amount] of the way to its [collageWashed] one: the accent and the text never move. */
+internal fun ArtworkPalette.collageWashed(amount: Float): ArtworkPalette {
+    if (amount <= 0f) return this
+    val washed = collageWashed()
+    if (amount >= 1f) return washed
+    return copy(
+        background = androidx.compose.ui.graphics.lerp(background, washed.background, amount),
+        wash = androidx.compose.ui.graphics.lerp(wash, washed.wash, amount),
+        elevated = androidx.compose.ui.graphics.lerp(elevated, washed.elevated, amount),
     )
 }
 

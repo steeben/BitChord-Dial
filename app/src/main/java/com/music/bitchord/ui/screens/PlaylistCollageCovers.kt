@@ -87,3 +87,13 @@ private fun Song.albumKey(): String? =
 
 private fun Song.artistKey(): String? =
     (artists.firstOrNull()?.name ?: artist).takeIf { it.isNotBlank() }?.trim()?.lowercase()
+
+/**
+ * The picture a page takes its colours from: an artist's [hero] photo, else
+ * the page's own [thumbnail], which is what it opened showing. A generated
+ * collage's [collageFront] cover only stands in for a page with no picture of
+ * its own, so the colours a playlist opens with are the ones it keeps once
+ * its collage has come in.
+ */
+internal fun pageColourSource(hero: String?, thumbnail: String?, collageFront: String?): String? =
+    hero ?: thumbnail?.takeIf { it.isNotBlank() } ?: collageFront
