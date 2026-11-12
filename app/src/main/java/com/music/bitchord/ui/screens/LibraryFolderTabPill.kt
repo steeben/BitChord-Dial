@@ -12,6 +12,19 @@ import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.round
+import com.music.bitchord.ui.components.LocalGlassFollowsOptions
+import com.music.bitchord.ui.components.LocalOnArtworkPage
+import com.music.bitchord.ui.components.TopBarAccessoryPlace
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -89,6 +102,8 @@ fun LibraryFolderTabPill(
     deviceTabs: Boolean,
     hazeState: HazeState?,
     modifier: Modifier = Modifier,
+    /** False for a pill that is only a picture of itself: it takes no touches at all. */
+    enabled: Boolean = true,
 ) {
     val haptics = rememberHaptics()
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
@@ -163,22 +178,30 @@ fun LibraryFolderTabPill(
                             )
                         }
                     }
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        role = Role.Tab,
-                    ) {
-                        when {
-                            !selected -> {
-                                haptics.play(Haptic.Select)
-                                onSelectTab(tab.index)
+                    .then(
+                        // Left off altogether, not disabled: a touch then goes
+                        // on through to whatever is under the pill.
+                        if (!enabled) {
+                            Modifier
+                        } else {
+                            Modifier.clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                role = Role.Tab,
+                            ) {
+                                when {
+                                    !selected -> {
+                                        haptics.play(Haptic.Select)
+                                        onSelectTab(tab.index)
+                                    }
+                                    hasOptions -> {
+                                        haptics.play(Haptic.Select)
+                                        onReopenTab(tab.index)
+                                    }
+                                }
                             }
-                            hasOptions -> {
-                                haptics.play(Haptic.Select)
-                                onReopenTab(tab.index)
-                            }
-                        }
-                    },
+                        },
+                    ),
                 contentAlignment = Alignment.Center,
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -207,6 +230,51 @@ fun LibraryFolderTabPill(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * A library folder's tabs while a page opened out of one of the folder's own
+ * cards ([coveringPage], by key) is over it: drawn where they sat in the bar
+ * ([TopBarAccessoryPlace]) and only where that page is not, so the page grows
+ * over them and, closing, shrinks away to show them still there, rather than
+ * the bar taking them off and putting them back.
+ *
+ * Goes under the top bar and over the pages, filling the same box.
+ */
+@Composable
+fun BoxScope.LibraryFolderTabsCovered(
+    selectedTab: Int,
+    deviceTabs: Boolean,
+    coveringPage: String,
+    hazeState: HazeState?,
+) {
+    val place = TopBarAccessoryPlace.bounds ?: return
+    var boxAt by remember { mutableStateOf(Offset.Zero) }
+    val density = LocalDensity.current
+    Box(
+        Modifier
+            .matchParentSize()
+            .onGloballyPositioned { boxAt = it.positionInRoot() },
+    ) {
+        // The folder's own page is no artwork page: its glass is the user's.
+        CompositionLocalProvider(
+            LocalGlassFollowsOptions provides true,
+            LocalOnArtworkPage provides false,
+        ) {
+            LibraryFolderTabPill(
+                selectedTab = selectedTab,
+                onSelectTab = {},
+                onReopenTab = {},
+                deviceTabs = deviceTabs,
+                hazeState = hazeState,
+                enabled = false,
+                modifier = Modifier
+                    .offset { (place.topLeft - boxAt).round() }
+                    .width(with(density) { place.width.toDp() })
+                    .behindLaunchOf(coveringPage),
+            )
         }
     }
 }

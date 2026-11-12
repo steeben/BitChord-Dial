@@ -13,6 +13,14 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.ui.geometry.translate
+import androidx.compose.ui.graphics.ClipOp
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
@@ -116,6 +124,9 @@ class DialOrigin(
      * picture by that point), so the page is gone over it with no gap between.
      */
     internal var landed by mutableStateOf(false)
+
+    /** Whether its page has been seen on its way back down: see [behindLaunchOnto]. */
+    internal var closeSeen = false
 }
 
 /**
@@ -153,6 +164,13 @@ object DialLaunch {
     fun settledOn(page: String) {
         stack = stackSettledOn(stack, page)
     }
+
+    /**
+     * Where each page in the middle of its launch is showing on screen just
+     * now, by its key: its window in root coordinates, corners and all. Only
+     * there while the page is growing or shrinking; read while drawing.
+     */
+    internal val windows = mutableStateMapOf<String, () -> RoundRect?>()
 
     /** The dial page Home should open on: the one a launched tile is on. */
     internal fun pageOf(shelfTitle: String): Int = stack.lastOrNull { it.shelfTitle == shelfTitle }?.page ?: 0
@@ -263,6 +281,31 @@ fun DialLaunchPage(
     ) { if (it == EnterExitState.Visible) 1f else 0f }
     // Where this page sits on screen, to turn the tile's root position into one on the page.
     val pageAt = remember { mutableStateOf(Offset.Zero) }
+    val pageSize = remember { mutableStateOf(IntSize.Zero) }
+    val density = LocalDensity.current
+    if (origin != null) {
+        // Told to whatever sits behind this page (the top bar of the page
+        // under it), so that can stay drawn and be covered by it.
+        DisposableEffect(key, origin, closing, density) {
+            val window: () -> RoundRect? = window@{
+                val w = pageSize.value.width.toFloat()
+                val h = pageSize.value.height.toFloat()
+                if (w <= 0f || h <= 0f) return@window null
+                val p = progress
+                val from = if (closing) origin.bounds else origin.bounds.scaled(origin.pressedScale)
+                val tile = from.translate(-pageAt.value)
+                val seen = from.intersect(origin.visible).translate(-pageAt.value)
+                val shown = seen.launched(w, h, tile.center, p).translate(pageAt.value)
+                val tileScale = if (closing) 1f else origin.pressedScale
+                val corner = (with(density) { origin.corner.toPx() } * tileScale)
+                    .coerceAtMost(minOf(tile.width, tile.height) / 2f)
+                val radius = lerp(corner, 0f, p.coerceAtLeast(0f)) * (1f + p.coerceAtMost(0f))
+                RoundRect(shown, CornerRadius(radius.coerceAtLeast(0f)))
+            }
+            DialLaunch.windows[key] = window
+            onDispose { if (DialLaunch.windows[key] === window) DialLaunch.windows.remove(key) }
+        }
+    }
     val ground = MaterialTheme.colorScheme.background
     // Read where it is drawn, not here: a frame of the close redraws the
     // picture and recomposes nothing.
@@ -287,7 +330,10 @@ fun DialLaunchPage(
     }
     Box(
         Modifier
-            .onPlaced { pageAt.value = it.positionInRoot() }
+            .onPlaced {
+                pageAt.value = it.positionInRoot()
+                pageSize.value = it.size
+            }
             .then(
                 if (origin == null) {
                     Modifier
@@ -395,6 +441,51 @@ fun DialLaunchPage(
             }
         }
     }
+}
+
+/**
+ * For something drawn over the pages that belongs to the page under the
+ * launched page [pageKey] (that page's own controls in the top bar): drawn
+ * only where the launched page is not, so it is covered as the page grows
+ * over it and uncovered as the page shrinks away, as if it sat behind it.
+ * Not drawn at all while the page is open and still.
+ */
+@Composable
+fun Modifier.behindLaunchOf(pageKey: String): Modifier =
+    behindLaunch(DialLaunch.origins.lastOrNull { it.key == pageKey }, closing = false)
+
+/**
+ * The same, once the launched page has been closed and is shrinking back onto
+ * [pageKey], the page on screen again: what belongs to [pageKey] stays out of
+ * sight under the closing page and is uncovered as it goes, never popping in
+ * over it.
+ */
+@Composable
+fun Modifier.behindLaunchOnto(pageKey: String): Modifier =
+    behindLaunch(DialLaunch.origins.lastOrNull { it.parent == pageKey && it.key != pageKey }, closing = true)
+
+@Composable
+private fun Modifier.behindLaunch(origin: DialOrigin?, closing: Boolean): Modifier {
+    if (origin == null) return this
+    val at = remember { mutableStateOf(Offset.Zero) }
+    val path = remember { Path() }
+    return this
+        .onPlaced { at.value = it.positionInRoot() }
+        .drawWithContent {
+            val window = DialLaunch.windows[origin.key]?.invoke()
+            if (window == null) {
+                // No launch in flight. Closing: the close has yet to start
+                // (covered still) or is over. Open: the page has yet to come
+                // up over its tile, or is up and covering everything.
+                val clear = if (closing) origin.closeSeen else !origin.launched
+                if (clear) drawContent()
+            } else {
+                if (closing) origin.closeSeen = true
+                path.rewind()
+                path.addRoundRect(window.translate(-at.value))
+                clipPath(path, clipOp = ClipOp.Difference) { this@drawWithContent.drawContent() }
+            }
+        }
 }
 
 /**

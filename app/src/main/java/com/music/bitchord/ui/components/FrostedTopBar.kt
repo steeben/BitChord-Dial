@@ -71,6 +71,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
@@ -126,8 +127,21 @@ private val ActionsInset = 56.dp
 /** Between a filling accessory and the actions pill. */
 private val ACCESSORY_GAP = 8.dp
 
-/** Low enough that the back button visibly overshoots before settling. */
-private const val BACK_BOUNCE_DAMPING = 0.42f
+/**
+ * A soft landing for the back button and a popping accessory: barely past
+ * their size (about 1%) before settling. Was 0.42, a visible bounce.
+ */
+private const val BACK_BOUNCE_DAMPING = 0.82f
+
+/**
+ * Where the bar's popping accessory (a library folder's tabs) was last laid
+ * out, in root px, at rest: for the same thing to be drawn in the same place
+ * while a page opened over its own covers it. See [FrostedTopBar]'s
+ * `accessoryCovered`.
+ */
+object TopBarAccessoryPlace {
+    var bounds: androidx.compose.ui.geometry.Rect? by mutableStateOf(null)
+}
 
 /**
  * Where the bar's actions pill starts, in window px: the right end of the room
@@ -221,6 +235,12 @@ fun FrostedTopBar(
      * button is, instead of springing in a second time.
      */
     accessoryReturns: Boolean = false,
+    /**
+     * The popping accessory's page has had another opened over it, out of one
+     * of its own cards. It leaves the bar at once, with no shrinking away: the
+     * caller draws it where it was, for the opening page to cover.
+     */
+    accessoryCovered: Boolean = false,
     actions: @Composable () -> Unit = {},
 ) {
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
@@ -397,6 +417,10 @@ fun FrostedTopBar(
             val popReturns = popWanted && !popWasWanted[0] && accessoryReturns
             if (popReturns) popGeneration++
             popWasWanted[0] = popWanted
+            if (accessory == null && accessoryCovered && poppedAccessory != null) {
+                poppedAccessory = null
+                popGeneration++
+            }
             val accessoryPop = remember(popGeneration) { MutableTransitionState(popReturns) }
             // The actions change with the page too (an album's save, sort and
             // more against a folder's lone photo), and their pill easing to its
@@ -461,7 +485,21 @@ fun FrostedTopBar(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (slot != null) {
-                    Box(Modifier.weight(1f)) {
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .then(
+                                if (popSlot && accessoryPopsIn) {
+                                    // The slot, not what is in it: that scales as it pops.
+                                    Modifier.onGloballyPositioned {
+                                        val at = it.boundsInRoot()
+                                        if (TopBarAccessoryPlace.bounds != at) TopBarAccessoryPlace.bounds = at
+                                    }
+                                } else {
+                                    Modifier
+                                },
+                            ),
+                    ) {
                         if (popSlot) {
                             androidx.compose.animation.AnimatedVisibility(
                                 visibleState = accessoryPop,

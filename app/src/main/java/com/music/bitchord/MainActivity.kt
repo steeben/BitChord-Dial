@@ -166,6 +166,7 @@ import com.music.bitchord.ui.components.popupSurface
 import com.music.bitchord.ui.components.PopupLayer
 import com.music.bitchord.ui.screens.SpeedDialIntro
 import com.music.bitchord.ui.screens.DialLaunch
+import com.music.bitchord.ui.screens.behindLaunchOnto
 import com.music.bitchord.ui.screens.DialLaunchPage
 import com.music.bitchord.ui.screens.MOOD_PAGE_KEY
 import com.music.bitchord.ui.screens.moodPageKey
@@ -282,6 +283,7 @@ import com.music.bitchord.ui.screens.dealLibraryFeed
 import com.music.bitchord.ui.screens.libraryGroupId
 import com.music.bitchord.ui.screens.rememberLibraryFeedLabels
 import com.music.bitchord.ui.screens.LibraryFolderTabPill
+import com.music.bitchord.ui.screens.LibraryFolderTabsCovered
 import com.music.bitchord.ui.screens.LibraryFolderScroll
 import com.music.bitchord.ui.screens.browseId
 import com.music.bitchord.ui.screens.LOCAL_LIBRARY_BROWSE_ID
@@ -5297,8 +5299,16 @@ private fun BitChordApp(
                             onReopenTab = { folderSortMenuFor = folderId },
                             deviceTabs = folderId == "local:all",
                             hazeState = hazeState,
+                            // Back from a page opened out of the folder, they
+                            // are uncovered as that page shrinks away.
+                            modifier = Modifier.behindLaunchOnto(folderId),
                         )
                     }
+                }
+                // The folder under a page opened out of one of its cards: its
+                // tabs stay drawn where they were, behind that page.
+                val coveredFolderId = launchBack?.first?.takeIf {
+                    it.isDeviceFolder() && detail != null && pageKey == detail.browseId
                 }
                 // The detected duplicates page is searched from the bar too.
                 val duplicatesSearch: (@Composable () -> Unit)? =
@@ -5371,6 +5381,14 @@ private fun BitChordApp(
                 val onArtworkPage = detail != null && !showStats && !showSettings &&
                     !showAccountScrobbling && !showSources && !showListenTogether &&
                     !showEqualizer && !showDiscord && !showHistory && !showReplay
+                if (coveredFolderId != null) {
+                    LibraryFolderTabsCovered(
+                        selectedTab = folderTabs[coveredFolderId] ?: 0,
+                        deviceTabs = coveredFolderId == "local:all",
+                        coveringPage = pageKey,
+                        hazeState = hazeState,
+                    )
+                }
                 CompositionLocalProvider(
                     LocalGlassFollowsOptions provides !onArtworkPage,
                     com.music.bitchord.ui.components.LocalOnArtworkPage provides onArtworkPage,
@@ -5524,6 +5542,7 @@ private fun BitChordApp(
                     // Back from an album or artist opened out of the folder,
                     // they are simply there again, like the back button.
                     accessoryReturns = folderReturns,
+                    accessoryCovered = coveredFolderId != null,
                     actions = {
                         // This is intentionally scoped to Listen together: the
                         // round-trip time is meaningful while coordinating a
