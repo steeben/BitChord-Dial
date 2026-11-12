@@ -3713,13 +3713,13 @@ private fun BitChordApp(
                 val pageKey = pageKeyFor()
                 // The tab each page was last up on, for the transition to tell
                 // a page left for another tab from one stepped back out of.
-                val pageTabs = remember { HashMap<String, Int>() }
-                pageTabs[pageKey] = selectedTab
+                val tabOfPage = remember { HashMap<String, Int>() }
+                tabOfPage[pageKey] = selectedTab
                 // Leaving for a tab's own page from a page on another tab: a
                 // tab itself, or anything opened on it (an album in the
                 // Library, a mood on Explore, Settings).
                 val changesTab: (String, String) -> Boolean = { from, to ->
-                    to.startsWith(TAB_KEY) && pageTabs[from].let { it != null && "$TAB_KEY$it" != to }
+                    to.startsWith(TAB_KEY) && tabOfPage[from].let { it != null && "$TAB_KEY$it" != to }
                 }
                 // What a tile or card tapped now opens its page from.
                 androidx.compose.runtime.SideEffect { DialLaunch.page = pageKey }
