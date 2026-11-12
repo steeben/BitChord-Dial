@@ -25,18 +25,17 @@
 ## Screenshots
 
 <div align="center">
-<table>
-  <tr>
-    <td align="center"><img src="docs/screenshots/home.jpg" width="220" alt="Home speed dial" /><br/><sub>Speed dial on Home</sub></td>
-    <td align="center"><img src="docs/screenshots/library.jpg" width="220" alt="Library songs list" /><br/><sub>Library songs with A–Z scroller</sub></td>
-    <td align="center"><img src="docs/screenshots/playlist.jpg" width="220" alt="Liked Music playlist" /><br/><sub>Playlist</sub></td>
-  </tr>
-  <tr>
-    <td align="center"><img src="docs/screenshots/artist.jpg" width="220" alt="Artist page" /><br/><sub>Artist page</sub></td>
-    <td align="center"><img src="docs/screenshots/player.jpg" width="220" alt="Now playing screen" /><br/><sub>Now playing</sub></td>
-    <td align="center"><img src="docs/screenshots/video.jpg" width="220" alt="Fullscreen video player" /><br/><sub>Fullscreen video</sub></td>
-  </tr>
-</table>
+
+<img src="docs/screenshots/home-dials.jpg" width="100%" alt="Home: the speed dial in dark and light themes, the Mixes Dial and the artist dial" />
+
+<img src="docs/screenshots/library.jpg" width="100%" alt="Library: For You, the Library, the songs list and the song details compare page" />
+
+<img src="docs/screenshots/pages.jpg" width="77%" alt="Pages: a playlist, an album and an artist" />
+
+<img src="docs/screenshots/player.jpg" width="100%" alt="Player: now playing, Canvas, the queue, and the sideways player with video and lyrics" />
+
+<img src="docs/screenshots/customize.jpg" width="100%" alt="Customize: speed dial options, Liquid Glass settings, app icons, progress bar styles, and the Glass, Frost and Solid app styles in dark and light" />
+
 </div>
 
 ---
