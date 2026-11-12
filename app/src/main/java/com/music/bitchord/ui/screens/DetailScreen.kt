@@ -208,6 +208,7 @@ import com.music.bitchord.ui.player.CanvasArtworkPlayer
 import com.music.bitchord.ui.theme.ArtworkPalette
 import com.music.bitchord.ui.theme.rememberArtworkPalette
 import com.music.bitchord.ui.theme.rememberArtworkTopBandLuminance
+import com.music.bitchord.ui.theme.rememberArtworkLuminance
 import com.music.bitchord.ui.components.TopChromeTone
 import com.music.bitchord.ui.components.LocalAppThemeDark
 import com.music.bitchord.ui.components.topChromeOverDark
@@ -651,10 +652,16 @@ fun DetailScreen(
     val palette = if (collage == null) artPalette else remember(artPalette) { artPalette.collageWashed() }
     // How bright the top of the banner is, where the top bar's controls and
     // the status bar sit: they turn white over a dark one. See [TopChromeTone].
-    val bannerTopLuminance by rememberUpdatedState(
-        rememberArtworkTopBandLuminance(appleArt?.heroUrl ?: collage?.firstOrNull() ?: page.thumbnailUrl),
-    )
     val washLuminance by rememberUpdatedState(palette.wash.luminance())
+    val artTopLuminance =
+        rememberArtworkTopBandLuminance(appleArt?.heroUrl ?: collage?.firstOrNull() ?: page.thumbnailUrl)
+    // A collage's front cover is not what is up there: the page's colour and
+    // the covers floating at the top are. See [collageTopLuminance].
+    val floatingLuminance = List(COLLAGE_TOP_COVERS) { rememberArtworkLuminance(collage?.getOrNull(it + 1)) }
+    val bannerTopLuminance by rememberUpdatedState(
+        if (collage == null) artTopLuminance
+        else collageTopLuminance(artTopLuminance, floatingLuminance, palette.wash.luminance()),
+    )
     // A moving banner (an artist's clip) is read off its own frames as it
     // plays: the still picture under it can be nothing like it.
     val clipTone = remember(page.browseId) { BannerClipTone() }
@@ -1090,13 +1097,15 @@ fun DetailScreen(
                     LocalAppThemeDark.current ?: (MaterialTheme.colorScheme.surface.luminance() <= 0.5f),
                 )
                 LaunchedEffect(toneOwner) {
+                    var was: Boolean? = null
                     snapshotFlow {
                         topChromeOverDark(
                             artLuminance = bannerArtLuminance(bannerTopLuminance, clipTone.luminance, clipTone.showing),
                             washLuminance = washLuminance,
                             artShowing = listState.artUnderTopBar(bannerPx, headerStopScroll()),
                             themeDark = appThemeDark,
-                        )
+                            was = was,
+                        ).also { was = it }
                     }.collect { TopChromeTone.set(toneOwner, it) }
                 }
                 DisposableEffect(toneOwner) { onDispose { TopChromeTone.clear(toneOwner) } }

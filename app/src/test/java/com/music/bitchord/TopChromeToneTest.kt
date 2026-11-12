@@ -5,8 +5,10 @@ import com.music.bitchord.ui.components.TopChromeTone
 import com.music.bitchord.ui.components.topControlsDark
 import com.music.bitchord.ui.components.bannerArtLuminance
 import com.music.bitchord.ui.components.topChromeOverDark
+import com.music.bitchord.ui.screens.collageTopLuminance
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TopChromeToneTest {
@@ -47,6 +49,41 @@ class TopChromeToneTest {
         assertEquals(false, topChromeOverDark(artLuminance = 0.25f, washLuminance = 0.8f, artShowing = 1f, themeDark = false))
         // A dim stage photograph: black would be lost.
         assertEquals(true, topChromeOverDark(artLuminance = 0.1f, washLuminance = 0.8f, artShowing = 1f, themeDark = false))
+    }
+
+    @Test
+    fun glyphsThatFlippedOnlyFlipBackOnceWellPastTheLine() {
+        // Dark theme, gone black over a bright banner: 0.55 is under the line but holds black.
+        assertEquals(false, topChromeOverDark(artLuminance = 0.55f, washLuminance = 0.05f, artShowing = 1f, themeDark = true, was = false))
+        assertEquals(true, topChromeOverDark(artLuminance = 0.45f, washLuminance = 0.05f, artShowing = 1f, themeDark = true, was = false))
+        // Still white: the same 0.55 does not turn them black.
+        assertEquals(true, topChromeOverDark(artLuminance = 0.55f, washLuminance = 0.05f, artShowing = 1f, themeDark = true, was = true))
+        // Light theme, gone white over a dark banner: 0.25 holds white, 0.35 gives black back.
+        assertEquals(true, topChromeOverDark(artLuminance = 0.25f, washLuminance = 0.8f, artShowing = 1f, themeDark = false, was = true))
+        assertEquals(false, topChromeOverDark(artLuminance = 0.35f, washLuminance = 0.8f, artShowing = 1f, themeDark = false, was = true))
+    }
+
+    @Test
+    fun aCollageWithABrightFrontCoverStaysWhiteInTheDarkTheme() {
+        // Liked Music as Stephen reported it: a white burst on red in front,
+        // an orange sleeve, a navy one and a dark grey one floating at the
+        // top, on a dark maroon page.
+        val top = collageTopLuminance(frontTop = 0.8f, floating = listOf(0.08f, 0.3f, 0.04f), wash = 0.06f)!!
+        assertTrue(top < 0.35f)
+        assertEquals(true, topChromeOverDark(top, washLuminance = 0.06f, artShowing = 1f, themeDark = true))
+    }
+
+    @Test
+    fun aCollageThatIsWhiteAllOverStillTurnsTheGlyphsBlack() {
+        val top = collageTopLuminance(frontTop = 0.95f, floating = listOf(0.9f, 0.9f, 0.9f), wash = 0.3f)!!
+        assertEquals(false, topChromeOverDark(top, washLuminance = 0.3f, artShowing = 1f, themeDark = true))
+    }
+
+    @Test
+    fun aCollageCoverNotReadYetCountsAsThePage() {
+        assertEquals(0.2f * 0.8f + 0.8f * 0.1f, collageTopLuminance(0.8f, listOf(null, null, null), wash = 0.1f)!!, 0.0001f)
+        assertEquals(0.2f * 0.8f + 0.8f * 0.1f, collageTopLuminance(0.8f, emptyList(), wash = 0.1f)!!, 0.0001f)
+        assertNull(collageTopLuminance(null, listOf(0.5f), wash = 0.1f))
     }
 
     @Test
