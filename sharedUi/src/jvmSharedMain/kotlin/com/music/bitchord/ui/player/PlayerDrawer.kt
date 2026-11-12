@@ -143,6 +143,13 @@ fun PlayerDrawer(
      */
     handlesBack: Boolean = false,
     /**
+     * Ducked below the bottom edge, with its dim, while something it opened is
+     * up in its place: a popup's glass sees the player and not this drawer,
+     * so left up the drawer showed everywhere but through the popup. It comes
+     * back up when this goes false again.
+     */
+    hidden: Boolean = false,
+    /**
      * Whether the drawer is a menu: non-null, its glass is the one every menu
      * in the app is made of, following the Liquid Glass options with a floor
      * under its text; null, it is the bare glass the app's bars wear (the
@@ -199,9 +206,14 @@ fun PlayerDrawer(
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
         label = "playerDrawerOffset",
     )
+    val duck by animateFloatAsState(
+        targetValue = if (hidden) 1f else 0f,
+        animationSpec = tween(260, easing = FastOutSlowInEasing),
+        label = "playerDrawerDuck",
+    )
     // Fades with the drawer rather than staying at full strength under a sheet
     // halfway off the screen, which is what makes the drag feel connected.
-    val backOffset = backSwipe.value * height * BACK_SWIPE_TRAVEL
+    val backOffset = backSwipe.value * height * BACK_SWIPE_TRAVEL + duck * height
     val scrimAlpha = scrimFade * if (height > 0) (1f - (offset + backOffset) / height).coerceIn(0f, 1f) else 1f
 
     // The drawer's rows scroll, and that scroll takes the finger before the
@@ -282,7 +294,9 @@ fun PlayerDrawer(
                 .widthIn(max = DRAWER_MAX_WIDTH)
                 .fillMaxWidth()
                 .onSizeChanged { height = it.height }
-                .offset { IntOffset(0, (offset + backSwipe.value * height * BACK_SWIPE_TRAVEL).roundToInt()) },
+                .offset {
+                    IntOffset(0, (offset + backSwipe.value * height * BACK_SWIPE_TRAVEL + duck * height).roundToInt())
+                },
         ) {
         // The app's menu glass over the player's backdrop, when the app has
         // glass on. Drawn behind the rows rather than

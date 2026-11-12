@@ -102,6 +102,8 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import org.jetbrains.compose.resources.painterResource
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
@@ -1255,7 +1257,8 @@ private fun PillSegment(
  * are not the same kind of fact. "Kushagra's Phone" answers which speaker in
  * this room; once there are four devices playing the same song, the room is no
  * longer what the listener is checking. The tap follows the label — whichever
- * one is on screen is the thing it opens.
+ * one is on screen is the thing it opens: the party, the output drawer, or for
+ * the stats the audio pipeline they are a line of.
  */
 @Composable
 internal fun OutputCaption(
@@ -1263,8 +1266,14 @@ internal fun OutputCaption(
     onOpenOutput: () -> Unit,
     /** Who's in it, before the settings page — see [ListenTogetherMembersSheet]. */
     onOpenMembers: () -> Unit,
+    /**
+     * The whole chain behind the stats, when it is the stats on the line.
+     * Handed where the line is on screen, for the window to grow out of.
+     */
+    onOpenPipeline: (Offset?) -> Unit,
 ) {
     val haptics = rememberHaptics()
+    var captionCenter by remember { mutableStateOf<Offset?>(null) }
     val badge = rememberPartyBadge()
     val outputName = rememberAudioOutputName(accountName)
     // Not in a party: there the line names the party, not the output.
@@ -1283,9 +1292,14 @@ internal fun OutputCaption(
         // The stats run longer than a device's name: codec, depth, rate,
         // bitrate and channels have to fit on the one line.
         .fillMaxWidth(if (statsLine != null) 0.92f else 0.65f)
+        .onGloballyPositioned { captionCenter = it.boundsInWindow().center }
         .clickable {
             haptics.play(Haptic.Tap)
-            if (badge.inParty) onOpenMembers() else onOpenOutput()
+            when {
+                badge.inParty -> onOpenMembers()
+                statsLine != null -> onOpenPipeline(captionCenter)
+                else -> onOpenOutput()
+            }
         }
     if (statsLine != null) {
         Text(

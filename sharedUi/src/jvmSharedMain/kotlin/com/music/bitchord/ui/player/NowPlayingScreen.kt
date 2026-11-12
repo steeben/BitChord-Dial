@@ -75,6 +75,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.State
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -1158,6 +1159,12 @@ fun NowPlayingScreen(
     // the bottom navigation pill.
     val playerHaze = remember { HazeState() }
     var showAudioPipeline by remember { mutableStateOf(false) }
+    // Where the pipeline was opened from, for its window to grow out of.
+    var audioPipelineOrigin by remember { mutableStateOf<Offset?>(null) }
+    val openAudioPipeline: (Offset?) -> Unit = { origin ->
+        audioPipelineOrigin = origin
+        showAudioPipeline = true
+    }
     var showCast by remember { mutableStateOf(false) }
     var showAudioOutput by remember { mutableStateOf(false) }
     var showLyricsProviders by remember { mutableStateOf(false) }
@@ -2400,6 +2407,7 @@ fun NowPlayingScreen(
                     accountName = accountName,
                     onOpenOutput = openAudioOutput,
                     onOpenMembers = openListenTogetherMembers,
+                    onOpenPipeline = openAudioPipeline,
                 )
             }
         }
@@ -2415,11 +2423,13 @@ fun NowPlayingScreen(
                 hazeState = playerHaze,
                 accountName = accountName,
                 onDismiss = { showAudioOutput = false },
-                onOpenPipeline = { showAudioPipeline = true },
+                onOpenPipeline = openAudioPipeline,
                 onOpenCast = { showCast = true },
-                // The pipeline and the cast picker are only ever opened from
-                // this drawer, so when either is up it is the one back closes.
+                // When the pipeline or the cast picker is up it is the one
+                // back closes, and the drawer ducks out from under it: their
+                // glass sees the player, not this drawer.
                 handlesBack = !showAudioPipeline && !showCast,
+                hidden = showAudioPipeline || showCast,
             )
         }
         if (showLyricsProviders) {
@@ -2440,11 +2450,13 @@ fun NowPlayingScreen(
             )
         }
         if (showAudioPipeline) {
-            AudioPipelineDialog(
-                hazeState = playerHaze,
-                isPlaying = isPlaying,
-                onDismiss = { showAudioPipeline = false },
-            )
+            CompositionLocalProvider(LocalPlayerPopupOrigin provides audioPipelineOrigin) {
+                AudioPipelineDialog(
+                    hazeState = playerHaze,
+                    isPlaying = isPlaying,
+                    onDismiss = { showAudioPipeline = false },
+                )
+            }
         }
         if (showCast) {
             PlayerPlatform.host.CastDialog(
@@ -2648,6 +2660,9 @@ fun NowPlayingScreen(
         val versionAligning by PlayerSettings.versionAlignmentInProgress.collectAsStateWithLifecycle()
         val transitionWindow by PlayerSettings.smartTransitionWindow.collectAsStateWithLifecycle()
         Box(modifier = modifier.fillMaxSize().then(dockHost)) {
+        // Everything but the drawers and popups below, recorded whole for their
+        // glass to see the player through — see [PlayerGlass.menuSource].
+        Box(Modifier.fillMaxSize().playerMenuSource()) {
             FullscreenVideoPlayer(
                 song = song,
                 isPlaying = isPlaying,
@@ -2689,6 +2704,7 @@ fun NowPlayingScreen(
                     )
                 },
             )
+        }
             playerOverlays()
         }
         return@ProvidePlayerInk
@@ -2756,6 +2772,9 @@ fun NowPlayingScreen(
         }
 
         Box(modifier = modifier.fillMaxSize().then(dockHost)) {
+        // Everything but the drawers and popups below, recorded whole for their
+        // glass to see the player through — see [PlayerGlass.menuSource].
+        Box(Modifier.fillMaxSize().playerMenuSource()) {
             // The lyric sheet of either landscape arrangement: beside the
             // sleeve, or beside the song's music video.
             val landscapeLyricsPlaceholder = if (lyricsInstrumental) {
@@ -3143,6 +3162,7 @@ fun NowPlayingScreen(
             if (landscapeVideoFullscreen) {
                 LandscapeVideoFullscreenOverlay(onExit = { landscapeVideoFullscreenAsked = false })
             }
+        }
             playerOverlays()
         }
         return@ProvidePlayerInk
@@ -3156,6 +3176,9 @@ fun NowPlayingScreen(
             .then(dockHost)
             .background(Color.Black),
     ) {
+        // Everything but the drawers and popups below, recorded whole for their
+        // glass to see the player through — see [PlayerGlass.menuSource].
+        Box(Modifier.fillMaxSize().playerMenuSource()) {
         // Anchored to the sleeve's bottom edge, so the screen carries on in the
         // colours the artwork ended in rather than in a quantiser's idea of what
         // the artwork was about. Position ticks recompose this screen twice a
@@ -5257,6 +5280,7 @@ fun NowPlayingScreen(
             }
             }
             }
+        }
         }
         playerOverlays()
     }
