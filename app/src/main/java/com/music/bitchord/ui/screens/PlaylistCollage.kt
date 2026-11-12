@@ -15,6 +15,7 @@ import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
@@ -59,6 +60,7 @@ import com.music.bitchord.data.settings.CustomizationSettings
 import com.music.bitchord.ui.graphics.forPixelAccess
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -114,7 +116,8 @@ internal fun rememberGeneratedCollage(page: DetailPage, songs: List<Song>): List
     var shown by remember(held) { mutableStateOf(heldCollages[held]) }
     LaunchedEffect(held, eligible, settled) {
         if (!eligible || !settled || held in heldCollages) return@LaunchedEffect
-        val own = ownCoverOf(context, custom, page.thumbnailUrl.takeUnless { liked }, songs)
+        val own = ownCoverOf(context, custom, page.thumbnailUrl, liked, songs)
+        if (own != null) ownFronts += own
         val picked = collageCovers(
             songs,
             newestFirst = liked,
@@ -128,18 +131,33 @@ internal fun rememberGeneratedCollage(page: DetailPage, songs: List<Song>): List
     return shown.takeIf { eligible }
 }
 
+/** The front covers that are a playlist's own picture, which make a different entrance. */
+private val ownFronts = HashSet<String>()
+
+/** Whether [covers]' front one is the playlist's own picture rather than a song's sleeve. */
+internal fun collageFrontIsOwn(covers: List<String>?): Boolean =
+    covers?.firstOrNull()?.let { it in ownFronts } == true
+
 /**
  * The playlist's own picture, for the front of its generated image: the
  * cover set for it on this device ([custom]) unless the app generated that
  * one, else the cover it came with ([thumbnail]) unless that is made of its
- * songs' sleeves. Null when it has none, or the cover couldn't be read in time.
+ * songs' sleeves. Liked music's ([liked]) is never a grid: its thumbs-up or
+ * heart is its own. Null when it has none, or the cover couldn't be read in time.
  */
-private suspend fun ownCoverOf(context: Context, custom: String?, thumbnail: String?, songs: List<Song>): String? {
+private suspend fun ownCoverOf(
+    context: Context,
+    custom: String?,
+    thumbnail: String?,
+    liked: Boolean,
+    songs: List<Song>,
+): String? {
     if (custom != null && playlistCoverIsOwnByAddress(custom) == true) return custom
     if (thumbnail.isNullOrBlank()) return null
     val sleeves = songs.take(GRID_SOURCE_ROWS).mapNotNull { it.thumbnailUrl }.distinct()
     val key = artworkKey(thumbnail)
     if (songs.any { artworkKey(it.thumbnailUrl) == key }) return null
+    if (liked) return thumbnail
     val own = playlistCoverIsOwnByAddress(thumbnail) ?: coverIsOwnByPicture(context, thumbnail, sleeves)
     return thumbnail.takeIf { own }
 }
@@ -189,6 +207,12 @@ private const val MAIN_SHAPE = 4
 
 /** How long the covers take to come in. */
 private const val ENTER_MS = 700
+
+/** How long the playlist's own picture takes to shrink from the whole banner into its place. */
+private const val OWN_ENTER_MS = 800
+
+/** The playlist's own picture is decoded larger: it starts out filling the banner. */
+private const val OWN_MAIN_PX = 1000
 
 /** How long the front cover waits for the floating ones before coming in without them. */
 private const val TILES_WAIT_MS = 2_500L
@@ -289,6 +313,23 @@ private class CollageGeometry {
     val paths = Array(SLOTS.size) { Path() }
     var mainSide = 0f
     var mainPath = Path()
+    private val settling = Path()
+
+    /** The front cover's outline [placed] of the way from square-cornered to its own shape. */
+    fun mainPathAt(placed: Float): Path {
+        if (placed >= 1f) return mainPath
+        val h = mainSide / 2f
+        val r = RADII[MAIN_SHAPE]
+        settling.reset()
+        settling.addRoundRect(
+            RoundRect(
+                -h, -h, h, h,
+                CornerRadius(mainSide * r[0] * placed), CornerRadius(mainSide * r[1] * placed),
+                CornerRadius(mainSide * r[2] * placed), CornerRadius(mainSide * r[3] * placed),
+            ),
+        )
+        return settling
+    }
 
     fun ensure(width: Float, height: Float) {
         if (width == w && height == h) return
@@ -322,9 +363,22 @@ private fun shapePath(kind: Int, side: Float): Path {
 /**
  * The generated playlist image: [covers]'s first in front, the rest floating
  * round it. Fills its bounds; the page's colour is expected to be under it.
+ *
+ * With [ownFront] the front cover is the playlist's own picture, the one the
+ * banner was showing whole: it starts out filling these bounds as the banner
+ * did and shrinks back into its place in one movement, the others coming in
+ * round it. [onEntrance] is called as that starts, for the banner to step
+ * aside.
  */
 @Composable
-internal fun PlaylistCollageArt(covers: List<String>, modifier: Modifier = Modifier) {
+internal fun PlaylistCollageArt(
+    covers: List<String>,
+    modifier: Modifier = Modifier,
+    ownFront: Boolean = false,
+    onEntrance: () -> Unit = {},
+) {
+    val entranceStarted by rememberUpdatedState(onEntrance)
+    val enterMs = if (ownFront) OWN_ENTER_MS else ENTER_MS
     val state = remember { CollageState() }
     val geometry = remember { CollageGeometry() }
     val borderPx = with(LocalDensity.current) { 1.dp.toPx() }
@@ -341,7 +395,7 @@ internal fun PlaylistCollageArt(covers: List<String>, modifier: Modifier = Modif
         enter.snapTo(0f)
         tilesEnter.snapTo(0f)
         coroutineScope {
-            val main = async(Dispatchers.Default) { loadCover(context, url, MAIN_PX) }
+            val main = async(Dispatchers.Default) { loadCover(context, url, if (ownFront) OWN_MAIN_PX else MAIN_PX) }
             val tiles = async(Dispatchers.Default) {
                 // Sharp at every depth: distance is shown by size and
                 // dimming alone, never by a smeared low-res copy.
@@ -353,12 +407,14 @@ internal fun PlaylistCollageArt(covers: List<String>, modifier: Modifier = Modif
             val ready = withTimeoutOrNull(TILES_WAIT_MS) { tiles.await() }
             if (ready != null) {
                 state.tiles = ready
-                launch { tilesEnter.animateTo(1f, tween(ENTER_MS, easing = FastOutSlowInEasing)) }
-                enter.animateTo(1f, tween(ENTER_MS, easing = FastOutSlowInEasing))
+                entranceStarted()
+                launch { tilesEnter.animateTo(1f, tween(enterMs, easing = FastOutSlowInEasing)) }
+                enter.animateTo(1f, tween(enterMs, easing = FastOutSlowInEasing))
             } else {
-                launch { enter.animateTo(1f, tween(ENTER_MS, easing = FastOutSlowInEasing)) }
+                entranceStarted()
+                launch { enter.animateTo(1f, tween(enterMs, easing = FastOutSlowInEasing)) }
                 state.tiles = tiles.await()
-                tilesEnter.animateTo(1f, tween(ENTER_MS, easing = FastOutSlowInEasing))
+                tilesEnter.animateTo(1f, tween(enterMs, easing = FastOutSlowInEasing))
             }
         }
     }
@@ -370,7 +426,7 @@ internal fun PlaylistCollageArt(covers: List<String>, modifier: Modifier = Modif
                 val v = c.isAttached && c.boundsInWindow().let { !it.isEmpty && it.bottom > 0f }
                 if (v != state.visible) state.visible = v
             }
-            .drawBehind { drawCollage(state, geometry, enter.value, tilesEnter.value, borderPx) },
+            .drawBehind { drawCollage(state, geometry, enter.value, tilesEnter.value, borderPx, fromBanner = ownFront) },
     )
 }
 
@@ -418,11 +474,13 @@ private fun DrawScope.drawCollage(
     tilesEnter: Float,
     borderPx: Float,
     centreY: Float = MAIN_CENTRE_Y,
+    /** The front cover starts out filling the bounds and shrinks into place, instead of fading in. */
+    fromBanner: Boolean = false,
 ) {
     val w = size.width
     val h = size.height.coerceAtLeast(1f)
     geo.ensure(w, h)
-    if (enter <= 0.01f && tilesEnter <= 0.01f) return
+    if (!fromBanner && enter <= 0.01f && tilesEnter <= 0.01f) return
     val t = state.seconds
     val tiles = if (tilesEnter > 0.01f) state.tiles else emptyList()
 
@@ -437,21 +495,32 @@ private fun DrawScope.drawCollage(
         drawTile(img, geo.paths[i], geo.sides[i], s.x * w + dx, s.y * h + dy, rot, sc * (0.94f + 0.06f * tilesEnter), tilesEnter, (1f - s.depth) * FAR_DIM, borderPx)
     }
 
-    val main = state.main?.takeIf { enter > 0.01f } ?: return
+    val main = state.main?.takeIf { fromBanner || enter > 0.01f } ?: return
+    // How far the front cover is into its place, and how much of it shows.
+    // Fading in, it is in place from the start; out of the banner, it is
+    // whole from the start and travels there.
+    val placed = if (fromBanner) enter else 1f
+    val alpha = if (fromBanner) 1f else enter
     val om = 2.0 * PI / 26.0
-    val rot = -7f + (1.6 * sin(om * t)).toFloat()
-    val cx = w / 2f + (0.012 * w * sin(om * 0.7 * t + 1.0)).toFloat()
-    val cy = h * centreY + (0.012 * w * sin(om * 0.9 * t + 2.0)).toFloat()
-    val sc = (0.94f + 0.06f * enter) * (1f + 0.012f * sin(om * 1.3 * t).toFloat())
+    val rot = (-7f + (1.6 * sin(om * t)).toFloat()) * placed
+    val restX = w / 2f + (0.012 * w * sin(om * 0.7 * t + 1.0)).toFloat()
+    val restY = h * centreY + (0.012 * w * sin(om * 0.9 * t + 2.0)).toFloat()
+    val cx = w / 2f + (restX - w / 2f) * placed
+    val cy = h / 2f + (restY - h / 2f) * placed
+    val restScale = (if (fromBanner) 1f else 0.94f + 0.06f * enter) * (1f + 0.012f * sin(om * 1.3 * t).toFloat())
+    // Filling the bounds as the banner's picture does: its middle square, over the longer side.
+    val fillScale = max(w, h) / geo.mainSide
+    val sc = fillScale + (restScale - fillScale) * placed
+    val path = geo.mainPathAt(placed)
     // A soft shadow under the front cover.
     withTransform({
-        translate(cx, cy + 0.02f * w)
+        translate(cx, cy + 0.02f * w * placed)
         rotate(rot, Offset.Zero)
         scale(sc * 1.02f, sc * 1.02f, Offset.Zero)
     }) {
-        drawPath(geo.mainPath, Color.Black.copy(alpha = 0.22f * enter))
+        drawPath(path, Color.Black.copy(alpha = 0.22f * alpha * placed))
     }
-    drawTile(main, geo.mainPath, geo.mainSide, cx, cy, rot, sc, enter, 0f, borderPx)
+    drawTile(main, path, geo.mainSide, cx, cy, rot, sc, alpha, 0f, borderPx * placed)
 }
 
 private fun DrawScope.drawTile(

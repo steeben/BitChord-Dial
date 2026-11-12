@@ -20,6 +20,7 @@ import com.music.bitchord.R
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -2612,9 +2613,14 @@ private fun PageBackground(
             }
             // The page's own artwork gives way to a generated collage, if
             // the playlist gets one, once the check for that has answered.
+            // A collage fronted by the playlist's own picture takes over in
+            // one go instead: that picture starts out exactly over this one
+            // and shrinks into its place, so there is nothing to fade between.
+            val ownFront = collageFrontIsOwn(collage)
+            var collageEntered by remember(collage) { mutableStateOf(false) }
             val artOut by animateFloatAsState(
-                targetValue = if (collage != null) 0f else 1f,
-                animationSpec = tween(ART_CROSSFADE_MS, easing = FastOutSlowInEasing),
+                targetValue = if (collage != null && (!ownFront || collageEntered)) 0f else 1f,
+                animationSpec = if (ownFront) snap<Float>() else tween<Float>(ART_CROSSFADE_MS, easing = FastOutSlowInEasing),
                 label = "artOut",
             )
             if (artOut > 0f) {
@@ -2646,7 +2652,12 @@ private fun PageBackground(
                             ),
                         ),
                 ) {
-                    PlaylistCollageArt(covers = collage, modifier = Modifier.matchParentSize())
+                    PlaylistCollageArt(
+                        covers = collage,
+                        modifier = Modifier.matchParentSize(),
+                        ownFront = ownFront,
+                        onEntrance = { collageEntered = true },
+                    )
                 }
             }
             if (heroArt != null) {

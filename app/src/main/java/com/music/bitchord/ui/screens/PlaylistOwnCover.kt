@@ -33,7 +33,6 @@ internal fun playlistCoverIsOwnByAddress(url: String?): Boolean? {
         host.endsWith("ytimg.com") -> if (path.startsWith("vi/") || path.startsWith("vi_webp/")) false else null
         host.endsWith("scdn.co") || host.endsWith("spotifycdn.com") -> when {
             host.startsWith("mosaic.") -> false
-            "liked-songs" in path -> false
             // An album's sleeve, which a playlist of under four albums wears.
             "image/ab67616d" in path -> false
             else -> true

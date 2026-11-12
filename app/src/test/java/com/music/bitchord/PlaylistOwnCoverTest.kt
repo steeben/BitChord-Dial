@@ -77,10 +77,10 @@ class PlaylistOwnCoverTest {
 
     @Test
     fun `some covers are known by their address alone`() {
-        // Spotify: a grid, an album's sleeve, liked songs; then an uploaded cover and a mix's.
+        // Spotify: a grid, an album's sleeve; then liked songs' heart, an uploaded cover and a mix's.
         assertEquals(false, playlistCoverIsOwnByAddress("https://mosaic.scdn.co/640/ab67616d00001e02aaaab67616d00001e02bbb"))
         assertEquals(false, playlistCoverIsOwnByAddress("https://i.scdn.co/image/ab67616d0000b273abcdef"))
-        assertEquals(false, playlistCoverIsOwnByAddress("https://misc.scdn.co/liked-songs/liked-songs-640.png"))
+        assertEquals(true, playlistCoverIsOwnByAddress("https://misc.scdn.co/liked-songs/liked-songs-640.png"))
         assertEquals(true, playlistCoverIsOwnByAddress("https://image-cdn-ak.spotifycdn.com/image/ab67706c0000da84abcdef"))
         assertEquals(true, playlistCoverIsOwnByAddress("https://seed-mix-image.spotifycdn.com/v6/img/artist/abc/en/default"))
         // YouTube: a video's still is the first song's; the rest has to be looked at.
