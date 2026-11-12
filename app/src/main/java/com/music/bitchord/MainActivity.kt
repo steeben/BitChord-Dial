@@ -4929,7 +4929,7 @@ private fun BitChordApp(
                             },
                             onAddonHistoryRemove = viewModel::removeAddonSearch,
                             onAddonHistoryClear = viewModel::clearAddonSearchHistory,
-                            // The same queue opening the Local Music folder and
+                            // The same queue opening the Library's Songs page and
                             // tapping the row there would give; the addons'
                             // hits play as a list of their own.
                             onLibrarySongClick = { songs, index ->
@@ -4958,9 +4958,9 @@ private fun BitChordApp(
                                         )
                                     } else {
                                         QueueSource(
-                                            context.getString(R.string.local_music),
+                                            context.getString(R.string.library),
                                             PlaybackSourceType.BROWSE,
-                                            "local:all",
+                                            librarySource.browseId,
                                         )
                                     },
                                 )

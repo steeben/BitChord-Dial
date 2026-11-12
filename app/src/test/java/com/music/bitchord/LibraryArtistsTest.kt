@@ -70,6 +70,11 @@ class LibraryArtistsTest {
         assertEquals(listOf("Madeon"), LibraryArtists.search(songs, "MADE").map { it.first })
         assertEquals(emptyList<String>(), LibraryArtists.search(songs, "  ").map { it.first })
         assertEquals(emptyList<String>(), LibraryArtists.search(songs, "zzz").map { it.first })
+        // A later word of the name finds it too, from a credit shared with a guest.
+        val more = songs + song("Savage Garden") + song("Someone feat. Savage Garden")
+        val garden = LibraryArtists.search(more, "garden")
+        assertEquals(listOf("Savage Garden"), garden.map { it.first })
+        assertEquals(2, garden.first().second.size)
     }
 
     @Test

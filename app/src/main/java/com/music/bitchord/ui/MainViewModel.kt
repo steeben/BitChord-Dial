@@ -115,6 +115,7 @@ import com.music.bitchord.ui.screens.CACHE_FOLDER_BROWSE_ID
 import com.music.bitchord.ui.screens.YT_MUSIC_LIBRARY_BROWSE_ID
 import com.music.bitchord.ui.screens.LOCAL_LIBRARY_BROWSE_ID
 import com.music.bitchord.ui.screens.ALL_LIBRARY_BROWSE_ID
+import com.music.bitchord.ui.screens.browseId
 import com.music.bitchord.ui.screens.LIBRARY_GROUP_PREFIX
 import com.music.bitchord.ui.screens.libraryGroupId
 import com.music.bitchord.data.AlbumArtChoices
@@ -319,9 +320,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _librarySongs = MutableStateFlow<UiState<List<Song>>>(UiState.Loading)
 
     /**
-     * The Library source's answer for the current query: the Local Music
-     * folder narrowed by the same match its own filter box uses, so the two
-     * places never disagree about what is on the device. Null while the field
+     * The Library source's answer for the current query: the Library's songs
+     * ([loadLibrarySongs]) narrowed by the same match its own filter box
+     * uses, so the two places never disagree about what is in it. Null while the field
      * is empty — there is nothing asked yet.
      */
     val libraryResults: StateFlow<UiState<List<Song>>?> = combine(_librarySongs, _query) { state, query ->
@@ -336,7 +337,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     /**
      * The Library source's artists for the current query: everyone in the
-     * Local Music folder whose name matches, each a row above the songs that
+     * Library's songs whose name matches, each a row above the songs that
      * opens their page. Empty while the field is.
      */
     private val libraryArtistHits: StateFlow<List<Pair<String, List<Song>>>> =
@@ -2838,23 +2839,25 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * Reads the Local Music folder for the Library source. Re-read on every
+     * Reads the Library for the search page's Library source: the same songs
+     * the Library's own Songs, Artists and Albums page lists for the source
+     * picked there — the device's files and downloads, the YouTube Music
+     * library, or both. Searching only the device's files left out every
+     * artist and song the Library shows from the account. Re-read on every
      * switch to it, so files added since — or a permission granted since —
-     * are in the next answer; the last list stays up meanwhile.
+     * are in the next answer; the last list stays up meanwhile, and a listing
+     * the Library already holds is shown until the fresh one lands.
      */
     fun loadLibrarySongs() {
         viewModelScope.launch {
-            val context = getApplication<Application>()
-            _librarySongs.value = if (!LocalMediaRepository.hasStoragePermission(context)) {
-                UiState.Error(text(R.string.storage_required_read))
-            } else {
-                runCatching { LocalMediaRepository.getLocalMusic(context) }.fold(
-                    onSuccess = { songs ->
-                        if (songs.isEmpty()) UiState.Error(text(R.string.no_local_audio_found))
-                        else UiState.Success(songs)
-                    },
-                    onFailure = { UiState.Error(text(R.string.no_local_audio_found)) },
-                )
+            val source = CustomizationSettings.librarySource.value
+            if (_librarySongs.value !is UiState.Success) {
+                librarySongsWarm[source.browseId]?.let { _librarySongs.value = it }
+            }
+            _librarySongs.value = when (source) {
+                LibrarySource.YOUTUBE_MUSIC -> ytLibraryState()
+                LibrarySource.LOCAL -> combinedLibraryState(withYouTube = false)
+                LibrarySource.ALL -> combinedLibraryState(withYouTube = true)
             }
         }
     }
