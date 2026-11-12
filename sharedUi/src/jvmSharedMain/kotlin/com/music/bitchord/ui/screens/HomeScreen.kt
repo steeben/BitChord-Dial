@@ -708,8 +708,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.itemsIndexedShelves(
  * null for a track or a video, which play where they are, and for the
  * device's own folders, whose cards are drawn rather than pictured.
  */
-internal fun ShelfItem.launchKey(): String? =
-    browseId?.takeIf { videoId == null && !it.startsWith("local:") }
+internal fun ShelfItem.launchKey(): String? = cardLaunchKey(browseId, videoId)
 
 /**
  * How many of Home's first shelves are dials: the speed dial, the artists'

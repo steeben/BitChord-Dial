@@ -1,6 +1,7 @@
 package com.music.bitchord
 
 import com.music.bitchord.ui.screens.Launched
+import com.music.bitchord.ui.screens.cardLaunchKey
 import com.music.bitchord.ui.screens.launchBetween
 import com.music.bitchord.ui.screens.stackSettledOn
 import com.music.bitchord.ui.screens.stackWith
@@ -64,5 +65,25 @@ class DialLaunchStackTest {
         assertTrue(stackWithout(listOf(mood, playlist), mood).isEmpty())
         assertEquals(listOf(mood), stackWithout(listOf(mood, playlist), playlist))
         assertEquals(listOf(mood), stackWithout(listOf(mood), playlist))
+    }
+
+    @Test
+    fun aCardThatOpensAPageLaunchesItAndOneThatPlaysDoesNot() {
+        assertEquals("MPREb_album", cardLaunchKey("MPREb_album", null))
+        // A track on a shelf plays where it is, whatever album it carries.
+        assertNull(cardLaunchKey("MPREb_album", "videoId"))
+        assertNull(cardLaunchKey(null, null))
+    }
+
+    @Test
+    fun whatIsKeptOnTheDeviceUnderACoverLaunchesAndItsFoldersDoNot() {
+        // The Library's own albums and artists, and the device's playlists.
+        assertEquals("local:group:album:Blue|Joni", cardLaunchKey("local:group:album:Blue|Joni", null))
+        assertEquals("local:playlist:PL1", cardLaunchKey("local:playlist:PL1", null))
+        assertEquals("local:offline:7", cardLaunchKey("local:offline:7", null))
+        // Folders are drawn, not pictured: nothing for a page to grow out of.
+        assertNull(cardLaunchKey("local:downloads", null))
+        assertNull(cardLaunchKey("local:all", null))
+        assertNull(cardLaunchKey("local:library", null))
     }
 }

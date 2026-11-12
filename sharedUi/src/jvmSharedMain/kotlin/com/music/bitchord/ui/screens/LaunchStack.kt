@@ -31,3 +31,19 @@ fun <T : Launched> stackSettledOn(stack: List<T>, page: String): List<T> {
 /** The launch in [stack] that going from page [from] to page [to] opens or closes. */
 fun <T : Launched> launchBetween(stack: List<T>, from: String, to: String): T? =
     stack.lastOrNull { (from == it.parent && to == it.key) || (from == it.key && to == it.parent) }
+
+/**
+ * The page a card opens, by key, when its page can grow out of its artwork:
+ * its browse id, unless the card plays ([videoId]) or is one of the device's
+ * folders (Downloads, Local Music...), which have no artwork to grow out of.
+ * What is kept on the device under a cover of its own (a downloaded or offline
+ * playlist, an album or artist grouped off the files' tags) launches as any
+ * other release does.
+ */
+fun cardLaunchKey(browseId: String?, videoId: String?): String? =
+    browseId?.takeIf {
+        videoId == null && (!it.startsWith("local:") || DEVICE_RELEASE_PREFIXES.any(it::startsWith))
+    }
+
+/** The ids under `local:` that are releases rather than folders. */
+private val DEVICE_RELEASE_PREFIXES = listOf("local:playlist:", "local:offline:", "local:group:")
