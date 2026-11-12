@@ -54,11 +54,6 @@
 - **Quick to browse.** An A–Z index, list or grid per tab, and a default library to open on.
 - **Fix a song's details.** Compare your file with its YouTube Music match and keep the title, artist, album and cover you prefer.
 
-### Pages
-- **Playlists** get a background built from their covers.
-- **Albums and artists** take their colours from the art.
-- **Pages open from their tile** and shrink back into it.
-
 ### Player
 - **Colours follow the song**, and the player opens out of the mini player.
 - **Lyrics.** The current line on the player, or the full synced sheet.
@@ -81,14 +76,11 @@ And more, on top of everything BitChord already does.
 
 Download the latest APK from the [Releases](https://github.com/steeben/Dial/releases) page. Sideloading requires enabling "Install unknown apps" for whichever app you download it with.
 
-> [!TIP]
-> I suggest using [ObtainX](https://github.com/bikram-agarwal/ObtainX) ([F-Droid](https://f-droid.org/packages/dev.bikram.obtainx/)) for automatic updates. Add this repository to it and it will pick up new releases as they are published.
-
 The app installs as **Dial**, a separate app from the official BitChord, so the two can sit side by side and neither touches the other's data. You'll need to sign in again the first time.
 
 Each release is signed with the same key, so a new version installs over the old one and keeps your sign-in and settings. The app also checks this repository for updates when it launches, and Settings › Miscellaneous › Check for updates asks on demand.
 
-To build it yourself, see [CONTRIBUTING.md](CONTRIBUTING.md) and, for the desktop app, [DESKTOP.md](DESKTOP.md).
+To build it yourself, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
@@ -105,3 +97,11 @@ BitChord is an independent, community-driven third-party audio player and client
 ## License
 
 Licensed under the **GNU General Public License v3.0**. See [LICENSE](LICENSE).
+
+---
+
+<div align="center">
+
+[![Support Dial](https://img.shields.io/badge/Support%20Dial-Donate%20with%20PayPal-0070ba?style=for-the-badge&logo=paypal&logoColor=white&labelColor=0d1117)](https://www.paypal.com/donate/?hosted_button_id=QA4XFTMJH98NU)
+
+</div>
