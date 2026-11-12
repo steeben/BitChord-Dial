@@ -123,6 +123,23 @@ object LibraryArtists {
     }
 
     /**
+     * The artists among [songs] whose name has [query] in it, for the Search
+     * tab's Library source: each with every track that credits them, as
+     * [group] lists them. Names that start with the query come first, then
+     * the rest, both in name order. Empty for a blank query.
+     */
+    fun search(songs: List<Song>, query: String): List<Pair<String, List<Song>>> {
+        val term = query.trim()
+        if (term.isEmpty()) return emptyList()
+        return group(songs)
+            .filter { (name, _) -> name.contains(term, ignoreCase = true) }
+            .sortedWith(
+                compareBy<Pair<String, List<Song>>> { (name, _) -> !name.startsWith(term, ignoreCase = true) }
+                    .thenBy(String.CASE_INSENSITIVE_ORDER) { it.first },
+            )
+    }
+
+    /**
      * Who an album is by: the artist credited on most of its [tracks], so a
      * guest on one song doesn't take the release over. Ties go to whoever is
      * named first on the first track.

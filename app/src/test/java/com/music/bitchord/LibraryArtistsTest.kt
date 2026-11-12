@@ -54,6 +54,25 @@ class LibraryArtistsTest {
     }
 
     @Test
+    fun searchFindsArtistsByName() {
+        val songs = listOf(
+            song("Madeon"),
+            song("Porter Robinson, Madeon"),
+            song("The Port"),
+            song("Porter Robinson"),
+            song("Someone Else", "Porter"),
+        )
+        val hits = LibraryArtists.search(songs, " port ")
+        // Starts-with first, then a name that only contains it; an album called
+        // "Porter" is not an artist.
+        assertEquals(listOf("Porter Robinson", "The Port"), hits.map { it.first })
+        assertEquals(2, hits.first().second.size)
+        assertEquals(listOf("Madeon"), LibraryArtists.search(songs, "MADE").map { it.first })
+        assertEquals(emptyList<String>(), LibraryArtists.search(songs, "  ").map { it.first })
+        assertEquals(emptyList<String>(), LibraryArtists.search(songs, "zzz").map { it.first })
+    }
+
+    @Test
     fun albumArtistIsTheMostCredited() {
         val tracks = listOf(
             song("Imaginary Cities, Porter Robinson"),
