@@ -3711,6 +3711,16 @@ private fun BitChordApp(
                     else -> "$TAB_KEY$selectedTab"
                 }
                 val pageKey = pageKeyFor()
+                // The tab each page was last up on, for the transition to tell
+                // a page left for another tab from one stepped back out of.
+                val pageTabs = remember { HashMap<String, Int>() }
+                pageTabs[pageKey] = selectedTab
+                // Leaving for a tab's own page from a page on another tab: a
+                // tab itself, or anything opened on it (an album in the
+                // Library, a mood on Explore, Settings).
+                val changesTab: (String, String) -> Boolean = { from, to ->
+                    to.startsWith(TAB_KEY) && pageTabs[from].let { it != null && "$TAB_KEY$it" != to }
+                }
                 // What a tile or card tapped now opens its page from.
                 androidx.compose.runtime.SideEffect { DialLaunch.page = pageKey }
                 // Settings itself, with nothing of its own pushed over it.
@@ -3910,7 +3920,11 @@ private fun BitChordApp(
                     transitionSpec = {
                         val from = libraryDepths[initialState]
                         val to = libraryDepths[targetState]
-                        val tabSwap = initialState.startsWith(TAB_KEY) && targetState.startsWith(TAB_KEY)
+                        // Any page left by a tap on another tab, not only a
+                        // tab's own: an album open in the Library and Home
+                        // tapped crossed over each other, both half there.
+                        val tabSwap = (initialState.startsWith(TAB_KEY) && targetState.startsWith(TAB_KEY)) ||
+                            changesTab(initialState, targetState)
                         // Into a Settings category and back out of it: pushed
                         // sideways, as Library's pages are.
                         // Sources, opened off the main page, pushes the same way.
@@ -5745,14 +5759,35 @@ private fun BitChordApp(
                 )
                 }
 
+                // How the mark comes and goes, settled as Home is arrived at
+                // or left. Between tabs it keeps the pages' time: it is drawn
+                // over them all, so shown at once it sat on the page being
+                // left until that had faded, and Home came in under it.
+                val markTabFade = remember(homeRoot) {
+                    val left = pageTransitionState.currentState
+                    !reduceAnimationSetting && if (homeRoot) {
+                        left != HOME_PAGE_KEY && changesTab(left, HOME_PAGE_KEY)
+                    } else {
+                        left == HOME_PAGE_KEY && pageKey.startsWith(TAB_KEY)
+                    }
+                }
                 // The mark, above the bar and its fade so neither washes it out.
                 androidx.compose.animation.AnimatedVisibility(
                     visible = homeRoot,
-                    // No fade either way: the bar's own buttons swap instantly,
-                    // and a mark that fades back in on every return to Home
-                    // reads as the page reloading.
-                    enter = EnterTransition.None,
-                    exit = ExitTransition.None,
+                    // Back on Home from a page opened on it, no fade either
+                    // way: the bar's own buttons swap instantly, and a mark
+                    // that fades back in on every return to Home reads as the
+                    // page reloading.
+                    enter = if (markTabFade) {
+                        fadeIn(tween(TAB_FADE_IN_MS, delayMillis = TAB_FADE_OUT_MS, easing = LinearOutSlowInEasing))
+                    } else {
+                        EnterTransition.None
+                    },
+                    exit = if (markTabFade) {
+                        fadeOut(tween(TAB_FADE_OUT_MS, easing = FastOutLinearInEasing))
+                    } else {
+                        ExitTransition.None
+                    },
                     modifier = Modifier.align(Alignment.TopStart),
                 ) {
                     HomeStickyLogo(
