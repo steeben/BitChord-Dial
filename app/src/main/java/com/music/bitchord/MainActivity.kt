@@ -3934,6 +3934,8 @@ private fun BitChordApp(
                                 (initialState == "settings" && targetState in SETTINGS_PAGE_KEYS) ||
                                 (targetState == "settings" && initialState in SETTINGS_PAGE_KEYS)
                         val dialZoom = !reduceAnimationSetting && DialLaunch.zooms(initialState, targetState)
+                        // Home's mark follows the tabs' fade through, and nothing else.
+                        HomeMark.tabSwap = false
                         when {
                             // A tile's page opening, as an app does from a
                             // phone's home screen: the page grows out of the tile
@@ -3965,6 +3967,7 @@ private fun BitChordApp(
                                     slideOutHorizontally(slide) { if (forward) -it else it }
                             }
                             tabSwap -> {
+                                HomeMark.tabSwap = true
                                 (
                                     fadeIn(tween(TAB_FADE_IN_MS, delayMillis = TAB_FADE_OUT_MS, easing = LinearOutSlowInEasing)) +
                                         scaleIn(
@@ -4000,6 +4003,10 @@ private fun BitChordApp(
                             }
                         },
                 ) { key ->
+                    // Home's mark is drawn over the pages: it takes this page's transition from here.
+                    if (key == HOME_PAGE_KEY) {
+                        HomeMarkFollow(transition, TAB_FADE_OUT_MS, TAB_FADE_IN_MS, TAB_FADE_IN_SCALE)
+                    }
                     // A page opened from a tile grows out of it, and shrinks back on closing.
                     DialLaunchPage(
                         key = key,
@@ -5759,35 +5766,28 @@ private fun BitChordApp(
                 )
                 }
 
-                // How the mark comes and goes, settled as Home is arrived at
-                // or left. Between tabs it keeps the pages' time: it is drawn
-                // over them all, so shown at once it sat on the page being
-                // left until that had faded, and Home came in under it.
-                val markTabFade = remember(homeRoot) {
-                    val left = pageTransitionState.currentState
-                    !reduceAnimationSetting && if (homeRoot) {
-                        left != HOME_PAGE_KEY && changesTab(left, HOME_PAGE_KEY)
-                    } else {
-                        left == HOME_PAGE_KEY && pageKey.startsWith(TAB_KEY)
-                    }
-                }
                 // The mark, above the bar and its fade so neither washes it out.
+                // Between tabs it fades and settles in with Home's page, and
+                // fades out with it, as the Library's heading does with its
+                // own: see [HomeMark]. The layer is the size of the pages, so
+                // the mark is scaled about the same middle as they are.
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .graphicsLayer {
+                            alpha = HomeMark.alpha
+                            scaleX = HomeMark.scale
+                            scaleY = HomeMark.scale
+                        },
+                ) {
                 androidx.compose.animation.AnimatedVisibility(
-                    visible = homeRoot,
+                    visible = homeRoot || HomeMark.leaving,
                     // Back on Home from a page opened on it, no fade either
                     // way: the bar's own buttons swap instantly, and a mark
                     // that fades back in on every return to Home reads as the
                     // page reloading.
-                    enter = if (markTabFade) {
-                        fadeIn(tween(TAB_FADE_IN_MS, delayMillis = TAB_FADE_OUT_MS, easing = LinearOutSlowInEasing))
-                    } else {
-                        EnterTransition.None
-                    },
-                    exit = if (markTabFade) {
-                        fadeOut(tween(TAB_FADE_OUT_MS, easing = FastOutLinearInEasing))
-                    } else {
-                        ExitTransition.None
-                    },
+                    enter = EnterTransition.None,
+                    exit = ExitTransition.None,
                     modifier = Modifier.align(Alignment.TopStart),
                 ) {
                     HomeStickyLogo(
@@ -5834,6 +5834,7 @@ private fun BitChordApp(
                             }
                         },
                     )
+                }
                 }
 
                 // Drawn before the bars so their own glass reads on top of it.
