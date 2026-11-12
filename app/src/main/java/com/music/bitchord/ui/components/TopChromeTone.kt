@@ -54,24 +54,38 @@ internal const val CHROME_DARK_BELOW = 0.60f
 internal const val CHROME_DARK_BELOW_LIGHT_THEME = 0.20f
 
 /**
+ * How far back past its flip point the brightness has to come before the
+ * glyphs change back. Without it a banner sitting on the line (a clip read
+ * again every second, a picture part scrolled away) flickered between the two.
+ */
+internal const val CHROME_FLIP_SLACK = 0.10f
+
+/**
  * Whether what is under the top controls is dark enough for white glyphs.
  * [artLuminance] is the top of the banner picture (null until it has been
  * read), [washLuminance] the page colour it is laid on, and [artShowing] how
  * much of the picture is still up there: 1 at the top of the page, less as it
  * fades or scrolls off. [themeDark] is the app's theme, which the glyphs lean
  * toward: white in the dark theme unless the banner is very bright, black in
- * the light theme unless it is dark.
+ * the light theme unless it is dark. [was] is the last answer given for this
+ * page: glyphs that have left the theme's own colour only return to it once
+ * the brightness has come back [CHROME_FLIP_SLACK] past the flip point.
  */
 internal fun topChromeOverDark(
     artLuminance: Float?,
     washLuminance: Float,
     artShowing: Float,
     themeDark: Boolean,
+    was: Boolean? = null,
 ): Boolean? {
     if (artLuminance == null) return null
     val showing = artShowing.coerceIn(0f, 1f)
     val under = washLuminance + (artLuminance - washLuminance) * showing
-    return under < if (themeDark) CHROME_DARK_BELOW else CHROME_DARK_BELOW_LIGHT_THEME
+    return if (themeDark) {
+        under < if (was == false) CHROME_DARK_BELOW - CHROME_FLIP_SLACK else CHROME_DARK_BELOW
+    } else {
+        under < if (was == true) CHROME_DARK_BELOW_LIGHT_THEME + CHROME_FLIP_SLACK else CHROME_DARK_BELOW_LIGHT_THEME
+    }
 }
 
 /**

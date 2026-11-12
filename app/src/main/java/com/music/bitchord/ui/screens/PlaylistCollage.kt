@@ -168,6 +168,47 @@ private val SLOTS = listOf(
     Slot(0.60f, 0.92f, 0.24f, 6f, 0.45f, 2, 39f, 2.7f, 0.020f, 0.020f, 3.0f),
 )
 
+/**
+ * How much of the strip under the status bar and the top controls each of the
+ * three covers floating up there fills ([SLOTS]' first three: left, middle,
+ * right), and how much the front cover's top edge does. The rest is the
+ * page's own colour showing between them.
+ */
+private val TOP_STRIP_SHARES = floatArrayOf(0.15f, 0.25f, 0.15f)
+private const val TOP_STRIP_FRONT_SHARE = 0.20f
+
+/**
+ * How bright a generated collage is under the status bar and the top
+ * controls, for [com.music.bitchord.ui.components.topChromeOverDark]. That strip is
+ * mostly the page's colour and the dimmed covers floating at the top; the
+ * front cover only reaches into it with its top edge. Read off the front
+ * cover alone, a bright sleeve there (a white burst on red) turned the
+ * glyphs black over a strip that was dark almost everywhere.
+ *
+ * [frontTop] is the front cover's top band, [floating] the whole-sleeve
+ * luminance of the covers after it in the collage's order (null for one not
+ * read yet or not there, which counts as the page showing through) and [wash]
+ * the page colour's. Null until the front cover has been read.
+ */
+internal fun collageTopLuminance(frontTop: Float?, floating: List<Float?>, wash: Float): Float? {
+    if (frontTop == null) return null
+    var sum = frontTop * TOP_STRIP_FRONT_SHARE
+    var covered = TOP_STRIP_FRONT_SHARE
+    for (i in TOP_STRIP_SHARES.indices) {
+        val tile = floating.getOrNull(i) ?: continue
+        // As drawn: a far cover has black laid over it, see drawCollage.
+        sum += tile * (1f - (1f - SLOTS[i].depth) * FAR_DIM) * TOP_STRIP_SHARES[i]
+        covered += TOP_STRIP_SHARES[i]
+    }
+    return sum + wash * (1f - covered)
+}
+
+/** How many of a collage's floating covers [collageTopLuminance] reads. */
+internal const val COLLAGE_TOP_COVERS = 3
+
+/** How much black is laid over the furthest floating cover; nearer ones get less. */
+private const val FAR_DIM = 0.45f
+
 /** Furthest first, so nearer covers overlap them. */
 private val DRAW_ORDER = SLOTS.indices.sortedBy { SLOTS[it].depth }
 
@@ -332,7 +373,7 @@ private fun DrawScope.drawCollage(
         val dy = (s.ampY * w * s.depth * sin(omega * 0.83 * t + s.phase * 1.7 + 1.1)).toFloat()
         val rot = s.rot + (s.ampR * sin(omega * 0.61 * t + s.phase * 0.9)).toFloat()
         val sc = 1f + 0.03f * sin(omega * 1.2 * t + s.phase * 2.3).toFloat()
-        drawTile(img, geo.paths[i], geo.sides[i], s.x * w + dx, s.y * h + dy, rot, sc * (0.94f + 0.06f * tilesEnter), tilesEnter, (1f - s.depth) * 0.45f, borderPx)
+        drawTile(img, geo.paths[i], geo.sides[i], s.x * w + dx, s.y * h + dy, rot, sc * (0.94f + 0.06f * tilesEnter), tilesEnter, (1f - s.depth) * FAR_DIM, borderPx)
     }
 
     val main = state.main?.takeIf { enter > 0.01f } ?: return
