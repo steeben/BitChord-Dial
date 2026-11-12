@@ -104,4 +104,6 @@ Licensed under the **GNU General Public License v3.0**. See [LICENSE](LICENSE).
 
 <a href="https://www.paypal.com/donate/?hosted_button_id=QA4XFTMJH98NU"><img src="docs/support-dial.png" width="460" alt="Support Dial: donate with PayPal" /></a>
 
+<sub>Dial and all of its features are free. Donations are optional and unlock nothing.</sub>
+
 </div>
