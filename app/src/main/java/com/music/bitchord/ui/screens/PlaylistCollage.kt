@@ -47,6 +47,7 @@ import coil3.SingletonImageLoader
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import coil3.toBitmap
+import com.music.bitchord.data.CustomCovers
 import com.music.bitchord.data.OfflinePlaylists
 import com.music.bitchord.data.YtMusicRepository
 import com.music.bitchord.data.model.BrowseType
@@ -73,9 +74,11 @@ import kotlinx.coroutines.withTimeoutOrNull
 /*
  * "Let Dial Generate Playlist Image": every playlist page gets a moving
  * collage behind it, one cover in front and others floating round it, made of
- * songs picked at random from the first batch of the list to load. A playlist's ⋯ menu can turn it off for that
- * one. A custom cover set on this device doesn't stop it: the cover shows
- * in lists, and the page keeps its moving collage.
+ * songs picked at random from the first batch of the list to load. A playlist
+ * with a picture of its own (one its owner chose, a mix's artwork, a cover
+ * set on this device) has that picture in front; one wearing the default 2x2
+ * grid of its sleeves has a song's. A playlist's ⋯ menu can turn it off for
+ * that one.
  */
 
 private fun DetailPage.isLiked(): Boolean =
@@ -85,17 +88,21 @@ private fun DetailPage.isLiked(): Boolean =
  * The covers to draw for this page, or null to show its own artwork.
  *
  * Every playlist gets one while the setting is on, unless its "..." menu has
- * turned it off for that playlist; a cover of the user's own doesn't count,
- * as the collage is drawn from the songs, not the cover. Its covers are picked
+ * turned it off for that playlist. The front cover is the playlist's own
+ * picture when it has one (see [ownCoverOf]), and the rest are picked
  * at random from the first batch of rows the first time the page is opened,
  * and then held: later pages of the list arriving and pulls to
  * refresh keep the picture it opened with. Kept by page for the life of the
- * process, so reopening one starts on it.
+ * process, so reopening one starts on it; a cover set or removed on this
+ * device makes it again.
  */
 @Composable
 internal fun rememberGeneratedCollage(page: DetailPage, songs: List<Song>): List<String>? {
     val enabled by CustomizationSettings.generatePlaylistImages.collectAsStateWithLifecycle()
     val turnedOff by CustomizationSettings.playlistBackdropsOff.collectAsStateWithLifecycle()
+    val customCovers by CustomCovers.covers.collectAsStateWithLifecycle()
+    val custom = CustomCovers.coverFor(page.browseId, customCovers)
+    val context = LocalContext.current.applicationContext
     val liked = page.isLiked()
     val eligible = enabled && page.type == BrowseType.PLAYLIST &&
         (liked || playlistTakesGeneratedImage(page.browseId)) &&
@@ -103,16 +110,70 @@ internal fun rememberGeneratedCollage(page: DetailPage, songs: List<Song>): List
     // The first batch of rows is enough: a long playlist's later pages can
     // take a while, and the picture shouldn't wait for them.
     val settled = page.songs is UiState.Success && songs.isNotEmpty()
-    var shown by remember(page.browseId) { mutableStateOf(heldCollages[page.browseId]) }
-    LaunchedEffect(page.browseId, eligible, settled) {
-        if (!eligible || !settled || page.browseId in heldCollages) return@LaunchedEffect
-        val next = collageCovers(songs, newestFirst = liked, shuffle = kotlin.random.Random(System.nanoTime()))
-            .takeIf { it.isNotEmpty() } ?: return@LaunchedEffect
+    val held = page.browseId + "|" + custom.orEmpty()
+    var shown by remember(held) { mutableStateOf(heldCollages[held]) }
+    LaunchedEffect(held, eligible, settled) {
+        if (!eligible || !settled || held in heldCollages) return@LaunchedEffect
+        val own = ownCoverOf(context, custom, page.thumbnailUrl.takeUnless { liked }, songs)
+        val picked = collageCovers(
+            songs,
+            newestFirst = liked,
+            max = if (own == null) COLLAGE_MAX_COVERS else COLLAGE_MAX_COVERS - 1,
+            shuffle = kotlin.random.Random(System.nanoTime()),
+        ).takeIf { it.isNotEmpty() } ?: return@LaunchedEffect
+        val next = listOfNotNull(own) + picked
         shown = next
-        heldCollages[page.browseId] = next
+        heldCollages[held] = next
     }
     return shown.takeIf { eligible }
 }
+
+/**
+ * The playlist's own picture, for the front of its generated image: the
+ * cover set for it on this device ([custom]) unless the app generated that
+ * one, else the cover it came with ([thumbnail]) unless that is made of its
+ * songs' sleeves. Null when it has none, or the cover couldn't be read in time.
+ */
+private suspend fun ownCoverOf(context: Context, custom: String?, thumbnail: String?, songs: List<Song>): String? {
+    if (custom != null && playlistCoverIsOwnByAddress(custom) == true) return custom
+    if (thumbnail.isNullOrBlank()) return null
+    val sleeves = songs.take(GRID_SOURCE_ROWS).mapNotNull { it.thumbnailUrl }.distinct()
+    val key = artworkKey(thumbnail)
+    if (songs.any { artworkKey(it.thumbnailUrl) == key }) return null
+    val own = playlistCoverIsOwnByAddress(thumbnail) ?: coverIsOwnByPicture(context, thumbnail, sleeves)
+    return thumbnail.takeIf { own }
+}
+
+/** [url] judged by its pixels against [sleeves]. Answers are kept for the process. */
+private suspend fun coverIsOwnByPicture(context: Context, url: String, sleeves: List<String>): Boolean {
+    ownCoverVerdicts[url]?.let { return it }
+    val verdict = withTimeoutOrNull(OWN_COVER_WAIT_MS) {
+        withContext<Boolean?>(Dispatchers.Default) {
+            val cover = loadPixels(context, url) ?: return@withContext null
+            val others = coroutineScope { sleeves.map { async { loadPixels(context, it) } }.awaitAll() }
+            coverIsOwnPicture(cover, others.filterNotNull())
+        }
+    // Not read in time: the page gets the picture it always had, a song in front.
+    } ?: return false
+    ownCoverVerdicts[url] = verdict
+    return verdict
+}
+
+private suspend fun loadPixels(context: Context, url: String): CoverPixels? {
+    val bitmap = loadSoftwareBitmap(context, url.artworkAt(GRID_PX) ?: url, GRID_PX) ?: return null
+    val pixels = IntArray(bitmap.width * bitmap.height)
+    bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+    return CoverPixels(bitmap.width, bitmap.height, pixels)
+}
+
+private val ownCoverVerdicts = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+
+/** The rows whose sleeves a cover is compared with: the default grid is made of the first ones. */
+private const val GRID_SOURCE_ROWS = 16
+private const val GRID_PX = 96
+
+/** How long the page's picture waits to learn whether the playlist's cover is its own. */
+private const val OWN_COVER_WAIT_MS = 4_000L
 
 /** The collage each playlist page settled on, by page. */
 private val heldCollages = HashMap<String, List<String>>()

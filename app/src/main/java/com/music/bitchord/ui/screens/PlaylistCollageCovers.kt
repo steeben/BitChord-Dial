@@ -77,7 +77,10 @@ internal fun collageCovers(
 }
 
 /** The artwork with its size hint taken out, so two sizes of one picture match. */
-private fun Song.artKey(): String? = thumbnailUrl?.artworkAt(1)?.substringBefore('?')
+private fun Song.artKey(): String? = artworkKey(thumbnailUrl)
+
+/** [url] with its size hint taken out, so two sizes of one picture match. */
+internal fun artworkKey(url: String?): String? = url?.artworkAt(1)?.substringBefore('?')
 
 private fun Song.albumKey(): String? =
     albumId?.takeIf { it.isNotBlank() } ?: albumName?.takeIf { it.isNotBlank() }?.lowercase()

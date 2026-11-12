@@ -640,8 +640,8 @@ fun DetailScreen(
             if (signature != null) return@LaunchedEffect
         }
     }
-    // A playlist still on YouTube Music's default grid cover gets a collage
-    // of its newest covers instead, and takes its colours from the front one.
+    // A playlist gets a collage of its songs' covers, its own picture in
+    // front when it has one, and takes its colours from the front one.
     val collage = if (isArtist) null else rememberGeneratedCollage(page, rawSongs)
     val artPalette = rememberArtworkPalette(
         imageUrl = appleArt?.heroUrl ?: collage?.firstOrNull() ?: page.thumbnailUrl,

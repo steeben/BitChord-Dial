@@ -36,6 +36,13 @@ object CustomCovers {
     private const val DIR = "playlist_covers"
     private const val MAX_PX = 1200
 
+    /**
+     * What a generated cover's file name starts with, so the playlist's page
+     * can tell it from a picture the owner chose: only the latter goes in
+     * front of the page's generated image.
+     */
+    const val GENERATED_MARK = "cover_gen_"
+
     private var prefs: SharedPreferences? = null
     private var dir: File? = null
 
@@ -125,7 +132,7 @@ object CustomCovers {
         runCatching {
             folder.mkdirs()
             val key = keyOf(browseId)
-            val file = File(folder, "cover_${key.hashCode().toUInt()}_${System.currentTimeMillis()}.jpg")
+            val file = File(folder, "$GENERATED_MARK${key.hashCode().toUInt()}_${System.currentTimeMillis()}.jpg")
             file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 92, it) }
             val previous = _covers.value[key]
             update(_covers.value + (key to Uri.fromFile(file).toString()))
