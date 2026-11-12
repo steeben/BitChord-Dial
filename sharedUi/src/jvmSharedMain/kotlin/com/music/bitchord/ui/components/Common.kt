@@ -90,7 +90,6 @@ import com.music.bitchord.data.model.ROW_ART_PX
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.model.isMatchPending
 import com.music.bitchord.data.model.isMatchMissing
-import androidx.compose.ui.draw.alpha
 import androidx.compose.material3.CircularProgressIndicator
 import com.music.bitchord.data.model.artworkAt
 import androidx.compose.foundation.isSystemInDarkTheme
