@@ -28,26 +28,39 @@ class BrightArtTest {
     }
 
     @Test
-    fun bandInkGoesDarkOnlyNearWhiteAndHoldsAcrossTheGap() {
-        // From light: only a near-white band flips it.
+    fun bandInkGoesDarkOverADecentlyBrightBandAndHoldsAcrossTheGap() {
+        // From light: a dark or middling band keeps light ink.
         assertEquals(false, bandInkIsDark(0.30f, wasDark = false))
-        assertEquals(false, bandInkIsDark(0.75f, wasDark = false))
-        // A bright green sleeve with pale paths (0.8 to 0.89) keeps light ink.
-        assertEquals(false, bandInkIsDark(0.85f, wasDark = false))
+        assertEquals(false, bandInkIsDark(0.54f, wasDark = false))
+        // A cream sleeve (about 0.8) is left bright under dark ink, as a white one is.
+        assertEquals(true, bandInkIsDark(0.55f, wasDark = false))
+        assertEquals(true, bandInkIsDark(0.80f, wasDark = false))
         assertEquals(true, bandInkIsDark(0.90f, wasDark = false))
         // From dark: it stays dark through the gap, so a wobbling clip can't flicker it.
-        assertEquals(true, bandInkIsDark(0.85f, wasDark = true))
-        assertEquals(true, bandInkIsDark(0.80f, wasDark = true))
-        assertEquals(false, bandInkIsDark(0.79f, wasDark = true))
+        assertEquals(true, bandInkIsDark(0.50f, wasDark = true))
+        assertEquals(true, bandInkIsDark(0.45f, wasDark = true))
+        assertEquals(false, bandInkIsDark(0.44f, wasDark = true))
+    }
+
+    @Test
+    fun darkInkDeepensAsTheBandGetsLessBright() {
+        // Nearly white: the ink as it always was.
+        assertEquals(0.575f, bandInkDarken(0.95f), 0.0001f)
+        assertEquals(0.575f, bandInkDarken(0.90f), 0.0001f)
+        val mid = bandInkDarken(0.72f)
+        assertTrue("mid was $mid", mid > 0.6f && mid < 0.78f)
+        assertEquals(0.80f, bandInkDarken(0.55f), 0.0001f)
+        assertEquals(0.80f, bandInkDarken(0.45f), 0.0001f)
     }
 
     @Test
     fun lightThemeBandInkGoesDarkOverABrightBand() {
-        // A pale grey sleeve (0.6 to 0.85) is light ink on a scrim in the dark
-        // theme and dark ink in the light one.
-        assertEquals(false, bandInkIsDark(0.84f, wasDark = false))
+        // A pale grey sleeve (0.6 to 0.85) is dark ink in either theme.
+        assertEquals(true, bandInkIsDark(0.84f, wasDark = false))
         assertEquals(true, bandInkIsDark(0.84f, wasDark = false, lightTheme = true))
-        // So is a pastel one (about 0.5).
+        // A pastel one (about 0.5) is light ink on a scrim in the dark theme
+        // and dark ink in the light one.
+        assertEquals(false, bandInkIsDark(0.50f, wasDark = false))
         assertEquals(true, bandInkIsDark(0.50f, wasDark = false, lightTheme = true))
         assertEquals(true, bandInkIsDark(0.42f, wasDark = false, lightTheme = true))
         // A band on the dark side of the middle keeps light ink there as well.

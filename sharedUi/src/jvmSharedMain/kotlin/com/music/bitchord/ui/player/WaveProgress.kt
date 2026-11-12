@@ -191,7 +191,7 @@ internal fun playerInk(alpha: Float): Color {
  *
  * On the main player, once the band behind the credits and controls is known
  * ([PlayerInkConditions.band]), that band decides instead of the whole sleeve: light ink
- * unless it is nearly white ([bandInkIsDark]), stood on a scrim that darkens with it
+ * unless it is decently bright ([bandInkIsDark]), stood on a scrim that darkens with it
  * ([LocalPlayerControlsScrim]). Lyrics and the queue take that same verdict
  * ([LocalPlayerInkDark]), so their text is dark exactly when the player's is.
  *
@@ -233,7 +233,14 @@ fun ProvidePlayerInk(
     val band = if (panelOpen) null else verdictBand
     val overClip = conditions?.overClip == true && !panelOpen
     val tint = if (dark) PLAYER_INK_TINT_BRIGHT else PLAYER_INK_TINT
-    val darken = if (dark) PLAYER_INK_DARKEN else 0f
+    // Dark ink the band called for in the dark theme stands on the sleeve as it
+    // is, with no veil to lift it, so it deepens as the band gets less bright.
+    val darken = when {
+        !dark -> 0f
+        !lightTheme && conditions?.forcedDark == null && bandDark == true && verdictBand != null ->
+            bandInkDarken(verdictBand)
+        else -> PLAYER_INK_DARKEN
+    }
     val target = remember(accent, tint, darken) {
         val base = accent.toHsl()
         val cast = if (base.s < GREY_SATURATION) {
@@ -325,10 +332,11 @@ private const val CLIP_UNKNOWN_BAND = 0.45f
 
 /**
  * Whether a controls band of [band] brightness calls for dark ink, given what it called
- * for last time ([wasDark]). The light ink, stood on [controlsScrimAlpha]'s scrim, reads
- * over everything short of a nearly white band, so only that goes dark: from
- * [BAND_DARK_FROM] up, and it stays dark until the band drops below [BAND_LIGHT_BELOW].
- * The gap between the two is what keeps a moving clip from flickering the ink.
+ * for last time ([wasDark]). A band that is decently bright is left as it is under dark
+ * ink rather than darkened until light ink reads: from [BAND_DARK_FROM] up, and it stays
+ * dark until the band drops below [BAND_LIGHT_BELOW]. The gap between the two is what
+ * keeps a moving clip from flickering the ink. The light theme goes dark sooner still,
+ * and lifts the band with a veil ([lightVeilAlpha]).
  */
 internal fun bandInkIsDark(band: Float, wasDark: Boolean, lightTheme: Boolean = false): Boolean = when {
     lightTheme -> if (wasDark) band >= LIGHT_THEME_BAND_LIGHT_BELOW else band >= LIGHT_THEME_BAND_DARK_FROM
@@ -337,14 +345,27 @@ internal fun bandInkIsDark(band: Float, wasDark: Boolean, lightTheme: Boolean = 
 
 /**
  * The white veil under dark ink in the light theme, over a band of [band] brightness:
- * none from [BAND_DARK_FROM] up, where the band is white enough on its own, easing up to
+ * none from [BAND_WHITE_FROM] up, where the band is white enough on its own, easing up to
  * [LIGHT_VEIL_MAX] at [LIGHT_THEME_BAND_DARK_FROM] and below. Rounded as
  * [controlsScrimAlpha] is.
  */
 internal fun lightVeilAlpha(band: Float): Float {
-    val t = ((BAND_DARK_FROM - band) / (BAND_DARK_FROM - LIGHT_THEME_BAND_DARK_FROM)).coerceIn(0f, 1f)
+    val t = ((BAND_WHITE_FROM - band) / (BAND_WHITE_FROM - LIGHT_THEME_BAND_DARK_FROM)).coerceIn(0f, 1f)
     val eased = t * t * (3f - 2f * t)
     return (LIGHT_VEIL_MAX * eased * 50f).roundToInt() / 50f
+}
+
+/**
+ * How far toward black the dark ink goes over a band of [band] brightness that nothing
+ * lifts (the dark theme, which lays no veil): [PLAYER_INK_DARKEN] over a nearly white
+ * band ([BAND_WHITE_FROM] up), deepening to [PLAYER_INK_DARKEN_MAX] at [BAND_DARK_FROM]
+ * and below, so the text keeps its contrast as the sleeve under it gets less bright.
+ * Rounded as [controlsScrimAlpha] is.
+ */
+internal fun bandInkDarken(band: Float): Float {
+    val t = ((BAND_WHITE_FROM - band) / (BAND_WHITE_FROM - BAND_DARK_FROM)).coerceIn(0f, 1f)
+    val darken = PLAYER_INK_DARKEN + (PLAYER_INK_DARKEN_MAX - PLAYER_INK_DARKEN) * t
+    return (darken * 40f).roundToInt() / 40f
 }
 
 /**
@@ -358,11 +379,19 @@ internal fun controlsScrimAlpha(band: Float): Float {
     return (CONTROLS_SCRIM_MAX * eased * 50f).roundToInt() / 50f
 }
 
-/** Band brightness (relative luminance, linear light) where dark ink takes over: near white. */
-private const val BAND_DARK_FROM = 0.90f
+/**
+ * Band brightness (relative luminance, linear light) where dark ink takes over: a
+ * decently bright sleeve (an sRGB grey of about 196), cream or pastel as much as white.
+ * It used to be near white only (0.90), with everything short of that darkened by the
+ * scrim until light ink read, which left a bright sleeve over a visibly dark foot.
+ */
+private const val BAND_DARK_FROM = 0.55f
 
 /** ...and where it hands back to light ink, once it has. */
-private const val BAND_LIGHT_BELOW = 0.80f
+private const val BAND_LIGHT_BELOW = 0.45f
+
+/** Band brightness that is white enough for the dark ink as it is: no veil, no deeper ink. */
+private const val BAND_WHITE_FROM = 0.90f
 
 /**
  * In the light theme, where dark ink takes over: any band on the bright side of the
@@ -389,7 +418,7 @@ private const val SCRIM_FROM = 0.20f
 private const val SCRIM_FULL_AT = 0.65f
 
 /**
- * The darkest the scrim gets. Over a band at [BAND_DARK_FROM] it still leaves white text
+ * The darkest the scrim gets. Over a band at [BAND_WHITE_FROM] it still leaves white text
  * at about 4.5:1, the contrast body text is asked for.
  */
 private const val CONTROLS_SCRIM_MAX = 0.56f
@@ -414,6 +443,9 @@ private const val PLAYER_INK_TINT_BRIGHT = 0.40f
  * 85% of what the old 50% left, so dark text sits 15% darker than it used to.
  */
 private const val PLAYER_INK_DARKEN = 0.575f
+
+/** The deepest the dark ink goes, over the least bright band that still takes it. */
+private const val PLAYER_INK_DARKEN_MAX = 0.80f
 
 /**
  * Mean relative luminance (linear light) a sleeve must reach before the ink goes dark.

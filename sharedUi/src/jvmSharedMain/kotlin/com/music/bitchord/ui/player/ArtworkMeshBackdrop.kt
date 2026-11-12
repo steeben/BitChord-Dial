@@ -415,11 +415,12 @@ fun ArtworkMeshBackdrop(
         incoming = null
     }
 
-    // The light theme's dark ink stands on the sleeve's own brightness (and a
-    // veil of white), so the scrim kept for white text thins as it does behind
-    // lyrics and the queue.
+    // Dark ink stands on the sleeve's own brightness (and, in the light theme,
+    // a veil of white), so the scrim kept for white text thins as it does
+    // behind lyrics and the queue, and a bright sleeve runs on into the foot
+    // of the player instead of into a darker one.
     val baseScrim by animateFloatAsState(
-        targetValue = if (LocalPlayerLightTheme.current && LocalPlayerInkDark.current) DARK_INK_SCRIM_SCALE else 1f,
+        targetValue = if (LocalPlayerInkDark.current) DARK_INK_SCRIM_SCALE else 1f,
         animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing),
         label = "meshScrim",
     )
