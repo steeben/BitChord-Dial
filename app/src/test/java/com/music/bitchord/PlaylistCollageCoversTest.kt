@@ -2,6 +2,7 @@ package com.music.bitchord
 
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.ui.screens.collageCovers
+import com.music.bitchord.ui.screens.pageColourSource
 import com.music.bitchord.ui.screens.playlistTakesGeneratedImage
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -68,5 +69,23 @@ class PlaylistCollageCoversTest {
         assertNotEquals(newest, again)
         assertEquals(again.size, again.toSet().size)
         assertTrue(again.all { url -> songs.any { it.thumbnailUrl == url } })
+    }
+
+    @Test
+    fun `a playlist keeps the colours of the picture it opened with once its collage is in`() {
+        assertEquals("cover", pageColourSource(null, "cover", null))
+        assertEquals("cover", pageColourSource(null, "cover", "sleeve"))
+    }
+
+    @Test
+    fun `a page with no picture of its own takes its colours from the collage`() {
+        assertEquals("sleeve", pageColourSource(null, null, "sleeve"))
+        assertEquals("sleeve", pageColourSource(null, "", "sleeve"))
+        assertEquals(null, pageColourSource(null, null, null))
+    }
+
+    @Test
+    fun `an artist photo still comes first`() {
+        assertEquals("hero", pageColourSource("hero", "cover", "sleeve"))
     }
 }
