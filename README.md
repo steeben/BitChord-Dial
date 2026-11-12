@@ -30,7 +30,7 @@
 
 <img src="docs/screenshots/library.jpg" width="100%" alt="Library: For You, the Library, the songs list and the song details compare page" />
 
-<img src="docs/screenshots/pages.jpg" width="77%" alt="Pages: a playlist, an album and an artist" />
+<img src="docs/screenshots/pages.jpg" width="100%" alt="Pages: a playlist, an album and an artist" />
 
 <img src="docs/screenshots/player.jpg" width="100%" alt="Player: now playing, Canvas, the queue, and the sideways player with video and lyrics" />
 
@@ -102,6 +102,6 @@ Licensed under the **GNU General Public License v3.0**. See [LICENSE](LICENSE).
 
 <div align="center">
 
-[![Support Dial](https://img.shields.io/badge/Support%20Dial-Donate%20with%20PayPal-0070ba?style=for-the-badge&logo=paypal&logoColor=white&labelColor=0d1117)](https://www.paypal.com/donate/?hosted_button_id=QA4XFTMJH98NU)
+<a href="https://www.paypal.com/donate/?hosted_button_id=QA4XFTMJH98NU"><img src="docs/support-dial.png" width="460" alt="Support Dial: donate with PayPal" /></a>
 
 </div>
