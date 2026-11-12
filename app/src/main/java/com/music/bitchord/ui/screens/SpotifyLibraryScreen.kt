@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -50,6 +52,7 @@ import coil3.compose.AsyncImage
 import com.music.bitchord.R
 import com.music.bitchord.ui.icons.BitChordIcons
 import com.music.bitchord.data.settings.AppSettings
+import com.music.bitchord.data.spotify.SPOTIFY_PAGE_PREFIX
 import com.music.bitchord.data.spotify.SpotifyLibrary
 import com.music.bitchord.data.spotify.SpotifyPlaylist
 import com.music.bitchord.data.spotify.SpotifyTrack
@@ -69,9 +72,15 @@ fun SpotifyLibraryScreen(
     onOpenTokenSetup: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
+    /** Kept by whoever shows this page, so it is where it was left when a playlist's page closes back onto its row. */
+    listState: LazyListState = rememberLazyListState(),
 ) {
     val cookie by AppSettings.spotifySpdcToken.collectAsStateWithLifecycle()
-    var playlists by remember { mutableStateOf<List<SpotifyPlaylist>>(emptyList()) }
+    // Starts as the list last read for this account: back from a playlist's
+    // page, its row is there at once for the page to shrink into.
+    var playlists by remember {
+        mutableStateOf(lastPlaylists?.takeIf { it.first == cookie }?.second ?: emptyList())
+    }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
@@ -81,15 +90,19 @@ fun SpotifyLibraryScreen(
             error = null
             return@LaunchedEffect
         }
-        loading = true
+        loading = playlists.isEmpty()
         error = null
         runCatching { SpotifyLibrary.playlists() }
-            .onSuccess { playlists = it }
+            .onSuccess {
+                playlists = it
+                lastPlaylists = cookie to it
+            }
             .onFailure { error = it.message }
         loading = false
     }
 
     LazyColumn(
+        state = listState,
         modifier = modifier.fillMaxSize(),
         contentPadding = contentPadding,
     ) {
@@ -153,6 +166,7 @@ fun SpotifyLibraryScreen(
                     subtitle = item.owner.orEmpty(),
                     imageUrl = item.imageUrl,
                     onClick = { onOpenPlaylist(item) },
+                    launchKey = SPOTIFY_PAGE_PREFIX + item.id,
                     inSpeedDial = isInSpeedDial(item),
                     onToggleSpeedDial = { onToggleSpeedDial(item) },
                 )
@@ -170,13 +184,16 @@ private fun LibraryRow(
     onClick: () -> Unit,
     inSpeedDial: Boolean,
     onToggleSpeedDial: () -> Unit,
+    /** The page a tap opens, by key, for it to grow out of the row's picture. */
+    launchKey: String? = null,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
+    val launch = rememberCardLaunch(launchKey, imageUrl, 8.dp)
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(
-                onClick = onClick,
+                onClick = launching(launch, onClick),
                 onLongClick = { menuOpen = true },
             )
             .padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
@@ -187,7 +204,8 @@ private fun LibraryRow(
             model = imageUrl,
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            modifier = Modifier.size(52.dp).clip(RoundedCornerShape(8.dp)),
+            onState = { launch?.shows(it) },
+            modifier = Modifier.size(52.dp).launchArt(launch).clip(RoundedCornerShape(8.dp)),
         )
         Column(Modifier.weight(1f)) {
             Text(
@@ -242,3 +260,6 @@ private fun LibraryRow(
         }
     }
 }
+
+/** The playlists last read, and the sign-in they were read for. */
+private var lastPlaylists: Pair<String, List<SpotifyPlaylist>>? = null

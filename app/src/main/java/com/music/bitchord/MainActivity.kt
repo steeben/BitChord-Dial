@@ -1549,6 +1549,7 @@ private fun BitChordApp(
     val moodGenreListState = rememberLazyListState()
     val libraryListState = rememberLazyListState()
     val historyListState = rememberLazyListState()
+    val spotifyListState = rememberLazyListState()
     val libraryShowAllGridState = rememberLazyGridState()
     val searchListState = rememberLazyListState()
     val playlistsGridState = rememberLazyGridState()
@@ -3991,10 +3992,8 @@ private fun BitChordApp(
                             pageTransitionState.targetState,
                         )?.key == key,
                         visibility = transition,
-                        // Home's cards and Explore's open their pages as the dial's tiles do.
-                        cardLaunch = !reduceAnimationSetting && (
-                            key == HOME_PAGE_KEY || key == "$TAB_KEY$TAB_EXPLORE" || key.startsWith(MOOD_PAGE_KEY)
-                            ),
+                        // Home's cards, Explore's and the Library's open their pages as the dial's tiles do.
+                        cardLaunch = !reduceAnimationSetting && launchesCards(key),
                     ) {
                     // Every branch below reads `key` rather than the state that
                     // produced it. The two are the same thing only for the page
@@ -4188,6 +4187,7 @@ private fun BitChordApp(
                             onOpenLogin = { showSpotifyLogin = true },
                             onOpenTokenSetup = { showSpotifyCanvasAuth = true },
                             contentPadding = listPadding,
+                            listState = spotifyListState,
                         )
                     } else if (key == "discord") {
                         DiscordScreen(
@@ -8591,6 +8591,18 @@ private fun SongSort.localizedLabel(): String = when (this) {
 private fun String?.isDeviceFolder(): Boolean =
     this != null && startsWith("local:") && !startsWith(Downloads.PLAYLIST_PREFIX) &&
         !startsWith(LIBRARY_GROUP_PREFIX) && !startsWith(OfflinePlaylists.PREFIX)
+
+/**
+ * Whether the cards on the page called [key] open their pages out of their
+ * artwork, as the dial's tiles do: Home's, Explore's and a mood's, and the
+ * Library's (the tab, what its menu opens, and a library's Songs / Artists /
+ * Albums page, which is a device folder's).
+ */
+private fun launchesCards(key: String): Boolean =
+    key == HOME_PAGE_KEY || key == "$TAB_KEY$TAB_EXPLORE" || key.startsWith(MOOD_PAGE_KEY) ||
+        key == "$TAB_KEY$TAB_LIBRARY" || key == "$TAB_KEY$TAB_PLAYLISTS" ||
+        key == "library_show_all" || key == "spotify" ||
+        key.isDeviceFolder()
 
 /**
  * Whether [videoId] is the track playing, and is known to be playing YouTube's

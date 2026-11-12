@@ -383,6 +383,7 @@ fun LocalMusicScreen(
                         onLongPress = onDevicePlaylistLongPress?.let { hold ->
                             { entry -> byKey[entry.key]?.let(hold) }
                         },
+                        launchKey = { entry -> entry.key.takeIf { it in byKey } },
                         contentPadding = bodyContentPadding,
                     )
                 }
@@ -479,6 +480,9 @@ fun LocalMusicScreen(
                             }
                         },
                         onArtistLongPress = onCollectionLongPress,
+                        launchKey = { artist ->
+                            if (onOpenCollection != null) libraryGroupId(BrowseType.ARTIST, artist) else null
+                        },
                         contentPadding = bodyContentPadding,
                     )
                 }
@@ -511,6 +515,13 @@ fun LocalMusicScreen(
                         },
                         onLongPress = onCollectionLongPress?.let { hold ->
                             { entry -> hold(entry.title, entry.songs) }
+                        },
+                        launchKey = { entry ->
+                            if (onOpenCollection != null) {
+                                libraryGroupId(BrowseType.PLAYLIST, entry.title, entry.artist)
+                            } else {
+                                null
+                            }
                         },
                         contentPadding = bodyContentPadding,
                     )
@@ -554,6 +565,18 @@ fun LocalMusicScreen(
                                 selectedDownloadIds = selectedDownloadIds + entry.songs.map { it.videoId }
                                 selectedAlbumKeys = selectedAlbumKeys + entry.key
                             } else onCollectionLongPress?.invoke(entry.title, entry.songs)
+                        },
+                        // Not while picking downloads, when a tap ticks the album.
+                        launchKey = { entry ->
+                            if (onOpenCollection != null && !selectingDownloads) {
+                                libraryGroupId(
+                                    if (entry.playlist) BrowseType.PLAYLIST else BrowseType.ALBUM,
+                                    entry.title,
+                                    entry.artist,
+                                )
+                            } else {
+                                null
+                            }
                         },
                         contentPadding = bodyContentPadding,
                     )
@@ -665,6 +688,8 @@ private fun CollectionListTab(
     onLongPress: ((AlbumEntry) -> Unit)?,
     contentPadding: PaddingValues,
     listState: LazyListState = rememberLazyListState(),
+    /** The page a tap on an entry opens, by key, for it to grow out of the entry's cover. */
+    launchKey: (AlbumEntry) -> String? = { null },
 ) {
     LazyColumn(
         state = listState,
@@ -711,6 +736,7 @@ private fun CollectionListTab(
                 entry = entry,
                 onClick = { onClick(entry) },
                 onLongPress = onLongPress?.let { { it(entry) } },
+                launchKey = launchKey(entry),
             )
             HorizontalDivider(
                 modifier = Modifier.padding(start = ROW_DIVIDER_INSET),
@@ -928,6 +954,8 @@ private fun ArtistsTab(
     contentPadding: PaddingValues,
     listState: LazyListState = rememberLazyListState(),
     gridState: LazyGridState = rememberLazyGridState(),
+    /** The page a tap on an artist opens, by key, for it to grow out of the artist's picture. */
+    launchKey: (String) -> String? = { null },
 ) {
     if (viewType == LibraryViewType.GRID) {
         Box(Modifier.fillMaxSize()) {
@@ -958,6 +986,7 @@ private fun ArtistsTab(
                         thumbnailUrl = artistSongs.firstNotNullOfOrNull { it.thumbnailUrl },
                         onClick = { onArtistClick(artist, artistSongs) },
                         onLongPress = onArtistLongPress?.let { { it(artist, artistSongs) } },
+                        launchKey = launchKey(artist),
                     )
                 }
             }
@@ -990,6 +1019,7 @@ private fun ArtistsTab(
                         thumbnailUrl = artistSongs.firstNotNullOfOrNull { it.thumbnailUrl },
                         onClick = { onArtistClick(artist, artistSongs) },
                         onLongPress = onArtistLongPress?.let { { it(artist, artistSongs) } },
+                        launchKey = launchKey(artist),
                     )
                     HorizontalDivider(
                         modifier = Modifier.padding(start = ROW_DIVIDER_INSET),
@@ -1018,11 +1048,13 @@ private fun ArtistRow(
     thumbnailUrl: String? = null,
     onClick: () -> Unit,
     onLongPress: (() -> Unit)? = null,
+    launchKey: String? = null,
 ) {
+    val launch = rememberCardLaunch(launchKey, thumbnailUrl, ROUND_CARD_CORNER)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .longPressMenuClickable(onClick = onClick, onLongClick = onLongPress)
+            .longPressMenuClickable(onClick = launching(launch, onClick), onLongClick = onLongPress)
             .padding(horizontal = PAGE_GUTTER, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1030,6 +1062,7 @@ private fun ArtistRow(
         Box(
             modifier = Modifier
                 .size(48.dp)
+                .launchArt(launch)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center,
@@ -1045,6 +1078,7 @@ private fun ArtistRow(
                     model = thumbnailUrl.artworkAt(ROW_ART_PX),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
+                    onState = { launch?.shows(it) },
                     modifier = Modifier
                         .fillMaxSize()
                         .clip(CircleShape)
@@ -1079,11 +1113,13 @@ private fun ArtistGridCard(
     onClick: () -> Unit,
     onLongPress: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
+    launchKey: String? = null,
 ) {
+    val launch = rememberCardLaunch(launchKey, thumbnailUrl, ROUND_CARD_CORNER)
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
-            .longPressMenuClickable(onClick = onClick, onLongClick = onLongPress)
+            .longPressMenuClickable(onClick = launching(launch, onClick), onLongClick = onLongPress)
             .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -1091,6 +1127,7 @@ private fun ArtistGridCard(
             modifier = Modifier
                 .fillMaxWidth(0.88f)
                 .aspectRatio(1f)
+                .launchArt(launch)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center,
@@ -1106,6 +1143,7 @@ private fun ArtistGridCard(
                     model = thumbnailUrl.artworkAt(CARD_ART_PX),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
+                    onState = { launch?.shows(it) },
                     modifier = Modifier
                         .fillMaxSize()
                         .clip(CircleShape)
@@ -1231,6 +1269,8 @@ private fun AlbumsTab(
     contentPadding: PaddingValues,
     listState: LazyListState = rememberLazyListState(),
     gridState: LazyGridState = rememberLazyGridState(),
+    /** The page a tap on an album opens, by key, for it to grow out of the album's cover. */
+    launchKey: (AlbumEntry) -> String? = { null },
 ) {
     if (viewType == LibraryViewType.GRID) {
         Box(Modifier.fillMaxSize()) {
@@ -1267,6 +1307,7 @@ private fun AlbumsTab(
                         selected = entry.key in selectedKeys,
                         onClick = { onAlbumClick(entry) },
                         onLongPress = onAlbumLongPress?.let { { it(entry) } },
+                        launchKey = launchKey(entry),
                     )
                 }
             }
@@ -1305,6 +1346,7 @@ private fun AlbumsTab(
                         selected = entry.key in selectedKeys,
                         onClick = { onAlbumClick(entry) },
                         onLongPress = onAlbumLongPress?.let { { it(entry) } },
+                        launchKey = launchKey(entry),
                     )
                     HorizontalDivider(
                         modifier = Modifier.padding(start = ROW_DIVIDER_INSET),
@@ -1333,12 +1375,18 @@ private fun AlbumGridCard(
     onClick: () -> Unit,
     onLongPress: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
+    launchKey: String? = null,
 ) {
+    // Albums grouped off tags have no cover of their own; the first
+    // track's embedded picture stands in until the real one exists.
+    val fetchedArt = rememberRemoteArtworkUrl(entry.songs.firstOrNull())
+    val cardArt = entry.thumbnailUrl ?: fetchedArt
+    val launch = rememberCardLaunch(launchKey, cardArt, 12.dp)
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
             .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f) else Color.Transparent)
-            .longPressMenuClickable(onClick = onClick, onLongClick = onLongPress)
+            .longPressMenuClickable(onClick = launching(launch, onClick), onLongClick = onLongPress)
             .padding(4.dp),
     ) {
         val shape = RoundedCornerShape(12.dp)
@@ -1346,6 +1394,7 @@ private fun AlbumGridCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
+                .launchArt(launch)
                 .clip(shape)
                 .thumbnailBorder(shape)
                 .background(MaterialTheme.colorScheme.secondaryContainer),
@@ -1357,15 +1406,12 @@ private fun AlbumGridCard(
                 tint = MaterialTheme.colorScheme.onSecondaryContainer,
                 modifier = Modifier.size(36.dp),
             )
-            // Albums grouped off tags have no cover of their own; the first
-            // track's embedded picture stands in until the real one exists.
-            val fetchedArt = rememberRemoteArtworkUrl(entry.songs.firstOrNull())
-            val cardArt = entry.thumbnailUrl ?: fetchedArt
             if (cardArt != null) {
                 AsyncImage(
                     model = cardArt.artworkAt(CARD_ART_PX),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
+                    onState = { launch?.shows(it) },
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -1409,15 +1455,17 @@ private fun AlbumRow(
     selected: Boolean = false,
     onClick: () -> Unit,
     onLongPress: (() -> Unit)? = null,
+    launchKey: String? = null,
 ) {
     // Hoisted out of the artwork call below: a conditional hook would
     // reshuffle composition groups when a refresh fills the cover in.
     val fetchedArt = rememberRemoteArtworkUrl(entry.songs.firstOrNull())
+    val launch = rememberCardLaunch(launchKey, entry.thumbnailUrl ?: fetchedArt, 8.dp)
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f) else Color.Transparent, RoundedCornerShape(10.dp))
-            .longPressMenuClickable(onClick = onClick, onLongClick = onLongPress)
+            .longPressMenuClickable(onClick = launching(launch, onClick), onLongClick = onLongPress)
             .padding(horizontal = PAGE_GUTTER, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1425,6 +1473,7 @@ private fun AlbumRow(
             url = entry.thumbnailUrl ?: fetchedArt,
             playlist = entry.playlist,
             size = 48.dp,
+            launch = launch,
         )
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
@@ -1483,11 +1532,12 @@ private fun AlbumRow(
  * glyph without the row changing size under it.
  */
 @Composable
-private fun CollectionArtwork(url: String?, playlist: Boolean, size: Dp) {
+private fun CollectionArtwork(url: String?, playlist: Boolean, size: Dp, launch: CardLaunch? = null) {
     val shape = RoundedCornerShape(8.dp)
     Box(
         modifier = Modifier
             .size(size)
+            .launchArt(launch)
             .clip(shape)
             .background(MaterialTheme.colorScheme.secondaryContainer),
         contentAlignment = Alignment.Center,
@@ -1503,6 +1553,7 @@ private fun CollectionArtwork(url: String?, playlist: Boolean, size: Dp) {
                 model = url.artworkAt(ROW_ART_PX),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
+                onState = { launch?.shows(it) },
                 modifier = Modifier
                     .size(size)
                     .clip(shape)

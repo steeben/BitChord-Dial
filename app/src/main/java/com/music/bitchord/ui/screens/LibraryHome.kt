@@ -53,6 +53,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -346,12 +347,19 @@ private fun SuggestionCard(
     onLongPress: (LibrarySuggestion) -> Unit,
 ) {
     val shape = if (suggestion.round) CircleShape else RoundedCornerShape(10.dp)
+    // Its page grows out of its picture, as a dial tile's does: not a
+    // station's, which plays where it is.
+    val launch = rememberCardLaunch(
+        opens = cardLaunchKey(suggestion.item.browseId, suggestion.item.videoId).takeUnless { suggestion.radio },
+        thumbnailUrl = suggestion.item.thumbnailUrl,
+        corner = if (suggestion.round) ROUND_CARD_CORNER else 10.dp,
+    )
     Column(
         horizontalAlignment = if (centered) Alignment.CenterHorizontally else Alignment.Start,
         modifier = Modifier
             .width(width)
             .longPressMenuClickable(
-                onClick = { onClick(suggestion) },
+                onClick = launching(launch) { onClick(suggestion) },
                 onLongClick = { onLongPress(suggestion) },
             ),
     ) {
@@ -359,6 +367,7 @@ private fun SuggestionCard(
             Box(
                 Modifier
                     .fillMaxSize()
+                    .launchArt(launch)
                     .clip(shape)
                     .thumbnailBorder(shape)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
@@ -367,6 +376,7 @@ private fun SuggestionCard(
                     model = suggestion.item.thumbnailUrl.artworkAt(CARD_ART_PX),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
+                    onState = { launch?.shows(it) },
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -532,7 +542,13 @@ private fun FeedRow(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = PAGE_GUTTER).padding(bottom = 10.dp),
         )
+        // Back where it was scrolled to when one of its cards' pages closes,
+        // for the page to land on the card.
+        val rowState = rememberLaunchRowState(row.title)
+        val launchRow = remember(row.title, rowState) { LaunchRow(row.title, rowState) }
+        CompositionLocalProvider(LocalLaunchRow provides launchRow) {
         LazyRow(
+            state = rowState,
             contentPadding = PaddingValues(horizontal = PAGE_GUTTER),
             horizontalArrangement = Arrangement.spacedBy(LIBRARY_GRID_SPACING),
         ) {
@@ -550,6 +566,7 @@ private fun FeedRow(
                     SuggestionCard(item, FEED_CARD_WIDTH, centered = false, onItemClick, onItemLongPress)
                 }
             }
+        }
         }
     }
 }

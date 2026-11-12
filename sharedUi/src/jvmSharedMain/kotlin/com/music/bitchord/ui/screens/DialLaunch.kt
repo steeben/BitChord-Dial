@@ -319,7 +319,11 @@ fun DialLaunchPage(
                                 (shown.bottom - at.top) / scale,
                             )
                             val tileScale = if (closing) 1f else origin.pressedScale
-                            val radius = lerp(origin.corner.toPx() * tileScale, 0f, p.coerceAtLeast(0f)) *
+                            // No rounder than a circle: a round picture (an
+                            // artist's) gives a corner as big as it likes.
+                            val corner = (origin.corner.toPx() * tileScale)
+                                .coerceAtMost(minOf(tile.width, tile.height) / 2f)
+                            val radius = lerp(corner, 0f, p.coerceAtLeast(0f)) *
                                 (1f + p.coerceAtMost(0f)) / scale
                             shape = WindowShape(
                                 window,
@@ -445,10 +449,13 @@ private class WindowShape(
 
 /**
  * Whether the cards under this open their pages as dial tiles do, growing out
- * of their artwork (see [rememberCardLaunch]). Off unless a page asks: where
- * pages slide in sideways (the Library), they still do.
+ * of their artwork (see [rememberCardLaunch]). Off unless a page asks: Home,
+ * Explore and the Library's pages do.
  */
 val LocalCardLaunch = staticCompositionLocalOf { false }
+
+/** The corners to give [rememberCardLaunch] for a round picture, an artist's: cut down to a circle whatever its size. */
+val ROUND_CARD_CORNER = 1000.dp
 
 /** The shelf a card sits in and its row's scroll, for the row to come back to when the card's page closes. */
 class LaunchRow(val title: String, val state: LazyListState)
