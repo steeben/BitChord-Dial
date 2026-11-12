@@ -1,40 +1,33 @@
-Dial 1.6.0
+Dial 1.7.0
 
-### Look and feel
-- One app style setting, Glass, Frost or Solid, replaces the glass and blur switches; all three share the same layout, and the glass options are kept per theme
-- Glass tint can follow the song, or be White, Black or a colour, and transparency goes all the way to 100%, menus included
-- Every menu and options window uses the same glass, and the player's glass follows your glass options and the cover
-- The theme follows the system by default, and the light theme is fixed up throughout: readable text, a light player ⋯ menu, and dark text in the player over bright and pastel covers
-- Coloured app icons: red plus seven more colours, each with a dark and a bright version
-- New splash: the logo builds, stays lit and sweeps away into the app in your theme's colours
-- Top controls over a banner take the banner's tone in the Glass style, and go black only over a very bright one
-- Frost: page buttons show the page through them, player buttons on a dark cover are lighter, and the ⋯ menu opens flush with its pill
+### Opening and closing pages
+- Cards on Home and Explore, and albums, artists and playlists in the Library, open out of their artwork the way dial tiles do, and shrink back into it when closed
+- A page opened from a card starts with the card's own picture as its banner while the full picture loads
+- Tiles and cards close on a springier curve, a cut-off card keeps its proportions, and a tile on the top or bottom row no longer snaps an edge into place at the end
+- Page items come in from top to bottom, once per opening, and placeholders fade into the real items
+- A Library folder's tabs stay in place behind an album or artist opened over them, and the top bar and back button come in with less bounce
+- Tapping a tab from any page fades through like switching tabs, and Home's logo fades in with Home
 
-### Home and dial
-- Mixes Dial: a page of mixes to the left of the speed dial, drawn from Spotify's "Your top mixes", YouTube Music's "From the community" and trending, one mix of each kind, with a tag for the app each comes from
-- Pull to refresh fills the dial mark square by square
-- Dial art retries when it fails to load
+### Mixes Dial
+- Up to three playlists from Explore's Decades join the mixes
+- Mixes lean towards the genres you listen to
+- Community and trending tiles show their playlist's name, and the source tag takes its colour from the cover
+- Tiles are loaded before you swipe over to them
 
-### Spotify
-- Spotify recommendations can drive radio, AutoPlay and a speed dial source
-- Like sync is on by default, with a switch in Account & integrations
-- "Played in Dial" playlist: songs you play are added to a Spotify playlist that keeps a number of songs you choose, and its window shows what happened on the last sync
+### Playlists
+- Spotify playlists and mixes get the generated collage background
+- A playlist's own picture sits in front of its generated background, the page keeps that picture's colours when the collage comes in, and the picture grows back to fill the banner as the page closes
+- Spotify playlist songs no longer come in twice, and rows stay in place when their match lands
+- Top controls no longer flip to black over a bright collage cover
 
 ### Player and lyrics
-- Sideways, lyrics sit beside the music video
-- The lyric strip scrolls with the song
-- The scrim under the cover fades in as the player opens, and the mini player pill no longer shows a fill at rest
+- Sideways, the music video fills the screen and dissolves under the lyrics
+- Lyrics and the queue run on under the player controls, blurred
+- Over a bright cover, the cover runs on into the controls under dark text
+- Stats for nerds shows the codec and quality where the output device name was, and tapping it opens the Audio pipeline window, now in your app style
+- The player shows through its glass drawers
 
-### Playlists and mixes
-- Generated mixes such as My Supermix now end, at 100 songs, instead of loading forever
-- A playlist's collage background comes in once every cover has loaded
-- Sleep mixes only show at night
-
-### Songs and data
-- New "Save song details to the file" switch in Your data (off by default): the details found for a song are written into the MP3, FLAC or M4A file's tags and cover
-- Coming from the old app (com.steeben.bitchord)? Dial shows a notice on first open pointing you to Export data in the old app and Import data here
-
-### First launch and settings
-- A first-launch tour, with a choice of theme and app style on the welcome
-- Developer options, behind ten taps on the Dial logo in Settings
-- Battery and stability fixes, and a calmer Library tab pill
+### Search and song details
+- The search Library tab searches your whole Library, not only the device's files, and lists artists above songs; tabs are in the order YouTube, Spotify, Library, Addons
+- After "Find this song's details", a compare page shows what was found beside what the file has, so you choose what to keep
+- Song fix searches open full screen and stay there
