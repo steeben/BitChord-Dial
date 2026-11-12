@@ -215,6 +215,12 @@ fun FrostedTopBar(
      * tabs, which arrive with the page they belong to.
      */
     accessoryPopsIn: Boolean = false,
+    /**
+     * The popping [accessory] is coming back rather than arriving: the page
+     * opened over its own has closed. It is simply there again, as the back
+     * button is, instead of springing in a second time.
+     */
+    accessoryReturns: Boolean = false,
     actions: @Composable () -> Unit = {},
 ) {
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
@@ -384,8 +390,15 @@ fun FrostedTopBar(
                 poppedAccessory = null
                 popGeneration++
             }
-            val accessoryPop = remember(popGeneration) { MutableTransitionState(false) }
-            accessoryPop.targetState = accessory != null && accessoryPopsIn
+            // Coming back from under a page that has closed, it starts out
+            // shown: a fresh state, so nothing is left to animate.
+            val popWanted = accessory != null && accessoryPopsIn
+            val popWasWanted = remember { booleanArrayOf(false) }
+            val popReturns = popWanted && !popWasWanted[0] && accessoryReturns
+            if (popReturns) popGeneration++
+            popWasWanted[0] = popWanted
+            val accessoryPop = remember(popGeneration) { MutableTransitionState(popReturns) }
+            accessoryPop.targetState = popWanted
             val popSlot = !(accessory != null && !accessoryPopsIn) &&
                 (accessoryPop.currentState || accessoryPop.targetState) &&
                 poppedAccessory != null
