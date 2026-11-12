@@ -30,7 +30,7 @@
 
 <img src="docs/screenshots/library.jpg" width="100%" alt="Library: For You, the Library, the songs list and the song details compare page" />
 
-<img src="docs/screenshots/pages.jpg" width="100%" alt="Pages: a playlist, an album and an artist" />
+<img src="docs/screenshots/pages-wide.jpg" width="100%" alt="Pages: a playlist, an album and an artist" />
 
 <img src="docs/screenshots/player.jpg" width="100%" alt="Player: now playing, Canvas, the queue, and the sideways player with video and lyrics" />
 
