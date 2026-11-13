@@ -198,14 +198,20 @@ object TrackLog {
     /**
      * Starts writing every logged line to [file], after [header]. A session
      * already running is ended first, its file kept.
+     *
+     * With [append], a file that is already there is added to and not
+     * replaced: a session carried over a launch of the app is one file, with
+     * each launch's own header where that launch begins.
      */
-    fun startSession(file: java.io.File, header: List<String> = emptyList()) {
+    fun startSession(file: java.io.File, header: List<String> = emptyList(), append: Boolean = false) {
         synchronized(sessionLock) {
             closeSession()
             file.parentFile?.mkdirs()
-            val writer = file.bufferedWriter()
+            val carriedOn = append && file.length() > 0L
+            val writer = java.io.FileOutputStream(file, carriedOn).bufferedWriter()
+            if (carriedOn) writer.write("\n")
             header.forEach { writer.write(it); writer.write("\n") }
-            writer.write("started: ${STAMP.format(Date())}\n\n")
+            writer.write("${if (carriedOn) "carried on" else "started"}: ${STAMP.format(Date())}\n\n")
             writer.flush()
             session = writer
             sessionFile = file

@@ -706,6 +706,11 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+        // A log left on over this launch: its frame times start with the
+        // window's first frame, not once the first page has been composed.
+        if (com.music.bitchord.data.LogRecorder.recording.value) {
+            com.music.bitchord.ui.performance.FrameLog.start(window)
+        }
     }
 
     /**

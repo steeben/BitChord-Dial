@@ -3,6 +3,7 @@ package com.music.bitchord.ui.performance
 import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
+import android.os.Process
 import android.os.SystemClock
 import android.view.FrameMetrics
 import android.view.Window
@@ -104,17 +105,31 @@ object FrameLog {
 
     private var thread: HandlerThread? = null
     private var listener: Window.OnFrameMetricsAvailableListener? = null
+    private var watched = java.lang.ref.WeakReference<Window>(null)
 
+    /** Whether this run of the app has had its first frame written. */
+    private var launchWritten = false
+
+    /**
+     * Starts counting [window]'s frames. Safe to call before the window is on
+     * screen: the count then starts with its first frame, which is how a log
+     * left on over a launch gets the launch.
+     */
     fun start(window: Window) {
-        if (listener != null) return
+        if (listener != null) {
+            if (watched.get() === window) return
+            // A window that went without saying so: the activity was rebuilt.
+            stop()
+        }
         val thread = HandlerThread("FrameLog").also { it.start() }
         val handler = Handler(thread.looper)
         val tally = FrameTally()
         var stretchPage = ""
         var stretchStart = 0L
-        // Before Android 12 a frame does not say how long it was given.
-        val refreshRate = window.decorView.display?.refreshRate?.takeIf { it > 0f } ?: 60f
-        val displayBudget = (1_000_000_000.0 / refreshRate).toLong()
+        // Before Android 12 a frame does not say how long it was given, so the
+        // display's rate stands in. Read at the first frame: before the window
+        // is on screen it has no display to ask.
+        var displayBudget = 0L
 
         fun write() {
             val line = tally.summary() ?: return
@@ -125,10 +140,37 @@ object FrameLog {
         val idle = Runnable { write() }
 
         val listener = Window.OnFrameMetricsAvailableListener { _, metrics, _ ->
-            // A window's first frame builds everything; it is not stutter.
-            if (metrics.getMetric(FrameMetrics.FIRST_DRAW_FRAME) == 1L) return@OnFrameMetricsAvailableListener
             val now = SystemClock.elapsedRealtime()
-            val current = page
+            val uiNanos = metrics.getMetric(FrameMetrics.INPUT_HANDLING_DURATION) +
+                metrics.getMetric(FrameMetrics.ANIMATION_DURATION) +
+                metrics.getMetric(FrameMetrics.LAYOUT_MEASURE_DURATION) +
+                metrics.getMetric(FrameMetrics.DRAW_DURATION)
+            val renderNanos = metrics.getMetric(FrameMetrics.SYNC_DURATION) +
+                metrics.getMetric(FrameMetrics.COMMAND_ISSUE_DURATION) +
+                metrics.getMetric(FrameMetrics.SWAP_BUFFERS_DURATION)
+            if (displayBudget == 0L) {
+                val refreshRate = window.decorView.display?.refreshRate?.takeIf { it > 0f } ?: 60f
+                displayBudget = (1_000_000_000.0 / refreshRate).toLong()
+                TrackLog.toSession('I', TAG, "display ${refreshRate}Hz")
+            }
+            // A window's first frame builds everything. It is not stutter, so
+            // it is kept out of the count and written on its own line.
+            if (metrics.getMetric(FrameMetrics.FIRST_DRAW_FRAME) == 1L) {
+                val sinceStart = if (launchWritten) {
+                    ""
+                } else {
+                    launchWritten = true
+                    ", ${now - Process.getStartElapsedRealtime()}ms after the app's process started"
+                }
+                TrackLog.toSession(
+                    'I',
+                    TAG,
+                    "first frame of the window: ${millis(metrics.getMetric(FrameMetrics.TOTAL_DURATION))}, " +
+                        "${millis(uiNanos)} on the app thread, ${millis(renderNanos)} on the render thread$sinceStart",
+                )
+                return@OnFrameMetricsAvailableListener
+            }
+            val current = page.ifEmpty { "launch" }
             if (tally.frames > 0 && (current != stretchPage || now - stretchStart >= STRETCH_MS)) write()
             if (tally.frames == 0) {
                 stretchPage = current
@@ -138,13 +180,8 @@ object FrameLog {
             tally.add(
                 totalNanos = metrics.getMetric(FrameMetrics.TOTAL_DURATION),
                 budgetNanos = if (hasDeadline) metrics.getMetric(FrameMetrics.DEADLINE) else displayBudget,
-                uiNanos = metrics.getMetric(FrameMetrics.INPUT_HANDLING_DURATION) +
-                    metrics.getMetric(FrameMetrics.ANIMATION_DURATION) +
-                    metrics.getMetric(FrameMetrics.LAYOUT_MEASURE_DURATION) +
-                    metrics.getMetric(FrameMetrics.DRAW_DURATION),
-                renderNanos = metrics.getMetric(FrameMetrics.SYNC_DURATION) +
-                    metrics.getMetric(FrameMetrics.COMMAND_ISSUE_DURATION) +
-                    metrics.getMetric(FrameMetrics.SWAP_BUFFERS_DURATION),
+                uiNanos = uiNanos,
+                renderNanos = renderNanos,
                 gpuNanos = if (hasDeadline) metrics.getMetric(FrameMetrics.GPU_DURATION) else 0L,
             )
             handler.removeCallbacks(idle)
@@ -153,12 +190,21 @@ object FrameLog {
         window.addOnFrameMetricsAvailableListener(listener, handler)
         this.thread = thread
         this.listener = listener
-        TrackLog.toSession('I', TAG, "frame times on, display ${refreshRate}Hz; ${effectsLine()}")
+        watched = java.lang.ref.WeakReference(window)
+        TrackLog.toSession('I', TAG, "frame times on; ${effectsLine()}")
     }
 
+    private fun millis(nanos: Long): String = "%.1fms".format(Locale.ROOT, nanos / 1_000_000.0)
+
+    /** Stops counting [window]'s frames. A window that is not the one being counted is left alone. */
     fun stop(window: Window) {
+        if (watched.get() === window) stop()
+    }
+
+    private fun stop() {
         val listener = listener ?: return
-        runCatching { window.removeOnFrameMetricsAvailableListener(listener) }
+        watched.get()?.let { runCatching { it.removeOnFrameMetricsAvailableListener(listener) } }
+        watched = java.lang.ref.WeakReference<Window>(null)
         thread?.quitSafely()
         this.listener = null
         thread = null

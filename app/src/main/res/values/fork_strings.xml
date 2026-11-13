@@ -217,8 +217,8 @@
     <string name="performance_mode_subtitle">Turns off the effects that use the most power: glass and blur, animations, the moving background and Canvas video. Turn it off to get your settings back.</string>
     <string name="performance_mode_on">On. Each setting that it changed stays in its own row, and you can change it there.</string>
     <string name="enable_logging">Enable logging</string>
-    <string name="enable_logging_subtitle">Records everything the app logs until you turn it off or close the app, then lets you share or save the log</string>
-    <string name="enable_logging_running">Logging now. Turn it off to share or save the log.</string>
+    <string name="enable_logging_subtitle">Records everything the app logs until you turn it off, then lets you share or save the log. It stays on when you close the app, so the log can include a launch.</string>
+    <string name="enable_logging_running">Logging now, also after the app is closed and opened again. Turn it off to share or save the log.</string>
     <string name="log_ready_title">Log recorded</string>
     <string name="log_ready_message">The log is %1$s. Share it, or save it to your phone\'s storage.</string>
     <string name="share_log">Share</string>
