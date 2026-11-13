@@ -86,7 +86,7 @@ class FrameTally {
  * Frame times, written to a log session while one is recording.
  *
  * A report of stutter says nothing about where or why. With logging on
- * (Settings, Developer options), this writes a line for each stretch of
+ * (Settings, Advanced, Enable logging), this writes a line for each stretch of
  * frames: the page they were on, how many were late, and where a late frame's
  * time went. Nothing is measured, and no listener is attached, with logging
  * off.
@@ -167,7 +167,8 @@ object FrameLog {
     /** The settings that decide how much each frame has to draw. */
     private fun effectsLine(): String {
         val style = AppStyle.of(AppSettings.liquidGlass.value, AppSettings.reduceDynamicBlur.value)
-        return "app style=$style, reduce animations=${AppSettings.reduceAnimation.value}, " +
+        return "performance mode=${AppSettings.performanceMode.value}, " +
+            "app style=$style, reduce animations=${AppSettings.reduceAnimation.value}, " +
             "high refresh rate=${AppSettings.highPerformanceMode.value}, " +
             "ambient background=${CustomizationSettings.ambientBackground.value}, " +
             "dial tile style=${CustomizationSettings.dialTileStyle.value}, " +

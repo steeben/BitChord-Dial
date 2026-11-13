@@ -4023,8 +4023,12 @@ private fun BitChordApp(
                             val p = detailBackProgress.value
                             if (p > 0f) {
                                 alpha = 1f - 0.65f * p
-                                val radius = 28.dp.toPx() * p
-                                renderEffect = BlurEffect(radius, radius, TileMode.Decal)
+                                // Solid blurs nothing, this included: a blur of
+                                // the whole page, redone each frame of the swipe.
+                                if (!AppSettings.reduceDynamicBlur.value) {
+                                    val radius = 28.dp.toPx() * p
+                                    renderEffect = BlurEffect(radius, radius, TileMode.Decal)
+                                }
                             }
                         },
                 ) { key ->

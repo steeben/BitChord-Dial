@@ -451,6 +451,13 @@ object AppSettings {
     /** Requests a sustained high-refresh UI. Off keeps Android's automatic policy. */
     val highPerformanceMode = MutableStateFlow(false)
 
+    /**
+     * Performance mode: a preset that sets the settings in [EffectSettings]
+     * to their low-cost values, and puts them back when it is turned off.
+     * Not to be confused with [highPerformanceMode], which asks for more.
+     */
+    val performanceMode = MutableStateFlow(false)
+
     /** Preferred UI refresh rate while [highPerformanceMode] is enabled. */
     val performanceRefreshRate = MutableStateFlow(DEFAULT_PERFORMANCE_REFRESH_RATE)
 
@@ -1051,6 +1058,7 @@ object AppSettings {
             reduceDynamicBlur.value = false
         }
         animatedCanvas.value = prefs.getBoolean(KEY_ANIMATED_CANVAS, true)
+        performanceMode.value = prefs.getBoolean(KEY_PERFORMANCE_MODE, false)
         canvasOverCellular.value = prefs.getBoolean(KEY_CANVAS_OVER_CELLULAR, false)
         spotifyCanvasAutoHide.value = prefs.getBoolean(KEY_SPOTIFY_CANVAS_AUTO_HIDE, true)
         prioritizeSpotifyCanvas.value = prefs.getBoolean(KEY_PRIORITIZE_SPOTIFY_CANVAS, false)
@@ -1521,6 +1529,54 @@ object AppSettings {
             editor.putBoolean(KEY_REDUCE_BLUR, false)
         }
         editor.apply()
+    }
+
+    /** The settings Performance mode is a preset over, as they stand now. */
+    private fun effectSettings() = EffectSettings(
+        appStyle = AppStyle.of(liquidGlass.value, reduceDynamicBlur.value),
+        reduceAnimation = reduceAnimation.value,
+        highRefreshRate = highPerformanceMode.value,
+        ambientBackground = CustomizationSettings.ambientBackground.value,
+        dialTileStyle = CustomizationSettings.dialTileStyle.value,
+        lyricsBlur = lyricsBlur.value,
+        animatedCanvas = animatedCanvas.value,
+    )
+
+    private fun applyEffectSettings(target: EffectSettings) {
+        // First, and off: setting Solid or Reduce animations turns it off
+        // anyway, and turning it on last undoes neither.
+        if (!target.highRefreshRate) setHighPerformanceMode(false)
+        setAppStyle(target.appStyle)
+        setReduceAnimation(target.reduceAnimation)
+        CustomizationSettings.setAmbientBackground(target.ambientBackground)
+        CustomizationSettings.setDialTileStyle(target.dialTileStyle)
+        setLyricsBlur(target.lyricsBlur)
+        setAnimatedCanvas(target.animatedCanvas)
+        if (target.highRefreshRate) setHighPerformanceMode(true)
+    }
+
+    /**
+     * Turns Performance mode on or off. On keeps the settings as they were
+     * and sets [EffectSettings.LOW_COST]; off puts back what was kept, see
+     * [EffectSettings.restored].
+     */
+    fun setPerformanceMode(value: Boolean) {
+        if (performanceMode.value == value) return
+        if (value) {
+            prefs.edit()
+                .putBoolean(KEY_PERFORMANCE_MODE, true)
+                .putString(KEY_PERFORMANCE_MODE_SAVED, effectSettings().encode())
+                .apply()
+            applyEffectSettings(EffectSettings.LOW_COST)
+        } else {
+            val saved = EffectSettings.decode(prefs.getString(KEY_PERFORMANCE_MODE_SAVED, null))
+            prefs.edit()
+                .putBoolean(KEY_PERFORMANCE_MODE, false)
+                .remove(KEY_PERFORMANCE_MODE_SAVED)
+                .apply()
+            if (saved != null) applyEffectSettings(EffectSettings.restored(saved, effectSettings()))
+        }
+        performanceMode.value = value
     }
 
     fun setPerformanceRefreshRate(value: Int) {
@@ -2375,6 +2431,8 @@ object AppSettings {
     private const val KEY_REDUCE_ANIMATION = "reduce_animation"
     private const val KEY_HIGH_PERFORMANCE_MODE = "high_performance_mode"
     private const val KEY_PERFORMANCE_REFRESH_RATE = "performance_refresh_rate"
+    private const val KEY_PERFORMANCE_MODE = "performance_mode"
+    private const val KEY_PERFORMANCE_MODE_SAVED = "performance_mode_saved"
     private const val KEY_STOP_ON_TASK_REMOVED = "stop_on_task_removed"
     private const val KEY_HIDE_VOLUME_BAR = "hide_volume_bar"
     private const val KEY_HIDE_SONG_STATUS = "hide_song_status"

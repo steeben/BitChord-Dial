@@ -1668,6 +1668,10 @@ fun SettingsScreen(
         }
 
         if (shows(SettingsCategory.PERFORMANCE)) SearchableSettingsGroup(search, header = stringResource(R.string.performance)) {
+            val performanceModeTitle = stringResource(R.string.performance_mode)
+            row(performanceModeTitle, "stutter", "lag", "slow", "smooth", "effects", "blur", "glass", "animation", "battery") {
+                PerformanceModeRow(performanceModeTitle)
+            }
             val highPerformanceModeTitle = stringResource(R.string.high_performance_mode)
             row(highPerformanceModeTitle, "frame rate", "refresh rate", "hz", "battery", "smooth") {
                 SettingsRow(
