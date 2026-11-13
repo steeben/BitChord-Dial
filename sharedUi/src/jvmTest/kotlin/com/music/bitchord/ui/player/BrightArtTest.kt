@@ -6,6 +6,41 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 
 class BrightArtTest {
+    private val accents = WaveAccents(
+        light = Color(0xFFD9C2F0),
+        accent = Color(0xFFA06AD9),
+        dark = Color(0xFF5B2E8C),
+    )
+
+    @Test
+    fun glowBarUnderLightInkIsTheAccentRunningIntoWhite() {
+        val ink = Color(0xFFF2ECF8)
+        val bright = androidx.compose.ui.graphics.lerp(accents.accent, accents.light, 0.4f)
+        val colors = glowBarColors(accents, ink, inkDark = 0f, held = 0f, lit = 1f)
+        assertEquals(bright, colors.fill)
+        assertEquals(Color.White, colors.head)
+        assertEquals(androidx.compose.ui.graphics.lerp(bright, Color.White, 0.75f), colors.light)
+    }
+
+    @Test
+    fun glowBarUnderDarkInkIsTheInkRunningIntoTheBrightAccent() {
+        val ink = Color(0xFF3B2F4A)
+        val bright = androidx.compose.ui.graphics.lerp(accents.accent, accents.light, 0.4f)
+        val colors = glowBarColors(accents, ink, inkDark = 1f, held = 0f, lit = 1f)
+        assertClose(ink, colors.fill)
+        assertClose(bright, colors.head)
+        assertClose(bright, colors.light)
+        // Paused, the playhead end settles into the fill, as it does under light ink.
+        assertClose(ink, glowBarColors(accents, ink, inkDark = 1f, held = 0f, lit = 0f).head)
+    }
+
+    private fun assertClose(expected: Color, actual: Color) {
+        assertEquals(expected.red, actual.red, 0.01f)
+        assertEquals(expected.green, actual.green, 0.01f)
+        assertEquals(expected.blue, actual.blue, 0.01f)
+        assertEquals(expected.alpha, actual.alpha, 0.01f)
+    }
+
     @Test
     fun inkTintIsEitherOr() {
         assertEquals(0.28f, playerInkTint(null), 0.0001f)

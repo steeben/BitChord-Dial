@@ -78,6 +78,11 @@ internal val GLOW_STRETCH_MAX = 14.dp
  * runs from a pale tint of the song's accent into white at the playhead, with a soft comet of
  * light trailing back from the playhead just above the line. The light breathes while the
  * music plays and steps aside while a finger holds the bar, which thickens and brightens.
+ *
+ * Over a bright sleeve, where the player's ink has gone dark ([LocalPlayerInkDark]), white
+ * light has nothing to show against: the played part is then the ink's own colour, the same
+ * as the controls around it, and the playhead end and the light are the song's bright accent
+ * (see [glowBarColors]).
  */
 @Composable
 internal fun GlowTrack(
@@ -119,6 +124,13 @@ internal fun GlowTrack(
         animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing),
         label = "glowLit",
     )
+    // How far the bar has gone over to its dark-ink colours, on the ink's own clock.
+    val inkDark by animateFloatAsState(
+        targetValue = if (LocalPlayerInkDark.current) 1f else 0f,
+        animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+        label = "glowInkDark",
+    )
+    val ink = PlayerInk
     // A slow swell of the light while the song moves; paused, it settles full and the clock stops.
     val breath = remember { Animatable(1f) }
     LaunchedEffect(playing, animate) {
@@ -169,9 +181,11 @@ internal fun GlowTrack(
         val alpha = if (dragging) 1f else mixPulse?.alpha(1f) ?: 1f
 
         // The song's colour along the played part, turning to white over the last stretch
-        // before the playhead. Held, the whole fill lifts a little toward white.
-        val tint = lerp(lerp(accents.accent, accents.light, 0.4f), Color.White, 0.25f * held)
-        val head = lerp(tint, Color.White, lit)
+        // before the playhead. Held, the whole fill lifts a little toward white. Under
+        // dark ink: the ink's colour, turning to the song's bright accent.
+        val colors = glowBarColors(accents, ink, inkDark, held, lit)
+        val tint = colors.fill
+        val head = colors.head
         val whiteRun = GLOW_WHITE_RUN.toPx()
         val solidWhite = GLOW_WHITE_HEAD.toPx()
         val whiteFrom = (1f - whiteRun / played).coerceIn(0f, 1f)
@@ -202,7 +216,7 @@ internal fun GlowTrack(
         if (strength > 0f) {
             val step = GLOW_STEP.toPx()
             val reach = (played / (step * GLOW_LAYERS)).coerceIn(0f, 1f)
-            val glowColor = lerp(tint, Color.White, 0.75f)
+            val glowColor = colors.light
             val base = GLOW_SPREAD_BASE.toPx()
             for (i in 0 until GLOW_LAYERS) {
                 val back = step * (i + 1) * reach
@@ -217,6 +231,42 @@ internal fun GlowTrack(
             }
         }
     }
+}
+
+/** The glow bar's colours: the played [fill], its [head] at the playhead, and the [light]. */
+internal data class GlowBarColors(val fill: Color, val head: Color, val light: Color)
+
+/**
+ * The glow bar's colours for [accents], with the player's [ink] and how far that ink has
+ * gone dark ([inkDark], 0 to 1). [held] is how far a finger has the bar, [lit] how far the
+ * music is lighting its playhead end.
+ *
+ * Under light ink (0) the fill is a pale tint of the accent that runs into white at the
+ * playhead, under a white light. Under dark ink (1) the fill is the ink itself, so the bar
+ * is the colour of the controls around it, and what was white is that same pale tint of
+ * the accent: white would be lost on a sleeve bright enough to turn the ink dark.
+ */
+internal fun glowBarColors(
+    accents: WaveAccents,
+    ink: Color,
+    inkDark: Float,
+    held: Float,
+    lit: Float,
+): GlowBarColors {
+    val bright = lerp(accents.accent, accents.light, 0.4f)
+    if (inkDark <= 0f) {
+        // Light ink: the bar exactly as it always was.
+        val fill = lerp(bright, Color.White, 0.25f * held)
+        return GlowBarColors(fill, lerp(fill, Color.White, lit), lerp(fill, Color.White, 0.75f))
+    }
+    // What the bar brightens toward: white, or the bright accent under dark ink.
+    val pole = lerp(Color.White, bright, inkDark)
+    val fill = lerp(lerp(bright, ink.copy(alpha = 1f), inkDark), pole, 0.25f * held)
+    return GlowBarColors(
+        fill = fill,
+        head = lerp(fill, pole, lit),
+        light = lerp(lerp(fill, Color.White, 0.75f), bright, inkDark),
+    )
 }
 
 /**

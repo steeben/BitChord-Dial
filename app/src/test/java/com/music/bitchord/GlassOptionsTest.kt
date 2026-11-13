@@ -6,6 +6,9 @@ import androidx.compose.ui.graphics.luminance
 import com.music.bitchord.data.settings.AppStyle
 import com.music.bitchord.data.settings.CustomizationSettings
 import com.music.bitchord.ui.components.GlassTint
+import com.music.bitchord.ui.components.PLAYER_BUTTON_GLASS_BLUR_DP
+import com.music.bitchord.ui.components.PLAYER_BUTTON_GLASS_SATURATION
+import com.music.bitchord.ui.components.PLAYER_BUTTON_GLASS_TRANSPARENCY
 import com.music.bitchord.ui.components.LEGIBLE_LIGHT_FILL
 import com.music.bitchord.ui.components.classicGlassFillColor
 import com.music.bitchord.ui.components.clearGlassFillColor
@@ -224,6 +227,29 @@ class GlassOptionsTest {
         val sleeve = Color(0xFF3A3A22)
         assertTrue(fill.compositeOver(sleeve).luminance() > sleeve.luminance())
         assertTrue(dense.compositeOver(sleeve).luminance() < sleeve.luminance())
+    }
+
+    @Test
+    fun `the player's glass buttons carry no colour whatever the options are`() {
+        // The dark theme's stock options: a black tint, darkened.
+        val classic = classicGlassFillColor(
+            base = Color(0xFF121212).copy(alpha = 0.4f),
+            tint = Color.Black,
+            darkness = 0.3f,
+            transparency = PLAYER_BUTTON_GLASS_TRANSPARENCY,
+        )
+        val clear = clearGlassFillColor(
+            veil = Color.White.copy(alpha = 0.03f),
+            themeSurface = Color(0xFF121212),
+            tint = Color.Black,
+            darkness = 0.3f,
+            transparency = PLAYER_BUTTON_GLASS_TRANSPARENCY,
+        )
+        assertEquals(0f, classic.alpha, 0.0001f)
+        assertEquals(0f, clear.alpha, 0.0001f)
+        assertEquals(0f, clearGlassStrength(PLAYER_BUTTON_GLASS_TRANSPARENCY), 0.0001f)
+        assertEquals(10f, PLAYER_BUTTON_GLASS_BLUR_DP, 0.0001f)
+        assertEquals(1f, PLAYER_BUTTON_GLASS_SATURATION, 0.0001f)
     }
 
     @Test

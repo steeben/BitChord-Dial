@@ -33,6 +33,7 @@ class AppPlayerGlass(
         underlay: Color,
         menu: Boolean,
         darkGround: Boolean?,
+        button: Boolean,
     ): Modifier = if (menu) {
         modifier.glassMenu(shape, backdrop = menuBackdrop ?: backdrop, underlay = underlay, dark = darkGround)
     } else {
@@ -42,6 +43,7 @@ class AppPlayerGlass(
             exportedBackdrop = null,
             underlay = underlay,
             dark = darkGround,
+            playerButton = button,
         )
     }
 }

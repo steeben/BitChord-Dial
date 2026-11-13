@@ -44,6 +44,10 @@ interface PlayerGlass {
      * same glass every menu in the app is made of. [darkGround] says whether
      * what it sits on is dark, which on the player is the sleeve's to say
      * and not the theme's; null leaves it to the theme.
+     *
+     * [button] is for the main player's own buttons, the heart, the ⋯ and
+     * the bottom pill: glass by a fixed rule of its own, fully clear over a
+     * set blur, whatever the app's glass options are.
      */
     @Composable
     fun surface(
@@ -52,6 +56,7 @@ interface PlayerGlass {
         underlay: Color = Color.Transparent,
         menu: Boolean = false,
         darkGround: Boolean? = null,
+        button: Boolean = false,
     ): Modifier
 }
 

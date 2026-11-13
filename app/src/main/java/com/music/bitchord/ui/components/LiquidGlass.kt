@@ -457,6 +457,14 @@ fun Modifier.liquidGlass(
      * alone, for a caller that lays its own colour on top (Play).
      */
     pageButton: Boolean = false,
+    /**
+     * One of the main player's buttons: the heart, the ⋯, the bottom pill. In
+     * the Glass style it is then clear glass by a rule of its own and not by
+     * the Liquid Glass options (see [PLAYER_BUTTON_GLASS_TRANSPARENCY]): no
+     * fill, tint or darkening, only the [underlay] it sits on. The Frost and
+     * Solid styles never followed those options and keep their own fills.
+     */
+    playerButton: Boolean = false,
 ): Modifier {
     if (!isGlassSupported()) return this
     val style = appStyle()
@@ -534,28 +542,56 @@ fun Modifier.liquidGlass(
             shape = shape,
             backdrop = backdrop,
             exportedBackdrop = exportedBackdrop,
-            surfaceColor = clearGlassFill(surfaceTint, themeTint, dark = !light)
-                .legibly()
-                .over(underlay),
-            blurDp = maxOf(minBlurDp, if (followsOptions) clearBlur else CustomizationSettings.DEFAULT_CLEAR_GLASS_BLUR),
-            saturation = if (followsOptions) clearSaturation else CustomizationSettings.DEFAULT_CLEAR_GLASS_SATURATION,
+            surfaceColor = if (playerButton) {
+                underlay
+            } else {
+                clearGlassFill(surfaceTint, themeTint, dark = !light)
+                    .legibly()
+                    .over(underlay)
+            },
+            blurDp = when {
+                playerButton -> PLAYER_BUTTON_GLASS_BLUR_DP
+                followsOptions -> maxOf(minBlurDp, clearBlur)
+                else -> maxOf(minBlurDp, CustomizationSettings.DEFAULT_CLEAR_GLASS_BLUR)
+            },
+            saturation = when {
+                playerButton -> PLAYER_BUTTON_GLASS_SATURATION
+                followsOptions -> clearSaturation
+                else -> CustomizationSettings.DEFAULT_CLEAR_GLASS_SATURATION
+            },
             dark = !light,
             // The light bundled under the lens is white laid on the glass,
             // so it goes as the fill does: none of it at 100% transparency.
-            caustic = if (followsOptions) clearGlassStrength(userTransparency) else 1f,
+            caustic = when {
+                playerButton -> clearGlassStrength(PLAYER_BUTTON_GLASS_TRANSPARENCY)
+                followsOptions -> clearGlassStrength(userTransparency)
+                else -> 1f
+            },
         )
     }
     val density = LocalDensity.current
     val userBlurDp by options.blur.collectAsStateWithLifecycle()
-    val blurDp = maxOf(minBlurDp, if (followsOptions) userBlurDp else CustomizationSettings.DEFAULT_GLASS_BLUR)
+    val blurDp = when {
+        playerButton -> PLAYER_BUTTON_GLASS_BLUR_DP
+        followsOptions -> maxOf(minBlurDp, userBlurDp)
+        else -> maxOf(minBlurDp, CustomizationSettings.DEFAULT_GLASS_BLUR)
+    }
     val userSaturation by options.saturation.collectAsStateWithLifecycle()
-    val saturation = if (followsOptions) userSaturation else CustomizationSettings.DEFAULT_GLASS_SATURATION
+    val saturation = when {
+        playerButton -> PLAYER_BUTTON_GLASS_SATURATION
+        followsOptions -> userSaturation
+        else -> CustomizationSettings.DEFAULT_GLASS_SATURATION
+    }
     val blurPx = with(density) { blurDp.dp.toPx() } * GLASS_RESOLUTION_SCALE
     val lensHeightPx = with(density) { (LENS_HEIGHT * LENS_MAX_DP).dp.toPx() } * GLASS_RESOLUTION_SCALE
     val lensAmountPx = with(density) { (LENS_AMOUNT * LENS_MAX_DP).dp.toPx() } * GLASS_RESOLUTION_SCALE
-    val surfaceTintColor = glassFill(surfaceTint, themeTint.copy(alpha = SURFACE_OPACITY))
-        .legibly()
-        .over(underlay)
+    val surfaceTintColor = if (playerButton) {
+        underlay
+    } else {
+        glassFill(surfaceTint, themeTint.copy(alpha = SURFACE_OPACITY))
+            .legibly()
+            .over(underlay)
+    }
 
     return drawBackdrop(
         backdrop = backdrop,

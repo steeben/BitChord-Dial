@@ -54,6 +54,19 @@ internal const val FROST_PAGE_BUTTON_VEIL = 0.35f
 internal fun frostPageButtonFill(dark: Boolean): Color =
     Color.White.copy(alpha = if (dark) FROST_BUTTON_LIFT else FROST_PAGE_BUTTON_VEIL)
 
+/**
+ * The Glass style's own rule for the buttons on the main player: the heart,
+ * the ⋯ and the bottom pill. They do not follow the Liquid Glass options. They
+ * are fully see-through, so no tint or darkening is left on them whatever the
+ * options say, over [PLAYER_BUTTON_GLASS_BLUR_DP] of blur, with the sleeve's
+ * colours at full saturation ([PLAYER_BUTTON_GLASS_SATURATION]). With the options'
+ * dark tint they were darker than a bright sleeve whose ink had gone dark,
+ * and the dark glyphs on them were hard to read.
+ */
+internal const val PLAYER_BUTTON_GLASS_TRANSPARENCY = 1f
+internal const val PLAYER_BUTTON_GLASS_BLUR_DP = 10f
+internal const val PLAYER_BUTTON_GLASS_SATURATION = 1f
+
 /** Classic's fill opacity at the transparency its fill is measured against. */
 internal const val SURFACE_OPACITY = 1f - CustomizationSettings.GLASS_REFERENCE_TRANSPARENCY
 
