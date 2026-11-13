@@ -591,6 +591,9 @@ class MainActivity : AppCompatActivity() {
                         }
                     },
                 )
+                // The first frame is held for the splash: the time to start
+                // what can only be started on this thread.
+                com.music.bitchord.data.WebViewWarmUp.behindSplash(this)
             } else {
                 LaunchGate.open = true
             }
