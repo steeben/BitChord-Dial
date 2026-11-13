@@ -81,8 +81,8 @@ internal val GLOW_STRETCH_MAX = 14.dp
  *
  * Over a bright sleeve, where the player's ink has gone dark ([LocalPlayerInkDark]), white
  * light has nothing to show against: the played part is then the ink's own colour, the same
- * as the controls around it, and the playhead end and the light are the song's bright accent
- * (see [glowBarColors]).
+ * as the controls around it, blending through the song's bright accent into white at the
+ * playhead, under a light of that accent (see [glowBarColors]).
  */
 @Composable
 internal fun GlowTrack(
@@ -182,22 +182,34 @@ internal fun GlowTrack(
 
         // The song's colour along the played part, turning to white over the last stretch
         // before the playhead. Held, the whole fill lifts a little toward white. Under
-        // dark ink: the ink's colour, turning to the song's bright accent.
+        // dark ink: the ink's colour, through the song's bright accent, into white, over
+        // a longer stretch so the three run into one another with no band between them.
         val colors = glowBarColors(accents, ink, inkDark, held, lit)
         val tint = colors.fill
         val head = colors.head
-        val whiteRun = GLOW_WHITE_RUN.toPx()
-        val solidWhite = GLOW_WHITE_HEAD.toPx()
+        val whiteRun = (GLOW_WHITE_RUN + (GLOW_INK_RUN - GLOW_WHITE_RUN) * inkDark).toPx()
+        val solidWhite = (GLOW_WHITE_HEAD + (GLOW_INK_HEAD - GLOW_WHITE_HEAD) * inkDark).toPx()
         val whiteFrom = (1f - whiteRun / played).coerceIn(0f, 1f)
         val whiteTo = (1f - solidWhite / played).coerceIn(whiteFrom, 1f)
+        val stops = if (inkDark <= 0f) {
+            arrayOf(
+                0f to tint.copy(alpha = alpha),
+                whiteFrom to tint.copy(alpha = alpha),
+                whiteTo to head.copy(alpha = alpha),
+                1f to head.copy(alpha = alpha),
+            )
+        } else {
+            arrayOf(
+                0f to tint.copy(alpha = alpha),
+                whiteFrom to tint.copy(alpha = alpha),
+                whiteFrom + (whiteTo - whiteFrom) * GLOW_INK_ACCENT_AT to colors.mid.copy(alpha = alpha),
+                whiteTo to head.copy(alpha = alpha),
+                1f to head.copy(alpha = alpha),
+            )
+        }
         drawRoundRect(
             brush = Brush.horizontalGradient(
-                colorStops = arrayOf(
-                    0f to tint.copy(alpha = alpha),
-                    whiteFrom to tint.copy(alpha = alpha),
-                    whiteTo to head.copy(alpha = alpha),
-                    1f to head.copy(alpha = alpha),
-                ),
+                colorStops = stops,
                 startX = 0f,
                 endX = played,
             ),
@@ -233,8 +245,11 @@ internal fun GlowTrack(
     }
 }
 
-/** The glow bar's colours: the played [fill], its [head] at the playhead, and the [light]. */
-internal data class GlowBarColors(val fill: Color, val head: Color, val light: Color)
+/**
+ * The glow bar's colours: the played [fill], its [head] at the playhead, the colour it
+ * passes through between the two ([mid]), and the [light].
+ */
+internal data class GlowBarColors(val fill: Color, val head: Color, val mid: Color, val light: Color)
 
 /**
  * The glow bar's colours for [accents], with the player's [ink] and how far that ink has
@@ -243,8 +258,9 @@ internal data class GlowBarColors(val fill: Color, val head: Color, val light: C
  *
  * Under light ink (0) the fill is a pale tint of the accent that runs into white at the
  * playhead, under a white light. Under dark ink (1) the fill is the ink itself, so the bar
- * is the colour of the controls around it, and what was white is that same pale tint of
- * the accent: white would be lost on a sleeve bright enough to turn the ink dark.
+ * is the colour of the controls around it; on its way to the white playhead end it passes
+ * through that same pale tint of the accent ([GlowBarColors.mid]), which is also the
+ * light's colour there, since white light would be lost on a sleeve that bright.
  */
 internal fun glowBarColors(
     accents: WaveAccents,
@@ -257,14 +273,18 @@ internal fun glowBarColors(
     if (inkDark <= 0f) {
         // Light ink: the bar exactly as it always was.
         val fill = lerp(bright, Color.White, 0.25f * held)
-        return GlowBarColors(fill, lerp(fill, Color.White, lit), lerp(fill, Color.White, 0.75f))
+        val head = lerp(fill, Color.White, lit)
+        return GlowBarColors(fill, head, lerp(fill, head, 0.5f), lerp(fill, Color.White, 0.75f))
     }
-    // What the bar brightens toward: white, or the bright accent under dark ink.
-    val pole = lerp(Color.White, bright, inkDark)
-    val fill = lerp(lerp(bright, ink.copy(alpha = 1f), inkDark), pole, 0.25f * held)
+    // What a held bar lifts toward: white, or the bright accent under dark ink.
+    val lift = lerp(Color.White, bright, inkDark)
+    val fill = lerp(lerp(bright, ink.copy(alpha = 1f), inkDark), lift, 0.25f * held)
+    val head = lerp(fill, Color.White, lit)
     return GlowBarColors(
         fill = fill,
-        head = lerp(fill, pole, lit),
+        head = head,
+        // Paused, the accent and the white both settle back into the fill.
+        mid = lerp(lerp(fill, head, 0.5f), lerp(fill, bright, lit), inkDark),
         light = lerp(lerp(fill, Color.White, 0.75f), bright, inkDark),
     )
 }
@@ -306,6 +326,14 @@ private val GLOW_CANVAS_HEIGHT = 30.dp
 /** How far back from the playhead the fill starts turning white, and how much is pure white. */
 private val GLOW_WHITE_RUN = 52.dp
 private val GLOW_WHITE_HEAD = 12.dp
+/**
+ * The same under dark ink: a longer run, since it holds two blends (ink to accent, accent
+ * to white), with the accent [GLOW_INK_ACCENT_AT] of the way along it and only the very
+ * end pure white.
+ */
+private val GLOW_INK_RUN = 120.dp
+private val GLOW_INK_HEAD = 3.dp
+private const val GLOW_INK_ACCENT_AT = 0.55f
 /** The light is [GLOW_LAYERS] teardrops, centred every [GLOW_STEP] back from the playhead. */
 private const val GLOW_LAYERS = 7
 private val GLOW_STEP = 10.dp

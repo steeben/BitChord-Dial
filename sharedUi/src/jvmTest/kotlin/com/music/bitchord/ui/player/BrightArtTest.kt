@@ -23,15 +23,18 @@ class BrightArtTest {
     }
 
     @Test
-    fun glowBarUnderDarkInkIsTheInkRunningIntoTheBrightAccent() {
+    fun glowBarUnderDarkInkIsTheInkRunningThroughTheAccentIntoWhite() {
         val ink = Color(0xFF3B2F4A)
         val bright = androidx.compose.ui.graphics.lerp(accents.accent, accents.light, 0.4f)
         val colors = glowBarColors(accents, ink, inkDark = 1f, held = 0f, lit = 1f)
         assertClose(ink, colors.fill)
-        assertClose(bright, colors.head)
+        assertClose(bright, colors.mid)
+        assertClose(Color.White, colors.head)
         assertClose(bright, colors.light)
         // Paused, the playhead end settles into the fill, as it does under light ink.
-        assertClose(ink, glowBarColors(accents, ink, inkDark = 1f, held = 0f, lit = 0f).head)
+        val paused = glowBarColors(accents, ink, inkDark = 1f, held = 0f, lit = 0f)
+        assertClose(ink, paused.mid)
+        assertClose(ink, paused.head)
     }
 
     private fun assertClose(expected: Color, actual: Color) {
