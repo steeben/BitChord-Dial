@@ -1098,17 +1098,46 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun knownArtistSubscription(browseId: String): SubscriptionState? =
         _detailStack.value.firstOrNull { it.browseId == browseId }?.subscription
             ?: artistCardPages[browseId]?.subscription
+            ?: artistCardStars[browseId]
 
     /**
-     * Fetches the artists' cards ahead of their menus — the artists' dial,
+     * Fetches the artists' stars ahead of their menus — the artists' dial,
      * which is held for its menu more than anything — one at a time, so the
-     * star and the shuffle are there the moment a menu opens.
+     * star is there the moment a menu opens.
+     *
+     * The star is all a menu needs before it is used, and the artist's landing
+     * page carries it: one request. This used to read each artist's whole page,
+     * every song and release paged out, and to start again from the top each
+     * time Home changed while a run was still going, so a launch read the
+     * dial's three dozen artists four and five times over, for half a minute.
+     * Now there is one run, each artist is asked once, and it waits for Home.
      */
     fun prefetchArtistCards(browseIds: List<String>) {
-        viewModelScope.launch {
-            browseIds.filterNot { it in artistCardPages }.forEach { artistCardPage(it) }
+        artistStarQueue += browseIds.filterNot { it in artistCardStars || it in artistCardPages }
+        if (artistStarJob?.isActive == true) return
+        artistStarJob = viewModelScope.launch {
+            awaitHomeSettled()
+            while (true) {
+                val browseId = artistStarQueue.firstOrNull() ?: break
+                artistStarQueue.remove(browseId)
+                if (browseId in artistCardStars || browseId in artistCardPages) continue
+                artistStar(browseId)
+            }
         }
     }
+
+    /** The artists whose stars [prefetchArtistCards] has yet to ask for, and its one run. */
+    private val artistStarQueue = LinkedHashSet<String>()
+    private var artistStarJob: Job? = null
+
+    /** Stars read off artists' landing pages, by artist. */
+    private val artistCardStars = HashMap<String, SubscriptionState>()
+
+    private suspend fun artistStar(browseId: String): SubscriptionState? =
+        artistCardPages[browseId]?.subscription
+            ?: artistCardStars[browseId]
+            ?: YtMusicRepository.artistLanding(browseId).getOrNull()?.subscription
+                ?.also { artistCardStars[browseId] = it }
 
     fun loadArtistSubscription(browseId: String, onResult: (SubscriptionState?) -> Unit) {
         val known = _detailStack.value.firstOrNull { it.browseId == browseId }?.subscription
@@ -1116,7 +1145,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             onResult(known)
             return
         }
-        viewModelScope.launch { onResult(artistCardPage(browseId)?.subscription) }
+        viewModelScope.launch { onResult(artistStar(browseId)) }
     }
 
     /**
@@ -1239,9 +1268,22 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** Artist pages fetched for card menus, so the menu's rows share one request. */
     private val artistCardPages = HashMap<String, ArtistPage>()
 
-    private suspend fun artistCardPage(browseId: String): ArtistPage? =
-        artistCardPages[browseId] ?: YtMusicRepository.artistPage(browseId).getOrNull()
-            ?.also { artistCardPages[browseId] = it }
+    /** The same pages while they are on their way, so two askers share one request. */
+    private val artistCardLoads = HashMap<String, kotlinx.coroutines.Deferred<ArtistPage?>>()
+
+    private suspend fun artistCardPage(browseId: String): ArtistPage? {
+        artistCardPages[browseId]?.let { return it }
+        val load = artistCardLoads.getOrPut(browseId) {
+            viewModelScope.async {
+                YtMusicRepository.artistPage(browseId).getOrNull()?.also { artistCardPages[browseId] = it }
+            }
+        }
+        return try {
+            load.await()
+        } finally {
+            if (artistCardLoads[browseId] === load) artistCardLoads.remove(browseId)
+        }
+    }
 
     /** Stars or un-stars an artist from a menu; [onDone] gets whether it worked. */
     fun setArtistSubscribed(browseId: String, state: SubscriptionState, subscribed: Boolean, onDone: (Boolean) -> Unit) {
@@ -1259,6 +1301,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         artistCardPages[browseId]?.let { card ->
             card.subscription?.let { artistCardPages[browseId] = card.copy(subscription = it.copy(subscribed = subscribed)) }
         }
+        artistCardStars[browseId]?.let { artistCardStars[browseId] = it.copy(subscribed = subscribed) }
         _detailStack.value = _detailStack.value.map { page ->
             val subscription = page.subscription
             if (page.browseId != browseId || subscription == null) {

@@ -18,8 +18,10 @@ import java.util.Locale
  *
  * A frame is late when it took longer than the display gave it. Each late
  * frame's time is kept apart by where it went, so a line of the log says not
- * only that a page stuttered but which part of the work was slow: the app's
- * own thread (composition, layout, drawing), the render thread, or the GPU.
+ * only that a page stuttered but which part of the work was slow: the wait
+ * for the app's thread to be free (something else was running on it), the
+ * app's thread itself (composition, layout, drawing), the render thread, or
+ * the GPU.
  */
 class FrameTally {
     var frames = 0
@@ -34,19 +36,27 @@ class FrameTally {
         private set
     var worstNanos = 0L
         private set
+
+    /**
+     * The least any frame of the stretch was given. Android gives a frame
+     * longer once the frames before it have fallen behind, so the least is the
+     * one that says what the display asks for.
+     */
     private var budgetNanos = 0L
+    private var lateWaitNanos = 0L
     private var lateUiNanos = 0L
     private var lateRenderNanos = 0L
     private var lateGpuNanos = 0L
 
-    fun add(totalNanos: Long, budgetNanos: Long, uiNanos: Long, renderNanos: Long, gpuNanos: Long) {
+    fun add(totalNanos: Long, budgetNanos: Long, waitNanos: Long, uiNanos: Long, renderNanos: Long, gpuNanos: Long) {
         frames++
-        this.budgetNanos = budgetNanos
+        if (budgetNanos > 0L && (this.budgetNanos == 0L || budgetNanos < this.budgetNanos)) this.budgetNanos = budgetNanos
         if (totalNanos > worstNanos) worstNanos = totalNanos
         if (totalNanos >= FROZEN_NANOS) frozen++
         if (budgetNanos <= 0L || totalNanos <= budgetNanos) return
         late++
         if (totalNanos > budgetNanos * 2) slow++
+        lateWaitNanos += waitNanos
         lateUiNanos += uiNanos
         lateRenderNanos += renderNanos
         lateGpuNanos += gpuNanos
@@ -58,20 +68,32 @@ class FrameTally {
         slow = 0
         frozen = 0
         worstNanos = 0L
+        budgetNanos = 0L
+        lateWaitNanos = 0L
         lateUiNanos = 0L
         lateRenderNanos = 0L
         lateGpuNanos = 0L
     }
 
-    /** One line for the log, or null when there was no frame to speak of. */
-    fun summary(): String? {
+    /**
+     * One line for the log, or null when there was no frame to speak of.
+     * [spanNanos] is the time from the stretch's first frame to its last.
+     */
+    fun summary(spanNanos: Long = 0L): String? {
         if (frames == 0) return null
-        val head = "$frames frames, worst ${millis(worstNanos)}, budget ${millis(budgetNanos)}"
+        // A rate only means something over a stretch long enough to have one.
+        val rate = if (spanNanos >= MIN_RATE_SPAN_NANOS) {
+            " (${"%.0f".format(Locale.ROOT, (frames - 1) * 1_000_000_000.0 / spanNanos)} a second)"
+        } else {
+            ""
+        }
+        val head = "$frames frames$rate, worst ${millis(worstNanos)}, budget ${millis(budgetNanos)}"
         if (late == 0) return "$head, none late"
         val share = late * 100.0 / frames
         return "$head, $late late (${"%.1f".format(Locale.ROOT, share)}%), " +
             "$slow over twice the budget, $frozen frozen; " +
-            "a late frame took on average ${millis(lateUiNanos / late)} on the app thread, " +
+            "a late frame took on average ${millis(lateWaitNanos / late)} waiting for the app thread, " +
+            "${millis(lateUiNanos / late)} on the app thread, " +
             "${millis(lateRenderNanos / late)} on the render thread, ${millis(lateGpuNanos / late)} on the GPU"
     }
 
@@ -80,6 +102,7 @@ class FrameTally {
     private companion object {
         /** What Android itself calls a frozen frame. */
         const val FROZEN_NANOS = 700_000_000L
+        const val MIN_RATE_SPAN_NANOS = 250_000_000L
     }
 }
 
@@ -98,6 +121,9 @@ object FrameLog {
     /** A stretch is written once it is this long, or once the screen has been still for [IDLE_MS]. */
     private const val STRETCH_MS = 5_000L
     private const val IDLE_MS = 1_000L
+
+    /** A single frame at least this long gets its own line. */
+    private const val SLOW_FRAME_NANOS = 40_000_000L
 
     /** The page on screen, as the app names it. Set by the app; read on the log's own thread. */
     @Volatile
@@ -131,20 +157,30 @@ object FrameLog {
         // is on screen it has no display to ask.
         var displayBudget = 0L
 
+        // When the stretch's last frame came in, so that the still second
+        // which ends a stretch is not counted as part of it.
+        var stretchEnd = 0L
+
         fun write() {
-            val line = tally.summary() ?: return
-            val seconds = (SystemClock.elapsedRealtime() - stretchStart) / 1000.0
-            TrackLog.toSession('I', TAG, "$stretchPage, ${"%.1f".format(Locale.ROOT, seconds)}s: $line")
+            val span = stretchEnd - stretchStart
+            val line = tally.summary(span * 1_000_000L) ?: return
+            TrackLog.toSession('I', TAG, "$stretchPage, ${"%.1f".format(Locale.ROOT, span / 1000.0)}s: $line")
             tally.reset()
         }
         val idle = Runnable { write() }
 
         val listener = Window.OnFrameMetricsAvailableListener { _, metrics, _ ->
             val now = SystemClock.elapsedRealtime()
-            val uiNanos = metrics.getMetric(FrameMetrics.INPUT_HANDLING_DURATION) +
-                metrics.getMetric(FrameMetrics.ANIMATION_DURATION) +
-                metrics.getMetric(FrameMetrics.LAYOUT_MEASURE_DURATION) +
-                metrics.getMetric(FrameMetrics.DRAW_DURATION)
+            val totalNanos = metrics.getMetric(FrameMetrics.TOTAL_DURATION)
+            // The time the frame stood waiting because the app's thread was
+            // busy with something that was not this frame.
+            val waitNanos = metrics.getMetric(FrameMetrics.UNKNOWN_DELAY_DURATION)
+            val inputNanos = metrics.getMetric(FrameMetrics.INPUT_HANDLING_DURATION)
+            // Compose runs its recompositions here, on the frame clock.
+            val animationNanos = metrics.getMetric(FrameMetrics.ANIMATION_DURATION)
+            val layoutNanos = metrics.getMetric(FrameMetrics.LAYOUT_MEASURE_DURATION)
+            val drawNanos = metrics.getMetric(FrameMetrics.DRAW_DURATION)
+            val uiNanos = inputNanos + animationNanos + layoutNanos + drawNanos
             val renderNanos = metrics.getMetric(FrameMetrics.SYNC_DURATION) +
                 metrics.getMetric(FrameMetrics.COMMAND_ISSUE_DURATION) +
                 metrics.getMetric(FrameMetrics.SWAP_BUFFERS_DURATION)
@@ -165,7 +201,7 @@ object FrameLog {
                 TrackLog.toSession(
                     'I',
                     TAG,
-                    "first frame of the window: ${millis(metrics.getMetric(FrameMetrics.TOTAL_DURATION))}, " +
+                    "first frame of the window: ${millis(totalNanos)}, " +
                         "${millis(uiNanos)} on the app thread, ${millis(renderNanos)} on the render thread$sinceStart",
                 )
                 return@OnFrameMetricsAvailableListener
@@ -176,14 +212,33 @@ object FrameLog {
                 stretchPage = current
                 stretchStart = now
             }
+            stretchEnd = now
             val hasDeadline = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+            val gpuNanos = if (hasDeadline) metrics.getMetric(FrameMetrics.GPU_DURATION) else 0L
             tally.add(
-                totalNanos = metrics.getMetric(FrameMetrics.TOTAL_DURATION),
+                totalNanos = totalNanos,
                 budgetNanos = if (hasDeadline) metrics.getMetric(FrameMetrics.DEADLINE) else displayBudget,
+                waitNanos = waitNanos,
                 uiNanos = uiNanos,
                 renderNanos = renderNanos,
-                gpuNanos = if (hasDeadline) metrics.getMetric(FrameMetrics.GPU_DURATION) else 0L,
+                gpuNanos = gpuNanos,
             )
+            // A frame this long is seen as a stop. It gets a line of its own,
+            // at the time it happened, so the lines around it in the log say
+            // what the app was doing.
+            if (totalNanos >= SLOW_FRAME_NANOS) {
+                val began = (System.nanoTime() - metrics.getMetric(FrameMetrics.INTENDED_VSYNC_TIMESTAMP)) / 1_000_000L
+                TrackLog.toSession(
+                    'I',
+                    TAG,
+                    "slow frame on $current: ${millis(totalNanos)}, began ${began}ms before this line; " +
+                        "${millis(waitNanos)} waiting for the app thread, " +
+                        "app thread ${millis(uiNanos)} (input ${millis(inputNanos)}, " +
+                        "animation and composition ${millis(animationNanos)}, " +
+                        "layout ${millis(layoutNanos)}, draw ${millis(drawNanos)}), " +
+                        "${millis(renderNanos)} on the render thread, ${millis(gpuNanos)} on the GPU",
+                )
+            }
             handler.removeCallbacks(idle)
             handler.postDelayed(idle, IDLE_MS)
         }
