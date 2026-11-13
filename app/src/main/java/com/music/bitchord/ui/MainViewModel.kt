@@ -57,6 +57,9 @@ import com.music.bitchord.data.model.withoutRepeatsOf
 import com.music.bitchord.data.model.LibraryPage
 import com.music.bitchord.data.model.LibraryState
 import com.music.bitchord.data.model.LikeStatus
+import com.music.bitchord.data.ExploreArtCache
+import com.music.bitchord.data.artByKey
+import com.music.bitchord.data.withArt
 import com.music.bitchord.data.model.MoodGenre
 import com.music.bitchord.data.model.MoodGenreSection
 import com.music.bitchord.data.model.PlaylistPrivacy
@@ -1884,7 +1887,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         startSuggestPipeline()
         startTypeaheadMediaPipeline()
         loadHome()
-        loadExplore()
+        // Explore waits its turn: nothing shows it at launch, and Home's own
+        // requests should not have to share the first seconds with it. Opening
+        // the tab before then asks for it at once, see [onExploreShown].
+        viewModelScope.launch {
+            awaitHomeSettled()
+            ensureExplore()
+        }
         if (_signedIn.value) {
             loadLibrary()
             loadAccount()
@@ -2064,9 +2073,53 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Suspends until this launch's Home is in (its feed and Recently played,
+     * or their failure), or for [STARTUP_SETTLE_MS] at the longest. What Home
+     * itself does not show waits on this, so that the first seconds of a
+     * launch belong to the page that is on screen.
+     */
+    suspend fun awaitHomeSettled() {
+        withTimeoutOrNull(STARTUP_SETTLE_MS) { _homeFresh.first { it } }
+    }
+
+    /** [awaitHomeSettled], given up at once when [sooner] says the wait is over. */
+    suspend fun awaitHomeSettled(sooner: kotlinx.coroutines.flow.Flow<Boolean>) {
+        withTimeoutOrNull(STARTUP_SETTLE_MS) {
+            kotlinx.coroutines.flow.merge(_homeFresh, sooner).first { it }
+        }
+    }
+
+    /** Whether Explore's categories have been asked for since the app started. */
+    private var exploreRequested = false
+
+    /**
+     * Whether the Explore tab has been opened since the app started. The page
+     * behind each category is only read ahead from then on.
+     */
+    private var exploreShown = false
+
+    /** Categories whose page has been read since the app started, and those being read now. */
+    private val exploreWarmed = HashSet<String>()
+    private val exploreInFlight = HashSet<String>()
+    private val exploreArtLimiter = Semaphore(EXPLORE_ART_PARALLELISM)
+
     fun loadExplore() {
+        exploreRequested = true
         _explore.value = UiState.Loading
         viewModelScope.launch { fetchExplore() }
+    }
+
+    private fun ensureExplore() {
+        if (!exploreRequested) loadExplore()
+    }
+
+    /** Call when the Explore tab becomes visible. */
+    fun onExploreShown() {
+        ensureExplore()
+        if (exploreShown) return
+        exploreShown = true
+        (_explore.value as? UiState.Success)?.data?.let(::loadMoodGenreArtwork)
     }
 
     private suspend fun fetchExplore() {
@@ -2080,38 +2133,87 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             },
             onFailure = { UiState.Error(it.friendly()) },
         )
-        _explore.value = state
-        (state as? UiState.Success)?.data?.let(::loadMoodGenreArtwork)
+        if (state !is UiState.Success) {
+            _explore.value = state
+            return
+        }
+        // The categories arrive with the pictures they showed last time, in
+        // one write, so the grid is whole the first time it is seen.
+        val saved = withContext(Dispatchers.IO) { ExploreArtCache.read(getApplication()) }
+        val sections = state.data.withArt(saved)
+        _explore.value = UiState.Success(sections)
+        loadMoodGenreArtwork(sections)
     }
 
     /**
      * Category buttons do not carry thumbnails themselves. Resolve a small
      * number at a time from the shelves they open, so the grid gains real art
      * without saturating the browse client or delaying the category list.
+     *
+     * Each picture costs the whole page its category opens. Until the Explore
+     * tab has been opened, only categories with no saved picture are asked for
+     * (a first launch, a category YouTube has added). Once it has been, every
+     * category's page is read ahead as before, so a tap opens it at once, and
+     * the picture it has now is saved for the next launch.
      */
     private fun loadMoodGenreArtwork(sections: List<MoodGenreSection>) {
+        val wanted = sections.flatMap(MoodGenreSection::items)
+            .distinctBy { ExploreArtCache.keyOf(it) }
+            .filter { item ->
+                val key = ExploreArtCache.keyOf(item)
+                key !in exploreInFlight &&
+                    if (exploreShown) key !in exploreWarmed else item.thumbnailUrl == null
+            }
+        if (wanted.isEmpty()) return
+        wanted.forEach { exploreInFlight += ExploreArtCache.keyOf(it) }
         viewModelScope.launch {
-            val limiter = Semaphore(4)
-            coroutineScope {
-                sections.flatMap(MoodGenreSection::items).forEach { item ->
-                    launch {
-                        val artwork = limiter.withPermit {
-                            YtMusicRepository.moodGenreArtwork(item.browseId, item.params).getOrNull()
-                        } ?: return@launch
-                        val current = (_explore.value as? UiState.Success)?.data ?: return@launch
-                        _explore.value = UiState.Success(current.map { section ->
-                            section.copy(items = section.items.map { currentItem ->
-                                if (currentItem.browseId == item.browseId && currentItem.params == item.params) {
-                                    currentItem.copy(thumbnailUrl = artwork)
-                                } else {
-                                    currentItem
-                                }
-                            })
-                        })
+            val found = HashMap<String, String>()
+            try {
+                coroutineScope {
+                    // Put on the grid a few at a time, not one write a picture:
+                    // each write redraws the page.
+                    val publisher = launch {
+                        while (true) {
+                            delay(EXPLORE_ART_PUBLISH_MS)
+                            publishExploreArt(found)
+                        }
                     }
+                    wanted.map { item ->
+                        launch {
+                            val key = ExploreArtCache.keyOf(item)
+                            val artwork = exploreArtLimiter.withPermit {
+                                YtMusicRepository.moodGenreArtwork(item.browseId, item.params)
+                            }
+                            if (artwork.isSuccess) exploreWarmed += key
+                            artwork.getOrNull()?.let { found[key] = it }
+                        }
+                    }.forEach { it.join() }
+                    publisher.cancel()
                 }
+            } finally {
+                wanted.forEach { exploreInFlight -= ExploreArtCache.keyOf(it) }
+                publishExploreArt(found)
+            }
+            // What each page shows now is kept for the next launch, also where
+            // the grid holds on to the picture it already had.
+            val shown = (_explore.value as? UiState.Success)?.data?.artByKey().orEmpty()
+            val keep = shown + found
+            if (keep.isNotEmpty()) {
+                withContext(Dispatchers.IO) { ExploreArtCache.write(getApplication(), keep) }
             }
         }
+    }
+
+    /**
+     * Puts the pictures in [art] on the Explore categories that have none. A
+     * category that already shows one keeps it until the next launch: a
+     * picture that changes while it is looked at is the pop this avoids.
+     */
+    private fun publishExploreArt(art: Map<String, String>) {
+        if (art.isEmpty()) return
+        val current = (_explore.value as? UiState.Success)?.data ?: return
+        val updated = current.withArt(art, replace = false)
+        if (updated !== current) _explore.value = UiState.Success(updated)
     }
 
     fun openMoodGenre(item: MoodGenre) {
@@ -4811,6 +4913,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 }
 
 private const val HOME_CACHE_WRITE_DELAY_MS = 2_000L
+
+/**
+ * The longest anything waits on Home's first load before going ahead without
+ * it: see [MainViewModel.awaitHomeSettled].
+ */
+private const val STARTUP_SETTLE_MS = 6_000L
+
+/** How many Explore category pages are read at a time, and how often their pictures are put on the grid. */
+private const val EXPLORE_ART_PARALLELISM = 4
+private const val EXPLORE_ART_PUBLISH_MS = 300L
 
 private const val DETAIL_CACHE_SIZE = 40
 private const val DETAIL_CACHE_TTL_MS = 30 * 60 * 1000L

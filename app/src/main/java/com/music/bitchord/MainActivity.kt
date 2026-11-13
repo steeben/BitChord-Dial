@@ -622,6 +622,12 @@ class MainActivity : AppCompatActivity() {
                 delay(PERFORMANCE_LOG_SETTLE_MS)
                 logPerformanceMode("settled", highPerformance, performanceRefreshRate, composeView)
             }
+            // Frame times go into a log session while one is recording, so a
+            // report of stutter comes with the page and the numbers.
+            androidx.compose.runtime.DisposableEffect(logRecording) {
+                if (logRecording) com.music.bitchord.ui.performance.FrameLog.start(window)
+                onDispose { com.music.bitchord.ui.performance.FrameLog.stop(window) }
+            }
             val darkTheme = when (theme) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
                 ThemeMode.LIGHT -> false
@@ -1590,6 +1596,9 @@ private fun BitChordApp(
         // Likewise for Library: a playlist created or a song liked since it
         // was last fetched is a change to exactly this page.
         if (currentFeed == MainViewModel.Feed.LIBRARY) viewModel.onLibraryShown()
+        // Explore's categories come in behind Home at launch; the pages they
+        // open are only read ahead once the tab has been looked at.
+        if (currentFeed == MainViewModel.Feed.EXPLORE) viewModel.onExploreShown()
     }
     // Coming back to the app on Home is opening Home too: without this, the
     // dial kept what it had when the app went to the background, however
@@ -3356,7 +3365,7 @@ private fun BitChordApp(
         rememberAmbientBlobs(
             ambientPrimary,
             ambientSecondary,
-            animate = !reduceAnimationSetting && !showNowPlaying,
+            animate = !reduceAnimationSetting && !showNowPlaying && appForeground,
         )
     } else {
         null
@@ -3612,6 +3621,18 @@ private fun BitChordApp(
                 LaunchedEffect(librarySource, signedIn, libraryDeals) {
                     val source = librarySource
                     if (libraryFeed?.source != source) libraryFeed = null
+                    // The deal reads the whole library: every page of the
+                    // account's songs and the device's files. At launch that
+                    // waits for Home to be in, so it does not share the first
+                    // seconds with the page on screen; opening the Library
+                    // meanwhile ends the wait at once.
+                    if (libraryFeed == null) {
+                        viewModel.awaitHomeSettled(
+                            sooner = androidx.compose.runtime.snapshotFlow {
+                                selectedTab == TAB_LIBRARY || selectedTab == TAB_PLAYLISTS
+                            },
+                        )
+                    }
                     try {
                         coroutineScope {
                             val songs = async {
@@ -3711,6 +3732,10 @@ private fun BitChordApp(
                     else -> "$TAB_KEY$selectedTab"
                 }
                 val pageKey = pageKeyFor()
+                // Named for the frame times a log session keeps.
+                androidx.compose.runtime.SideEffect {
+                    com.music.bitchord.ui.performance.FrameLog.page = if (showNowPlaying) "player" else pageKey
+                }
                 // The tab each page was last up on, for the transition to tell
                 // a page left for another tab from one stepped back out of.
                 val tabOfPage = remember { HashMap<String, Int>() }
@@ -4649,7 +4674,12 @@ private fun BitChordApp(
                         if (key.startsWith(MOOD_PAGE_KEY)) TAB_EXPLORE else key.removePrefix(TAB_KEY).toIntOrNull() ?: selectedTab
                     ) {
                         TAB_HOME -> HomeScreen(
-                            state = arrangedHomeState.withCustomCovers(customCovers),
+                            // Remembered: with a custom cover set, this is a new
+                            // list each time it is asked for, and Home redrew with
+                            // every state the app above it read.
+                            state = remember(arrangedHomeState, customCovers) {
+                                arrangedHomeState.withCustomCovers(customCovers)
+                            },
                             speedDialPinned = speedDialPinnedIds,
                             onSpeedDialHeaderLongPress = { editingSpeedDial = true },
                             speedDialRows = speedDialRows,
