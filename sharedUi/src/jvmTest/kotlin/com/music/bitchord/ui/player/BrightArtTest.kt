@@ -30,7 +30,7 @@ class BrightArtTest {
         assertClose(ink, colors.fill)
         assertClose(bright, colors.mid)
         assertClose(Color.White, colors.head)
-        assertClose(bright, colors.light)
+        assertClose(Color.White, colors.light)
         // Paused, the playhead end settles into the fill, as it does under light ink.
         val paused = glowBarColors(accents, ink, inkDark = 1f, held = 0f, lit = 0f)
         assertClose(ink, paused.mid)

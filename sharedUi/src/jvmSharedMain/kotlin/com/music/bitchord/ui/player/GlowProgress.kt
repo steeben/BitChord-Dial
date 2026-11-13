@@ -82,7 +82,7 @@ internal val GLOW_STRETCH_MAX = 14.dp
  * Over a bright sleeve, where the player's ink has gone dark ([LocalPlayerInkDark]), white
  * light has nothing to show against: the played part is then the ink's own colour, the same
  * as the controls around it, blending through the song's bright accent into white at the
- * playhead, under a light of that accent (see [glowBarColors]).
+ * playhead, under a white light (see [glowBarColors]).
  */
 @Composable
 internal fun GlowTrack(
@@ -259,8 +259,9 @@ internal data class GlowBarColors(val fill: Color, val head: Color, val mid: Col
  * Under light ink (0) the fill is a pale tint of the accent that runs into white at the
  * playhead, under a white light. Under dark ink (1) the fill is the ink itself, so the bar
  * is the colour of the controls around it; on its way to the white playhead end it passes
- * through that same pale tint of the accent ([GlowBarColors.mid]), which is also the
- * light's colour there, since white light would be lost on a sleeve that bright.
+ * through that same pale tint of the accent ([GlowBarColors.mid]). The light there is
+ * plain white: it lies over the white playhead end, and in the accent's colour it tinted
+ * that end, so the bar no longer ran evenly into white.
  */
 internal fun glowBarColors(
     accents: WaveAccents,
@@ -285,7 +286,7 @@ internal fun glowBarColors(
         head = head,
         // Paused, the accent and the white both settle back into the fill.
         mid = lerp(lerp(fill, head, 0.5f), lerp(fill, bright, lit), inkDark),
-        light = lerp(lerp(fill, Color.White, 0.75f), bright, inkDark),
+        light = lerp(lerp(fill, Color.White, 0.75f), Color.White, inkDark),
     )
 }
 
