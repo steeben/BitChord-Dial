@@ -112,7 +112,9 @@ class FrameTally {
  * A report of stutter says nothing about where or why. With logging on
  * (Settings, Advanced, Enable logging), this writes a line for each stretch of
  * frames: the page they were on, how many were late, and where a late frame's
- * time went. Nothing is measured, and no listener is attached, with logging
+ * time went. While frames are drawn, [AppThreadWatch] also writes what the
+ * app's thread was in the middle of each time it was busy for longer than a
+ * few frames. Nothing is measured, and no listener is attached, with logging
  * off.
  */
 object FrameLog {
@@ -135,6 +137,9 @@ object FrameLog {
 
     /** Whether this run of the app has had its first frame written. */
     private var launchWritten = false
+
+    /** Whether this run of the app has said how much of its code is compiled. */
+    private var compiledWritten = false
 
     /**
      * Starts counting [window]'s frames. Safe to call before the window is on
@@ -171,6 +176,7 @@ object FrameLog {
 
         val listener = Window.OnFrameMetricsAvailableListener { _, metrics, _ ->
             val now = SystemClock.elapsedRealtime()
+            AppThreadWatch.lastFrameAt = SystemClock.uptimeMillis()
             val totalNanos = metrics.getMetric(FrameMetrics.TOTAL_DURATION)
             // The time the frame stood waiting because the app's thread was
             // busy with something that was not this frame.
@@ -247,6 +253,13 @@ object FrameLog {
         this.listener = listener
         watched = java.lang.ref.WeakReference(window)
         TrackLog.toSession('I', TAG, "frame times on; ${effectsLine()}")
+        if (!compiledWritten) {
+            compiledWritten = true
+            val apk = window.context.applicationInfo?.sourceDir
+            // Read off the app's thread: it is a file of some thousands of lines.
+            handler.post { CompiledCode.line(apk)?.let { TrackLog.toSession('I', TAG, it) } }
+        }
+        AppThreadWatch.start()
     }
 
     private fun millis(nanos: Long): String = "%.1fms".format(Locale.ROOT, nanos / 1_000_000.0)
@@ -258,6 +271,7 @@ object FrameLog {
 
     private fun stop() {
         val listener = listener ?: return
+        AppThreadWatch.stop()
         watched.get()?.let { runCatching { it.removeOnFrameMetricsAvailableListener(listener) } }
         watched = java.lang.ref.WeakReference<Window>(null)
         thread?.quitSafely()
