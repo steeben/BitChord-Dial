@@ -916,13 +916,13 @@ object CustomizationSettings {
     const val DEFAULT_SPEED_DIAL_ROWS = 4
 
     /**
-     * The glass as it ships, in both styles: 90% see-through, a 4dp frost,
+     * The glass as it ships, in both styles: 90% see-through, a 10dp frost,
      * the colour behind it taken down a touch (90%), and the theme's own
      * tint, black shaded 30% on the dark theme and white, unshaded, on the
      * light one.
      */
     const val DEFAULT_GLASS_TRANSPARENCY = 0.9f
-    const val DEFAULT_GLASS_BLUR = 4f
+    const val DEFAULT_GLASS_BLUR = 10f
     const val MAX_GLASS_BLUR = 32f
     const val DEFAULT_GLASS_SATURATION = 0.9f
     const val MAX_GLASS_SATURATION = 2f
