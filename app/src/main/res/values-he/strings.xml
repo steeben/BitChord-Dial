@@ -39,6 +39,8 @@
     <string name="podcast">פודקאסט</string>
     <string name="read_more">קראו עוד</string>
     <string name="about_podcast">אודות הפודקאסט</string>
+    <string name="new_episode">פרק חדש</string>
+    <string name="episodes_for_later">פרקים להמשך</string>
     <string name="new_playlist">פלייליסט חדש</string>
     <string name="saved_to_youtube_music">נשמר ל-YouTube Music</string>
     <string name="sign_in">התחברות</string>

@@ -49,8 +49,12 @@ import com.music.bitchord.ui.components.HomeStickyLogo
 import com.music.bitchord.ui.components.PodcastsDialMenu
 import com.music.bitchord.ui.screens.HomeScreen
 import com.music.bitchord.ui.screens.SPEED_DIAL_PAGE_KEYS
+import com.music.bitchord.ui.screens.SpeedDialLucky
 import com.music.bitchord.ui.theme.Metropolis
 import dev.chrisbanes.haze.HazeState
+
+/** YouTube Music's "Episodes for later" playlist, as a page. */
+private const val EPISODES_FOR_LATER_ID = "VLSE"
 
 /**
  * What the Podcasts page shares with what is drawn round it (the top bar's
@@ -123,23 +127,57 @@ internal fun PodcastsTabPage(
     val pinIcon by CustomizationSettings.dialPinIcon.collectAsStateWithLifecycle()
     val pinnedIds = remember(pins) { pins.mapNotNullTo(HashSet()) { it.speedDialId } }
 
-    val state: UiState<List<HomeShelf>> = remember(feed, pins, hidden, lastDial) {
+    // The followed shows whose new episode is still to start: after the pins, each with its tag.
+    val playedInApp by EpisodeProgress.played.collectAsStateWithLifecycle()
+    val fresh = remember(feed, playedInApp) {
+        (feed as? UiState.Success)?.data?.let { PodcastsDial.freshShows(it.fresh, playedInApp) }.orEmpty()
+    }
+    val freshIds = remember(fresh) { fresh.mapNotNullTo(HashSet()) { it.speedDialId } }
+    // What was started in this app since the feed was read is only known once its file is.
+    LaunchedEffect(fresh.isNotEmpty()) { if (fresh.isNotEmpty()) EpisodeProgress.load() }
+
+    val state: UiState<List<HomeShelf>> = remember(feed, pins, hidden, lastDial, fresh) {
         // Nothing from the network (yet): the dial as it last was, when there is one.
         val saved = PodcastsDial.tiles(pins, lastDial, hidden)
             .takeIf { it.isNotEmpty() }
             ?.let { UiState.Success(PodcastsDial.page(it, emptyList())) }
         when (val current = feed) {
             is UiState.Success -> UiState.Success(
-                PodcastsDial.page(PodcastsDial.tiles(pins, current.data.picks, hidden), PodcastsDial.shelvesUnder(current.data)),
+                PodcastsDial.page(
+                    PodcastsDial.tiles(pins, current.data.picks, hidden, fresh),
+                    PodcastsDial.shelvesUnder(current.data),
+                ),
             )
             is UiState.Loading -> saved ?: UiState.Loading
             is UiState.Error -> saved ?: current
         }
     }
     // Saved once the fresh dial is what is showing, for the next time the page opens.
-    LaunchedEffect(feed, pins, hidden) {
-        val fresh = (feed as? UiState.Success)?.data ?: return@LaunchedEffect
-        CustomizationSettings.setLastPodcastDial(PodcastsDial.tiles(pins, fresh.picks, hidden))
+    LaunchedEffect(feed, pins, hidden, fresh) {
+        val latest = (feed as? UiState.Success)?.data ?: return@LaunchedEffect
+        CustomizationSettings.setLastPodcastDial(PodcastsDial.tiles(pins, latest.picks, hidden, fresh))
+    }
+
+    // "Episodes for later", in the die's place: YouTube Music's own list, which only an account has.
+    val episodesForLater by CustomizationSettings.podcastEpisodesForLater.collectAsStateWithLifecycle()
+    val laterLabel = stringResource(R.string.episodes_for_later)
+    val laterTile = remember(episodesForLater, signedIn, laterLabel) {
+        if (episodesForLater && signedIn) {
+            SpeedDialLucky(
+                label = laterLabel,
+                onRoll = {
+                    viewModel.openDetail(
+                        browseId = EPISODES_FOR_LATER_ID,
+                        title = laterLabel,
+                        subtitle = "",
+                        thumbnailUrl = null,
+                    )
+                },
+                episodesForLater = true,
+            )
+        } else {
+            null
+        }
     }
 
     // The row of large cards under the dial: this feed's, or until it is in, the row as it last was.
@@ -207,6 +245,9 @@ internal fun PodcastsTabPage(
         speedDialPinned = pinnedIds,
         speedDialRows = rows,
         onSpeedDialReorder = CustomizationSettings::setPodcastDialPins,
+        speedDialLucky = laterTile,
+        speedDialNewReleases = freshIds,
+        newReleaseLabel = stringResource(R.string.new_episode),
         dialLabels = labels,
         dialLabelOverrides = labelOverrides,
         dialPinIcon = pinIcon,

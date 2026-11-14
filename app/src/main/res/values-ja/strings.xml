@@ -36,6 +36,8 @@
     <string name="podcast">ポッドキャスト</string>
     <string name="read_more">続きを読む</string>
     <string name="about_podcast">ポッドキャストについて</string>
+    <string name="new_episode">新しいエピソード</string>
+    <string name="episodes_for_later">後で聴くエピソード</string>
     <string name="new_playlist">新しいプレイリスト</string>
     <string name="saved_to_youtube_music">YouTube Musicに保存済み</string>
     <string name="sign_in">ログイン</string>

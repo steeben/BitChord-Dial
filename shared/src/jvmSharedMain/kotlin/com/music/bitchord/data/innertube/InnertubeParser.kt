@@ -684,11 +684,7 @@ object InnertubeParser {
         if (playlistScope == null && suggestionShelves.isEmpty()) return null
 
         val pageCredit = pageCredit(root)
-        val songs = playlistScope?.let { playlist ->
-            collectRenderers(playlist, "musicResponsiveListItemRenderer")
-                .mapNotNull { parseResponsiveListItem(it, pageCredit) }
-                .distinctBy { it.videoId }
-        }.orEmpty()
+        val songs = playlistScope?.let { playlist -> playlistRows(playlist, pageCredit) }.orEmpty()
         val knownSongs = songs.mapTo(HashSet()) { it.videoId }
         val suggested = suggestionShelves
             .flatMap { collectRenderers(it, "musicResponsiveListItemRenderer") }
@@ -701,6 +697,34 @@ object InnertubeParser {
         // continuation means more real tracks.
         val token = playlistScope?.let { continuationToken(it) }
         return PlaylistShelfPage(songs, suggested, token)
+    }
+
+    /**
+     * A playlist shelf's own rows, in its order: tracks, and on a playlist of
+     * podcast episodes ("Episodes for later", "New episodes") the episode
+     * rows, which are another renderer; see [parseMultiRowListItem].
+     */
+    private fun playlistRows(playlist: JsonObject, pageCredit: Credits): List<Song> {
+        val out = LinkedHashMap<String, Song>()
+        fun walk(node: JsonElement) {
+            when (node) {
+                is JsonObject -> {
+                    val track = node["musicResponsiveListItemRenderer"] as? JsonObject
+                    val episode = node["musicMultiRowListItemRenderer"] as? JsonObject
+                    when {
+                        track != null -> parseResponsiveListItem(track, pageCredit)
+                            ?.let { out.putIfAbsent(it.videoId, it) }
+                        episode != null -> parseMultiRowListItem(episode, null)
+                            ?.let { out.putIfAbsent(it.videoId, it) }
+                        else -> node.values.forEach(::walk)
+                    }
+                }
+                is JsonArray -> node.forEach(::walk)
+                else -> Unit
+            }
+        }
+        walk(playlist)
+        return out.values.toList()
     }
 
     /** One page of saved library cards, plus the token for the next page. */
@@ -908,6 +932,10 @@ object InnertubeParser {
                 released = episodeReleased(renderer.o("subtitle").a("runs")),
                 playedPercent = ((progress?.get("playbackProgressPercentage") as? JsonPrimitive)?.intOrNull ?: 0)
                     .coerceIn(0, 100),
+                showId = renderer.o("secondTitle").a("runs").orEmpty().firstNotNullOfOrNull { run ->
+                    run.o("navigationEndpoint").o("browseEndpoint").s("browseId")
+                        ?.takeIf { it.startsWith(PODCAST_SHOW_PREFIX) }
+                },
             ),
         )
     }

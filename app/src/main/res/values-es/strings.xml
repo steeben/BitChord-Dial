@@ -38,6 +38,8 @@
     <string name="podcast">Pódcast</string>
     <string name="read_more">Leer más</string>
     <string name="about_podcast">Acerca del pódcast</string>
+    <string name="new_episode">Nuevo episodio</string>
+    <string name="episodes_for_later">Episodios para más tarde</string>
     <string name="new_playlist">Nueva lista</string>
     <string name="saved_to_youtube_music">Guardada en YouTube Music</string>
     <string name="sign_in">Iniciar sesión</string>

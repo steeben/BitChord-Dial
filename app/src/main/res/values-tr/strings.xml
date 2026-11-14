@@ -37,6 +37,8 @@
     <string name="podcast">Podcast</string>
     <string name="read_more">Devamını oku</string>
     <string name="about_podcast">Podcast hakkında</string>
+    <string name="new_episode">Yeni bölüm</string>
+    <string name="episodes_for_later">Sonraya bırakılan bölümler</string>
     <string name="new_playlist">Yeni çalma listesi</string>
     <string name="saved_to_youtube_music">YouTube Music\'e kaydedildi</string>
     <string name="sign_in">Giriş yap</string>

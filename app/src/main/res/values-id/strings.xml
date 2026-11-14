@@ -36,6 +36,8 @@
     <string name="podcast">Podcast</string>
     <string name="read_more">Baca selengkapnya</string>
     <string name="about_podcast">Tentang podcast</string>
+    <string name="new_episode">Episode baru</string>
+    <string name="episodes_for_later">Episode untuk nanti</string>
     <string name="new_playlist">Playlist baru</string>
     <string name="saved_to_youtube_music">Disimpan ke YouTube Music</string>
     <string name="sign_in">Masuk</string>

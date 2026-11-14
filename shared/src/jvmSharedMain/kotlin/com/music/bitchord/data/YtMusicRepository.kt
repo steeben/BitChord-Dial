@@ -6,6 +6,7 @@ import com.music.bitchord.data.innertube.InnertubeParser
 import com.music.bitchord.data.model.Account
 import com.music.bitchord.data.model.AccountChannel
 import com.music.bitchord.data.model.isExactArtistMatch
+import com.music.bitchord.data.model.isPodcastShow
 import com.music.bitchord.data.model.normalizedArtistName
 import com.music.bitchord.data.model.ArtistPage
 import com.music.bitchord.data.model.BrowseType
@@ -157,8 +158,31 @@ object YtMusicRepository {
         InnertubeParser.parsePodcastShelves(Innertube.browse("FEmusic_non_music_audio"))
     }
 
+    /**
+     * The newest episodes of the shows the account follows: YouTube Music's
+     * own "New episodes" playlist, first page. Each names its show
+     * ([com.music.bitchord.data.model.EpisodeInfo.showId]) and says how much
+     * of it was played. For a signed-in account; a guest has no such list.
+     */
+    suspend fun newEpisodes(): Result<List<Song>> = call("podcasts:new") {
+        val response = Innertube.browse(NEW_EPISODES)
+        InnertubeParser.parsePlaylistShelf(response)?.songs
+            ?: InnertubeParser.collectSongsDeep(response)
+    }
+
+    /** The shows the account follows, as the library lists them: first page. */
+    suspend fun followedShows(): Result<List<ShelfItem>> = call("podcasts:followed") {
+        InnertubeParser.parseLibraryItems(Innertube.browse(LIBRARY_PODCASTS)).filter { it.isPodcastShow }
+    }
+
     /** What Home's Podcasts chip sends as its browse params. */
     private const val PODCASTS_CHIP_PARAMS = "ggMGSgQIDBAD"
+
+    /** YouTube Music's playlist of the followed shows' newest episodes. */
+    private const val NEW_EPISODES = "VLRDPN"
+
+    /** The library's list of followed shows. */
+    private const val LIBRARY_PODCASTS = "FEmusic_library_non_music_audio_list"
 
     /**
      * The lead shelf: the account's listening history, newest first.
@@ -1115,7 +1139,7 @@ object YtMusicRepository {
         "Albums" to "FEmusic_liked_albums",
         "Artists" to "FEmusic_library_corpus_track_artists",
         "Subscriptions" to "FEmusic_library_corpus_artists",
-        "Podcasts" to "FEmusic_library_non_music_audio_list",
+        "Podcasts" to LIBRARY_PODCASTS,
     )
 
     // ---- Writes -------------------------------------------------------------

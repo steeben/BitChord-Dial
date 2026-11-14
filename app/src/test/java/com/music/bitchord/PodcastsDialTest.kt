@@ -1,8 +1,10 @@
 package com.music.bitchord
 
+import com.music.bitchord.data.model.EpisodeInfo
 import com.music.bitchord.data.model.HomeShelf
 import com.music.bitchord.data.model.ShelfItem
 import com.music.bitchord.data.model.ShelfLayout
+import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.podcasts.PodcastsDial
 import com.music.bitchord.data.settings.CustomizationSettings
 import org.junit.Assert.assertEquals
@@ -142,6 +144,61 @@ class PodcastsDialTest {
         val tiles = PodcastsDial.tiles(pins, picks, hidden = setOf("MPSPb"))
 
         assertEquals(listOf("p1", "p2", "a", "c"), ids(tiles))
+    }
+
+    private fun newEpisode(id: String, show: String?, played: Int = 0) = Song(
+        videoId = id,
+        title = "Episode $id",
+        artist = "Show $show",
+        thumbnailUrl = "still/$id",
+        episode = EpisodeInfo(playedPercent = played, showId = show?.let { "MPSP$it" }),
+    )
+
+    @Test
+    fun fresh_isOneForEachShow_byItsNewestEpisode_whenThatWasNotStarted() {
+        val episodes = listOf(
+            newEpisode("e1", "a"),
+            newEpisode("e2", "b", played = 40),
+            // An older one of a show whose newest was started does not make the show new.
+            newEpisode("e3", "b"),
+            newEpisode("e4", "a"),
+            newEpisode("e5", null),
+            newEpisode("e6", "c"),
+        )
+        val fresh = PodcastsDial.fresh(episodes, followed = listOf(show("a")), known = listOf(show("c"), show("a")))
+
+        assertEquals(listOf("a", "c"), ids(fresh.map { it.show }))
+        assertEquals(listOf("e1", "e6"), fresh.map { it.episodeId })
+        // The library's own tile for the show, where it has one.
+        assertEquals(show("a"), fresh.first().show)
+    }
+
+    @Test
+    fun fresh_makesATileFromTheEpisode_forAShowNoListHas() {
+        val made = PodcastsDial.fresh(listOf(newEpisode("e1", "z")), followed = emptyList()).single().show
+
+        assertEquals("MPSPz", made.browseId)
+        assertEquals("Show z", made.title)
+        assertEquals("still/e1", made.thumbnailUrl)
+    }
+
+    @Test
+    fun freshShows_leaveOutAShowWhoseEpisodeWasStartedHere() {
+        val fresh = PodcastsDial.fresh(listOf(newEpisode("e1", "a"), newEpisode("e2", "b")), listOf(show("a"), show("b")))
+
+        assertEquals(listOf("a", "b"), ids(PodcastsDial.freshShows(fresh, emptyMap())))
+        assertEquals(listOf("b"), ids(PodcastsDial.freshShows(fresh, mapOf("e1" to 3))))
+    }
+
+    @Test
+    fun tiles_putShowsWithANewEpisodeAfterThePins_andLeaveAPinnedOneWhereItIs() {
+        val pins = listOf(show("p1"), show("n2"))
+        val picks = listOf(show("a"), show("n1"), show("b"))
+        val fresh = listOf(show("n1"), show("n2"))
+
+        val tiles = PodcastsDial.tiles(pins, picks, hidden = emptySet(), fresh = fresh)
+
+        assertEquals(listOf("p1", "n2", "n1", "a", "b"), ids(tiles))
     }
 
     @Test

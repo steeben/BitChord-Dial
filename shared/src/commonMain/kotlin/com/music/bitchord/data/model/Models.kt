@@ -29,11 +29,14 @@ data class ArtistRef(
  * "Nov 14, 2025", or "1d ago" for the newest.
  * @property playedPercent How much of it the account has played, 0 to 100;
  * 0 when it was not started, or when no account is signed in.
+ * @property showId The `MPSP…` page of the show it is an episode of, where
+ * the row is away from that page and so names its show ("New episodes").
  */
 data class EpisodeInfo(
     val description: String? = null,
     val released: String? = null,
     val playedPercent: Int = 0,
+    val showId: String? = null,
 )
 
 /** A playable YouTube Music track. */

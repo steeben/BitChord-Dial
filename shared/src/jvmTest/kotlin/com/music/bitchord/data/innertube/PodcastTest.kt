@@ -95,6 +95,29 @@ class PodcastTest {
     }
 
     @Test
+    fun playlistOfEpisodes_listsThem_eachWithItsShow() {
+        val page = json(
+            """
+            { "contents": { "twoColumnBrowseResultsRenderer": { "secondaryContents": { "sectionListRenderer": {
+              "contents": [ { "musicPlaylistShelfRenderer": { "contents": [
+                ${episode(
+                "TPXdcOJRmRc", "World News Tonight", "20 min",
+                """, "secondTitle": { "runs": [ { "text": "ABC World News Tonight", "navigationEndpoint": {
+                    "browseEndpoint": { "browseId": "MPSPPLQOa26lW-uI8hXwg0nCxcX2ukSk_iCP3p" } } } ] }""",
+            )},
+                ${episode("eYSOabR3YP0", "Essentials: Supplementation", "34 min")}
+              ] } } ]
+            } } } } }
+            """,
+        )
+        val songs = InnertubeParser.parsePlaylistShelf(page)!!.songs
+        assertEquals(listOf("TPXdcOJRmRc", "eYSOabR3YP0"), songs.map { it.videoId })
+        assertEquals("MPSPPLQOa26lW-uI8hXwg0nCxcX2ukSk_iCP3p", songs[0].episode?.showId)
+        assertEquals("ABC World News Tonight", songs[0].artist)
+        assertNull(songs[1].episode?.showId)
+    }
+
+    @Test
     fun continuation_hasNoHeaderSoTheShowIsCarriedIn() {
         val page = json(
             """

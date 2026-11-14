@@ -2240,17 +2240,33 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val identity = listenerKey()
         val home = async { YtMusicRepository.podcastsHome() }
         val landing = async { YtMusicRepository.podcastsLanding() }
+        // The followed shows' newest episodes, and the shows themselves for
+        // their tiles. Only an account has them, and the page does not wait
+        // on a failure of either: there is then no show to bring forward.
+        val signedIn = _signedIn.value
+        val newEpisodes = async {
+            if (signedIn) YtMusicRepository.newEpisodes().getOrNull().orEmpty() else emptyList()
+        }
+        val followed = async {
+            if (signedIn) YtMusicRepository.followedShows().getOrNull().orEmpty() else emptyList()
+        }
         val homeResult = home.await()
         val landingResult = landing.await()
         val homeShelves = homeResult.getOrNull()?.shelves.orEmpty()
+        val landingShelves = landingResult.getOrNull().orEmpty()
         // "Shows for you" is not in every answer: kept when it is, for the ones it is not in.
         PodcastsDial.showShelves(homeShelves).firstOrNull()
             ?.let { CustomizationSettings.setPodcastShowsForYou(it, identity) }
         val feed = PodcastsDial.feed(
             home = homeShelves,
             continuation = homeResult.getOrNull()?.continuation,
-            landing = landingResult.getOrNull().orEmpty(),
+            landing = landingShelves,
             savedForYou = CustomizationSettings.podcastShowsFor(identity),
+            fresh = PodcastsDial.fresh(
+                episodes = newEpisodes.await(),
+                followed = followed.await(),
+                known = PodcastsDial.picks(homeShelves, landingShelves),
+            ),
         )
         if (feed.picks.isNotEmpty() || feed.shelves.isNotEmpty()) {
             UiState.Success(feed)

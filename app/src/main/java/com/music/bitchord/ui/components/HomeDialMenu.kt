@@ -110,7 +110,8 @@ fun HomeDialMenu(
 /**
  * What the Podcasts page's "…" button opens, on the same glass as Home's:
  * the settings of its dial that it shares with Home's dials (the grid, the
- * tile names and the pin badges), applied as they are touched.
+ * tile names and the pin badges), and its own "Episodes for later" tile,
+ * applied as they are touched.
  */
 @Composable
 fun PodcastsDialMenu(
@@ -121,6 +122,7 @@ fun PodcastsDialMenu(
     val rows by CustomizationSettings.speedDialRows.collectAsStateWithLifecycle()
     val pinIcon by CustomizationSettings.dialPinIcon.collectAsStateWithLifecycle()
     val labels by CustomizationSettings.dialLabels.collectAsStateWithLifecycle()
+    val episodesForLater by CustomizationSettings.podcastEpisodesForLater.collectAsStateWithLifecycle()
     GlassMenuPanel(visible = visible, hazeState = hazeState, onDismiss = onDismiss) {
         Column(Modifier.widthIn(min = 280.dp, max = 340.dp)) {
             MenuHeading(stringResource(R.string.speed_dial_grid))
@@ -130,6 +132,11 @@ fun PodcastsDialMenu(
                 onSelect = { CustomizationSettings.setSpeedDialRows(it + 3) },
                 glass = true,
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp),
+            )
+            DialSwitch(
+                stringResource(R.string.episodes_for_later),
+                episodesForLater,
+                CustomizationSettings::setPodcastEpisodesForLater,
             )
             DialSwitch(stringResource(R.string.dial_labels_default), labels, CustomizationSettings::setDialLabels)
             DialSwitch(stringResource(R.string.dial_pin_icon), pinIcon, CustomizationSettings::setDialPinIcon)

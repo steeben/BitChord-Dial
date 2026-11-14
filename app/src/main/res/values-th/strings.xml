@@ -36,6 +36,8 @@
     <string name="podcast">พอดแคสต์</string>
     <string name="read_more">อ่านเพิ่มเติม</string>
     <string name="about_podcast">เกี่ยวกับพอดแคสต์</string>
+    <string name="new_episode">ตอนใหม่</string>
+    <string name="episodes_for_later">ตอนสำหรับฟังภายหลัง</string>
     <string name="new_playlist">เพลย์ลิสต์ใหม่</string>
     <string name="saved_to_youtube_music">บันทึกลง YouTube Music แล้ว</string>
     <string name="sign_in">ลงชื่อเข้าใช้</string>

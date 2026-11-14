@@ -36,6 +36,8 @@
     <string name="podcast">播客</string>
     <string name="read_more">展开</string>
     <string name="about_podcast">关于这个播客</string>
+    <string name="new_episode">新剧集</string>
+    <string name="episodes_for_later">稍后收听的剧集</string>
     <string name="new_playlist">新建播放列表</string>
     <string name="saved_to_youtube_music">已保存到 YouTube Music</string>
     <string name="sign_in">登录</string>

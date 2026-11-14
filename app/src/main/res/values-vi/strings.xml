@@ -37,6 +37,8 @@
     <string name="podcast">Podcast</string>
     <string name="read_more">Xem thêm</string>
     <string name="about_podcast">Về podcast</string>
+    <string name="new_episode">Tập mới</string>
+    <string name="episodes_for_later">Tập để nghe sau</string>
     <string name="new_playlist">Danh sách phát mới</string>
     <string name="saved_to_youtube_music">Đã lưu vào YouTube Music</string>
     <string name="sign_in">Đăng nhập</string>

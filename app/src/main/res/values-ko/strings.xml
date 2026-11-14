@@ -40,6 +40,8 @@
     <string name="podcast">팟캐스트</string>
     <string name="read_more">더보기</string>
     <string name="about_podcast">팟캐스트 정보</string>
+    <string name="new_episode">새 에피소드</string>
+    <string name="episodes_for_later">나중에 들을 에피소드</string>
     <string name="new_playlist">새 재생목록</string>
     <string name="saved_to_youtube_music">YouTube Music에 저장했습니다</string>
     <string name="sign_in">로그인</string>

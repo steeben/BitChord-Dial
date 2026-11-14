@@ -3,6 +3,7 @@ package com.music.bitchord.data.podcasts
 import com.music.bitchord.data.model.HomeShelf
 import com.music.bitchord.data.model.ShelfItem
 import com.music.bitchord.data.model.ShelfLayout
+import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.model.isPodcastShow
 import com.music.bitchord.data.settings.CustomizationSettings
 import com.music.bitchord.data.settings.speedDialId
@@ -20,6 +21,8 @@ import com.music.bitchord.data.settings.speedDialId
  * [shelves] once those have ended: the popular episodes, and shows by category.
  * @property continuation The token for more of [shelves], null once they have ended.
  * @property pages How many pages of [shelves] were read.
+ * @property fresh The shows the account follows whose newest episode was not
+ * started when the feed was read, the newest episode's show first.
  */
 data class PodcastsFeed(
     val picks: List<ShelfItem>,
@@ -28,7 +31,11 @@ data class PodcastsFeed(
     val landing: List<HomeShelf>,
     val continuation: String?,
     val pages: Int = 1,
+    val fresh: List<FreshShow> = emptyList(),
 )
+
+/** A followed show with a new episode: its tile, and the episode ([episodeId] is its video id). */
+data class FreshShow(val show: ShelfItem, val episodeId: String)
 
 /**
  * The Podcasts page: its dial, and what is under it.
@@ -74,6 +81,7 @@ object PodcastsDial {
         continuation: String?,
         landing: List<HomeShelf>,
         savedForYou: HomeShelf? = null,
+        fresh: List<FreshShow> = emptyList(),
     ): PodcastsFeed {
         val fromHome = showShelves(home).firstOrNull()
         val forYou = fromHome
@@ -86,8 +94,43 @@ object PodcastsDial {
             shelves = playable(home),
             landing = playable(landing),
             continuation = continuation,
+            fresh = fresh,
         )
     }
+
+    /**
+     * The followed shows with a new episode that was not started, from
+     * YouTube Music's "New episodes" list ([episodes], newest first): one for
+     * each show, by its newest episode there. The show's tile is the one the
+     * library has for it ([followed]), else one of [known] (the dial's own
+     * picks), else one made from the episode.
+     */
+    fun fresh(episodes: List<Song>, followed: List<ShelfItem>, known: List<ShelfItem> = emptyList()): List<FreshShow> {
+        val tiles = HashMap<String, ShelfItem>()
+        (followed + known).forEach { item ->
+            val id = item.browseId
+            if (id != null && item.isPodcastShow) tiles.putIfAbsent(id, item)
+        }
+        return episodes
+            .mapNotNull { song -> song.episode?.showId?.let { showId -> showId to song } }
+            // Only a show's newest episode says whether the show has a new one.
+            .distinctBy { (showId, _) -> showId }
+            .filter { (_, song) -> (song.episode?.playedPercent ?: 0) == 0 }
+            .map { (showId, song) ->
+                FreshShow(
+                    show = tiles[showId] ?: ShelfItem(song.artist, "", song.thumbnailUrl, null, showId),
+                    episodeId = song.videoId,
+                )
+            }
+    }
+
+    /**
+     * The shows of [fresh] that still have their new episode to start:
+     * without the ones whose episode was started in this app since
+     * ([playedInApp], percent by video id).
+     */
+    fun freshShows(fresh: List<FreshShow>, playedInApp: Map<String, Int>): List<ShelfItem> =
+        fresh.filter { (playedInApp[it.episodeId] ?: 0) == 0 }.map { it.show }
 
     /** [feed] with one more page of Home's podcast shelves; the paging stops at [MAX_PAGES]. */
     fun more(feed: PodcastsFeed, shelves: List<HomeShelf>, continuation: String?): PodcastsFeed {
@@ -105,11 +148,18 @@ object PodcastsDial {
     }
 
     /**
-     * The dial's tiles: [pins] first, then [picks], without what was taken
-     * off the dial ([hidden]), up to the size of a dial.
+     * The dial's tiles: [pins] first, then the followed shows with a new
+     * episode ([fresh]), then [picks], without what was taken off the dial
+     * ([hidden]), up to the size of a dial. A pinned show stays where its pin
+     * is.
      */
-    fun tiles(pins: List<ShelfItem>, picks: List<ShelfItem>, hidden: Set<String>): List<ShelfItem> =
-        (pins + picks)
+    fun tiles(
+        pins: List<ShelfItem>,
+        picks: List<ShelfItem>,
+        hidden: Set<String>,
+        fresh: List<ShelfItem> = emptyList(),
+    ): List<ShelfItem> =
+        (pins + fresh + picks)
             .filter { it.isPodcastShow && it.speedDialId !in hidden }
             .distinctBy { it.speedDialId }
             .take(CustomizationSettings.SPEED_DIAL_SIZE)

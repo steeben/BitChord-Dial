@@ -274,6 +274,12 @@ object CustomizationSettings {
     /** Whose [podcastShowsForYou] is: another listener's shows are not this one's. */
     private var podcastShowsListener = ""
 
+    /**
+     * Whether the Podcasts page's dial has the "Episodes for later" tile, where
+     * the speed dial has its die. Off until it is asked for.
+     */
+    val podcastEpisodesForLater = MutableStateFlow(false)
+
     fun init(prefs: SharedPreferences) {
         this.prefs = prefs
         readAll()
@@ -390,6 +396,7 @@ object CustomizationSettings {
         artistDialPins.value = readPins(p.getString(KEY_ARTIST_DIAL_PINS, null))
         podcastDialPins.value = readPins(p.getString(KEY_PODCAST_DIAL_PINS, null))
         lastPodcastDial.value = readPins(p.getString(KEY_LAST_PODCAST_DIAL, null))
+        podcastEpisodesForLater.value = p.getBoolean(KEY_PODCAST_EPISODES_FOR_LATER, false)
         podcastShowsListener = p.getString(KEY_PODCAST_SHOWS_LISTENER, null).orEmpty()
         podcastShowsForYou.value = readPins(p.getString(KEY_PODCAST_SHOWS_FOR_YOU, null))
             .takeIf { it.isNotEmpty() }
@@ -593,6 +600,11 @@ object CustomizationSettings {
             ?.putString(KEY_PODCAST_SHOWS_TITLE, shelf.title)
             ?.putString(KEY_PODCAST_SHOWS_LISTENER, podcastShowsListener)
             ?.apply()
+    }
+
+    fun setPodcastEpisodesForLater(value: Boolean) {
+        podcastEpisodesForLater.value = value
+        prefs?.edit()?.putBoolean(KEY_PODCAST_EPISODES_FOR_LATER, value)?.apply()
     }
 
     fun setFeelingLucky(value: Boolean) {
@@ -1081,6 +1093,7 @@ object CustomizationSettings {
     private const val KEY_PODCAST_SHOWS_FOR_YOU = "custom_podcast_shows_for_you"
     private const val KEY_PODCAST_SHOWS_TITLE = "custom_podcast_shows_title"
     private const val KEY_PODCAST_SHOWS_LISTENER = "custom_podcast_shows_listener"
+    private const val KEY_PODCAST_EPISODES_FOR_LATER = "custom_podcast_episodes_for_later"
     private const val KEY_HIDDEN_FROM_DIAL = "custom_hidden_from_dial"
     private const val KEY_DIAL_HIDDEN_LABELS = "custom_dial_hidden_labels"
     private const val KEY_DIAL_PIN_ICON = "custom_dial_pin_icon"
