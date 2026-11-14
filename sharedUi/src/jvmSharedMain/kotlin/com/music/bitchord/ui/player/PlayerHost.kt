@@ -219,6 +219,8 @@ interface PlayerSettingsSource {
     val canvasOverCellular: StateFlow<Boolean>
     val fullBleedArtwork: StateFlow<Boolean>
     val hideSongStatus: StateFlow<Boolean>
+    /** Whether the status bar and the gradient under it are off the full player. */
+    val hidePlayerStatusBar: StateFlow<Boolean>
     /** Whether the queue lists what has already played above the playing track. */
     val showQueueHistory: StateFlow<Boolean>
     val hideVolumeBar: StateFlow<Boolean>

@@ -226,6 +226,8 @@
     <string name="hide_volume_bar_subtitle">メインプレイヤーから音量スライダーを削除します</string>
     <string name="hide_song_status">曲のステータスを隠す</string>
     <string name="hide_song_status_subtitle">メインプレーヤーの「再生元」や「再生者」の表示を隠します</string>
+    <string name="hide_player_status_bar">ステータスバーを非表示</string>
+    <string name="hide_player_status_bar_subtitle">メインプレーヤーでステータスバーと上部の影を非表示にします</string>
     <string name="off">オフ</string>
     <string name="low">低</string>
     <string name="medium">中</string>
