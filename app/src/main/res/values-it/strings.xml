@@ -326,6 +326,8 @@
     <string name="beta">Beta</string>
     <string name="refresh_rate">Frequenza di aggiornamento</string>
     <string name="high_performance_battery_needed">Imposta l\'uso della batteria di Dial su Illimitato. Tocca qui per aprire le impostazioni.</string>
+    <string name="disable_haptics">Disattiva feedback aptico</string>
+    <string name="disable_haptics_subtitle">Interrompe tutte le vibrazioni in Dial</string>
     <string name="enable">Attiva</string>
     <string name="activity">Attività</string>
     <string name="activity_competing">In gara</string>

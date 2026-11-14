@@ -385,6 +385,8 @@
     <string name="beta">베타</string>
     <string name="refresh_rate">주사율</string>
     <string name="high_performance_battery_needed">Dial의 배터리 사용을 제한 없음으로 설정하세요. 여기를 탭하면 설정이 열립니다.</string>
+    <string name="disable_haptics">햅틱 끄기</string>
+    <string name="disable_haptics_subtitle">Dial의 모든 진동 피드백을 끕니다</string>
     <string name="enable">켜기</string>
     <string name="activity">활동</string>
     <string name="activity_competing">경쟁 중</string>
