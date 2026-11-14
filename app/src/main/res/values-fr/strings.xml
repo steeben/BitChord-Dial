@@ -253,6 +253,8 @@
     <string name="high_performance_active">%1$d Hz demandés. Android peut le réduire si nécessaire.</string>
     <string name="beta">Bêta</string>
     <string name="refresh_rate">Taux de rafraîchissement</string>
+    <string name="disable_haptics">Désactiver le retour haptique</string>
+    <string name="disable_haptics_subtitle">Arrête toutes les vibrations dans Dial</string>
     <string name="high_performance_before_enabling">Avant d\'activer</string>
     <string name="high_performance_battery_warning">Réglez d\'abord l\'utilisation de la batterie de Dial sur Illimitée. Des taux de rafraîchissement plus élevés consomment plus de batterie, de CPU et de GPU, et peuvent faire chauffer votre appareil.</string>
     <string name="open_battery_settings">Ouvrir les paramètres de batterie</string>

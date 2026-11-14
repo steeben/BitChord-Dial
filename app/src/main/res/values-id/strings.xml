@@ -247,6 +247,8 @@
     <string name="high_performance_active">%1$d Hz diminta. Android dapat menurunkannya saat diperlukan.</string>
     <string name="beta">Beta</string>
     <string name="refresh_rate">Refresh rate</string>
+    <string name="disable_haptics">Nonaktifkan haptik</string>
+    <string name="disable_haptics_subtitle">Menghentikan semua umpan balik getaran di Dial</string>
     <string name="high_performance_before_enabling">Sebelum mengaktifkan</string>
     <string name="high_performance_battery_warning">Atur dulu penggunaan baterai Dial ke Tidak Dibatasi. Refresh rate yang lebih tinggi menggunakan lebih banyak baterai, CPU, dan GPU, serta dapat membuat perangkat Anda menjadi hangat.</string>
     <string name="open_battery_settings">Buka pengaturan baterai</string>

@@ -252,6 +252,8 @@
     <string name="high_performance_active">%1$d Hz angefordert. Android kann die Rate bei Bedarf verringern.</string>
     <string name="beta">Beta</string>
     <string name="refresh_rate">Bildwiederholrate</string>
+    <string name="disable_haptics">Haptik deaktivieren</string>
+    <string name="disable_haptics_subtitle">Stoppt jedes Vibrationsfeedback in Dial</string>
     <string name="high_performance_before_enabling">Vor der Aktivierung</string>
     <string name="high_performance_battery_warning">Stelle zuerst den Akkuverbrauch von Dial auf Uneingeschränkt. Höhere Bildwiederholraten verbrauchen mehr Akku, CPU und GPU und können dein Gerät erwärmen.</string>
     <string name="open_battery_settings">Akku-Einstellungen öffnen</string>

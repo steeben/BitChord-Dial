@@ -254,6 +254,8 @@
     <string name="high_performance_active">%1$d Hz solicitados. O Android pode diminuir quando necessário.</string>
     <string name="beta">Beta</string>
     <string name="refresh_rate">Taxa de atualização</string>
+    <string name="disable_haptics">Desativar resposta tátil</string>
+    <string name="disable_haptics_subtitle">Para todas as vibrações no Dial</string>
     <string name="high_performance_before_enabling">Antes de ativar</string>
     <string name="high_performance_battery_warning">Primeiro, defina o uso da bateria do Dial como Irrestrito. Taxas de atualização mais altas usam mais bateria, CPU e GPU, e podem aquecer seu dispositivo.</string>
     <string name="open_battery_settings">Abrir configurações da bateria</string>

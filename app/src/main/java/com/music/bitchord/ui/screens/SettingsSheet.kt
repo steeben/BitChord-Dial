@@ -1720,6 +1720,10 @@ fun SettingsScreen(
                     )
                 }
             }
+            val disableHapticsTitle = stringResource(R.string.disable_haptics)
+            row(disableHapticsTitle, "haptic", "vibration", "vibrate", "touch feedback", "buzz") {
+                DisableHapticsRow(title = disableHapticsTitle)
+            }
         }
 
         if (shows(SettingsCategory.LOCAL_MUSIC)) SearchableSettingsGroup(search, header = stringResource(R.string.local_music)) {

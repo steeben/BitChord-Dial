@@ -253,6 +253,8 @@
     <string name="high_performance_active">%1$d הרץ התבקש. מערכת אנדרואיד עשויה להפחית זאת במידת הצורך.</string>
     <string name="beta">בטא</string>
     <string name="refresh_rate">קצב רענון</string>
+    <string name="disable_haptics">השבתת משוב רטט</string>
+    <string name="disable_haptics_subtitle">מפסיק את כל משוב הרטט ב-Dial</string>
     <string name="high_performance_before_enabling">לפני ההפעלה</string>
     <string name="high_performance_battery_warning">תחילה הגדר את השימוש בסוללה של Dial ללא הגבלה. קצבי רענון גבוהים צורכים יותר סוללה, מעבד ומאיץ גרפי, ועשויים לחמם את המכשיר.</string>
     <string name="open_battery_settings">פתח הגדרות סוללה</string>
