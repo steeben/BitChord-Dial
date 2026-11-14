@@ -40,6 +40,24 @@ data class SpotifyTrack(
     val imageUrl: String?,
 )
 
+/** An artist hit of a Spotify search. */
+data class SpotifyArtist(val id: String, val name: String, val imageUrl: String?)
+
+/** An album hit of a Spotify search. */
+data class SpotifyAlbum(val id: String, val name: String, val artist: String, val imageUrl: String?)
+
+/**
+ * All the hits of one Spotify search. [topUri] is the Spotify URI of the hit
+ * that Spotify puts first, when the answer names one.
+ */
+data class SpotifySearch(
+    val tracks: List<SpotifyTrack>,
+    val artists: List<SpotifyArtist> = emptyList(),
+    val albums: List<SpotifyAlbum> = emptyList(),
+    val playlists: List<SpotifyPlaylist> = emptyList(),
+    val topUri: String? = null,
+)
+
 object SpotifyLibrary {
     /** The web player's bearer, and its client token when there is one. */
     class Tokens(val bearer: String, val clientToken: String?)
@@ -194,7 +212,13 @@ object SpotifyLibrary {
      * Spotify's catalogue searched for [query], songs only: the web player's
      * search page query, signed with the same session as the library.
      */
-    suspend fun searchTracks(query: String, limit: Int = 30): List<SpotifyTrack> = withContext(Dispatchers.IO) {
+    suspend fun searchTracks(query: String, limit: Int = 30): List<SpotifyTrack> = search(query, limit).tracks
+
+    /**
+     * Spotify's catalogue searched for [query]: the songs, and the artists,
+     * albums and playlists that the same answer of the web player holds.
+     */
+    suspend fun search(query: String, limit: Int = 30): SpotifySearch = withContext(Dispatchers.IO) {
         val variables = buildJsonObject {
             put("searchTerm", query)
             put("offset", 0)
@@ -206,7 +230,7 @@ object SpotifyLibrary {
             put("includeLocalConcertsField", false)
             put("includeAuthors", false)
         }
-        parseSearchTracks(gql("searchDesktop", SEARCH, variables, authHeaders()))
+        parseSearch(gql("searchDesktop", SEARCH, variables, authHeaders()))
     }
 
     private fun playlistPage(headers: Map<String, String>, offset: Int): Triple<List<SpotifyPlaylist>, Int, Int> {
@@ -439,6 +463,61 @@ internal fun parseSearchTracks(root: JsonObject): List<SpotifyTrack> {
             imageUrl = album?.obj("coverArt")?.arr("sources")?.lastUrl(),
         )
     }
+}
+
+/**
+ * All the hits of a `searchDesktop` answer. The songs must be there; a kind
+ * that the answer does not hold, or holds in a form not known here, is left
+ * empty and does not fail the search.
+ */
+internal fun parseSearch(root: JsonObject): SpotifySearch {
+    val tracks = parseSearchTracks(root)
+    val search = root.obj("data")?.obj("searchV2") ?: return SpotifySearch(tracks)
+    fun JsonObject.hits(key: String): List<JsonObject> = obj(key)?.arr("items").orEmpty().mapNotNull { element ->
+        val entry = runCatching { element.jsonObject }.getOrNull() ?: return@mapNotNull null
+        (entry.obj("item") ?: entry).obj("data")
+    }
+    fun JsonObject.sources(): String? = arr("sources")
+        ?.mapNotNull { source ->
+            val entry = runCatching { source.jsonObject }.getOrNull() ?: return@mapNotNull null
+            val url = entry.str("url") ?: return@mapNotNull null
+            url to (entry.int("width") ?: 0)
+        }
+        ?.maxByOrNull { it.second }
+        ?.first
+    val artists = search.hits("artists").mapNotNull { data ->
+        val uri = data.str("uri")?.takeIf { it.startsWith("spotify:artist:") } ?: return@mapNotNull null
+        val name = data.obj("profile")?.str("name")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+        SpotifyArtist(uri.substringAfterLast(":"), name, data.obj("visuals")?.obj("avatarImage")?.sources())
+    }
+    val albums = search.hits("albumsV2").mapNotNull { data ->
+        val uri = data.str("uri")?.takeIf { it.startsWith("spotify:album:") } ?: return@mapNotNull null
+        val name = data.str("name")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+        SpotifyAlbum(
+            id = uri.substringAfterLast(":"),
+            name = name,
+            artist = data.obj("artists")?.arr("items").orEmpty().mapNotNull { artist ->
+                runCatching { artist.jsonObject }.getOrNull()?.obj("profile")?.str("name")?.takeIf { it.isNotBlank() }
+            }.joinToString(", "),
+            imageUrl = data.obj("coverArt")?.sources(),
+        )
+    }
+    val playlists = search.hits("playlists").mapNotNull { data ->
+        val uri = data.str("uri") ?: return@mapNotNull null
+        if (uri == SPOTIFY_DJ_URI || !uri.startsWith(SPOTIFY_PAGE_PREFIX)) return@mapNotNull null
+        val name = data.str("name")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+        SpotifyPlaylist(
+            id = uri.substringAfterLast(":"),
+            name = name,
+            owner = data.obj("ownerV2")?.obj("data")?.str("name"),
+            imageUrl = coverUrl(data.obj("images")),
+        )
+    }
+    val top = search.obj("topResultsV2")?.arr("itemsV2")?.firstOrNull()
+        ?.let { runCatching { it.jsonObject }.getOrNull() }
+        ?.obj("item")
+        ?.let { item -> item.str("_uri") ?: item.obj("data")?.str("uri") }
+    return SpotifySearch(tracks, artists, albums, playlists, top)
 }
 
 /** The Liked Songs page: `me.library.tracks`, each entry wrapping the track under `track`. */
