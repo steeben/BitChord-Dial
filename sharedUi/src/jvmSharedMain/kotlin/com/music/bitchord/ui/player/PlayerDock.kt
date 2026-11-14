@@ -39,6 +39,7 @@ class PlayerDock {
      */
     private var miniArt: LayoutCoordinates? = null
     private var miniArtCorner: Dp = 8.dp
+    private var miniArtBordered = false
 
     /**
      * How far the player sheet sits below fully open, in pixels. Set by the
@@ -59,9 +60,10 @@ class PlayerDock {
         internal set
 
     /** Reported by the mini player's cover whenever it is placed. */
-    fun reportMiniArt(coordinates: LayoutCoordinates, corner: Dp) {
+    fun reportMiniArt(coordinates: LayoutCoordinates, corner: Dp, bordered: Boolean = false) {
         miniArt = coordinates
         miniArtCorner = corner
+        miniArtBordered = bordered
     }
 
     /** From the cover leaving composition, so a stale rect is never flown to. */
@@ -98,6 +100,16 @@ class PlayerDock {
     }
 
     internal fun miniArtCorner(): Dp = miniArtCorner
+
+    /**
+     * How much of the mini player's hairline round its cover the player's
+     * artwork wears this frame, 0 to 1: all of it on the cover, none by the
+     * time it is [COVER_EDGE_UNTIL] of the way open. The artwork has no such
+     * line of its own, and the cover's showed up whole the moment the artwork
+     * handed back to it. 0 for a cover that has no line.
+     */
+    internal fun miniArtEdge(): Float =
+        if (miniArtBordered) coverEdgeAt(openFraction()) else 0f
 
     /** The sheet's offset this frame, or null with no sheet laid out. */
     internal fun offset(): Float? = sheetOffset?.invoke()?.takeUnless { it.isNaN() }
@@ -301,6 +313,13 @@ class PlayerDock {
     // changed.
     private val coversMiniArtState = derivedStateOf { attached && (openFraction() > 0f || panelShown) }
 }
+
+/** How far open the player is when the last of the cover's hairline has left its artwork. */
+internal const val COVER_EDGE_UNTIL = 0.5f
+
+/** [PlayerDock.miniArtEdge] for an open fraction of [open]. */
+internal fun coverEdgeAt(open: Float): Float =
+    (1f - open / COVER_EDGE_UNTIL).coerceIn(0f, 1f)
 
 /** How far open the panel is before any of the player's fill comes over the pill. */
 internal const val PILL_HOLD = 0.06f
