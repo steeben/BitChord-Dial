@@ -41,6 +41,18 @@ fun Display?.resolvePerformanceRefreshRate(preferred: Int): Int =
     supportedPerformanceRefreshRates().minBy { abs(it - preferred) }
 
 /**
+ * Whether a display that was asked for [askedHz] turned the request down:
+ * it runs slower than that once it has had the time to switch.
+ *
+ * Rates are not round numbers (119.88, 120.00001), so a rate within
+ * [REFRESH_RATE_MARGIN_HZ] of the one asked for is that rate.
+ */
+fun refreshRateRefused(askedHz: Int, runningHz: Float): Boolean =
+    askedHz > 0 && runningHz > 0f && runningHz + REFRESH_RATE_MARGIN_HZ < askedHz
+
+private const val REFRESH_RATE_MARGIN_HZ = 2f
+
+/**
  * What the display offers and what it is doing, for a log session: every
  * mode with its id, size and rate, then the mode and rate in use. Written
  * when high performance mode is applied and again a moment later, so a log
