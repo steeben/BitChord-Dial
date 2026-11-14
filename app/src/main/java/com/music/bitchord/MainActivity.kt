@@ -121,6 +121,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -282,6 +283,8 @@ import com.music.bitchord.ui.screens.LIBRARY_GROUP_PREFIX
 import com.music.bitchord.ui.screens.dealLibraryFeed
 import com.music.bitchord.ui.screens.libraryGroupId
 import com.music.bitchord.ui.screens.rememberLibraryFeedLabels
+import com.music.bitchord.ui.screens.KeptPage
+import com.music.bitchord.ui.screens.KeptPageLocals
 import com.music.bitchord.ui.screens.LibraryFolderTabPill
 import com.music.bitchord.ui.screens.LibraryFolderTabsCovered
 import com.music.bitchord.ui.screens.LibraryFolderScroll
@@ -3936,7 +3939,126 @@ private fun BitChordApp(
                 ) {
                 // The colour behind the pages, and what the dial's glass tiles see.
                 com.music.bitchord.ui.components.DialTileBackdropLayer(ambientBlobs)
-                rememberTransition(pageTransitionState, label = "content").AnimatedContent(
+                val pages = rememberTransition(pageTransitionState, label = "content")
+                // Home is built once and kept. While another page is up it waits
+                // off stage (below, after the pages), and coming back to it moves
+                // it into its place again instead of building it: see [KeptPage].
+                val keepHome by AppSettings.keepHome.collectAsStateWithLifecycle()
+                val keptHome = remember { KeptPage(HOME_PAGE_KEY) }
+                keptHome.keep = keepHome
+                // `shown`: in its place among the pages, not off stage.
+                val homeBody: @Composable (Boolean) -> Unit = { shown ->
+                    KeptPageLocals(HOME_PAGE_KEY, cardLaunch = !reduceAnimationSetting) {
+                        HomeScreen(
+                            // Remembered: with a custom cover set, this is a new
+                            // list each time it is asked for, and Home redrew with
+                            // every state the app above it read.
+                            state = remember(arrangedHomeState, customCovers) {
+                                arrangedHomeState.withCustomCovers(customCovers)
+                            },
+                            speedDialPinned = speedDialPinnedIds,
+                            onSpeedDialHeaderLongPress = { editingSpeedDial = true },
+                            speedDialRows = speedDialRows,
+                            onSpeedDialReorder = { reordered ->
+                                CustomizationSettings.setSpeedDialPins(reordered)
+                            },
+                            artistDialPinned = artistDialPinnedIds,
+                            onArtistDialReorder = { reordered ->
+                                CustomizationSettings.setArtistDialPins(reordered)
+                            },
+                            speedDialLucky = speedDialLucky,
+                            dialHistoryLabel = stringResource(R.string.dial_history),
+                            speedDialNewReleases = homeFeed.newReleaseIds,
+                            mixesDialOn = homeFeed.mixesDialOn,
+                            mixesDial = homeFeed.mixes,
+                            mixesDialNamed = homeFeed.mixesNamed,
+                            mixesDialEmptyLabel = stringResource(R.string.mixes_dial_empty),
+                            newReleaseLabel = stringResource(R.string.dial_new_release),
+                            onSpeedDialHistory = {
+                                viewModel.loadDialHistory()
+                                historyMode = HistoryMode.DIAL_SONGS
+                                showHistory = true
+                            },
+                            onArtistDialHistory = {
+                                viewModel.loadDialHistory()
+                                historyMode = HistoryMode.DIAL_ARTISTS
+                                showHistory = true
+                            },
+                            dialLabels = dialLabels,
+                            dialLabelOverrides = dialHiddenLabels,
+                            dialPinIcon = dialPinIcon,
+                            skeletonSpeedDialFirst = speedDialsOn,
+                            listState = homeListState,
+                            currentSong = player.song,
+                            // The playing bars and the moving artwork hold still off stage:
+                            // each frame of them is work, seen or not.
+                            isPlaying = player.isPlaying && shown,
+                            title = stringResource(R.string.listen_now),
+                            signedIn = signedIn,
+                            onSignIn = { webSession = WebSessionMode.SIGN_IN },
+                            onItemClick = { item, shelfTitle ->
+                                val song = shelfSong(item)
+                                // Hoisted because ShelfItem lives in :shared, and
+                                // Kotlin will not smart-cast a public nullable
+                                // property declared in another module.
+                                val browseId = item.browseId
+                                when {
+                                    song != null -> playRadio(
+                                        song,
+                                        QueueSource(shelfTitle, PlaybackSourceType.HOME),
+                                    )
+                                    browseId != null -> viewModel.openDetail(
+                                        browseId = browseId,
+                                        title = item.title,
+                                        subtitle = item.subtitle,
+                                        thumbnailUrl = item.thumbnailUrl,
+                                        // The artists' dial opens each one's page.
+                                        type = if (shelfTitle == ARTIST_DIAL_SHELF_TITLE) {
+                                            BrowseType.ARTIST
+                                        } else {
+                                            BrowseType.OTHER
+                                        },
+                                    )
+                                }
+                            },
+                            onItemLongPress = onShelfLongPress,
+                            onDialItemLongPress = onDialLongPress,
+                            onRetry = viewModel::loadHome,
+                            refreshing = MainViewModel.Feed.HOME in refreshing,
+                            onRefresh = { viewModel.refresh(MainViewModel.Feed.HOME) },
+                            pullState = homePull,
+                            contentPadding = listPadding,
+                            onLoadMore = viewModel::loadMoreHome,
+                            onSectionsRevealed = viewModel::revealHomeSections,
+                            loadingMore = homeLoadingMore,
+                            // The saved dial needs no placeholder while Recently played loads.
+                            recentlyPlayedLoading = homeRecentlyPlayedLoading && !holdSavedDial,
+                            topPicks = topPicks,
+                            topPicksLoading = topPicksLoading,
+                            listenerName = account?.name,
+                            onTopPickClick = openTopPick,
+                            onMoodClick = { mood, label -> openTopPick(TopPicks.moodStation(mood), label) },
+                            artworkMotion = artworkMotion && shown,
+                            onTopPickLongPress = { pick ->
+                                pick.browseId?.let { browseId ->
+                                    onShelfLongPress(
+                                        ShelfItem(
+                                            title = pick.title,
+                                            subtitle = pick.artistName.orEmpty(),
+                                            thumbnailUrl = pick.images.firstOrNull(),
+                                            videoId = null,
+                                            browseId = browseId,
+                                        ),
+                                    )
+                                }
+                            },
+                        )
+                    }
+                }
+                // The page itself is made once; what it draws is this composition's.
+                val latestHomeBody by rememberUpdatedState(homeBody)
+                val homePage = remember { movableContentOf<Boolean> { shown -> latestHomeBody(shown) } }
+                pages.AnimatedContent(
                     // Library pages pan: one pushed from the Library slides in
                     // from the right as the page it was opened from goes off to
                     // the left, and back reverses it. Side by side, never one
@@ -4685,108 +4807,11 @@ private fun BitChordApp(
                     } else when (
                         if (key.startsWith(MOOD_PAGE_KEY)) TAB_EXPLORE else key.removePrefix(TAB_KEY).toIntOrNull() ?: selectedTab
                     ) {
-                        TAB_HOME -> HomeScreen(
-                            // Remembered: with a custom cover set, this is a new
-                            // list each time it is asked for, and Home redrew with
-                            // every state the app above it read.
-                            state = remember(arrangedHomeState, customCovers) {
-                                arrangedHomeState.withCustomCovers(customCovers)
-                            },
-                            speedDialPinned = speedDialPinnedIds,
-                            onSpeedDialHeaderLongPress = { editingSpeedDial = true },
-                            speedDialRows = speedDialRows,
-                            onSpeedDialReorder = { reordered ->
-                                CustomizationSettings.setSpeedDialPins(reordered)
-                            },
-                            artistDialPinned = artistDialPinnedIds,
-                            onArtistDialReorder = { reordered ->
-                                CustomizationSettings.setArtistDialPins(reordered)
-                            },
-                            speedDialLucky = speedDialLucky,
-                            dialHistoryLabel = stringResource(R.string.dial_history),
-                            speedDialNewReleases = homeFeed.newReleaseIds,
-                            mixesDialOn = homeFeed.mixesDialOn,
-                            mixesDial = homeFeed.mixes,
-                            mixesDialNamed = homeFeed.mixesNamed,
-                            mixesDialEmptyLabel = stringResource(R.string.mixes_dial_empty),
-                            newReleaseLabel = stringResource(R.string.dial_new_release),
-                            onSpeedDialHistory = {
-                                viewModel.loadDialHistory()
-                                historyMode = HistoryMode.DIAL_SONGS
-                                showHistory = true
-                            },
-                            onArtistDialHistory = {
-                                viewModel.loadDialHistory()
-                                historyMode = HistoryMode.DIAL_ARTISTS
-                                showHistory = true
-                            },
-                            dialLabels = dialLabels,
-                            dialLabelOverrides = dialHiddenLabels,
-                            dialPinIcon = dialPinIcon,
-                            skeletonSpeedDialFirst = speedDialsOn,
-                            listState = homeListState,
-                            currentSong = player.song,
-                            isPlaying = player.isPlaying,
-                            title = stringResource(R.string.listen_now),
-                            signedIn = signedIn,
-                            onSignIn = { webSession = WebSessionMode.SIGN_IN },
-                            onItemClick = { item, shelfTitle ->
-                                val song = shelfSong(item)
-                                // Hoisted because ShelfItem lives in :shared, and
-                                // Kotlin will not smart-cast a public nullable
-                                // property declared in another module.
-                                val browseId = item.browseId
-                                when {
-                                    song != null -> playRadio(
-                                        song,
-                                        QueueSource(shelfTitle, PlaybackSourceType.HOME),
-                                    )
-                                    browseId != null -> viewModel.openDetail(
-                                        browseId = browseId,
-                                        title = item.title,
-                                        subtitle = item.subtitle,
-                                        thumbnailUrl = item.thumbnailUrl,
-                                        // The artists' dial opens each one's page.
-                                        type = if (shelfTitle == ARTIST_DIAL_SHELF_TITLE) {
-                                            BrowseType.ARTIST
-                                        } else {
-                                            BrowseType.OTHER
-                                        },
-                                    )
-                                }
-                            },
-                            onItemLongPress = onShelfLongPress,
-                            onDialItemLongPress = onDialLongPress,
-                            onRetry = viewModel::loadHome,
-                            refreshing = MainViewModel.Feed.HOME in refreshing,
-                            onRefresh = { viewModel.refresh(MainViewModel.Feed.HOME) },
-                            pullState = homePull,
-                            contentPadding = listPadding,
-                            onLoadMore = viewModel::loadMoreHome,
-                            onSectionsRevealed = viewModel::revealHomeSections,
-                            loadingMore = homeLoadingMore,
-                            // The saved dial needs no placeholder while Recently played loads.
-                            recentlyPlayedLoading = homeRecentlyPlayedLoading && !holdSavedDial,
-                            topPicks = topPicks,
-                            topPicksLoading = topPicksLoading,
-                            listenerName = account?.name,
-                            onTopPickClick = openTopPick,
-                            onMoodClick = { mood, label -> openTopPick(TopPicks.moodStation(mood), label) },
-                            artworkMotion = artworkMotion,
-                            onTopPickLongPress = { pick ->
-                                pick.browseId?.let { browseId ->
-                                    onShelfLongPress(
-                                        ShelfItem(
-                                            title = pick.title,
-                                            subtitle = pick.artistName.orEmpty(),
-                                            thumbnailUrl = pick.images.firstOrNull(),
-                                            videoId = null,
-                                            browseId = browseId,
-                                        ),
-                                    )
-                                }
-                            },
-                        )
+                        TAB_HOME -> if (key == HOME_PAGE_KEY) {
+                            keptHome.Place(transition, pages) { homePage(true) }
+                        } else {
+                            homeBody(true)
+                        }
                         // The mood this page is for, held while it closes: by
                         // then no mood is selected, and it would shrink away
                         // as Explore itself.
@@ -5179,6 +5204,9 @@ private fun BitChordApp(
                     }
                     }
                 }
+                // Home, kept while another page is up. After the pages, so that
+                // this is composed in the same pass in which they let go of it.
+                keptHome.OffStage(pages) { homePage(false) }
 
                 // ---- Settings sub-screen overlays ----
                 // When a sub-screen is opened from Settings, AnimatedContent keeps

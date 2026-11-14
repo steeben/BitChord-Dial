@@ -127,6 +127,13 @@ object FrameLog {
     /** A single frame at least this long gets its own line. */
     private const val SLOW_FRAME_NANOS = 40_000_000L
 
+    /**
+     * The least time between two memory lines. A line is written only once
+     * the screen has gone still: reading the memory can hold the app up for a
+     * moment, and a stop made by the log itself would be read as the app's.
+     */
+    private const val MEMORY_GAP_MS = 10_000L
+
     /** The page on screen, as the app names it. Set by the app; read on the log's own thread. */
     @Volatile
     var page: String = ""
@@ -172,7 +179,23 @@ object FrameLog {
             TrackLog.toSession('I', TAG, "$stretchPage, ${"%.1f".format(Locale.ROOT, span / 1000.0)}s: $line")
             tally.reset()
         }
-        val idle = Runnable { write() }
+        var memoryAt = 0L
+
+        fun writeMemory() {
+            val now = SystemClock.elapsedRealtime()
+            if (memoryAt != 0L && now - memoryAt < MEMORY_GAP_MS) return
+            memoryAt = now
+            val reading = MemoryLog.read() ?: return
+            TrackLog.toSession(
+                'I',
+                TAG,
+                MemoryLog.line(page.ifEmpty { "launch" }, reading, homeKept = AppSettings.keepHome.value),
+            )
+        }
+        val idle = Runnable {
+            write()
+            writeMemory()
+        }
 
         val listener = Window.OnFrameMetricsAvailableListener { _, metrics, _ ->
             val now = SystemClock.elapsedRealtime()
@@ -257,12 +280,26 @@ object FrameLog {
             compiledWritten = true
             val apk = window.context.applicationInfo?.sourceDir
             // Read off the app's thread: it is a file of some thousands of lines.
-            handler.post { CompiledCode.line(apk)?.let { TrackLog.toSession('I', TAG, it) } }
+            val context = window.context.applicationContext
+            handler.post {
+                CompiledCode.line(apk)?.let { TrackLog.toSession('I', TAG, it) }
+                MemoryLog.deviceLine(context)?.let { TrackLog.toSession('I', TAG, it) }
+            }
         }
         AppThreadWatch.start()
     }
 
     private fun millis(nanos: Long): String = "%.1fms".format(Locale.ROOT, nanos / 1_000_000.0)
+
+    /**
+     * A line about what the app did to a page, between the frame lines: that
+     * it was built, or kept and brought back. A slow frame beside one of these
+     * says which it was for.
+     */
+    fun note(message: String) {
+        if (listener == null) return
+        TrackLog.toSession('I', TAG, message)
+    }
 
     /** Stops counting [window]'s frames. A window that is not the one being counted is left alone. */
     fun stop(window: Window) {
@@ -283,6 +320,7 @@ object FrameLog {
     private fun effectsLine(): String {
         val style = AppStyle.of(AppSettings.liquidGlass.value, AppSettings.reduceDynamicBlur.value)
         return "performance mode=${AppSettings.performanceMode.value}, " +
+            "keep Home loaded=${AppSettings.keepHome.value}, " +
             "app style=$style, reduce animations=${AppSettings.reduceAnimation.value}, " +
             "high refresh rate=${AppSettings.highPerformanceMode.value}, " +
             "ambient background=${CustomizationSettings.ambientBackground.value}, " +

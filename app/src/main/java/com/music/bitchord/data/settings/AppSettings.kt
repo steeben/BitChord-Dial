@@ -458,6 +458,15 @@ object AppSettings {
      */
     val performanceMode = MutableStateFlow(false)
 
+    /**
+     * Keep Home built while another page is up, so that coming back to it
+     * builds nothing: see `KeptPage`. It costs the memory of Home's pictures
+     * for as long as the app is open, so a phone that Android itself calls
+     * low on memory starts with it off.
+     */
+    val keepHome = MutableStateFlow(true)
+    private var lowRamDevice = false
+
     /** Preferred UI refresh rate while [highPerformanceMode] is enabled. */
     val performanceRefreshRate = MutableStateFlow(DEFAULT_PERFORMANCE_REFRESH_RATE)
 
@@ -954,6 +963,9 @@ object AppSettings {
             likedTitle = context.getString(com.music.bitchord.R.string.auto_liked),
         )
         LastPlayed.init(context)
+        lowRamDevice = runCatching {
+            (context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager).isLowRamDevice
+        }.getOrDefault(false)
         readAll()
         watchConnection(context)
     }
@@ -1059,6 +1071,7 @@ object AppSettings {
         }
         animatedCanvas.value = prefs.getBoolean(KEY_ANIMATED_CANVAS, true)
         performanceMode.value = prefs.getBoolean(KEY_PERFORMANCE_MODE, false)
+        keepHome.value = prefs.getBoolean(KEY_KEEP_HOME, !lowRamDevice)
         canvasOverCellular.value = prefs.getBoolean(KEY_CANVAS_OVER_CELLULAR, false)
         spotifyCanvasAutoHide.value = prefs.getBoolean(KEY_SPOTIFY_CANVAS_AUTO_HIDE, true)
         prioritizeSpotifyCanvas.value = prefs.getBoolean(KEY_PRIORITIZE_SPOTIFY_CANVAS, false)
@@ -1577,6 +1590,11 @@ object AppSettings {
             if (saved != null) applyEffectSettings(EffectSettings.restored(saved, effectSettings()))
         }
         performanceMode.value = value
+    }
+
+    fun setKeepHome(value: Boolean) {
+        keepHome.value = value
+        prefs.edit().putBoolean(KEY_KEEP_HOME, value).apply()
     }
 
     fun setPerformanceRefreshRate(value: Int) {
@@ -2433,6 +2451,7 @@ object AppSettings {
     private const val KEY_PERFORMANCE_REFRESH_RATE = "performance_refresh_rate"
     private const val KEY_PERFORMANCE_MODE = "performance_mode"
     private const val KEY_PERFORMANCE_MODE_SAVED = "performance_mode_saved"
+    private const val KEY_KEEP_HOME = "keep_home"
     private const val KEY_STOP_ON_TASK_REMOVED = "stop_on_task_removed"
     private const val KEY_HIDE_VOLUME_BAR = "hide_volume_bar"
     private const val KEY_HIDE_SONG_STATUS = "hide_song_status"

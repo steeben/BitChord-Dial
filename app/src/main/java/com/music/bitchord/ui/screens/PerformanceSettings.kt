@@ -1,6 +1,7 @@
 package com.music.bitchord.ui.screens
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -24,5 +25,21 @@ internal fun PerformanceModeRow(title: String) {
         subtitle = stringResource(if (on) R.string.performance_mode_on else R.string.performance_mode_subtitle),
         trailing = { IosSwitch(checked = on, onCheckedChange = AppSettings::setPerformanceMode) },
         onClick = { AppSettings.setPerformanceMode(!on) },
+    )
+}
+
+/**
+ * Performance's "Keep Home loaded": Home stays built while another page is
+ * up, for the memory its pictures take. See [KeptPage].
+ */
+@Composable
+internal fun KeepHomeRow(title: String) {
+    val on by AppSettings.keepHome.collectAsStateWithLifecycle()
+    SettingsRow(
+        icon = Icons.Rounded.Home,
+        title = title,
+        subtitle = stringResource(R.string.keep_home_subtitle),
+        trailing = { IosSwitch(checked = on, onCheckedChange = AppSettings::setKeepHome) },
+        onClick = { AppSettings.setKeepHome(!on) },
     )
 }
