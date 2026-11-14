@@ -325,8 +325,10 @@ fun HomeScreen(
         val artistPageShown by rememberUpdatedState(
             (state as? UiState.Success)?.data?.getOrNull(1)?.title == ARTIST_DIAL_SHELF_TITLE,
         )
-        val defaultFling = ScrollableDefaults.flingBehavior()
+        // Home's flings go by each frame's own time: see EvenFling.kt.
         val decay = rememberSplineBasedDecay<Float>()
+        val evenFling = remember(decay) { EvenFling(decay) }
+        FrameBeatWhileScrolling(listState)
         val dialFling = remember(listState, decay, density) {
             DialPageFling(
                 listState = listState,
@@ -339,7 +341,7 @@ fun HomeScreen(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            flingBehavior = if (dialLeads) dialFling else defaultFling,
+            flingBehavior = if (dialLeads) dialFling else evenFling,
             // The heading sits higher than the other tabs' first row: pull the
             // whole feed up by [HOME_TITLE_LIFT] with it.
             contentPadding = if (title != null) {
