@@ -18,7 +18,9 @@ import java.util.concurrent.ConcurrentHashMap
  * music video for what's playing?" without knowing how it got there. The
  * player only falls back to it when the song has no Canvas of its own — see
  * NowPlayingScreen. Only a video that calls itself a music video, a lyric
- * video, a visualizer or the like is taken by [findFor]: see [MusicVideoTerms].
+ * video, a visualizer or the like is taken by [findFor] (see
+ * [MusicVideoTerms]), or one that is the artist's own upload of the song,
+ * as long as the song is (see [ArtistUploads]).
  *
  * A song whose own id is a YouTube video (YouTube files some uploads as songs
  * in one place and videos in another) is linked to itself: its own picture
@@ -93,6 +95,11 @@ object VideoCanvases {
                 return
             }
             val video = YtMusicRepository.resolveVideo(song) ?: return
+            if (ArtistUploads.matches(song, video)) {
+                TrackLog.d("Canvas", "'${song.title}' has no Canvas: '${video.title}' (${video.videoId}) is as long as the song and on ${video.artist}'s channel, it stands in", id)
+                linkFound(id, video.videoId)
+                return
+            }
             if (!saysItIsAVideo(video.title, video.videoId)) {
                 TrackLog.d("Canvas", "'${video.title}' (${video.videoId}) does not call itself a music video: not used as the Canvas", id)
                 return
