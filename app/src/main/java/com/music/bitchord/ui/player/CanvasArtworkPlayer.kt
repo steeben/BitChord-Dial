@@ -1164,9 +1164,18 @@ private fun AndroidMusicVideoCanvas(videoId: String, spec: CanvasVideoSpec, modi
     val wipe = remember { Animatable(1f) }
     LaunchedEffect(placeholder != null, rendered) {
         if (placeholder == null) return@LaunchedEffect
-        // Held under the live picture for its first moment, then let go; and
-        // given up on if the picture is not coming back.
-        delay(if (rendered) PLACEHOLDER_FADE_MS else MUSIC_VIDEO_PLACEHOLDER_WAIT_MS)
+        // Let go as soon as the live picture is up under it, and given up on
+        // if the picture is not coming back. Not held the clip's 700 ms: while
+        // this frame stood in, the progressive blur under the player's credits
+        // did not take the video, and it came in all at once after the player
+        // had finished opening. [rendered] already means a frame was drawn to
+        // this view, so two frames are enough for it to be on screen.
+        if (rendered) {
+            withFrameMillis { }
+            withFrameMillis { }
+        } else {
+            delay(MUSIC_VIDEO_PLACEHOLDER_WAIT_MS)
+        }
         placeholder = null
     }
     LaunchedEffect(rendered, placeholder != null) {
