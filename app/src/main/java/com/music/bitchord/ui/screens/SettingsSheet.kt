@@ -78,6 +78,7 @@ import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.FilterAlt
 import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.Gradient
 import androidx.compose.material.icons.rounded.GraphicEq
@@ -222,6 +223,8 @@ import com.music.bitchord.data.sources.DeviceCodecs
 import com.music.bitchord.data.settings.AudioQuality
 import com.music.bitchord.data.settings.DownloadQuality
 import com.music.bitchord.data.settings.ThemeMode
+import com.music.bitchord.data.settings.VideoQuality
+import com.music.bitchord.ui.player.MusicVideoEngine
 import com.music.bitchord.data.stats.Backup
 import com.music.bitchord.playback.AudioCache
 import com.music.bitchord.ui.player.fullBleedArtworkAvailable
@@ -322,6 +325,7 @@ fun SettingsScreen(
     val signatureApiEnabled by AppSettings.signatureApiEnabled.collectAsStateWithLifecycle()
     val signatureApiUrl by AppSettings.signatureApiUrl.collectAsStateWithLifecycle()
     val canvasOverCellular by AppSettings.canvasOverCellular.collectAsStateWithLifecycle()
+    val videoQuality by AppSettings.videoQuality.collectAsStateWithLifecycle()
     val fullBleedArtwork by AppSettings.fullBleedArtwork.collectAsStateWithLifecycle()
     val legacyMeshGradient by AppSettings.legacyMeshGradient.collectAsStateWithLifecycle()
     val syncedLyrics by AppSettings.syncedLyrics.collectAsStateWithLifecycle()
@@ -1719,6 +1723,32 @@ fun SettingsScreen(
                         ),
                     )
                 }
+            }
+            val videoQualityTitle = stringResource(R.string.video_quality)
+            row(videoQualityTitle, "music video", "canvas", "resolution", "480p", "1080p", "4k", "hd", "data") {
+                SettingsRow(
+                    icon = Icons.Rounded.Videocam,
+                    title = videoQualityTitle,
+                    subtitle = stringResource(R.string.video_quality_subtitle),
+                )
+                SegmentedControl(
+                    options = listOf(
+                        stringResource(R.string.video_quality_auto),
+                        stringResource(R.string.video_quality_480),
+                        stringResource(R.string.video_quality_1080),
+                        stringResource(R.string.video_quality_max),
+                    ),
+                    selectedIndex = VideoQuality.entries.indexOf(videoQuality),
+                    onSelect = { index ->
+                        AppSettings.setVideoQuality(VideoQuality.entries[index])
+                        MusicVideoEngine.onQualitySettingChanged(context)
+                    },
+                    modifier = Modifier.padding(
+                        start = TEXT_INSET,
+                        end = ROW_INSET,
+                        bottom = 14.dp,
+                    ),
+                )
             }
         }
 

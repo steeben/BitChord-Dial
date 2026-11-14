@@ -429,6 +429,12 @@
     <string name="filter_non_music_audio">Filter non-music audio</string>
     <string name="filter_non_music_audio_subtitle">Hides clips under 30 seconds, WAV files, voice notes, recordings and system sounds</string>
     <string name="performance">Performance</string>
+    <string name="video_quality">Video quality</string>
+    <string name="video_quality_subtitle">For music videos, and for a music video that shows as the Canvas of a song. Auto uses 1080p, or 480p on mobile data. Max quality uses up to 4K on all connections. It uses much more data and battery, and can be slow on weak phones.</string>
+    <string name="video_quality_auto">Auto</string>
+    <string name="video_quality_480">480p</string>
+    <string name="video_quality_1080">1080p</string>
+    <string name="video_quality_max">Max quality</string>
     <string name="high_performance_mode">High performance mode</string>
     <string name="high_performance_subtitle">Uses full animations and blur, and requests a higher display refresh rate</string>
     <string name="high_performance_active">%1$d Hz requested. Android may lower it when needed.</string>
