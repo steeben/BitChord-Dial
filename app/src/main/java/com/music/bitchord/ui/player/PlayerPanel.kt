@@ -76,6 +76,7 @@ import com.music.bitchord.ui.components.miniPlayerProgress
 import com.music.bitchord.ui.components.pageAccent
 import com.music.bitchord.playback.PlaybackPosition
 import com.music.bitchord.ui.components.rememberRemoteArtworkUrl
+import com.music.bitchord.ui.components.thumbnailBorder
 import com.music.bitchord.ui.components.thumbnailContentScale
 import com.music.bitchord.data.model.ROW_ART_PX
 import com.music.bitchord.data.model.artworkAt
@@ -390,6 +391,8 @@ private fun PanelMiniRow(
                     .size(width = artWidth, height = artSize)
                     .graphicsLayer { alpha = if (dock.coversMiniArt) 0f else 1f }
                     .clip(RoundedCornerShape(artCorner))
+                    // The plain pill's cover has a hairline; so does its stand-in.
+                    .then(if (glass) Modifier else Modifier.thumbnailBorder(RoundedCornerShape(artCorner)))
                     .background(MaterialTheme.colorScheme.surfaceVariant),
             )
             Spacer(Modifier.width(if (inline) 8.dp else 10.dp))
