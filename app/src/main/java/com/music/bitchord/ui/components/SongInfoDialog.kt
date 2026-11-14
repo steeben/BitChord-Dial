@@ -97,13 +97,7 @@ internal fun SongInfoDialog(song: Song, onDismiss: () -> Unit) {
                     .verticalScroll(rememberScrollState()),
             ) {
                 val unavailable = stringResource(R.string.song_info_unavailable)
-                val rows = listOf(
-                    R.string.song_info_album to (info?.album ?: song.albumName),
-                    R.string.song_info_release_date to (info?.releaseDate ?: info?.releaseYear),
-                    R.string.song_info_views to info?.views?.let(::compactCount),
-                    R.string.song_info_likes to info?.likes,
-                    R.string.song_info_comments to info?.comments,
-                )
+                val rows = infoRows(song, info)
                 rows.forEachIndexed { index, (label, value) ->
                     if (index > 0) AlertRule(Modifier.padding(start = 16.dp))
                     SongInfoRow(
@@ -212,13 +206,7 @@ internal fun SongInfoPage(song: Song, palette: ArtworkPalette, onBack: () -> Uni
         HorizontalDivider(thickness = 0.5.dp, color = palette.divider)
 
         val unavailable = stringResource(R.string.song_info_unavailable)
-        listOf(
-            R.string.song_info_album to (info?.album ?: song.albumName),
-            R.string.song_info_release_date to (info?.releaseDate ?: info?.releaseYear),
-            R.string.song_info_views to info?.views?.let(::compactCount),
-            R.string.song_info_likes to info?.likes,
-            R.string.song_info_comments to info?.comments,
-        ).forEach { (label, value) ->
+        infoRows(song, info).forEach { (label, value) ->
             SongInfoPageRow(stringResource(label), value ?: unavailable.takeIf { info != null }, palette)
         }
 
@@ -236,6 +224,15 @@ internal fun SongInfoPage(song: Song, palette: ArtworkPalette, onBack: () -> Uni
         Spacer(Modifier.height(24.dp))
     }
 }
+
+/** The rows of the Info window. A podcast episode has no album, so it gets no album row. */
+private fun infoRows(song: Song, info: SongInfo?): List<Pair<Int, String?>> = listOfNotNull(
+    (R.string.song_info_album to (info?.album ?: song.albumName)).takeUnless { song.isEpisode },
+    R.string.song_info_release_date to (info?.releaseDate ?: info?.releaseYear),
+    R.string.song_info_views to info?.views?.let(::compactCount),
+    R.string.song_info_likes to info?.likes,
+    R.string.song_info_comments to info?.comments,
+)
 
 /** Same metrics as the sleep timer's options; the value takes the sheet's accent, spinner while loading. */
 @Composable

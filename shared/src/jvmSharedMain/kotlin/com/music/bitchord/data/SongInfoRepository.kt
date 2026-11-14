@@ -3,6 +3,7 @@ package com.music.bitchord.data
 import com.music.bitchord.data.innertube.Innertube
 import com.music.bitchord.data.innertube.InnertubeParser
 import com.music.bitchord.data.model.Song
+import com.music.bitchord.data.model.isEpisode
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
@@ -73,8 +74,15 @@ object SongInfoRepository {
                     parameter("hl", Innertube.currentLanguage)
                 }
                 check(response.status.value == 200)
-                SongInfoParser.parse(response.bodyAsText(), song.videoId)
+                SongInfoParser.parse(response.bodyAsText(), song.videoId, episode = song.isEpisode)
             }
+        }
+        // A podcast episode has no album and no catalogue release: its date
+        // is the day it was published, which the watch page gives.
+        // YouTube Music's own text ("Nov 14, 2025") stands in if the page has none.
+        if (song.isEpisode) {
+            val info = statistics.await().getOrNull() ?: SongInfo(failed = true)
+            return@withContext info.copy(releaseDate = info.releaseDate ?: song.episode?.released)
         }
         var album = song.albumName
         var year: String? = null
@@ -135,7 +143,12 @@ internal object SongInfoParser {
         return details.str("shortDescription")?.takeIf { it.isNotBlank() }
     }
 
-    fun parse(html: String, videoId: String): SongInfo {
+    /**
+     * The counts and release date of [videoId] off its watch page. For an
+     * [episode] the release date is the day the video was published: a
+     * podcast episode is the upload itself, and has no catalogue release.
+     */
+    fun parse(html: String, videoId: String, episode: Boolean = false): SongInfo {
         val scripts = Jsoup.parse(html).select("script").map { it.data() }
         val player = scripts.firstNotNullOfOrNull { extract(it, "ytInitialPlayerResponse") }
             ?: error("Missing player metadata")
@@ -160,7 +173,11 @@ internal object SongInfoParser {
             }?.find("engagementPanelTitleHeaderRenderer")?.firstOrNull()
                 ?.get("contextualInfo")?.text()?.withCount()
         return SongInfo(
-            releaseDate = releaseDate(details.str("shortDescription")),
+            releaseDate = if (episode) {
+                publishDate(player.obj("microformat").obj("playerMicroformatRenderer"))
+            } else {
+                releaseDate(details.str("shortDescription"))
+            },
             views = details.str("viewCount")?.takeIf { it.toLongOrNull()?.let { n -> n >= 0 } == true },
             likes = (newLike ?: oldLike)?.withCount(),
             comments = comments,
@@ -176,6 +193,12 @@ internal object SongInfoParser {
                 .matchEntire(line.trim())?.groupValues?.get(1)
         } ?: return null
         return runCatching { LocalDate.parse(date).toString() }.getOrNull()
+    }
+
+    /** The day a video was published, "2025-11-14", from "2025-11-14" or "2025-11-14T07:00:12-08:00". */
+    private fun publishDate(microformat: JsonObject): String? {
+        val raw = microformat.str("publishDate") ?: microformat.str("uploadDate") ?: return null
+        return runCatching { LocalDate.parse(raw.take(10)).toString() }.getOrNull()
     }
 
     /** Balanced JSON extraction tolerates braces inside titles and trailing script statements. */
