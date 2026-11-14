@@ -1113,10 +1113,16 @@ private fun BitChordApp(
     // Over an artist, album or playlist banner the status glyphs follow the
     // banner instead: white on a dark photograph even in the light theme.
     val barsFollowTheme = !showNowPlaying && !showReplay && replayStory == null
+    // The page's own status glyphs, player or no player over it: the player
+    // takes them for the trip down to the mini player — see [PageStatusBarIcons].
+    val pageStatusDark = !showReplay && replayStory == null &&
+        !(com.music.bitchord.ui.components.TopChromeTone.overDark ?: darkTheme)
+    androidx.compose.runtime.SideEffect {
+        com.music.bitchord.ui.theme.PageStatusBarIcons.dark = pageStatusDark
+    }
     SystemBarIcons(
         dark = !darkTheme && barsFollowTheme,
-        statusDark = barsFollowTheme &&
-            !(com.music.bitchord.ui.components.TopChromeTone.overDark ?: darkTheme),
+        statusDark = !showNowPlaying && pageStatusDark,
     )
 
     val speedDialPins by CustomizationSettings.speedDialPins.collectAsStateWithLifecycle()
