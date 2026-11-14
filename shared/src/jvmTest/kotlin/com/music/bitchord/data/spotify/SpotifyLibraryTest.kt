@@ -143,4 +143,30 @@ class SpotifyLibraryTest {
             parsePlaylistHead(root),
         )
     }
+
+    @Test
+    fun searchReadsArtistsAlbumsPlaylistsAndTheTopHit() {
+        val root = json.parseToJsonElement(
+            """
+            {"data":{"searchV2":{
+              "tracksV2":{"items":[]},
+              "artists":{"items":[{"data":{"__typename":"Artist","uri":"spotify:artist:a1","profile":{"name":"Four Tet"},
+                "visuals":{"avatarImage":{"sources":[{"url":"https://a-small","width":64},{"url":"https://a-big","width":640}]}}}}]},
+              "albumsV2":{"items":[{"data":{"__typename":"Album","uri":"spotify:album:b1","name":"Rounds",
+                "artists":{"items":[{"profile":{"name":"Four Tet"}}]},
+                "coverArt":{"sources":[{"url":"https://b-big","width":640}]}}}]},
+              "playlists":{"items":[{"data":{"__typename":"Playlist","uri":"spotify:playlist:p1","name":"This Is Four Tet",
+                "ownerV2":{"data":{"name":"Spotify"}},
+                "images":{"items":[{"sources":[{"url":"https://p","width":300}]}]}}},
+                {"data":{"__typename":"NotFound"}}]},
+              "topResultsV2":{"itemsV2":[{"item":{"__typename":"ArtistResponseWrapper","data":{"uri":"spotify:artist:a1"}}}]}
+            }}}
+            """.trimIndent(),
+        ).jsonObject
+        val search = parseSearch(root)
+        assertEquals(listOf(SpotifyArtist("a1", "Four Tet", "https://a-big")), search.artists)
+        assertEquals(listOf(SpotifyAlbum("b1", "Rounds", "Four Tet", "https://b-big")), search.albums)
+        assertEquals(listOf(SpotifyPlaylist("p1", "This Is Four Tet", "Spotify", "https://p")), search.playlists)
+        assertEquals("spotify:artist:a1", search.topUri)
+    }
 }
