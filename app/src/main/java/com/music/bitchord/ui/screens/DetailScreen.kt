@@ -69,7 +69,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.ui.graphics.luminance
 import com.music.bitchord.data.model.LibraryState
 import androidx.compose.material.icons.rounded.Close
@@ -156,6 +155,8 @@ import com.music.bitchord.data.model.DetailPage
 import com.music.bitchord.data.model.PODCAST_SHOW_PREFIX
 import com.music.bitchord.data.podcasts.EpisodeProgress
 import com.music.bitchord.data.podcasts.EpisodeFilter
+import com.music.bitchord.ui.components.EpisodeFilterMenu
+import com.music.bitchord.ui.components.episodeFilterLabel
 import com.music.bitchord.data.model.CARD_ART_PX
 import com.music.bitchord.data.model.HEADER_ART_PX
 import com.music.bitchord.data.model.ROW_ART_PX
@@ -591,7 +592,7 @@ fun DetailScreen(
         }
     }
     val filterControl = if (isShow && rawSongs.isNotEmpty()) {
-        EpisodeFilterControl(episodeFilter) { episodeFilter = episodeFilter.next() }
+        EpisodeFilterControl(episodeFilter) { episodeFilter = it }
     } else null
     // A Spotify playlist swaps each row for its match as it is found. The row
     // stays the same row through that, artwork included (see [HeldRowArt]).
@@ -2059,18 +2060,18 @@ private fun ReleaseActions(
                 shuffle = if (episodeFilter != null) {
                     {
                         // A show's episodes are listened to in order, so its
-                        // filter takes Shuffle's place. Each tap goes to the
-                        // next filter, and the pill names the one that is on.
+                        // filter takes Shuffle's place. The pill names the
+                        // filter that is on, as text alone so that it fits,
+                        // and opens the menu of filters out of itself.
                         GlassPill(
-                            icon = Icons.Rounded.FilterList,
-                            label = stringResource(episodeFilter.filter.label()),
+                            icon = null,
+                            label = stringResource(episodeFilterLabel(episodeFilter.filter)),
                             contentDescription = stringResource(R.string.episode_filter) + ", " +
-                                stringResource(episodeFilter.filter.label()),
-                            onClick = episodeFilter.onNext,
-                            haptic = Haptic.Select,
+                                stringResource(episodeFilterLabel(episodeFilter.filter)),
+                            onClick = { EpisodeFilterMenu.show(episodeFilter.filter, episodeFilter.onSelect) },
                             enabled = !searching,
                             compact = true,
-                            modifier = it.then(folding),
+                            modifier = it.then(folding).menuAnchor(),
                         )
                     }
                 } else {
@@ -2230,7 +2231,8 @@ private fun Modifier.headerGlass(shape: androidx.compose.foundation.shape.Corner
 /** A capsule of header glass with an icon and a label: Shuffle, Search. */
 @Composable
 private fun GlassPill(
-    icon: ImageVector,
+    /** Null for a pill that is its [label] alone. */
+    icon: ImageVector?,
     /** Null for an icon-only pill, which then needs a [contentDescription]. */
     label: String?,
     onClick: () -> Unit,
@@ -2271,9 +2273,11 @@ private fun GlassPill(
             compact -> 16.dp
             else -> 18.dp
         }
-        Icon(imageVector = icon, contentDescription = null, tint = tint, modifier = Modifier.size(iconSize))
+        if (icon != null) {
+            Icon(imageVector = icon, contentDescription = null, tint = tint, modifier = Modifier.size(iconSize))
+        }
         if (label != null) {
-            Spacer(Modifier.width(if (compact) 6.dp else 8.dp))
+            if (icon != null) Spacer(Modifier.width(if (compact) 6.dp else 8.dp))
             Text(
                 text = label,
                 style = if (compact) MaterialTheme.typography.labelLarge else MaterialTheme.typography.titleMedium,
@@ -4068,14 +4072,6 @@ private fun DockedTitle(
     )
 }
 
-/** A show's episode filter for the header: the one that is on, and a tap to go to the next. */
+/** A show's episode filter for the header: the one that is on, and what takes a new choice. */
 @Immutable
-internal class EpisodeFilterControl(val filter: EpisodeFilter, val onNext: () -> Unit)
-
-/** The name of [this] filter, as the pill shows it. */
-private fun EpisodeFilter.label(): Int = when (this) {
-    EpisodeFilter.ALL -> R.string.episode_filter_all
-    EpisodeFilter.UNPLAYED -> R.string.episode_filter_unplayed
-    EpisodeFilter.IN_PROGRESS -> R.string.episode_filter_in_progress
-    EpisodeFilter.PLAYED -> R.string.episode_filter_played
-}
+internal class EpisodeFilterControl(val filter: EpisodeFilter, val onSelect: (EpisodeFilter) -> Unit)

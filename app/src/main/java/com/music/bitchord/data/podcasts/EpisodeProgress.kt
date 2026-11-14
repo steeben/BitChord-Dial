@@ -59,6 +59,17 @@ object EpisodeProgress {
         synchronized(lock) { known.addAll(ids) }
     }
 
+    /**
+     * The ids known here to be episodes: the ones listed or played as
+     * episodes this session, and the ones counted before. Reads the file.
+     */
+    suspend fun episodeIds(): Set<String> = withContext(Dispatchers.IO) {
+        synchronized(lock) {
+            open()
+            known + stored.keys
+        }
+    }
+
     /** Reads what was counted before, for a page that shows it. Off the main thread. */
     suspend fun load() = withContext(Dispatchers.IO) {
         synchronized(lock) { open() }

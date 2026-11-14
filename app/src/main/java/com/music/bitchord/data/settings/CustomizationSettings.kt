@@ -4,6 +4,7 @@ import android.content.SharedPreferences
 import com.music.bitchord.data.model.HomeShelf
 import com.music.bitchord.data.model.ShelfItem
 import com.music.bitchord.data.model.isPodcastShow
+import com.music.bitchord.data.model.isPodcast
 import com.music.bitchord.data.podcasts.PodcastSource
 import com.music.bitchord.ui.components.DialTileStyle
 import com.music.bitchord.ui.components.GlassTint
@@ -719,10 +720,15 @@ object CustomizationSettings {
         )
     }
 
-    /** Pins first, then [picks], minus what was taken off the dial, up to [SPEED_DIAL_SIZE]. */
+    /**
+     * Pins first, then [picks], minus what was taken off the dial, up to
+     * [SPEED_DIAL_SIZE]. The dial is music: podcast shows and episodes in
+     * [picks] are left to the Podcasts page's dial. A pin stays, as the
+     * listener put it there.
+     */
     fun assembleDial(pins: List<ShelfItem>, picks: List<ShelfItem>): List<ShelfItem> {
         val hidden = hiddenFromDial.value
-        return (pins + picks)
+        return (pins + picks.filterNot { it.isPodcast })
             .filter { it.speedDialId != null && it.speedDialId !in hidden }
             .distinctBy { it.speedDialId }
             .take(SPEED_DIAL_SIZE)

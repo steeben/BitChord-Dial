@@ -443,6 +443,8 @@ data class ShelfItem(
     val isVideo: Boolean = false,
     /** A podcast episode's runtime, as "2:43:00" or "34:00"; null for anything else. */
     val durationText: String? = null,
+    /** A podcast episode, by the type its play action states. Not kept when the card is saved. */
+    val isPodcastEpisode: Boolean = false,
 )
 
 /** What the browse id of a podcast show's page starts with. */
@@ -451,6 +453,19 @@ const val PODCAST_SHOW_PREFIX = "MPSP"
 /** Whether this card is a podcast show: it opens the show's page, and plays nothing by itself. */
 val ShelfItem.isPodcastShow: Boolean
     get() = videoId == null && browseId?.startsWith(PODCAST_SHOW_PREFIX) == true
+
+/**
+ * Whether this card is podcast rather than music: a show, an episode, or one
+ * of YouTube Music's podcast lists ("Episodes for later", "New episodes").
+ * The music dial and "For you" leave these to the Podcasts page.
+ */
+val ShelfItem.isPodcast: Boolean
+    get() = isPodcastShow || isPodcastEpisode || durationText != null ||
+        browseId in PODCAST_LIST_IDS || browseId?.startsWith("spotify:show:") == true ||
+        browseId?.startsWith("spotify:episode:") == true
+
+/** YouTube Music's own podcast lists: "Episodes for later" and "New episodes", with and without "VL". */
+private val PODCAST_LIST_IDS = setOf("VLSE", "SE", "VLRDPN", "RDPN")
 
 /** How a shelf's items are laid out — the web player's `ShelfLayout`, by the same rules. */
 enum class ShelfLayout {

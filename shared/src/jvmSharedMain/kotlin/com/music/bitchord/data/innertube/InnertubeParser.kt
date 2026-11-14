@@ -380,7 +380,10 @@ object InnertubeParser {
             parseTwoRowItem(item.o("musicTwoRowItemRenderer"))
                 ?: parseResponsiveListItem(item.o("musicResponsiveListItemRenderer"))
                     ?.let { song ->
-                        ShelfItem(song.title, song.artist, song.thumbnailUrl, song.videoId, null, isVideo = song.isVideo)
+                        ShelfItem(
+                            song.title, song.artist, song.thumbnailUrl, song.videoId, null,
+                            isVideo = song.isVideo, isPodcastEpisode = song.episode != null,
+                        )
                     }
                 // A chart row with nothing to play — "Top artists" lists the
                 // artist alone, no track — falls through parseResponsiveListItem
@@ -1860,6 +1863,9 @@ object InnertubeParser {
             videoId = videoId,
             browseId = resolvedBrowseId,
             isVideo = isVideo,
+            // A "Listen again" card for an episode states its type in its play
+            // action; the music dial leaves it out.
+            isPodcastEpisode = videoId != null && renderer.isPodcastEpisode(),
         )
     }
 

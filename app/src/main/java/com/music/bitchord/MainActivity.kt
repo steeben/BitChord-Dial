@@ -7980,6 +7980,8 @@ private fun BitChordApp(
                 onDismiss = { dialMenuOpen = false },
             )
             PodcastsDialMenuHost(hazeState)
+            // A show page's episode filter; see [EpisodeFilterMenu].
+            com.music.bitchord.ui.components.EpisodeFilterMenuHost(hazeState)
         }
 
         run {

@@ -17,6 +17,7 @@ import com.music.bitchord.data.LikeState
 import com.music.bitchord.data.YtMusicRepository
 import com.music.bitchord.data.TopPicks
 import com.music.bitchord.data.AppleArtistPhotos
+import com.music.bitchord.data.model.PODCAST_SHOW_PREFIX
 import com.music.bitchord.data.model.ArtistRef
 import com.music.bitchord.data.model.TopPick
 import com.music.bitchord.data.stats.ListeningStats
@@ -2516,9 +2517,19 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun localTaste(): TopPicks.LocalTaste {
         val month = runCatching { ListeningStats.summary(ReplayPeriod.THIS_MONTH) }.getOrNull()
             ?: return TopPicks.LocalTaste()
+        // "For you" is music: the chart counts podcast episodes and their
+        // shows too, which are left out here.
+        val episodes = com.music.bitchord.data.podcasts.EpisodeProgress.episodeIds()
+        val shows = month.songs.filter { it.song.videoId in episodes }.mapTo(HashSet()) { it.song.artist.lowercase() }
         return TopPicks.LocalTaste(
-            artists = month.artists.take(10).map { ArtistRef(name = it.title, browseId = it.browseId) },
-            songs = month.songs.take(5).map { it.song },
+            artists = month.artists
+                .filterNot {
+                    it.browseId?.startsWith(PODCAST_SHOW_PREFIX) == true || it.title.lowercase() in shows
+                }
+                .take(10).map { ArtistRef(name = it.title, browseId = it.browseId) },
+            songs = month.songs
+                .filterNot { it.song.videoId in episodes || it.song.artistId?.startsWith(PODCAST_SHOW_PREFIX) == true }
+                .take(5).map { it.song },
             genres = month.genres.take(3).map { it.title },
         )
     }

@@ -17,6 +17,24 @@ class SpeedDialPickerTest {
     private fun ids(items: List<ShelfItem>) = items.map { it.videoId ?: it.browseId!! }
 
     @Test
+    fun theDialIsMusicOnly() {
+        val show = album("MPSPPLshow")
+        val episode = song("ep1").copy(isPodcastEpisode = true)
+        val shelfEpisode = song("ep2").copy(durationText = "34:00")
+        val later = album("VLSE")
+        val picks = SpeedDialPicker.pick(
+            SpeedDialSource.YOUTUBE,
+            history = listOf(episode, song("s3")),
+            official = listOf(show, song("s1")),
+            listenAgain = listOf(shelfEpisode, later, song("s2")),
+            size = 3,
+        )
+        assertEquals(listOf("s1", "s2", "s3"), ids(picks.items))
+        val fromHistory = SpeedDialPicker.pick(SpeedDialSource.HISTORY, listOf(show, song("s1"), episode), size = 3)
+        assertEquals(listOf("s1"), ids(fromHistory.items))
+    }
+
+    @Test
     fun history_keepsTheHistoryOrder() {
         val picks = SpeedDialPicker.pick(SpeedDialSource.HISTORY, history, official = items("o", 5), size = 36)
         assertEquals(history, picks.items)
