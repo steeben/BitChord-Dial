@@ -373,13 +373,14 @@ private fun Modifier.pageEntrance(slot: Int, run: PageEntrance.Run?): Modifier {
 @Composable
 private fun rememberEntrance(slot: Int, run: PageEntrance.Run?): State<Float> {
     val startAt = remember { run?.startOf(slot, System.currentTimeMillis()) }
-    val progress = remember {
-        mutableFloatStateOf(entranceShown(startAt, System.currentTimeMillis()))
-    }
+    // Asked each frame: a scroll brings forward what was waiting for its turn.
+    fun shown(): Float =
+        entranceShown(startAt?.let { run?.setOff(it) ?: it }, System.currentTimeMillis())
+    val progress = remember { mutableFloatStateOf(shown()) }
     LaunchedEffect(progress) {
         while (progress.floatValue < 1f) {
             withFrameNanos { }
-            progress.floatValue = entranceShown(startAt, System.currentTimeMillis())
+            progress.floatValue = shown()
         }
     }
     return progress
@@ -1080,6 +1081,20 @@ fun DetailScreen(
             PageEntrance.Run(System.currentTimeMillis())
         } else {
             null
+        }
+    }
+    // A scroll ends the entrance's waiting: the rows in view that were still
+    // to come in set off at once, and the rows the scroll brings into view
+    // are simply there. Left to their turns, they were an empty gap in the
+    // list, with the rows past the entrance's last slot there under it.
+    LaunchedEffect(entrance) {
+        val run = entrance ?: return@LaunchedEffect
+        // From the frame after the one the page's things were first drawn
+        // in: those are given their turns before anything hurries them.
+        withFrameNanos { }
+        withTimeoutOrNull(PageEntrance.JOIN_WINDOW_MS + PageEntrance.totalMs) {
+            snapshotFlow { listState.isScrollInProgress }.first { it }
+            run.hurry(System.currentTimeMillis())
         }
     }
     // Whether this showing of the page began with placeholders up, and how

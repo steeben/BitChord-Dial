@@ -604,6 +604,7 @@ internal fun SpeedDialShelf(
                                     SpeedDialTile(
                                         item = item,
                                         spot = tileSpots.getOrPut(id) { TileSpot() },
+                                        launchShelf = shelf.title,
                                         pinned = pinnedTile && showPinIcon,
                                         newRelease = if (id in newReleaseIds) newReleaseLabel else null,
                                         source = if (sourceTags) mixSourceOf(item) else null,
@@ -855,6 +856,8 @@ private fun SpeedDialTile(
     dim: () -> Float = { 0f },
     /** Where it is and its picture, for whoever needs them: see [TileSpot]. */
     spot: TileSpot = remember { TileSpot() },
+    /** The shelf it is on, for a tile whose page closes back onto it: see [DialLaunch.placed]. */
+    launchShelf: String? = null,
 ) {
     val shape = RoundedCornerShape(10.dp)
     val press = rememberTilePress()
@@ -865,7 +868,13 @@ private fun SpeedDialTile(
     Box(
         modifier = modifier
             .dialTileOutset()
-            .onPlaced { spot.coordinates = it }
+            .onPlaced { placed ->
+                spot.coordinates = placed
+                val opens = item.browseId
+                if (launchShelf != null && opens != null) {
+                    DialLaunch.placed(opens, launchShelf, card = false, at = placed)
+                }
+            }
             .tilePress(press)
             .drawWithContent {
                 drawn.record { this@drawWithContent.drawContent() }

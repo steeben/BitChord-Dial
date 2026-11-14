@@ -104,6 +104,7 @@ class PageEntranceTest {
     @Test
     fun `a row swapped for another mid entrance carries on rather than starting over`() {
         val run = PageEntrance.Run(startedAtMs = 1_000)
+        run.startOf(slot = 0, nowMs = 1_010)
         val first = run.startOf(slot = 2, nowMs = 1_010)
         assertEquals(1_010 + PageEntrance.delayMs(2), first)
         // The Spotify row gives way to its match while still coming in.
@@ -124,13 +125,53 @@ class PageEntranceTest {
     fun `a slot first drawn after the entrance has no part in it`() {
         val run = PageEntrance.Run(startedAtMs = 1_000)
         assertEquals(null, run.startOf(slot = 3, nowMs = 1_000 + PageEntrance.JOIN_WINDOW_MS))
+        run.startOf(slot = 0, nowMs = 1_000)
         assertEquals(null, run.startOf(slot = PageEntrance.SLOTS, nowMs = 1_000))
         assertEquals(1f, PageEntrance.fraction(null, 1_000))
     }
 
     @Test
+    fun `the turns are counted from the first thing drawn`() {
+        // The page was scrolled down when its songs landed: row 5 is the top one in view.
+        val run = PageEntrance.Run(startedAtMs = 1_000)
+        assertEquals(1_000L, run.startOf(slot = 5, nowMs = 1_000))
+        assertEquals(1_000 + PageEntrance.delayMs(2), run.startOf(slot = 7, nowMs = 1_000))
+        // A screenful on from there, not from the top of the page.
+        assertEquals(
+            1_000 + PageEntrance.delayMs(PageEntrance.SLOTS - 1),
+            run.startOf(slot = 5 + PageEntrance.SLOTS - 1, nowMs = 1_000),
+        )
+        assertEquals(null, run.startOf(slot = 5 + PageEntrance.SLOTS, nowMs = 1_000))
+        // One above the first has no wait.
+        assertEquals(1_020L, run.startOf(slot = 3, nowMs = 1_020))
+    }
+
+    @Test
+    fun `a scroll sets off what was waiting and leaves the rest simply there`() {
+        val run = PageEntrance.Run(startedAtMs = 1_000)
+        val first = run.startOf(slot = 0, nowMs = 1_000)!!
+        val waiting = run.startOf(slot = 6, nowMs = 1_000)!!
+        assertEquals(waiting, run.setOff(waiting))
+        run.hurry(nowMs = 1_100)
+        // Already on its way: as it was.
+        assertEquals(first, run.setOff(first))
+        // Still to come: now.
+        assertEquals(1_100L, run.setOff(waiting))
+        // Scrolled into view: no part in the entrance.
+        assertEquals(null, run.startOf(slot = 8, nowMs = 1_120))
+        // A row swapped for another keeps its slot's time.
+        assertEquals(waiting, run.startOf(slot = 6, nowMs = 1_120))
+        // Only the first scroll counts.
+        run.hurry(nowMs = 1_400)
+        assertEquals(1_100L, run.setOff(waiting))
+    }
+
+    @Test
     fun `a slot waits its turn then runs its length`() {
-        val start = PageEntrance.Run(1_000).startOf(slot = 4, nowMs = 1_000)!!
+        val run = PageEntrance.Run(1_000)
+        run.startOf(slot = 0, nowMs = 1_000)
+        val start = run.startOf(slot = 4, nowMs = 1_000)!!
+        assertEquals(1_000 + PageEntrance.delayMs(4), start)
         assertEquals(0f, PageEntrance.fraction(start, 1_000))
         assertEquals(0.5f, PageEntrance.fraction(start, start + PageEntrance.DURATION_MS / 2))
         assertEquals(1f, PageEntrance.fraction(start, start + PageEntrance.DURATION_MS))
