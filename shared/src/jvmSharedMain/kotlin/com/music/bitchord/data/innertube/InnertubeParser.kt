@@ -7,6 +7,7 @@ import com.music.bitchord.data.model.ArtistNameIndex
 import com.music.bitchord.data.model.ArtistPage
 import com.music.bitchord.data.model.ArtistRef
 import com.music.bitchord.data.model.completeArtistCredits
+import com.music.bitchord.data.model.EpisodeInfo
 import com.music.bitchord.data.model.BrowseItem
 import com.music.bitchord.data.model.BrowseType
 import com.music.bitchord.data.model.HomeShelf
@@ -30,6 +31,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
 import java.util.Locale
 
 /**
@@ -890,6 +892,7 @@ object InnertubeParser {
             ?: return null
         val title = renderer.o("title").runs()
         if (title.isBlank()) return null
+        val progress = renderer.o("playbackProgress").o("musicPlaybackProgressRenderer")
         return Song(
             videoId = videoId,
             title = title,
@@ -898,12 +901,27 @@ object InnertubeParser {
                 ?: "Unknown artist",
             thumbnailUrl = renderer.o("thumbnail").o("musicThumbnailRenderer")
                 .o("thumbnail").a("thumbnails").best(),
-            durationText = episodeRuntime(
-                renderer.o("playbackProgress").o("musicPlaybackProgressRenderer")
-                    .o("durationText").runs(),
-            ),
+            durationText = episodeRuntime(progress.o("durationText").runs()),
             isExplicit = renderer.hasExplicitBadge(),
+            episode = EpisodeInfo(
+                description = renderer.o("description").runs().trim().takeIf { it.isNotEmpty() },
+                released = episodeReleased(renderer.o("subtitle").a("runs")),
+                playedPercent = ((progress?.get("playbackProgressPercentage") as? JsonPrimitive)?.intOrNull ?: 0)
+                    .coerceIn(0, 100),
+            ),
         )
+    }
+
+    /**
+     * When an episode came out, off its row's subtitle ("489K views • 1d
+     * ago", "8M views • Oct 24"): the last part of it. Null for a subtitle of
+     * one part, which is the views alone.
+     */
+    private fun episodeReleased(runs: JsonArray?): String? {
+        val parts = runs.orEmpty()
+            .mapNotNull { it.s("text")?.trim() }
+            .filter { part -> part.any { it.isLetterOrDigit() } }
+        return parts.lastOrNull()?.takeIf { parts.size >= 2 }
     }
 
     /**

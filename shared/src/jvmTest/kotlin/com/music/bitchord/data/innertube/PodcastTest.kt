@@ -73,6 +73,28 @@ class PodcastTest {
     }
 
     @Test
+    fun showPage_readsWhatAnEpisodeRowSaysBeyondATracks() {
+        val row = json(
+            """{ "contents": [ ${episode(
+                "NlVu0P1RdHs", "Ross Edgley", "2 hr 43 min",
+                """, "description": { "runs": [ { "text": "How to build endurance.\n\nSponsors below. " } ] }""",
+            ).replace(
+                """"durationText"""",
+                """"playbackProgressPercentage": 37, "durationText"""",
+            )} ] }""",
+        )
+        val episode = InnertubeParser.collectSongsDeep(row, "Huberman Lab").single().episode!!
+        assertEquals("How to build endurance.\n\nSponsors below.", episode.description)
+        assertEquals("2d ago", episode.released)
+        assertEquals(37, episode.playedPercent)
+
+        // Not started, and nothing written about it.
+        val plain = InnertubeParser.collectSongsDeep(showPage, "Huberman Lab").first().episode!!
+        assertNull(plain.description)
+        assertEquals(0, plain.playedPercent)
+    }
+
+    @Test
     fun continuation_hasNoHeaderSoTheShowIsCarriedIn() {
         val page = json(
             """

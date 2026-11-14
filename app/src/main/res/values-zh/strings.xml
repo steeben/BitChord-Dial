@@ -33,6 +33,9 @@
     <string name="playlists">播放列表</string>
     <string name="podcasts">播客</string>
     <string name="podcasts_dial_menu">播客选项</string>
+    <string name="podcast">播客</string>
+    <string name="read_more">展开</string>
+    <string name="about_podcast">关于这个播客</string>
     <string name="new_playlist">新建播放列表</string>
     <string name="saved_to_youtube_music">已保存到 YouTube Music</string>
     <string name="sign_in">登录</string>

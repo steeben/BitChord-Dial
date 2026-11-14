@@ -40,6 +40,7 @@ import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.model.TopPick
 import com.music.bitchord.data.model.TopPickKind
 import com.music.bitchord.data.model.UiState
+import com.music.bitchord.data.podcasts.EpisodeProgress
 import com.music.bitchord.data.podcasts.PodcastsDial
 import com.music.bitchord.data.settings.CustomizationSettings
 import com.music.bitchord.data.settings.speedDialId
@@ -179,8 +180,13 @@ internal fun PodcastsTabPage(
                     subtitle = item.subtitle,
                     thumbnailUrl = item.thumbnailUrl,
                 )
-            } else if (item.videoId != null) {
-                onPlayEpisode(item, shelfTitle)
+            } else {
+                val videoId = item.videoId
+                if (videoId != null) {
+                    // What is played of it is counted, for its row on its show's page.
+                    EpisodeProgress.know(listOf(videoId))
+                    onPlayEpisode(item, shelfTitle)
+                }
             }
         },
         onRetry = viewModel::loadPodcasts,

@@ -34,6 +34,9 @@
     <string name="playlists">Danh sách phát</string>
     <string name="podcasts">Podcast</string>
     <string name="podcasts_dial_menu">Tùy chọn podcast</string>
+    <string name="podcast">Podcast</string>
+    <string name="read_more">Xem thêm</string>
+    <string name="about_podcast">Về podcast</string>
     <string name="new_playlist">Danh sách phát mới</string>
     <string name="saved_to_youtube_music">Đã lưu vào YouTube Music</string>
     <string name="sign_in">Đăng nhập</string>

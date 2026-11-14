@@ -36,6 +36,9 @@
     <string name="playlists">Плейлисты</string>
     <string name="podcasts">Подкасты</string>
     <string name="podcasts_dial_menu">Параметры подкастов</string>
+    <string name="podcast">Подкаст</string>
+    <string name="read_more">Читать далее</string>
+    <string name="about_podcast">О подкасте</string>
     <string name="new_playlist">Новый плейлист</string>
     <string name="saved_to_youtube_music">Сохранено в YouTube Music</string>
     <string name="sign_in">Войти</string>

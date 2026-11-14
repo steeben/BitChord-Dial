@@ -33,6 +33,9 @@
     <string name="playlists">プレイリスト</string>
     <string name="podcasts">ポッドキャスト</string>
     <string name="podcasts_dial_menu">ポッドキャストのオプション</string>
+    <string name="podcast">ポッドキャスト</string>
+    <string name="read_more">続きを読む</string>
+    <string name="about_podcast">ポッドキャストについて</string>
     <string name="new_playlist">新しいプレイリスト</string>
     <string name="saved_to_youtube_music">YouTube Musicに保存済み</string>
     <string name="sign_in">ログイン</string>

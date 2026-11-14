@@ -151,6 +151,8 @@ import com.music.bitchord.data.canvas.CanvasArtwork
 import com.music.bitchord.data.canvas.CanvasRepository
 import com.music.bitchord.data.model.BrowseType
 import com.music.bitchord.data.model.DetailPage
+import com.music.bitchord.data.model.PODCAST_SHOW_PREFIX
+import com.music.bitchord.data.podcasts.EpisodeProgress
 import com.music.bitchord.data.model.CARD_ART_PX
 import com.music.bitchord.data.model.HEADER_ART_PX
 import com.music.bitchord.data.model.ROW_ART_PX
@@ -587,6 +589,17 @@ fun DetailScreen(
         rawSongs.withIndex().associate { (i, s) -> s.videoId to i + 1 }
     }
     val isArtist = page.type == BrowseType.ARTIST
+    // A podcast show's page: its rows are episodes, drawn by [EpisodeRow].
+    val isShow = page.browseId.startsWith(PODCAST_SHOW_PREFIX)
+    // What is played of these from now on is counted, and what was counted
+    // before is read, for the bar along the foot of each row.
+    val episodeIds = remember(rawSongs) { rawSongs.filter { it.episode != null }.map { it.videoId } }
+    LaunchedEffect(episodeIds) {
+        if (episodeIds.isNotEmpty()) {
+            EpisodeProgress.know(episodeIds)
+            EpisodeProgress.load()
+        }
+    }
     // An artist page's Local toggle: only what is on this device, both the top
     // songs and the release shelves.
     var localOnly by rememberSaveable(page.browseId) { mutableStateOf(isArtist && localOnlyByDefault) }
@@ -1349,7 +1362,7 @@ fun DetailScreen(
             // The header holds Apple's logo here, so the ink goes at the foot of the page instead.
             val aboutSignature = if (isArtist && appleArt?.logoUrl != null) signature else null
             val showAbout = (!description.isNullOrBlank() &&
-                (page.type == BrowseType.ALBUM || isArtist)) || hasStats || aboutSignature != null
+                (page.type == BrowseType.ALBUM || isArtist || isShow)) || hasStats || aboutSignature != null
             fun LazyListScope.aboutItem(slot: Int) {
                 if (!showAbout) return
                 item(key = "about") {
@@ -1357,7 +1370,11 @@ fun DetailScreen(
                     Box(Modifier.pageEntrance(slot, entrance).padding(top = if (isArtist) 28.dp else 0.dp)) {
                     AboutSection(
                         title = stringResource(
-                            if (isArtist) R.string.about_artist else R.string.about_album,
+                            when {
+                                isArtist -> R.string.about_artist
+                                isShow -> R.string.about_podcast
+                                else -> R.string.about_album
+                            },
                         ),
                         text = description?.takeIf { it.isNotBlank() },
                         palette = palette,
@@ -1494,6 +1511,27 @@ fun DetailScreen(
                             placeheld = placeheld && position < placeholderRows,
                             placeholder = { SongRowSkeleton(index = position) },
                         ) {
+                        val episode = song.episode
+                        if (episode != null) {
+                            EpisodeRow(
+                                song = song,
+                                info = episode,
+                                palette = palette,
+                                onClick = {
+                                    if (selecting) toggleSelected(song) else onSongClick(queue, position)
+                                },
+                                onLongPress = {
+                                    selectionHaptics.play(Haptic.Select)
+                                    toggleSelected(song)
+                                },
+                                onMore = { onSongLongPress(song) },
+                                onSwipeToQueue = { onSongSwipe(song, it) },
+                                selected = song.videoId in selectedIds,
+                                selectionMode = selecting,
+                                isCurrent = isCurrent,
+                                isPlaying = isCurrent && isPlaying,
+                            )
+                        } else {
                         SongRow(
                             song = if (numbered) {
                                 song
@@ -1525,10 +1563,16 @@ fun DetailScreen(
                             activeTint = palette.accent,
                             searchPlayingStyle = true,
                         )
+                        }
                         if (position < matches.lastIndex) {
                             HorizontalDivider(
                                 modifier = Modifier.padding(
-                                    start = if (numbered) NUMBERED_ROW_DIVIDER_INSET else ROW_DIVIDER_INSET,
+                                    start = when {
+                                        // Under an episode's bar, from edge to edge as the bar is.
+                                        episode != null -> 0.dp
+                                        numbered -> NUMBERED_ROW_DIVIDER_INSET
+                                        else -> ROW_DIVIDER_INSET
+                                    },
                                 ),
                                 thickness = 0.5.dp,
                                 color = palette.divider,
@@ -3793,14 +3837,20 @@ private fun DetailPage.headerLines(trackCount: Int, playtime: String? = null): P
     val year = parts.lastOrNull { it.length == 4 && it.all(Char::isDigit) }
     val kind = parts.firstOrNull { it.lowercase(Locale.ROOT) in KIND_WORDS }
     val credit = parts.filter { it != year && it != kind }.joinToString(", ")
-    val meta = listOfNotNull(
-        kind ?: type.localizedLabel(),
-        year,
-        trackCount.takeIf { it > 0 }?.let {
-            pluralStringResource(R.plurals.track_count_plural, it, it)
-        },
-        playtime,
-    ).joinToString(" • ").uppercase(Locale.getDefault())
+    // A show's page is read a part at a time, so it is not said how many
+    // episodes it has or how long they play: only what it is.
+    val meta = if (browseId.startsWith(PODCAST_SHOW_PREFIX)) {
+        stringResource(R.string.podcast).uppercase(Locale.getDefault())
+    } else {
+        listOfNotNull(
+            kind ?: type.localizedLabel(),
+            year,
+            trackCount.takeIf { it > 0 }?.let {
+                pluralStringResource(R.plurals.track_count_plural, it, it)
+            },
+            playtime,
+        ).joinToString(" • ").uppercase(Locale.getDefault())
+    }
     return credit to meta
 }
 

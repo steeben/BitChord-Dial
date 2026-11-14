@@ -7324,6 +7324,8 @@ class PlaybackService : MediaLibraryService() {
                     lastPositionSeconds = player.currentPosition / 1000
                     player.currentMediaItem?.mediaId?.let {
                         PlaybackTracker.onProgress(it, lastPositionSeconds)
+                        // How far into a podcast episode, for its row on the show's page.
+                        com.music.bitchord.data.podcasts.EpisodeProgress.onSample(it, player.currentPosition, player.duration)
                     }
                     // The device's own listening record — see [ListeningRecorder],
                     // which counts wall-clock time between ticks rather than

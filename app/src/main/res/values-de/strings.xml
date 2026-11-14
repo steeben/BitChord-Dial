@@ -34,6 +34,9 @@
     <string name="playlists">Playlists</string>
     <string name="podcasts">Podcasts</string>
     <string name="podcasts_dial_menu">Podcast-Optionen</string>
+    <string name="podcast">Podcast</string>
+    <string name="read_more">Mehr lesen</string>
+    <string name="about_podcast">Über den Podcast</string>
     <string name="new_playlist">Neue Playlist</string>
     <string name="saved_to_youtube_music">In YouTube Music gespeichert</string>
     <string name="sign_in">Anmelden</string>

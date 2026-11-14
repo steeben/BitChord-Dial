@@ -21,6 +21,21 @@ data class ArtistRef(
     val browseId: String? = null,
 )
 
+/**
+ * What a podcast episode's row on its show's page says beyond a track's.
+ *
+ * @property description The episode's notes, as its publisher wrote them.
+ * @property released When it came out, in YouTube Music's own words: "Oct 24",
+ * "Nov 14, 2025", or "1d ago" for the newest.
+ * @property playedPercent How much of it the account has played, 0 to 100;
+ * 0 when it was not started, or when no account is signed in.
+ */
+data class EpisodeInfo(
+    val description: String? = null,
+    val released: String? = null,
+    val playedPercent: Int = 0,
+)
+
 /** A playable YouTube Music track. */
 data class Song(
     val videoId: String,
@@ -141,6 +156,8 @@ data class Song(
      * non-history rows (e.g. search results, library).
      */
     val feedbackToken: String? = null,
+    /** What a podcast episode's row says beyond a track's; null for anything else. */
+    val episode: EpisodeInfo? = null,
 ) {
     /** Legacy derived property: true if and only if [queueTier] is [QueueTier.AUTOPLAY]. */
     val fromAutoplay: Boolean get() = queueTier == QueueTier.AUTOPLAY
