@@ -89,7 +89,7 @@ class GlassOptionsTest {
             val light = CustomizationSettings.glassOptions(clear = clear, dark = false)
             for (set in listOf(dark, light)) {
                 assertEquals(0.9f, set.transparency.value, 0f)
-                assertEquals(4f, set.blur.value, 0f)
+                assertEquals(10f, set.blur.value, 0f)
                 assertEquals(0.9f, set.saturation.value, 0f)
             }
             assertEquals(GlassTint.BLACK, dark.tint.value)
