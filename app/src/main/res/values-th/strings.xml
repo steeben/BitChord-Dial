@@ -281,6 +281,10 @@
     <string name="filter_non_music_audio">กรองเสียงที่ไม่ใช่เพลง</string>
     <string name="filter_non_music_audio_subtitle">ซ่อนคลิปสั้นกว่า 30 วินาที ไฟล์ WAV บันทึกเสียง การอัดเสียง และเสียงระบบ</string>
     <string name="performance">ประสิทธิภาพ</string>
+    <string name="video_quality">คุณภาพวิดีโอ</string>
+    <string name="video_quality_subtitle">สำหรับมิวสิกวิดีโอ และมิวสิกวิดีโอที่แสดงเป็น Canvas ของเพลง คุณภาพสูงสุดใช้สูงสุด 4K ตัวเลือกนี้ใช้ข้อมูลและแบตเตอรี่มากขึ้นมาก และอาจช้าในโทรศัพท์ที่สเปกต่ำ</string>
+    <string name="video_quality_mobile">ข้อมูลมือถือ</string>
+    <string name="video_quality_max">คุณภาพสูงสุด</string>
     <string name="high_performance_mode">โหมดประสิทธิภาพสูง</string>
     <string name="high_performance_subtitle">ขออัตรารีเฟรชหน้าจอที่สูงขึ้น</string>
     <string name="high_performance_active">ขออัตรารีเฟรช %1$d Hz ระบบ Android อาจลดลงเมื่อจำเป็น</string>

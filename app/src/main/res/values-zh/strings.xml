@@ -242,6 +242,10 @@
     <string name="filter_non_music_audio">过滤非音乐音频</string>
     <string name="filter_non_music_audio_subtitle">隐藏时长低于 30 秒的片段、WAV 文件、语音备忘录、录音和系统提示音</string>
     <string name="performance">性能</string>
+    <string name="video_quality">视频画质</string>
+    <string name="video_quality_subtitle">适用于音乐视频，以及作为歌曲 Canvas 显示的音乐视频。最高画质最高使用 4K，会消耗更多流量和电量，在性能较弱的手机上可能较慢。</string>
+    <string name="video_quality_mobile">移动数据</string>
+    <string name="video_quality_max">最高画质</string>
     <string name="high_performance_mode">高性能模式</string>
     <string name="high_performance_subtitle">请求更高的屏幕刷新率</string>
     <string name="high_performance_active">已请求 %1$d Hz。Android 可能会在需要时降低此数值。</string>

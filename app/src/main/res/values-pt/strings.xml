@@ -249,6 +249,10 @@
     <string name="filter_non_music_audio">Filtrar áudio não musical</string>
     <string name="filter_non_music_audio_subtitle">Oculta clipes com menos de 30 segundos, arquivos WAV, notas de voz, gravações e sons do sistema</string>
     <string name="performance">Desempenho</string>
+    <string name="video_quality">Qualidade de vídeo</string>
+    <string name="video_quality_subtitle">Para vídeos musicais e para um vídeo musical mostrado como Canvas de uma música. Qualidade máxima usa até 4K. Usa muito mais dados e bateria e pode ser lenta em telefones fracos.</string>
+    <string name="video_quality_mobile">Dados móveis</string>
+    <string name="video_quality_max">Qualidade máxima</string>
     <string name="high_performance_mode">Modo de alto desempenho</string>
     <string name="high_performance_subtitle">Solicita uma taxa de atualização de tela mais alta</string>
     <string name="high_performance_active">%1$d Hz solicitados. O Android pode diminuir quando necessário.</string>
