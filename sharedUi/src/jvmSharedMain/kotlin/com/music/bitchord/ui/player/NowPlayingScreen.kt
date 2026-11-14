@@ -3611,10 +3611,32 @@ fun NowPlayingScreen(
         // bar, not this artwork: the glyphs are the page's for the trip, and
         // this cover's only once the player has landed.
         StatusBarIcons(dark = if (dockMoving) PageStatusBarIcons.dark else statusIconsDark)
-        // "Hide status bar": away while the player is fully up, and back as it
-        // starts down (a drag, a back swipe or a close), so the page under the
-        // player has its bar, and its own top inset, before much of it shows.
-        HideStatusBar(hidden = hidePlayerStatusBar && !dockMoving)
+        // "Hide status bar": the bar is there for the whole of the trip up
+        // from the mini player and slides away only once the player has
+        // landed; it slides back as soon as the player starts down (a drag, a
+        // back swipe or a close), and away again if that is called off and the
+        // player lands once more.
+        //
+        // Off the sheet's own position, not [dockMoving]: that one says "not
+        // moving" for the first frames of an open, before the mini player's
+        // cover is known, and the bar went in those frames, came back for the
+        // trip and went again. And only after the player has stayed landed
+        // for a moment, so no single frame's reading can take the bar.
+        val playerLanded by remember(dock) {
+            derivedStateOf { dock == null || dock.openFraction() >= 1f }
+        }
+        var statusBarAway by remember { mutableStateOf(false) }
+        LaunchedEffect(playerLanded, hidePlayerStatusBar, dock == null) {
+            if (playerLanded && hidePlayerStatusBar) {
+                // Without the dock ("Reduce animation") the sheet slides up on
+                // its own and does not say where it is: its slide's length.
+                delay(if (dock == null) 450L else 120L)
+                statusBarAway = true
+            } else {
+                statusBarAway = false
+            }
+        }
+        HideStatusBar(hidden = statusBarAway)
         // Read in the scrim's draw pass only, so the fade redraws that strip
         // without recomposing the player. With the status bar hidden there is
         // nothing for the scrim to hold up, so it goes with the bar.
