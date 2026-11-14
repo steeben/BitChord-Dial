@@ -325,6 +325,9 @@ import com.music.bitchord.data.model.TopPickKind
 import com.music.bitchord.playback.commitRadioQueue
 import com.music.bitchord.playback.fromAutoplay
 import com.music.bitchord.playback.hasYouTubeOriginal
+import com.music.bitchord.playback.INITIAL_RADIO_TRACKS
+import com.music.bitchord.playback.asRadioSeed
+import com.music.bitchord.playback.awaitSounding
 import com.music.bitchord.playback.loadAutoplayTracks
 import com.music.bitchord.playback.playSongs
 import com.music.bitchord.playback.playBoundedContext
@@ -495,7 +498,8 @@ private const val TOP_FADE_RAMP = 0.3f
 
 /** How long the blur along Explore's top takes to come and go. */
 
-private const val INITIAL_RADIO_TRACKS = 24
+/** How long whoever asked for a station waits for its first song to sound before no longer waiting. */
+private const val RADIO_START_WAIT_MS = 8_000L
 
 /** How long the Library page waits on its songs and shelves before dealing without them. */
 private const val LIBRARY_DEAL_WAIT_MS = 15_000L
@@ -2142,10 +2146,17 @@ private fun BitChordApp(
      * destroy the queue already playing. Once ready, the whole old queue is
      * replaced in one Media3 operation.
      */
-    /** Starts a radio off [song]; [announce] says so in a toast once it is playing. */
-    val startRadioFrom: (Song, Boolean) -> Unit = { song, announce ->
+    /**
+     * Starts a radio off [song]; [announce] says so in a toast once it is playing.
+     * [station] is the station made ready ahead of time, if one was (see
+     * `MainViewModel.prepareLucky`). [onStarted] is told once the song is
+     * sounding, or once it is known that none will start.
+     */
+    val startRadioWith: (Song, Boolean, kotlinx.coroutines.Deferred<Result<List<Song>>>?, (() -> Unit)?) -> Unit = { song, announce, station, onStarted ->
         val originalController = controller
-        if (originalController != null && !refusedByHost()) {
+        if (originalController == null || refusedByHost()) {
+            onStarted?.invoke()
+        } else {
             val request = ++playRequestGeneration
             // Ignore AutoPlay's tail: it may legitimately grow while the
             // request is in flight and does not mean the listener chose a
@@ -2155,13 +2166,13 @@ private fun BitChordApp(
                 .filterNot { it.fromAutoplay }
                 .map { it.mediaId }
             scope.launch {
-                val seed = song.copy(
-                    radioName = song.title,
-                    playbackSource = song.title,
-                    playbackSourceType = PlaybackSourceType.SHARED_LINK,
-                    playbackSourceId = song.videoId,
-                )
-                val related = loadAutoplayTracks(
+                try {
+                val seed = song.asRadioSeed()
+                // The one made ready, unless it failed or came back empty then:
+                // that says nothing about now, so it is asked for again.
+                val ready = station?.let { runCatching { it.await() }.getOrNull()?.getOrNull() }
+                    ?.takeIf { it.isNotEmpty() }
+                val related = ready ?: loadAutoplayTracks(
                     existing = listOf(seed),
                     seedSong = seed,
                     limit = INITIAL_RADIO_TRACKS,
@@ -2207,6 +2218,12 @@ private fun BitChordApp(
                 } else {
                     activeRadioSeed = null
                     activeController.playSongs(listOf(seed) + related, 0)
+                    // Whoever is waiting on the song waits for it to sound,
+                    // not for the queue to be handed over.
+                    if (onStarted != null) {
+                        activeController.awaitSounding(currentItem?.mediaId, RADIO_START_WAIT_MS)
+                        onStarted()
+                    }
                 }
                 // Make this station — never the queue from before it — what a
                 // fresh process restores, even if it is killed immediately.
@@ -2218,9 +2235,15 @@ private fun BitChordApp(
                         Toast.LENGTH_SHORT,
                     ).show()
                 }
+                } finally {
+                    // However it ended. A second call does nothing: the die
+                    // only waits for the first.
+                    onStarted?.invoke()
+                }
             }
         }
     }
+    val startRadioFrom: (Song, Boolean) -> Unit = { song, announce -> startRadioWith(song, announce, null, null) }
     val startRadio: (Song) -> Unit = { song -> startRadioFrom(song, true) }
     val addToQueue: (Song) -> Unit = { song ->
         scope.launch {
@@ -2644,18 +2667,23 @@ private fun BitChordApp(
     // off a random seed from the session's pool — see MainViewModel.feelingLucky.
     val feelingLuckyOn by CustomizationSettings.feelingLucky.collectAsStateWithLifecycle()
     val luckyLabel = stringResource(R.string.feeling_lucky)
-    // Quietly: the die landing is all the answer a roll needs.
-    val latestStartRadio by rememberUpdatedState<(Song) -> Unit>({ song -> startRadioFrom(song, false) })
+    // Quietly: the die landing is all the answer a roll needs. It lands when
+    // the song is sounding (`landed`), so the two are one thing, not one after
+    // the other.
+    val latestStartLucky by rememberUpdatedState<(MainViewModel.LuckyRoll, () -> Unit) -> Unit>(
+        { roll, landed -> startRadioWith(roll.seed, false, roll.station, landed) },
+    )
     val speedDialLucky = remember(feelingLuckyOn, luckyLabel) {
         if (!feelingLuckyOn) {
             null
         } else {
-            SpeedDialLucky(luckyLabel) {
-                viewModel.feelingLucky { seed ->
-                    if (seed != null) {
-                        latestStartRadio(seed)
+            SpeedDialLucky(luckyLabel) { landed ->
+                viewModel.feelingLucky { roll ->
+                    if (roll != null) {
+                        latestStartLucky(roll, landed)
                     } else {
                         Toast.makeText(context, R.string.feeling_lucky_empty, Toast.LENGTH_SHORT).show()
+                        landed()
                     }
                 }
             }

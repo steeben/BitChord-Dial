@@ -112,6 +112,9 @@ import com.music.bitchord.data.sources.TrackMatcher
 import com.music.bitchord.playback.AudioCache
 import com.music.bitchord.playback.BoundedContextRequests
 import com.music.bitchord.playback.DirectSourceGate
+import com.music.bitchord.playback.INITIAL_RADIO_TRACKS
+import com.music.bitchord.playback.asRadioSeed
+import com.music.bitchord.playback.loadAutoplayTracks
 import com.music.bitchord.playback.contextEntryKey
 import com.music.bitchord.playback.StreamChoice
 import com.music.bitchord.ui.screens.CACHE_FOLDER_BROWSE_ID
@@ -1164,18 +1167,60 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /**
      * "I'm Feeling Lucky"'s seeds for this session: about twenty songs drawn
      * evenly from what was played lately, what has been in heavy rotation and
-     * what is liked — gathered on the first roll and re-rolled from after that.
+     * what is liked — gathered ahead of the first roll and re-rolled from after that.
      */
     private var luckyPool: List<Song>? = null
     private var lastLucky: String? = null
 
-    /** A random seed from the pool (never the last one twice running), or null if there is none. */
-    fun feelingLucky(onSeed: (Song?) -> Unit) {
+    /** One roll of the die: the song it landed on, as a station's seed, and that station, in or on its way. */
+    class LuckyRoll(val seed: Song, val station: kotlinx.coroutines.Deferred<Result<List<Song>>>)
+
+    /**
+     * The next roll, made ready before the die is tapped.
+     *
+     * A roll needs its seeds, its station and its first song's stream, one
+     * after the other, and the die's own turn is over long before all three
+     * are in: the song came a second or more after the die had landed. Ready
+     * ahead of time, a tap has only the song itself left to start.
+     */
+    private var luckyNext: kotlinx.coroutines.Deferred<LuckyRoll?>? = null
+
+    /** Makes the next roll ready, if one is not ready or on its way already. */
+    fun prepareLucky() {
+        if (luckyNext != null) return
+        luckyNext = viewModelScope.async { rollLucky() }
+    }
+
+    /** Picks a seed from the pool (never the last one twice running) and starts on its station and stream. */
+    private suspend fun rollLucky(): LuckyRoll? {
+        val pool = luckyPool ?: gatherLuckySeeds().also { if (it.isNotEmpty()) luckyPool = it }
+        val pick = pool.filter { it.videoId != lastLucky }.ifEmpty { pool }.randomOrNull() ?: return null
+        lastLucky = pick.videoId
+        val seed = pick.asRadioSeed()
+        viewModelScope.launch { runCatching { warmStream(seed) } }
+        val station = viewModelScope.async {
+            runCatching {
+                loadAutoplayTracks(existing = listOf(seed), seedSong = seed, limit = INITIAL_RADIO_TRACKS)
+            }.getOrElse { Result.failure(it) }
+        }
+        return LuckyRoll(seed, station)
+    }
+
+    /** The roll made ready for this tap, or one made now; null if there is nothing to roll from. */
+    fun feelingLucky(onRoll: (LuckyRoll?) -> Unit) {
         viewModelScope.launch {
-            val pool = luckyPool ?: gatherLuckySeeds().also { if (it.isNotEmpty()) luckyPool = it }
-            val seed = pool.filter { it.videoId != lastLucky }.ifEmpty { pool }.randomOrNull()
-            lastLucky = seed?.videoId
-            onSeed(seed)
+            val ready = luckyNext
+            luckyNext = null
+            // One made ready with nothing to roll from (no network at the
+            // time) is not the answer to this tap: it is rolled again now.
+            val roll = ready?.let { runCatching { it.await() }.getOrNull() }
+                ?: runCatching { rollLucky() }.getOrNull()
+            onRoll(roll)
+            // The one after it, once this one has had the network to itself.
+            if (roll != null) {
+                delay(LUCKY_NEXT_DELAY_MS)
+                prepareLucky()
+            }
         }
     }
 
@@ -1924,6 +1969,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             DeveloperOptions.placeholderAccount.collect { offered ->
                 if (!offered && _activeAccountId.value == DeveloperOptions.PLACEHOLDER_ACCOUNT_ID) leavePlaceholder()
+            }
+        }
+        // The die's first roll, made ready once the launch is out of the way.
+        viewModelScope.launch {
+            CustomizationSettings.feelingLucky.collectLatest { on ->
+                if (on) {
+                    delay(LUCKY_WARM_DELAY_MS)
+                    prepareLucky()
+                }
             }
         }
         startSearchPipeline()
@@ -3302,43 +3356,46 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 is SearchResult.Browse -> null
             }
         } ?: return
+        viewModelScope.launch { runCatching { warmStream(song) } }
+    }
+
+    /**
+     * Has [audio]'s stream found before it is played, so that playing it has
+     * only the song itself to fetch.
+     */
+    private suspend fun warmStream(audio: Song) {
         // Direct Source Stream fetches nothing before it is played. Warming
         // here would also pin JioSaavn's quick answer ahead of the addon.
         if (DirectSourceGate.isActive()) return
-        viewModelScope.launch {
-            runCatching {
-                val audio = song
-                // A source-backed row resolves through its own source already
-                // and never takes the YouTube path — warming either half of
-                // this for one would be work nothing asks for.
-                if (SourceRegistry.parseTrackKey(audio.videoId) != null) return@runCatching
-                // Pinned to one source by hand: playback asks only that one.
-                if (com.music.bitchord.playback.SourcePins.of(audio.videoId) != null) return@runCatching
-                // JioSaavn first, on the same reasoning as the queue's
-                // read-ahead: it is the copy that will actually be played if it
-                // has the track, so warming YouTube's URL instead warms the one
-                // that loses. Pinned through [StreamChoice] so playback opens
-                // this very stream rather than racing for it again — see
-                // [SourceResolver.prefetchSubstitute], which requires it.
-                val warmed = SourceResolver.prefetchSubstitute(
-                    TrackMatcher.Target(
-                        title = audio.title,
-                        artist = audio.artist,
-                        durationSec = TrackMatcher.secondsOf(audio.durationText),
-                        album = audio.albumName,
-                        isExplicit = audio.isExplicit,
-                        isVideo = audio.isVideo,
-                    ),
-                )
-                if (warmed != null) {
-                    StreamChoice.remember(audio.videoId, warmed, substituted = true)
-                    return@runCatching
-                }
-                // Disabled, or hasn't got it: the tap path falls back to
-                // YouTube, so that is what is worth having ready.
-                StreamResolver.resolve(audio.videoId)
-            }
+        // A source-backed row resolves through its own source already
+        // and never takes the YouTube path — warming either half of
+        // this for one would be work nothing asks for.
+        if (SourceRegistry.parseTrackKey(audio.videoId) != null) return
+        // Pinned to one source by hand: playback asks only that one.
+        if (com.music.bitchord.playback.SourcePins.of(audio.videoId) != null) return
+        // JioSaavn first, on the same reasoning as the queue's
+        // read-ahead: it is the copy that will actually be played if it
+        // has the track, so warming YouTube's URL instead warms the one
+        // that loses. Pinned through [StreamChoice] so playback opens
+        // this very stream rather than racing for it again — see
+        // [SourceResolver.prefetchSubstitute], which requires it.
+        val warmed = SourceResolver.prefetchSubstitute(
+            TrackMatcher.Target(
+                title = audio.title,
+                artist = audio.artist,
+                durationSec = TrackMatcher.secondsOf(audio.durationText),
+                album = audio.albumName,
+                isExplicit = audio.isExplicit,
+                isVideo = audio.isVideo,
+            ),
+        )
+        if (warmed != null) {
+            StreamChoice.remember(audio.videoId, warmed, substituted = true)
+            return
         }
+        // Disabled, or hasn't got it: the tap path falls back to
+        // YouTube, so that is what is worth having ready.
+        StreamResolver.resolve(audio.videoId)
     }
 
     companion object {
@@ -4993,6 +5050,15 @@ private const val LIKED_RETRY_STEP_MS = 1_000L
 
 /** How many seeds "I'm Feeling Lucky" keeps per session. */
 private const val LUCKY_POOL_SIZE = 20
+
+/**
+ * How long after the app opens, or the die is turned on, its first roll is made
+ * ready: after the launch has had the network and the phone to itself.
+ */
+private const val LUCKY_WARM_DELAY_MS = 6_000L
+
+/** How long after a roll the next one is made ready. */
+private const val LUCKY_NEXT_DELAY_MS = 3_000L
 
 /** How far back into history, and down the most-played lists, its seeds are drawn from. */
 private const val LUCKY_RECENT_REACH = 30
