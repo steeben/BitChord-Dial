@@ -133,6 +133,7 @@ import com.music.bitchord.data.innertube.PlayerClient
 import com.music.bitchord.data.innertube.StreamResolver
 import com.music.bitchord.data.model.LikeStatus
 import com.music.bitchord.data.model.Song
+import com.music.bitchord.data.model.isEpisode
 import com.music.bitchord.data.model.isUnresolvedSpotify
 import com.music.bitchord.data.scrobbling.LastFM
 import com.music.bitchord.data.scrobbling.ListenBrainzManager
@@ -2045,6 +2046,8 @@ class PlaybackService : MediaLibraryService() {
     private suspend fun loopMixLyrics(item: MediaItem, durationMs: Long): List<LyricLine>? {
         if (!AppSettings.syncedLyrics.value) return null
         val song = item.toSong()
+        // A podcast episode has no lyrics to look for.
+        if (song.isEpisode) return null
         return kotlinx.coroutines.withTimeoutOrNull(LOOP_MIX_LYRICS_TIMEOUT_MS) {
             song.localUri?.let { EmbeddedLyrics.forUri(this@PlaybackService, it) }
                 ?: LyricsRepository.lyrics(
@@ -7324,6 +7327,8 @@ class PlaybackService : MediaLibraryService() {
                     lastPositionSeconds = player.currentPosition / 1000
                     player.currentMediaItem?.mediaId?.let {
                         PlaybackTracker.onProgress(it, lastPositionSeconds)
+                        // How far into a podcast episode, for its row on the show's page.
+                        com.music.bitchord.data.podcasts.EpisodeProgress.onSample(it, player.currentPosition, player.duration)
                     }
                     // The device's own listening record — see [ListeningRecorder],
                     // which counts wall-clock time between ticks rather than
@@ -8569,7 +8574,8 @@ class PlaybackService : MediaLibraryService() {
             return
         }
 
-        if (!lyricsOnNotification()) {
+        // Nor for a podcast episode, which has none.
+        if (!lyricsOnNotification() || currentSong.isEpisode) {
             serviceLyricsJob?.cancel()
             serviceLyrics = null
             stopLyricsTicker()

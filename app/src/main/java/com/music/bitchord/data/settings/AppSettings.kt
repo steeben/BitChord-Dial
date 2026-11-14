@@ -1040,6 +1040,9 @@ object AppSettings {
         showQueueHistory.value = prefs.getBoolean(KEY_SHOW_QUEUE_HISTORY, true)
         dontRepeatSuggestions.value = prefs.getBoolean(KEY_DONT_REPEAT_SUGGESTIONS, false)
         smartVersionAlignment.value = prefs.getBoolean(KEY_SMART_VERSION_ALIGNMENT, true)
+        com.music.bitchord.data.EpisodeVideo.load(prefs.getBoolean(KEY_EPISODE_VIDEO, true)) { on ->
+            prefs.edit().putBoolean(KEY_EPISODE_VIDEO, on).apply()
+        }
         reduceDynamicBlur.value = prefs.getBoolean(KEY_REDUCE_BLUR, false)
         liquidGlass.value = prefs.getBoolean(KEY_LIQUID_GLASS, true)
         lyricsBlur.value = prefs.getBoolean(KEY_LYRICS_BLUR, true)
@@ -2381,6 +2384,7 @@ object AppSettings {
     private const val KEY_SHOW_QUEUE_HISTORY = "show_queue_history"
     private const val KEY_DONT_REPEAT_SUGGESTIONS = "dont_repeat_suggestions"
     private const val KEY_SMART_VERSION_ALIGNMENT = "smart_version_alignment"
+    private const val KEY_EPISODE_VIDEO = "episode_video"
     private const val KEY_REDUCE_BLUR = "reduce_dynamic_blur"
     private const val KEY_LIQUID_GLASS = "liquid_glass"
     private const val KEY_LYRICS_BLUR = "lyrics_blur"

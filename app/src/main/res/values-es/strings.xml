@@ -33,6 +33,15 @@
     <string name="audio_files_on_device">Archivos de audio del dispositivo</string>
     <string name="on_device">En el dispositivo</string>
     <string name="playlists">Listas de reproducción</string>
+    <string name="podcasts">Pódcasts</string>
+    <string name="podcasts_dial_menu">Opciones de pódcasts</string>
+    <string name="podcast">Pódcast</string>
+    <string name="read_more">Leer más</string>
+    <string name="about_podcast">Acerca del pódcast</string>
+    <string name="new_episode">Nuevo episodio</string>
+    <string name="episodes_for_later">Episodios para más tarde</string>
+    <string name="podcast_source">Programas recomendados</string>
+    <string name="podcast_source_both">Ambos</string>
     <string name="new_playlist">Nueva lista</string>
     <string name="saved_to_youtube_music">Guardada en YouTube Music</string>
     <string name="sign_in">Iniciar sesión</string>
@@ -1435,4 +1444,19 @@
     <string name="old_app_notice_body">Tus ajustes, biblioteca, historial de escucha y sesiones de la app antigua no se pasan solos. En la app antigua, abre Ajustes, luego Tus datos, y toca Exportar datos. Después toca Importar datos aquí y elige ese archivo. Tendrás que volver a iniciar sesión.</string>
     <string name="old_app_notice_take_me_there">Llévame allí</string>
     <string name="old_app_notice_got_it">Entendido</string>
+    <string name="episode_info">Información</string>
+    <string name="episode_play_video">Reproducir vídeo</string>
+    <string name="search_podcasts_hint">Buscar pódcasts</string>
+    <string name="podcast_search_hint">Busca programas y episodios.</string>
+    <string name="podcast_search_library_hint">Busca en los programas que sigues, los de tu dial y tus episodios para más tarde.</string>
+    <string name="podcast_search_failed">No se pudo buscar. Inténtalo de nuevo.</string>
+    <string name="podcast_search_none">No hay programas ni episodios para “%1$s”.</string>
+    <string name="podcast_search_shows">Programas</string>
+    <string name="podcast_search_episodes">Episodios</string>
+    <string name="episode_filter">Filtrar episodios</string>
+    <string name="episode_filter_all">Todos</string>
+    <string name="episode_filter_unplayed">Sin reproducir</string>
+    <string name="episode_filter_in_progress">En curso</string>
+    <string name="episode_filter_played">Reproducidos</string>
+    <string name="episode_filter_none">No hay episodios con este filtro.</string>
 </resources>

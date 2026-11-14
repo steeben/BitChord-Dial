@@ -31,6 +31,15 @@
     <string name="audio_files_on_device">File audio di perangkat</string>
     <string name="on_device">Di Perangkat</string>
     <string name="playlists">Playlist</string>
+    <string name="podcasts">Podcast</string>
+    <string name="podcasts_dial_menu">Opsi podcast</string>
+    <string name="podcast">Podcast</string>
+    <string name="read_more">Baca selengkapnya</string>
+    <string name="about_podcast">Tentang podcast</string>
+    <string name="new_episode">Episode baru</string>
+    <string name="episodes_for_later">Episode untuk nanti</string>
+    <string name="podcast_source">Acara yang direkomendasikan</string>
+    <string name="podcast_source_both">Keduanya</string>
     <string name="new_playlist">Playlist baru</string>
     <string name="saved_to_youtube_music">Disimpan ke YouTube Music</string>
     <string name="sign_in">Masuk</string>
@@ -1440,4 +1449,19 @@
     <string name="old_app_notice_body">Pengaturan, pustaka, riwayat dengar, dan login dari aplikasi lama tidak ikut pindah sendiri. Di aplikasi lama, buka Pengaturan, lalu Data Anda, dan ketuk Ekspor data. Lalu ketuk Impor data di sini dan pilih file itu. Kamu perlu login lagi.</string>
     <string name="old_app_notice_take_me_there">Bawa ke Sana</string>
     <string name="old_app_notice_got_it">Mengerti</string>
+    <string name="episode_info">Info</string>
+    <string name="episode_play_video">Putar video</string>
+    <string name="search_podcasts_hint">Cari podcast</string>
+    <string name="podcast_search_hint">Cari acara dan episode.</string>
+    <string name="podcast_search_library_hint">Cari di acara yang Anda ikuti, acara di dial Anda, dan episode untuk nanti.</string>
+    <string name="podcast_search_failed">Tidak dapat mencari. Coba lagi.</string>
+    <string name="podcast_search_none">Tidak ada acara atau episode untuk “%1$s”.</string>
+    <string name="podcast_search_shows">Acara</string>
+    <string name="podcast_search_episodes">Episode</string>
+    <string name="episode_filter">Filter episode</string>
+    <string name="episode_filter_all">Semua</string>
+    <string name="episode_filter_unplayed">Belum diputar</string>
+    <string name="episode_filter_in_progress">Sedang diputar</string>
+    <string name="episode_filter_played">Sudah diputar</string>
+    <string name="episode_filter_none">Tidak ada episode di filter ini.</string>
 </resources>

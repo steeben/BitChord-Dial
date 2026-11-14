@@ -24,6 +24,11 @@
     <string name="choose_lyrics_provider">Wybierz źródło tekstów</string>
     <string name="clear">Wyczyść</string>
     <string name="close_lyrics">Zamknij teksty</string>
+    <string name="comments">Komentarze</string>
+    <string name="comments_off">Komentarze są wyłączone</string>
+    <string name="comments_unavailable">Nie można wczytać komentarzy</string>
+    <string name="more_comments">Więcej komentarzy</string>
+    <string name="no_comments">Brak komentarzy</string>
     <string name="data_saver">Data-Saver</string>
     <string name="decrease_lyrics_offset">Decrease lyrics offset</string>
     <string name="downgraded_from">↓ z %1$s</string>

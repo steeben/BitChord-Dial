@@ -1164,9 +1164,18 @@ private fun AndroidMusicVideoCanvas(videoId: String, spec: CanvasVideoSpec, modi
     val wipe = remember { Animatable(1f) }
     LaunchedEffect(placeholder != null, rendered) {
         if (placeholder == null) return@LaunchedEffect
-        // Held under the live picture for its first moment, then let go; and
-        // given up on if the picture is not coming back.
-        delay(if (rendered) PLACEHOLDER_FADE_MS else MUSIC_VIDEO_PLACEHOLDER_WAIT_MS)
+        // Let go as soon as the live picture is up under it, and given up on
+        // if the picture is not coming back. Not held the clip's 700 ms: while
+        // this frame stood in, the progressive blur under the player's credits
+        // did not take the video, and it came in all at once after the player
+        // had finished opening. [rendered] already means a frame was drawn to
+        // this view, so two frames are enough for it to be on screen.
+        if (rendered) {
+            withFrameMillis { }
+            withFrameMillis { }
+        } else {
+            delay(MUSIC_VIDEO_PLACEHOLDER_WAIT_MS)
+        }
         placeholder = null
     }
     LaunchedEffect(rendered, placeholder != null) {
@@ -1231,7 +1240,31 @@ private fun AndroidMusicVideoCanvas(videoId: String, spec: CanvasVideoSpec, modi
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .matchParentSize()
-                .graphicsLayer { this.alpha = currentPresentationAlpha() },
+                .graphicsLayer {
+                    this.alpha = currentPresentationAlpha()
+                    // Offscreen so the fade below erases the frame rather
+                    // than whatever is drawn behind it.
+                    compositingStrategy = CompositingStrategy.Offscreen
+                }
+                // The banner's bottom fade, as the frame below puts it on the
+                // live picture. Left off, a podcast episode's video came back
+                // with a hard bottom edge as the player opened, until the live
+                // picture took over and the fade popped in.
+                .drawWithContent {
+                    drawContent()
+                    val fade = spec.bottomFade
+                    val endY = (spec.bottomFadeEndPx ?: size.height).coerceIn(0f, size.height)
+                    if (fade > 0.001f && endY > 0f) {
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(Color.Black, Color.Transparent),
+                                startY = endY * (1f - fade.coerceAtMost(1f)),
+                                endY = endY,
+                            ),
+                            blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
+                        )
+                    }
+                },
         )
     }
     AndroidView(
@@ -1264,11 +1297,16 @@ private fun AndroidMusicVideoCanvas(videoId: String, spec: CanvasVideoSpec, modi
         update = { frame ->
             val view = frame.getChildAt(0) as TextureView
             view.alpha = alpha * spec.presentationAlpha()
-            // Always cropped to cover: the video is the whole screen's backdrop.
+            // Always cropped to cover: the video is the whole screen's
+            // backdrop, or a podcast episode's picture in the cover's place.
             if (frame.applied.transformDiffers(engineAspect, CanvasContentMode.CROP, false, view.width, view.height)) {
                 view.applyContentTransform(engineAspect, CanvasContentMode.CROP, false)
             }
             frame.wipe = wipe.value
+            // The banner's dissolve into the backdrop, for an episode's picture
+            // that runs as the banner. None is asked for under the whole screen.
+            frame.fadeFraction = spec.bottomFade
+            frame.fadeEndPx = spec.bottomFadeEndPx
         },
         onRelease = { frame ->
             if (textureView === frame.getChildAt(0)) textureView = null

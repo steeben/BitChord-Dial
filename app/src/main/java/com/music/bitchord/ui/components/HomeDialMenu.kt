@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.R
+import com.music.bitchord.data.podcasts.PodcastSource
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.CustomizationSettings
 import com.music.bitchord.data.settings.SpeedDialSource
@@ -103,6 +104,66 @@ fun HomeDialMenu(
                     )
                 }
             }
+        }
+    }
+}
+
+/**
+ * What the Podcasts page's "…" button opens, on the same glass as Home's:
+ * the settings of its dial that it shares with Home's dials (the grid, the
+ * tile names and the pin badges), and its own: whose recommended shows fill
+ * it (offered while a Spotify account is signed in) and the "Episodes for
+ * later" tile. Applied as they are touched.
+ */
+@Composable
+fun PodcastsDialMenu(
+    visible: Boolean,
+    hazeState: HazeState,
+    onDismiss: () -> Unit,
+) {
+    val rows by CustomizationSettings.speedDialRows.collectAsStateWithLifecycle()
+    val pinIcon by CustomizationSettings.dialPinIcon.collectAsStateWithLifecycle()
+    val labels by CustomizationSettings.dialLabels.collectAsStateWithLifecycle()
+    val episodesForLater by CustomizationSettings.podcastEpisodesForLater.collectAsStateWithLifecycle()
+    val source by CustomizationSettings.podcastSource.collectAsStateWithLifecycle()
+    // Spotify is a choice only while a Spotify account is signed in.
+    val spotifyToken by AppSettings.spotifySpdcToken.collectAsStateWithLifecycle()
+    val sources = PodcastSource.choices(spotifyToken.isNotBlank())
+    GlassMenuPanel(visible = visible, hazeState = hazeState, onDismiss = onDismiss) {
+        Column(Modifier.widthIn(min = 280.dp, max = 340.dp)) {
+            if (sources.size > 1) {
+                MenuHeading(stringResource(R.string.podcast_source))
+                SegmentedControl(
+                    options = sources.map { choice ->
+                        stringResource(
+                            when (choice) {
+                                PodcastSource.YOUTUBE -> R.string.speed_dial_source_youtube
+                                PodcastSource.SPOTIFY -> R.string.spotify
+                                PodcastSource.BOTH -> R.string.podcast_source_both
+                            },
+                        )
+                    },
+                    selectedIndex = sources.indexOf(source.effective(spotifyToken.isNotBlank())),
+                    onSelect = { CustomizationSettings.setPodcastSource(sources[it]) },
+                    glass = true,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp),
+                )
+            }
+            MenuHeading(stringResource(R.string.speed_dial_grid))
+            SegmentedControl(
+                options = listOf("3 × 3", "3 × 4"),
+                selectedIndex = rows - 3,
+                onSelect = { CustomizationSettings.setSpeedDialRows(it + 3) },
+                glass = true,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp),
+            )
+            DialSwitch(
+                stringResource(R.string.episodes_for_later),
+                episodesForLater,
+                CustomizationSettings::setPodcastEpisodesForLater,
+            )
+            DialSwitch(stringResource(R.string.dial_labels_default), labels, CustomizationSettings::setDialLabels)
+            DialSwitch(stringResource(R.string.dial_pin_icon), pinIcon, CustomizationSettings::setDialPinIcon)
         }
     }
 }

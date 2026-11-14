@@ -38,6 +38,39 @@ class SpotifyLibraryTest {
     }
 
     @Test
+    fun recommendedShowsAreTheShowsOfTheHomePagesEpisodes_eachOnce() {
+        fun episode(name: String, show: String, showName: String) =
+            """{"content":{"__typename":"EpisodeOrChapterResponseWrapper","data":{"__typename":"Episode",
+              "name":"$name","uri":"spotify:episode:$name",
+              "podcastV2":{"data":{"__typename":"Podcast","name":"$showName","uri":"spotify:show:$show",
+                "publisher":{"name":"Publisher of $showName"},
+                "coverArt":{"sources":[{"url":"https://img/$show/64"},{"url":"https://img/$show/640"}]}}}}}}"""
+        val root = json.parseToJsonElement(
+            """
+            {"data":{"home":{"sectionContainer":{"sections":{"items":[
+              {"data":{"title":{"transformedLabel":"Your top mixes"}},
+               "sectionItems":{"items":[${card("m1", "Chill Mix")}]}},
+              {"data":{"title":{"transformedLabel":"Episodes you might like"}},
+               "sectionItems":{"items":[${episode("e1", "s1", "Show One")},${episode("e2", "s2", "Show Two")},
+                 ${episode("e3", "s1", "Show One")}]}},
+              {"data":{"title":{"transformedLabel":"Shows to try"}},
+               "sectionItems":{"items":[{"content":{"data":{"__typename":"Podcast","name":"Show Three",
+                 "uri":"spotify:show:s3","coverArt":{"sources":[]}}}}]}}
+            ]}}}}}
+            """.trimIndent(),
+        ).jsonObject
+
+        val shows = parseHomeShows(root)
+
+        assertEquals(listOf("s1", "s2", "s3"), shows.map { it.id })
+        assertEquals("Show One", shows[0].name)
+        assertEquals("Publisher of Show One", shows[0].publisher)
+        assertEquals("https://img/s1/640", shows[0].imageUrl)
+        assertNull(shows[2].publisher)
+        assertNull(shows[2].imageUrl)
+    }
+
+    @Test
     fun aShelfAskedForOnItsOwnGivesItsPlaylists() {
         val root = json.parseToJsonElement(
             """
@@ -142,5 +175,28 @@ class SpotifyLibraryTest {
             120 to listOf("u1" to "spotify:track:a", "u2" to "spotify:track:b"),
             parsePlaylistHead(root),
         )
+    }
+
+    @Test
+    fun searchShowsAreTheSearchsPodcasts_eachOnce() {
+        fun show(id: String, name: String) =
+            """{"__typename":"PodcastResponseWrapper","data":{"__typename":"Podcast","name":"$name",
+              "uri":"spotify:show:$id","publisher":{"name":"Publisher of $name"},
+              "coverArt":{"sources":[{"url":"https://img/$id/64"},{"url":"https://img/$id/640"}]}}}"""
+        val root = json.parseToJsonElement(
+            """
+            {"data":{"searchV2":{
+              "tracksV2":{"items":[]},
+              "podcasts":{"items":[${show("s1", "Show One")},
+                {"__typename":"AudiobookResponseWrapper","data":{"__typename":"Audiobook","name":"A book","uri":"spotify:show:b1"}},
+                ${show("s2", "Show Two")},${show("s1", "Show One")}]}
+            }}}
+            """.trimIndent(),
+        ).jsonObject
+        val shows = parseSearchShows(root)
+        assertEquals(listOf("s1", "s2"), shows.map { it.id })
+        assertEquals("Show One", shows.first().name)
+        assertEquals("Publisher of Show One", shows.first().publisher)
+        assertEquals(emptyList(), parseSearchShows(json.parseToJsonElement("""{"data":{"searchV2":{}}}""").jsonObject))
     }
 }

@@ -24,6 +24,11 @@
     <string name="choose_lyrics_provider">Escolher provedor de letras</string>
     <string name="clear">Limpar</string>
     <string name="close_lyrics">Fechar letras</string>
+    <string name="comments">Comentários</string>
+    <string name="comments_off">Os comentários estão desativados</string>
+    <string name="comments_unavailable">Não é possível carregar os comentários</string>
+    <string name="more_comments">Mais comentários</string>
+    <string name="no_comments">Sem comentários</string>
     <string name="data_saver">Data-Saver</string>
     <string name="decrease_lyrics_offset">Decrease lyrics offset</string>
     <string name="downgraded_from">↓ de %1$s</string>

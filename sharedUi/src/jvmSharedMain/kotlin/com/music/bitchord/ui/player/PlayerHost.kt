@@ -9,6 +9,7 @@ import com.music.bitchord.data.listentogether.PartyMember
 import com.music.bitchord.data.lyrics.LyricLine
 import com.music.bitchord.data.lyrics.LyricsSource
 import com.music.bitchord.data.model.Song
+import com.music.bitchord.data.model.isEpisode
 import com.music.bitchord.data.settings.AudioQuality
 import com.music.bitchord.data.settings.LastPlayerScreen
 import com.music.bitchord.data.settings.SmartAnalysis
@@ -176,9 +177,12 @@ internal fun videoQualityLabel(height: Int): String = when {
     else -> "${height}p"
 }
 
-/** Whether [song]'s picture can be shown here — a music video, on a platform that plays one. */
+/**
+ * Whether [song]'s picture can be shown here — a music video or a podcast
+ * episode, on a platform that plays one.
+ */
 internal fun showsMusicVideo(song: Song): Boolean =
-    song.isVideo && PlayerPlatform.host.musicVideoSupported
+    (song.isVideo || song.isEpisode) && PlayerPlatform.host.musicVideoSupported
 
 /** @see PlayerHost.MusicVideo */
 @Composable

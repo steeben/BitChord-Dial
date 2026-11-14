@@ -35,6 +35,15 @@
     <string name="audio_files_on_device">Pliki audio na urządzeniu</string>
     <string name="on_device">Na urządzeniu</string>
     <string name="playlists">Playlisty</string>
+    <string name="podcasts">Podcasty</string>
+    <string name="podcasts_dial_menu">Opcje podcastów</string>
+    <string name="podcast">Podcast</string>
+    <string name="read_more">Czytaj więcej</string>
+    <string name="about_podcast">O podcaście</string>
+    <string name="new_episode">Nowy odcinek</string>
+    <string name="episodes_for_later">Odcinki na później</string>
+    <string name="podcast_source">Polecane programy</string>
+    <string name="podcast_source_both">Oba</string>
     <string name="new_playlist">Nowa playlista</string>
     <string name="saved_to_youtube_music">Zapisano do YouTube Music</string>
     <string name="sign_in">Zaloguj</string>
@@ -1503,4 +1512,19 @@
     <string name="old_app_notice_body">Ustawienia, biblioteka, historia słuchania i logowania ze starej aplikacji nie przeniosą się same. W starej aplikacji otwórz Ustawienia, potem Twoje dane, i stuknij Wyeksportuj dane. Następnie stuknij tutaj Importuj dane i wybierz ten plik. Trzeba będzie zalogować się ponownie.</string>
     <string name="old_app_notice_take_me_there">Zabierz mnie tam</string>
     <string name="old_app_notice_got_it">Rozumiem</string>
+    <string name="episode_info">Informacje</string>
+    <string name="episode_play_video">Odtwórz wideo</string>
+    <string name="search_podcasts_hint">Szukaj podcastów</string>
+    <string name="podcast_search_hint">Szukaj audycji i odcinków.</string>
+    <string name="podcast_search_library_hint">Przeszukaj obserwowane audycje, audycje na tarczy i odcinki na później.</string>
+    <string name="podcast_search_failed">Nie udało się wyszukać. Spróbuj ponownie.</string>
+    <string name="podcast_search_none">Brak audycji i odcinków dla „%1$s”.</string>
+    <string name="podcast_search_shows">Audycje</string>
+    <string name="podcast_search_episodes">Odcinki</string>
+    <string name="episode_filter">Filtruj odcinki</string>
+    <string name="episode_filter_all">Wszystkie</string>
+    <string name="episode_filter_unplayed">Nieodtworzone</string>
+    <string name="episode_filter_in_progress">W trakcie</string>
+    <string name="episode_filter_played">Odtworzone</string>
+    <string name="episode_filter_none">Brak odcinków w tym filtrze.</string>
 </resources>

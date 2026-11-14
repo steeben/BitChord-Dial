@@ -32,6 +32,15 @@
     <string name="audio_files_on_device">Tệp âm thanh trên thiết bị</string>
     <string name="on_device">Trên thiết bị</string>
     <string name="playlists">Danh sách phát</string>
+    <string name="podcasts">Podcast</string>
+    <string name="podcasts_dial_menu">Tùy chọn podcast</string>
+    <string name="podcast">Podcast</string>
+    <string name="read_more">Xem thêm</string>
+    <string name="about_podcast">Về podcast</string>
+    <string name="new_episode">Tập mới</string>
+    <string name="episodes_for_later">Tập để nghe sau</string>
+    <string name="podcast_source">Chương trình đề xuất</string>
+    <string name="podcast_source_both">Cả hai</string>
     <string name="new_playlist">Danh sách phát mới</string>
     <string name="saved_to_youtube_music">Đã lưu vào YouTube Music</string>
     <string name="sign_in">Đăng nhập</string>
@@ -1380,4 +1389,19 @@
     <string name="old_app_notice_body">Cài đặt, thư viện, lịch sử nghe và đăng nhập từ ứng dụng cũ không tự chuyển sang. Trong ứng dụng cũ, mở Cài đặt, rồi Dữ liệu của bạn, và chạm Xuất dữ liệu. Sau đó chạm Nhập dữ liệu ở đây và chọn tệp đó. Bạn sẽ cần đăng nhập lại.</string>
     <string name="old_app_notice_take_me_there">Đưa tôi đến đó</string>
     <string name="old_app_notice_got_it">Đã hiểu</string>
+    <string name="episode_info">Thông tin</string>
+    <string name="episode_play_video">Phát video</string>
+    <string name="search_podcasts_hint">Tìm podcast</string>
+    <string name="podcast_search_hint">Tìm chương trình và tập.</string>
+    <string name="podcast_search_library_hint">Tìm trong các chương trình bạn theo dõi, chương trình trên dial và các tập để nghe sau.</string>
+    <string name="podcast_search_failed">Không tìm được. Hãy thử lại.</string>
+    <string name="podcast_search_none">Không có chương trình hoặc tập nào cho “%1$s”.</string>
+    <string name="podcast_search_shows">Chương trình</string>
+    <string name="podcast_search_episodes">Tập</string>
+    <string name="episode_filter">Lọc tập</string>
+    <string name="episode_filter_all">Tất cả</string>
+    <string name="episode_filter_unplayed">Chưa phát</string>
+    <string name="episode_filter_in_progress">Đang nghe dở</string>
+    <string name="episode_filter_played">Đã phát</string>
+    <string name="episode_filter_none">Không có tập nào trong bộ lọc này.</string>
 </resources>

@@ -10,6 +10,7 @@ import com.music.bitchord.data.model.TopPick
 import com.music.bitchord.data.model.TopPickKind
 import com.music.bitchord.data.model.TopPickMood
 import com.music.bitchord.data.model.WatchTarget
+import com.music.bitchord.data.model.isEpisode
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -76,7 +77,9 @@ object TopPicks {
         val historyAsync = async { YtMusicRepository.recentHistory().getOrNull().orEmpty() }
         val mixesAsync = async { findMixes(homeShelves) }
 
-        val history = historyAsync.await()
+        // Music only: a podcast episode in the history would put its show's
+        // channel on the row as an artist, or start a radio off the episode.
+        val history = historyAsync.await().filterNot { it.isEpisode }
         val ranked = weightedSample(rankArtists(history, local.artists).take(ARTIST_POOL), ARTISTS)
         val pages = ranked.map { artist ->
             async { YtMusicRepository.artistLanding(artist.browseId!!).getOrNull() }

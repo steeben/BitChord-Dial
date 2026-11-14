@@ -24,6 +24,11 @@
     <string name="choose_lyrics_provider">가사 제공자 선택</string>
     <string name="clear">지우기</string>
     <string name="close_lyrics">가사 닫기</string>
+    <string name="comments">댓글</string>
+    <string name="comments_off">댓글이 사용 중지되었습니다</string>
+    <string name="comments_unavailable">댓글을 불러올 수 없습니다</string>
+    <string name="more_comments">댓글 더보기</string>
+    <string name="no_comments">댓글이 없습니다</string>
     <string name="data_saver">데이터 절약</string>
     <string name="decrease_lyrics_offset">가사 오프셋 줄이기</string>
     <string name="downgraded_from">%1$s에서 ↓</string>

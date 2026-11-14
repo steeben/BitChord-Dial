@@ -34,6 +34,15 @@
     <string name="audio_files_on_device">קובצי אודיו במכשיר</string>
     <string name="on_device">במכשיר</string>
     <string name="playlists">פלייליסטים</string>
+    <string name="podcasts">פודקאסטים</string>
+    <string name="podcasts_dial_menu">אפשרויות פודקאסטים</string>
+    <string name="podcast">פודקאסט</string>
+    <string name="read_more">קראו עוד</string>
+    <string name="about_podcast">אודות הפודקאסט</string>
+    <string name="new_episode">פרק חדש</string>
+    <string name="episodes_for_later">פרקים להמשך</string>
+    <string name="podcast_source">תוכניות מומלצות</string>
+    <string name="podcast_source_both">שניהם</string>
     <string name="new_playlist">פלייליסט חדש</string>
     <string name="saved_to_youtube_music">נשמר ל-YouTube Music</string>
     <string name="sign_in">התחברות</string>
@@ -1468,4 +1477,19 @@
     <string name="old_app_notice_body">ההגדרות, הספרייה, היסטוריית ההאזנה וההתחברויות מהאפליקציה הישנה לא עוברים מעצמם. באפליקציה הישנה פתחו הגדרות, ואז הנתונים שלך, והקישו על ייצוא נתונים. אחר כך הקישו כאן על ייבוא נתונים ובחרו את הקובץ. תצטרכו להתחבר מחדש.</string>
     <string name="old_app_notice_take_me_there">קח אותי לשם</string>
     <string name="old_app_notice_got_it">הבנתי</string>
+    <string name="episode_info">מידע</string>
+    <string name="episode_play_video">הפעלת וידאו</string>
+    <string name="search_podcasts_hint">חיפוש פודקאסטים</string>
+    <string name="podcast_search_hint">חפשו תוכניות ופרקים.</string>
+    <string name="podcast_search_library_hint">חפשו בתוכניות שאתם עוקבים אחריהן, בתוכניות בחוגה ובפרקים לשמיעה מאוחרת.</string>
+    <string name="podcast_search_failed">לא ניתן לחפש. נסו שוב.</string>
+    <string name="podcast_search_none">אין תוכניות או פרקים עבור “%1$s”.</string>
+    <string name="podcast_search_shows">תוכניות</string>
+    <string name="podcast_search_episodes">פרקים</string>
+    <string name="episode_filter">סינון פרקים</string>
+    <string name="episode_filter_all">הכול</string>
+    <string name="episode_filter_unplayed">לא הושמעו</string>
+    <string name="episode_filter_in_progress">בהשמעה</string>
+    <string name="episode_filter_played">הושמעו</string>
+    <string name="episode_filter_none">אין פרקים במסנן הזה.</string>
 </resources>

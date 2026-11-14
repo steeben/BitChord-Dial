@@ -178,6 +178,7 @@ import com.music.bitchord.data.canvas.CanvasSource
 import com.music.bitchord.data.canvas.AnimatedArtKind
 import com.music.bitchord.data.canvas.kind
 import com.music.bitchord.data.AudioOnlyVideos
+import com.music.bitchord.data.EpisodeVideo
 import com.music.bitchord.data.CanvasAudioFixes
 import com.music.bitchord.data.VideoCanvases
 import com.music.bitchord.data.lyrics.LyricLine
@@ -190,6 +191,7 @@ import com.music.bitchord.data.model.ROW_ART_PX
 import com.music.bitchord.data.model.PLAYER_ART_PX
 import com.music.bitchord.data.model.artworkAt
 import com.music.bitchord.data.model.Song
+import com.music.bitchord.data.model.isEpisode
 import dev.chrisbanes.haze.HazeInputScale
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
@@ -1168,6 +1170,8 @@ fun NowPlayingScreen(
     var showCast by remember { mutableStateOf(false) }
     var showAudioOutput by remember { mutableStateOf(false) }
     var showLyricsProviders by remember { mutableStateOf(false) }
+    // A podcast episode's comments, which its lyrics button opens — see [EpisodeCommentsSheet].
+    var showComments by remember { mutableStateOf(false) }
     // Gated on the Bluetooth permission the first time — see [rememberOutputPicker].
     val openAudioOutput = rememberOutputPicker { showAudioOutput = true }
     // Listening in a party whose host has taken the controls: the transport
@@ -1182,7 +1186,8 @@ fun NowPlayingScreen(
 
     val syncedLyricsEnabled by PlayerSettings.syncedLyrics.collectAsStateWithLifecycle()
     // Off in Settings or marked instrumental, the current-line strip goes.
-    val lyricStripShown = syncedLyricsEnabled && !lyricsInstrumental
+    // Nor has a podcast episode a line to show: no lyrics are looked for it.
+    val lyricStripShown = syncedLyricsEnabled && !lyricsInstrumental && !song.isEpisode
     val lyricsOffsetMs by PlayerSettings.lyricsOffsetMs.collectAsStateWithLifecycle()
     // A lambda, not a value: read by the lyric strip and panel in scopes of
     // their own, so a tick recomposes them and not the player around them.
@@ -1203,7 +1208,10 @@ fun NowPlayingScreen(
     val mixing by PlayerSettings.smartMixInProgress.collectAsStateWithLifecycle()
     // A music video plays its own picture where the sleeve is — see
     // [MusicVideoSurface] — and takes the place of any animated cover.
-    val musicVideo = showsMusicVideo(song) && song.videoId !in audioOnlyVideos
+    // An episode plays its video only while the "…" menu's switch is on.
+    val episodeVideoOn by EpisodeVideo.on.collectAsStateWithLifecycle()
+    val musicVideo = showsMusicVideo(song) && song.videoId !in audioOnlyVideos &&
+        (song.isVideo || !song.isEpisode || episodeVideoOn)
     val restoredPlayerScreen = remember { PlayerSettings.lastPlayerScreen.value }
     var queueOpen by remember {
         mutableStateOf(restoredPlayerScreen == LastPlayerScreen.QUEUE)
@@ -1227,9 +1235,19 @@ fun NowPlayingScreen(
     // behind the landscape player, which draws it aside for them — see
     // [LandscapePlayerLayout]'s videoLyrics. Whatever Appearance says about
     // video as artwork: this is the video being watched, not standing in.
-    val videoBesideLyrics = musicVideo && landscapeLayout && lyricsOpen
-    val videoAsCanvas = musicVideo &&
-        ((playerFillsWindow(windowWidth) && videoArtAllowed) || videoBesideLyrics)
+    // A podcast episode's picture is neither of those. Upright it plays where
+    // the cover is, cropped to the cover's own shape (the card, or the banner
+    // when the artwork runs full bleed): the sleeve's clip, as an animated
+    // cover is. Sideways it is the whole screen, fitted, under the video
+    // player's own controls. Whatever Appearance says about video as artwork:
+    // an episode's picture is the episode.
+    val episodeVideo = musicVideo && song.isEpisode
+    val videoBesideLyrics = musicVideo && !episodeVideo && landscapeLayout && lyricsOpen
+    val videoAsCanvas = musicVideo && if (episodeVideo) {
+        !landscapeLayout
+    } else {
+        (playerFillsWindow(windowWidth) && videoArtAllowed) || videoBesideLyrics
+    }
     val videoMode = musicVideo && !videoAsCanvas
     val clipBehindPlayer = playerFillsWindow(windowWidth) || landscapeLayout
     // Fixes the listener made from the ⋯ menu — see [CanvasAudioFixes].
@@ -1283,10 +1301,12 @@ fun NowPlayingScreen(
     val holdClip = videoStandInWanted && clipBehindPlayer && !videoSearched
     val canvas = if (videoAsCanvas || pictureVideoId != null) {
         val pictureId = pictureVideoId ?: song.videoId
-        remember(pictureId) {
+        remember(pictureId, episodeVideo) {
             CanvasArtwork(
                 url = "$MUSIC_VIDEO_CANVAS_SCHEME$pictureId",
-                source = CanvasSource.SPOTIFY,
+                // Spotify's is the clip that runs under the whole screen; an
+                // episode's picture stays in the sleeve.
+                source = if (episodeVideo) CanvasSource.OTHER else CanvasSource.SPOTIFY,
                 musicVideoId = pictureId,
             )
         }
@@ -1547,9 +1567,14 @@ fun NowPlayingScreen(
     // open but the half-player was not, so every trip into lyrics briefly
     // started an exit animation and reversed it on the following frame.
     val openLyrics: () -> Unit = {
-        lyricsControlsOpen = true
-        lyricsOpen = true
-        queueOpen = false
+        if (song.isEpisode) {
+            // An episode has no lyrics to open: its comments are what there is to read.
+            showComments = true
+        } else {
+            lyricsControlsOpen = true
+            lyricsOpen = true
+            queueOpen = false
+        }
     }
     val closeLyrics: () -> Unit = {
         lyricsControlsOpen = false
@@ -1557,6 +1582,14 @@ fun NowPlayingScreen(
     }
     val toggleLyrics: () -> Unit = {
         if (lyricsOpen) closeLyrics() else openLyrics()
+    }
+    // The lyrics a song left open are not an episode's, and its comments are not a song's.
+    LaunchedEffect(song.videoId) {
+        if (song.isEpisode) {
+            if (lyricsOpen) closeLyrics()
+        } else {
+            showComments = false
+        }
     }
     val toggleQueue: () -> Unit = {
         val opening = !queueOpen
@@ -2384,6 +2417,7 @@ fun NowPlayingScreen(
             repeatMode = repeatMode,
             autoplayEnabled = autoplayEnabled,
             onToggleLyrics = toggleLyrics,
+            comments = song.isEpisode,
             onToggleQueue = toggleQueue,
             onToggleShuffle = onToggleShuffle,
             onCycleRepeat = onCycleRepeat,
@@ -2393,7 +2427,7 @@ fun NowPlayingScreen(
             onOpenListenTogetherMembers = openListenTogetherMembers,
             // Lyrics load whether or not the strip is shown, so there is
             // always a provider to choose between.
-            onChooseLyricsProvider = { showLyricsProviders = true },
+            onChooseLyricsProvider = if (song.isEpisode) null else ({ showLyricsProviders = true }),
         )
         // Keep the current output caption visible in every state but the
         // compact controls under the queue and lyrics.
@@ -2430,6 +2464,13 @@ fun NowPlayingScreen(
                 // glass sees the player, not this drawer.
                 handlesBack = !showAudioPipeline && !showCast,
                 hidden = showAudioPipeline || showCast,
+            )
+        }
+        if (showComments && song.isEpisode) {
+            EpisodeCommentsSheet(
+                hazeState = playerHaze,
+                videoId = song.videoId,
+                onDismiss = { showComments = false },
             )
         }
         if (showLyricsProviders) {
@@ -2669,6 +2710,10 @@ fun NowPlayingScreen(
                 artRequest = art.request,
                 rendered = videoRendered,
                 onRenderedChanged = { videoRendered = it },
+                // An episode can be sound alone, over one picture: then its
+                // cover is what is watched, and it is dimmed a little under
+                // the controls as the picture is.
+                episode = song.isEpisode,
                 onExitFullscreen = screenOrientation::portrait,
                 scrubber = {
                     PlayerScrubber(

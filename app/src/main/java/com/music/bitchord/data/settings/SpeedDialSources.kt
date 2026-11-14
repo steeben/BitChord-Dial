@@ -2,6 +2,7 @@ package com.music.bitchord.data.settings
 
 import com.music.bitchord.data.model.HomeShelf
 import com.music.bitchord.data.model.ShelfItem
+import com.music.bitchord.data.model.isPodcast
 
 /**
  * Where the speed dial's tiles after the pins come from: what was played
@@ -74,13 +75,18 @@ object SpeedDialPicker {
         quickPicks: List<ShelfItem> = emptyList(),
         size: Int,
     ): DialPicks {
-        if (source == SpeedDialSource.HISTORY) return DialPicks(history, emptySet())
+        // The dial is music. Podcast shows and episodes are on the Podcasts
+        // page's dial, so they take no tile here, and the fill goes on past them.
+        if (source == SpeedDialSource.HISTORY) return DialPicks(history.filterNot { it.isPodcast }, emptySet())
         val dial = ArrayList<ShelfItem>()
         val seen = HashSet<String>()
         // YouTube's own dial whole; the fill stops at the dial's size.
-        official.forEach { item -> item.speedDialId?.let { if (seen.add(it)) dial += item } }
+        official.forEach { item ->
+            if (!item.isPodcast) item.speedDialId?.let { if (seen.add(it)) dial += item }
+        }
         listOf(listenAgain, recents, forgotten, quickPicks, history).forEach { pool ->
             pool.forEach { item ->
+                if (item.isPodcast) return@forEach
                 val id = item.speedDialId ?: return@forEach
                 if (dial.size < size && seen.add(id)) dial += item
             }
