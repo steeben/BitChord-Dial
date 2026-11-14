@@ -11,7 +11,6 @@ class PerformanceModeTest {
     private val stock = EffectSettings(
         appStyle = AppStyle.GLASS,
         reduceAnimation = false,
-        highRefreshRate = false,
         ambientBackground = true,
         dialTileStyle = DialTileStyle.GLASS,
         lyricsBlur = true,
@@ -29,8 +28,18 @@ class PerformanceModeTest {
         assertNull(EffectSettings.decode(null))
         assertNull(EffectSettings.decode(""))
         assertNull(EffectSettings.decode("GLASS;false;false"))
+        assertNull(EffectSettings.decode("MARBLE;false;true;GLASS;true;true"))
+        assertNull(EffectSettings.decode("GLASS;no;true;GLASS;true;true"))
+    }
+
+    @Test
+    fun `what a build with the refresh rate in the list kept is still read`() {
+        // Third of seven then. The refresh rate is no longer Performance
+        // mode's to put back, so the field is passed over.
+        assertEquals(stock, EffectSettings.decode("GLASS;false;true;true;GLASS;true;true"))
+        assertEquals(stock, EffectSettings.decode("GLASS;false;false;true;GLASS;true;true"))
+        assertNull(EffectSettings.decode("GLASS;false;maybe;true;GLASS;true;true"))
         assertNull(EffectSettings.decode("MARBLE;false;false;true;GLASS;true;true"))
-        assertNull(EffectSettings.decode("GLASS;no;false;true;GLASS;true;true"))
     }
 
     @Test
@@ -56,21 +65,5 @@ class PerformanceModeTest {
     fun `settings that were already low cost stay low cost`() {
         val saved = stock.copy(appStyle = AppStyle.SOLID, reduceAnimation = true, dialTileStyle = DialTileStyle.NONE)
         assertEquals(saved, EffectSettings.restored(saved, EffectSettings.LOW_COST))
-    }
-
-    @Test
-    fun `the high refresh rate comes back with the full effects it had`() {
-        val saved = stock.copy(highRefreshRate = true)
-        assertEquals(saved, EffectSettings.restored(saved, EffectSettings.LOW_COST))
-    }
-
-    @Test
-    fun `the high refresh rate does not come back beside reduced effects`() {
-        // It goes with full effects only. Kept settings that pair it with
-        // Solid or Reduce animations give the effects, without the rate.
-        val solid = stock.copy(highRefreshRate = true, appStyle = AppStyle.SOLID)
-        assertEquals(false, EffectSettings.restored(solid, EffectSettings.LOW_COST).highRefreshRate)
-        val still = stock.copy(highRefreshRate = true, reduceAnimation = true)
-        assertEquals(false, EffectSettings.restored(still, EffectSettings.LOW_COST).highRefreshRate)
     }
 }

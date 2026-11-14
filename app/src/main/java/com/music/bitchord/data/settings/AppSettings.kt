@@ -448,13 +448,19 @@ object AppSettings {
     /** Freezes the main player's mesh gradient instead of letting it drift/crossfade. */
     val reduceAnimation = MutableStateFlow(false)
 
-    /** Requests a sustained high-refresh UI. Off keeps Android's automatic policy. */
+    /**
+     * Requests a sustained high-refresh UI. Off keeps Android's automatic
+     * policy. It is a request to the display and nothing else: the app style
+     * and Reduce animations are settings of their own and do not change it,
+     * nor it them.
+     */
     val highPerformanceMode = MutableStateFlow(false)
 
     /**
      * Performance mode: a preset that sets the settings in [EffectSettings]
      * to their low-cost values, and puts them back when it is turned off.
-     * Not to be confused with [highPerformanceMode], which asks for more.
+     * Not to be confused with [highPerformanceMode], which is the display's
+     * refresh rate and is not one of them.
      */
     val performanceMode = MutableStateFlow(false)
 
@@ -1065,10 +1071,6 @@ object AppSettings {
         lyricsOffsetMs.value = prefs.getInt(KEY_LYRICS_OFFSET_MS, 0)
             .coerceIn(MIN_LYRICS_OFFSET_MS, MAX_LYRICS_OFFSET_MS)
         translationLanguage.value = prefs.getString(KEY_TRANSLATION_LANGUAGE, "").orEmpty()
-        if (highPerformanceMode.value) {
-            reduceAnimation.value = false
-            reduceDynamicBlur.value = false
-        }
         animatedCanvas.value = prefs.getBoolean(KEY_ANIMATED_CANVAS, true)
         performanceMode.value = prefs.getBoolean(KEY_PERFORMANCE_MODE, false)
         keepHome.value = prefs.getBoolean(KEY_KEEP_HOME, !lowRamDevice)
@@ -1475,10 +1477,7 @@ object AppSettings {
 
     fun setReduceAnimation(value: Boolean) {
         reduceAnimation.value = value
-        if (value) highPerformanceMode.value = false
-        val editor = prefs.edit().putBoolean(KEY_REDUCE_ANIMATION, value)
-        if (value) editor.putBoolean(KEY_HIGH_PERFORMANCE_MODE, false)
-        editor.apply()
+        prefs.edit().putBoolean(KEY_REDUCE_ANIMATION, value).apply()
     }
 
     fun setStopOnTaskRemoved(value: Boolean) {
@@ -1513,10 +1512,7 @@ object AppSettings {
 
     fun setReduceDynamicBlur(value: Boolean) {
         reduceDynamicBlur.value = value
-        if (value) highPerformanceMode.value = false
-        val editor = prefs.edit().putBoolean(KEY_REDUCE_BLUR, value)
-        if (value) editor.putBoolean(KEY_HIGH_PERFORMANCE_MODE, false)
-        editor.apply()
+        prefs.edit().putBoolean(KEY_REDUCE_BLUR, value).apply()
     }
 
     /** Sets what the app's surfaces are made of: both switches behind [AppStyle] at once. */
@@ -1532,23 +1528,13 @@ object AppSettings {
 
     fun setHighPerformanceMode(value: Boolean) {
         highPerformanceMode.value = value
-        if (value) {
-            reduceAnimation.value = false
-            reduceDynamicBlur.value = false
-        }
-        val editor = prefs.edit().putBoolean(KEY_HIGH_PERFORMANCE_MODE, value)
-        if (value) {
-            editor.putBoolean(KEY_REDUCE_ANIMATION, false)
-            editor.putBoolean(KEY_REDUCE_BLUR, false)
-        }
-        editor.apply()
+        prefs.edit().putBoolean(KEY_HIGH_PERFORMANCE_MODE, value).apply()
     }
 
     /** The settings Performance mode is a preset over, as they stand now. */
     private fun effectSettings() = EffectSettings(
         appStyle = AppStyle.of(liquidGlass.value, reduceDynamicBlur.value),
         reduceAnimation = reduceAnimation.value,
-        highRefreshRate = highPerformanceMode.value,
         ambientBackground = CustomizationSettings.ambientBackground.value,
         dialTileStyle = CustomizationSettings.dialTileStyle.value,
         lyricsBlur = lyricsBlur.value,
@@ -1556,16 +1542,12 @@ object AppSettings {
     )
 
     private fun applyEffectSettings(target: EffectSettings) {
-        // First, and off: setting Solid or Reduce animations turns it off
-        // anyway, and turning it on last undoes neither.
-        if (!target.highRefreshRate) setHighPerformanceMode(false)
         setAppStyle(target.appStyle)
         setReduceAnimation(target.reduceAnimation)
         CustomizationSettings.setAmbientBackground(target.ambientBackground)
         CustomizationSettings.setDialTileStyle(target.dialTileStyle)
         setLyricsBlur(target.lyricsBlur)
         setAnimatedCanvas(target.animatedCanvas)
-        if (target.highRefreshRate) setHighPerformanceMode(true)
     }
 
     /**
