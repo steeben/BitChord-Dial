@@ -254,6 +254,10 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
             // the header is attached per request instead. See WebDavCoilAuth.
             .components {
                 add(WebDavCoilAuth())
+                // A video's picture is listed at 400x225; where it is drawn
+                // large, load a larger copy. Before LetterboxCrop, which
+                // then sees the address in use. See VideoThumbnailUpgrade.
+                add(com.music.bitchord.data.VideoThumbnailUpgrade())
                 // Video thumbnails come letterboxed; trim the bars so a
                 // square crop fills with picture. See LetterboxCrop.
                 add(com.music.bitchord.data.LetterboxCrop.Install())
