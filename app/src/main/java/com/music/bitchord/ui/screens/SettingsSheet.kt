@@ -1692,6 +1692,10 @@ fun SettingsScreen(
                     )
                 }
             }
+            val staticBackgroundTitle = stringResource(R.string.static_background)
+            row(staticBackgroundTitle, "background", "colour", "color", "ambient", "blobs", "animation", "still", "move") {
+                StaticBackgroundRow(staticBackgroundTitle)
+            }
             val disableHapticsTitle = stringResource(R.string.disable_haptics)
             row(disableHapticsTitle, "haptic", "vibration", "vibrate", "touch feedback", "buzz") {
                 DisableHapticsRow(title = disableHapticsTitle)

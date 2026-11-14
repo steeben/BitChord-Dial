@@ -265,6 +265,8 @@
     <string name="high_performance_battery_needed">Установите для использования батареи Dial значение «Без ограничений». Нажмите здесь, чтобы открыть настройки.</string>
     <string name="disable_haptics">Отключить виброотклик</string>
     <string name="disable_haptics_subtitle">Отключает все вибрации в Dial</string>
+    <string name="static_background">Статичные цвета фона</string>
+    <string name="static_background_subtitle">Останавливает движение цветов за страницами приложения</string>
     <string name="enable">Включить</string>
     <string name="activity">Активность</string>
     <string name="activity_competing">Соревнуется</string>

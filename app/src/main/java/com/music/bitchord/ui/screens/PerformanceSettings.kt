@@ -7,6 +7,7 @@ import android.os.PowerManager
 import android.provider.Settings
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.BubbleChart
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +27,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.R
 import com.music.bitchord.data.settings.AppSettings
+import com.music.bitchord.data.settings.CustomizationSettings
 import com.music.bitchord.ui.components.IosSwitch
 import com.music.bitchord.ui.icons.BitChordIcons
 
@@ -43,6 +45,23 @@ internal fun PerformanceModeRow(title: String) {
         subtitle = stringResource(if (on) R.string.performance_mode_on else R.string.performance_mode_subtitle),
         trailing = { IosSwitch(checked = on, onCheckedChange = AppSettings::setPerformanceMode) },
         onClick = { AppSettings.setPerformanceMode(!on) },
+    )
+}
+
+/**
+ * Performance's "Static background colours": the ambient background keeps its
+ * colours and stops drifting. It does nothing while the ambient background is
+ * off, or while Reduce animations already holds it still.
+ */
+@Composable
+internal fun StaticBackgroundRow(title: String) {
+    val on by CustomizationSettings.ambientStatic.collectAsStateWithLifecycle()
+    SettingsRow(
+        icon = Icons.Rounded.BubbleChart,
+        title = title,
+        subtitle = stringResource(R.string.static_background_subtitle),
+        trailing = { IosSwitch(checked = on, onCheckedChange = CustomizationSettings::setAmbientStatic) },
+        onClick = { CustomizationSettings.setAmbientStatic(!on) },
     )
 }
 

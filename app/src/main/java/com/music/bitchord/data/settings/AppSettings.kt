@@ -1547,6 +1547,7 @@ object AppSettings {
         dialTileStyle = CustomizationSettings.dialTileStyle.value,
         lyricsBlur = lyricsBlur.value,
         animatedCanvas = animatedCanvas.value,
+        disableHaptics = disableHaptics.value,
     )
 
     private fun applyEffectSettings(target: EffectSettings) {
@@ -1556,6 +1557,7 @@ object AppSettings {
         CustomizationSettings.setDialTileStyle(target.dialTileStyle)
         setLyricsBlur(target.lyricsBlur)
         setAnimatedCanvas(target.animatedCanvas)
+        setDisableHaptics(target.disableHaptics)
     }
 
     /**

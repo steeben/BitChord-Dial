@@ -250,6 +250,8 @@
     <string name="high_performance_battery_needed">Atur penggunaan baterai Dial ke Tidak Dibatasi. Ketuk di sini untuk membuka pengaturan.</string>
     <string name="disable_haptics">Nonaktifkan haptik</string>
     <string name="disable_haptics_subtitle">Menghentikan semua umpan balik getaran di Dial</string>
+    <string name="static_background">Warna latar belakang statis</string>
+    <string name="static_background_subtitle">Menghentikan gerakan warna di belakang halaman aplikasi</string>
     <string name="enable">Aktifkan</string>
     <string name="activity">Aktivitas</string>
     <string name="activity_competing">Berkompetisi</string>
