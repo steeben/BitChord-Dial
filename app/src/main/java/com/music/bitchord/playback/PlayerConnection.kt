@@ -299,6 +299,25 @@ fun songFromBundle(b: Bundle): Song {
     )
 }
 
+/**
+ * Waits until a track other than [previousId] is sounding, for at most
+ * [timeoutMs], and says whether one is. "Other than", not "this one": a music
+ * video is swapped for its song on the way in, under another id.
+ *
+ * Asked again every few frames rather than listened for: a listener has to be
+ * taken off on the app's thread, and a wait that times out is not on it.
+ */
+suspend fun Player.awaitSounding(previousId: String?, timeoutMs: Long): Boolean {
+    val until = android.os.SystemClock.elapsedRealtime() + timeoutMs
+    while (!(isPlaying && currentMediaItem?.mediaId != previousId)) {
+        if (android.os.SystemClock.elapsedRealtime() >= until) return false
+        delay(SOUNDING_POLL_MS)
+    }
+    return true
+}
+
+private const val SOUNDING_POLL_MS = 25L
+
 /** Flushes the current radio queue to disk before reporting that it started. */
 suspend fun MediaController.commitRadioQueue() {
     sendCustomCommand(

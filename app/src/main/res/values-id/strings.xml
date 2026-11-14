@@ -242,6 +242,10 @@
     <string name="filter_non_music_audio">Filter audio non-musik</string>
     <string name="filter_non_music_audio_subtitle">Menyembunyikan klip di bawah 30 detik, file WAV, catatan suara, rekaman, dan suara sistem</string>
     <string name="performance">Performa</string>
+    <string name="video_quality">Kualitas video</string>
+    <string name="video_quality_subtitle">Untuk video musik dan untuk video musik yang ditampilkan sebagai Canvas sebuah lagu. Kualitas maksimum memakai hingga 4K. Pilihan ini memakai jauh lebih banyak data dan baterai, dan bisa lambat pada ponsel yang lemah.</string>
+    <string name="video_quality_mobile">Data seluler</string>
+    <string name="video_quality_max">Kualitas maksimum</string>
     <string name="high_performance_mode">Mode performa tinggi</string>
     <string name="high_performance_subtitle">Menggunakan animasi dan blur penuh, serta meminta refresh rate layar yang lebih tinggi</string>
     <string name="high_performance_active">%1$d Hz diminta. Android dapat menurunkannya saat diperlukan.</string>

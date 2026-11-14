@@ -79,12 +79,26 @@ private val DIACRITICS = Regex("\\p{Mn}+")
  * contacts do.
  */
 fun indexSortKey(title: String): String {
+    SORT_KEYS[title]?.let { return it }
     val start = title.indexOfFirst { it.isLetterOrDigit() }
     val trimmed = if (start < 0) title else title.substring(start)
-    return java.text.Normalizer.normalize(trimmed, java.text.Normalizer.Form.NFD)
+    val key = java.text.Normalizer.normalize(trimmed, java.text.Normalizer.Form.NFD)
         .replace(DIACRITICS, "")
         .lowercase(Locale.ROOT)
+    if (SORT_KEYS.size >= SORT_KEYS_KEPT) SORT_KEYS.clear()
+    SORT_KEYS[title] = key
+    return key
 }
+
+/**
+ * The keys already worked out. A library page asks for each title's key
+ * several times over on the frame it opens (the sort, then the A-Z index's
+ * letters, then each tab's own sort), and a normalise and a regex for every
+ * title each time was a good part of that frame. Asked from the app's thread
+ * and from the one that groups the library ahead of it.
+ */
+private val SORT_KEYS = java.util.concurrent.ConcurrentHashMap<String, String>()
+private const val SORT_KEYS_KEPT = 8_000
 
 /**
  * Sorted by the [indexSortKey] of each item's [title], each key worked out once.

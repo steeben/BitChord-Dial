@@ -1,8 +1,10 @@
 name: Check
 
+# Runs for each pull request, and for each push to main (the latest release)
+# and to next (the changes for the subsequent release; test builds come from it).
 on:
   push:
-    branches: [main]
+    branches: [main, next]
   pull_request:
 
 concurrency:
@@ -57,24 +59,40 @@ jobs:
       # which made every scroll and launch feel laggier than it is. Release lint
       # is skipped: it stops on translation leftovers in the upstream strings.
       # arm64 only (-Parm64Only): it is the one APK the test builds are tried on.
+      # A pull request with the label "32-bit build" also gets the armeabi-v7a
+      # APK, for a phone with a 32-bit system. The label counts from the next push.
       - name: Build the dev APK
+        env:
+          WITH_32_BIT: ${{ contains(github.event.pull_request.labels.*.name, '32-bit build') }}
         run: |
           set -o pipefail
+          ABI_FLAG=-Parm64Only
+          if [ "$WITH_32_BIT" = "true" ]; then ABI_FLAG=-Pabis=arm64-v8a,armeabi-v7a; fi
           if [ -n "$SHARED_KEYSTORE" ]; then
-            ./gradlew assembleDevBenchmark -x lintVitalDevBenchmark -PnoBenchmarkSuffix -Parm64Only \
+            ./gradlew assembleDevBenchmark -x lintVitalDevBenchmark -PnoBenchmarkSuffix "$ABI_FLAG" \
               -Pandroid.injected.signing.store.file="$SHARED_KEYSTORE" \
               -Pandroid.injected.signing.store.password=android \
               -Pandroid.injected.signing.key.alias=androiddebugkey \
               -Pandroid.injected.signing.key.password=android 2>&1 | tee -a "$RUNNER_TEMP/gradle.log"
           else
-            ./gradlew assembleDevBenchmark -x lintVitalDevBenchmark -PnoBenchmarkSuffix -Parm64Only 2>&1 | tee -a "$RUNNER_TEMP/gradle.log"
+            ./gradlew assembleDevBenchmark -x lintVitalDevBenchmark -PnoBenchmarkSuffix "$ABI_FLAG" 2>&1 | tee -a "$RUNNER_TEMP/gradle.log"
           fi
 
       - name: Upload the dev APK
         uses: actions/upload-artifact@v4
         with:
           name: bitchord-dial-${{ github.sha }}
-          path: app/build/outputs/apk/dev/benchmark/*.apk
+          path: |
+            app/build/outputs/apk/dev/benchmark/*.apk
+            !app/build/outputs/apk/dev/benchmark/*armeabi-v7a*.apk
+          if-no-files-found: error
+
+      - name: Upload the 32-bit dev APK
+        if: contains(github.event.pull_request.labels.*.name, '32-bit build')
+        uses: actions/upload-artifact@v4
+        with:
+          name: dial-32-bit-${{ github.sha }}
+          path: app/build/outputs/apk/dev/benchmark/*armeabi-v7a*.apk
           if-no-files-found: error
 
       # Compiler errors and failed tasks as annotations, so they read on the

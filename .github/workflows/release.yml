@@ -84,6 +84,7 @@ jobs:
           LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
         run: |
           ./gradlew assembleDevBenchmark -x lintVitalDevBenchmark -PnoBenchmarkSuffix \
+            -Pabis=arm64-v8a,armeabi-v7a \
             -Pandroid.injected.signing.store.file="$SHARED_KEYSTORE" \
             -Pandroid.injected.signing.store.password=android \
             -Pandroid.injected.signing.key.alias=androiddebugkey \
@@ -94,13 +95,28 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          APK=$(ls app/build/outputs/apk/dev/benchmark/*.apk | head -n1)
-          cp "$APK" "Dial-${TAG}.apk"
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "Dial-${TAG}.apk" --clobber
-          else
-            gh release create "$TAG" "Dial-${TAG}.apk" \
+          # One APK for each ABI. 64-bit phones take arm64-v8a. Phones with a
+          # 32-bit system (many Android Go phones) can only install armeabi-v7a.
+          # arm64-v8a goes up first and sorts first: the update check of 1.7.1
+          # and older takes the first APK of a release, and those are all
+          # arm64 installs.
+          OUT=app/build/outputs/apk/dev/benchmark
+          ASSETS=()
+          for ABI in arm64-v8a armeabi-v7a; do
+            APK=$(ls "$OUT"/*"$ABI"*.apk 2>/dev/null | head -n1)
+            if [ -z "$APK" ]; then
+              echo "::error::No $ABI APK in $OUT"
+              exit 1
+            fi
+            cp "$APK" "Dial-${TAG}-${ABI}.apk"
+            ASSETS+=("Dial-${TAG}-${ABI}.apk")
+          done
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" \
               --target "$GITHUB_SHA" \
               --title "Dial ${TAG#v}" \
               --notes-file RELEASE_NOTES.md
           fi
+          for ASSET in "${ASSETS[@]}"; do
+            gh release upload "$TAG" "$ASSET" --clobber
+          done
