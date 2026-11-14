@@ -325,7 +325,8 @@ fun SettingsScreen(
     val signatureApiEnabled by AppSettings.signatureApiEnabled.collectAsStateWithLifecycle()
     val signatureApiUrl by AppSettings.signatureApiUrl.collectAsStateWithLifecycle()
     val canvasOverCellular by AppSettings.canvasOverCellular.collectAsStateWithLifecycle()
-    val videoQuality by AppSettings.videoQuality.collectAsStateWithLifecycle()
+    val videoQualityWifi by AppSettings.videoQualityWifi.collectAsStateWithLifecycle()
+    val videoQualityMobile by AppSettings.videoQualityMobile.collectAsStateWithLifecycle()
     val fullBleedArtwork by AppSettings.fullBleedArtwork.collectAsStateWithLifecycle()
     val legacyMeshGradient by AppSettings.legacyMeshGradient.collectAsStateWithLifecycle()
     val syncedLyrics by AppSettings.syncedLyrics.collectAsStateWithLifecycle()
@@ -1725,29 +1726,34 @@ fun SettingsScreen(
                 }
             }
             val videoQualityTitle = stringResource(R.string.video_quality)
-            row(videoQualityTitle, "music video", "canvas", "resolution", "480p", "1080p", "4k", "hd", "data") {
+            val videoQualityOptions = listOf(
+                stringResource(R.string.video_quality_480),
+                stringResource(R.string.video_quality_1080),
+                stringResource(R.string.video_quality_max),
+            )
+            row(videoQualityTitle, "music video", "canvas", "resolution", "480p", "1080p", "4k", "hd", "data", "wifi", "mobile") {
                 SettingsRow(
                     icon = Icons.Rounded.Videocam,
                     title = videoQualityTitle,
                     subtitle = stringResource(R.string.video_quality_subtitle),
                 )
-                SegmentedControl(
-                    options = listOf(
-                        stringResource(R.string.video_quality_auto),
-                        stringResource(R.string.video_quality_480),
-                        stringResource(R.string.video_quality_1080),
-                        stringResource(R.string.video_quality_max),
-                    ),
-                    selectedIndex = VideoQuality.entries.indexOf(videoQuality),
-                    onSelect = { index ->
-                        AppSettings.setVideoQuality(VideoQuality.entries[index])
+                VideoQualityChoice(
+                    label = stringResource(R.string.video_quality_wifi),
+                    options = videoQualityOptions,
+                    selected = videoQualityWifi,
+                    onSelect = {
+                        AppSettings.setVideoQualityWifi(it)
                         MusicVideoEngine.onQualitySettingChanged(context)
                     },
-                    modifier = Modifier.padding(
-                        start = TEXT_INSET,
-                        end = ROW_INSET,
-                        bottom = 14.dp,
-                    ),
+                )
+                VideoQualityChoice(
+                    label = stringResource(R.string.video_quality_mobile),
+                    options = videoQualityOptions,
+                    selected = videoQualityMobile,
+                    onSelect = {
+                        AppSettings.setVideoQualityMobile(it)
+                        MusicVideoEngine.onQualitySettingChanged(context)
+                    },
                 )
             }
         }
@@ -4014,6 +4020,28 @@ internal fun DestructiveRow(
 }
 
 /** Sliding pill selector, for the handful of settings with two or three states. */
+/** One line of the video quality setting: the connection name above its three choices. */
+@Composable
+private fun VideoQualityChoice(
+    label: String,
+    options: List<String>,
+    selected: VideoQuality,
+    onSelect: (VideoQuality) -> Unit,
+) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = TEXT_INSET, end = ROW_INSET, bottom = 6.dp),
+    )
+    SegmentedControl(
+        options = options,
+        selectedIndex = VideoQuality.entries.indexOf(selected),
+        onSelect = { index -> onSelect(VideoQuality.entries[index]) },
+        modifier = Modifier.padding(start = TEXT_INSET, end = ROW_INSET, bottom = 14.dp),
+    )
+}
+
 @Composable
 internal fun SegmentedControl(
     options: List<String>,

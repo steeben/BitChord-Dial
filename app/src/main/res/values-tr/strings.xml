@@ -288,8 +288,8 @@
     <string name="filter_non_music_audio_subtitle">30 saniyeden kısa klipleri, WAV dosyalarını, sesli notları, kayıtları ve sistem seslerini gizler</string>
     <string name="performance">Performans</string>
     <string name="video_quality">Video kalitesi</string>
-    <string name="video_quality_subtitle">Müzik videoları ve bir şarkının Canvas\'ı olarak gösterilen müzik videosu için. Otomatik 1080p, mobil veride 480p kullanır. En yüksek kalite tüm bağlantılarda 4K\'ya kadar kullanır. Çok daha fazla veri ve pil kullanır, zayıf telefonlarda yavaş olabilir.</string>
-    <string name="video_quality_auto">Otomatik</string>
+    <string name="video_quality_subtitle">Müzik videoları ve bir şarkının Canvas\'ı olarak gösterilen müzik videosu için. En yüksek kalite 4K\'ya kadar kullanır. Çok daha fazla veri ve pil kullanır, zayıf telefonlarda yavaş olabilir.</string>
+    <string name="video_quality_mobile">Mobil veri</string>
     <string name="video_quality_max">En yüksek kalite</string>
     <string name="high_performance_mode">Yüksek performans modu</string>
     <string name="high_performance_subtitle">Tam animasyonlar ve bulanıklık kullanır ve daha yüksek bir ekran yenileme hızı ister</string>

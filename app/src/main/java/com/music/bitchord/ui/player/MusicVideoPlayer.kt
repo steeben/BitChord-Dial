@@ -166,7 +166,7 @@ object MusicVideoEngine {
     /** What the loaded stream was asked for, so a failed high one can step down once. */
     private var loadedCap = 0
 
-    /** Videos whose height above 1080p did not decode here. They play at [VideoQuality.FULL_HD_HEIGHT]. */
+    /** Videos whose height above 1080p did not decode here. They play at [VideoQuality.SAFE_HEIGHT]. */
     private val stepDown = HashSet<String>()
 
     private val _playing = MutableStateFlow(false)
@@ -226,7 +226,7 @@ object MusicVideoEngine {
             streams.remove(id)
             // Some phones cannot decode the video above 1080p. Try one more
             // time at 1080p or less.
-            if (loadedCap > VideoQuality.FULL_HD_HEIGHT && stepDown.add(id)) {
+            if (loadedCap > VideoQuality.SAFE_HEIGHT && stepDown.add(id)) {
                 load(id, standInSong())
                 return
             }
@@ -430,9 +430,8 @@ object MusicVideoEngine {
 
     /** The height to ask for: the held one, or the one from the setting for this connection. */
     private fun capFor(videoId: String): Int = VideoQuality.heightToAsk(
-        setting = AppSettings.videoQuality.value,
+        setting = AppSettings.videoQualityNow,
         held = _quality.value.held,
-        metered = AppSettings.meteredConnection.value,
         steppedDown = videoId in stepDown,
     )
 
@@ -482,7 +481,7 @@ object MusicVideoEngine {
             // The cause of the height, for a log from a listener.
             TrackLog.d(
                 TAG,
-                "video: asked for a maximum of ${cap}p (setting=${AppSettings.videoQuality.value}, " +
+                "video: asked for a maximum of ${cap}p (setting=${AppSettings.videoQualityNow}, " +
                     "held=${_quality.value.held}, metered=${AppSettings.meteredConnection.value}); " +
                     "got ${stream?.let { "${it.width}x${it.height} ${it.mimeType}" }}, " +
                     "available heights=${stream?.heights}",

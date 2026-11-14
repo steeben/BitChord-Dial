@@ -249,8 +249,8 @@
     <string name="filter_non_music_audio_subtitle">מסתיר קטעים קצרים מ-30 שניות, קבצי WAV, הודעות קוליות, הקלטות וצלילי מערכת</string>
     <string name="performance">ביצועים</string>
     <string name="video_quality">איכות וידאו</string>
-    <string name="video_quality_subtitle">לקליפים ולקליפ שמוצג כ-Canvas של שיר. אוטומטי משתמש ב-1080p, או ב-480p בנתונים סלולריים. איכות מרבית משתמשת בעד 4K בכל החיבורים. היא צורכת הרבה יותר נתונים וסוללה, ועלולה להיות איטית בטלפונים חלשים.</string>
-    <string name="video_quality_auto">אוטומטי</string>
+    <string name="video_quality_subtitle">לקליפים ולקליפ שמוצג כ-Canvas של שיר. איכות מרבית משתמשת בעד 4K. היא צורכת הרבה יותר נתונים וסוללה, ועלולה להיות איטית בטלפונים חלשים.</string>
+    <string name="video_quality_mobile">נתונים סלולריים</string>
     <string name="video_quality_max">איכות מרבית</string>
     <string name="high_performance_mode">מצב ביצועים גבוהים</string>
     <string name="high_performance_subtitle">משתמש באנימציות מלאות וטשטוש, ומבקש קצב רענון מסך גבוה יותר</string>

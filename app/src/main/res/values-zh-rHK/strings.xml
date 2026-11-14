@@ -244,8 +244,8 @@
     <string name="filter_non_music_audio_subtitle">隱藏時長低於 30 秒的片段、WAV 檔案、語音備忘錄、錄音和系統提示音</string>
     <string name="performance">效能</string>
     <string name="video_quality">影片畫質</string>
-    <string name="video_quality_subtitle">適用於音樂影片，以及作為歌曲 Canvas 顯示的音樂影片。自動使用 1080p，使用行動數據時為 480p。最高畫質在所有連線下最高使用 4K，會消耗更多數據和電量，在效能較弱的手機上可能較慢。</string>
-    <string name="video_quality_auto">自動</string>
+    <string name="video_quality_subtitle">適用於音樂影片，以及作為歌曲 Canvas 顯示的音樂影片。最高畫質最高使用 4K，會消耗更多數據和電量，在效能較弱的手機上可能較慢。</string>
+    <string name="video_quality_mobile">流動數據</string>
     <string name="video_quality_max">最高畫質</string>
     <string name="high_performance_mode">高效能模式</string>
     <string name="high_performance_subtitle">使用完整動畫和模糊效果，並請求更高的螢幕重新整理率</string>

@@ -250,8 +250,8 @@
     <string name="filter_non_music_audio_subtitle">Oculta clipes com menos de 30 segundos, arquivos WAV, notas de voz, gravações e sons do sistema</string>
     <string name="performance">Desempenho</string>
     <string name="video_quality">Qualidade de vídeo</string>
-    <string name="video_quality_subtitle">Para vídeos musicais e para um vídeo musical mostrado como Canvas de uma música. Automática usa 1080p, ou 480p com dados móveis. Qualidade máxima usa até 4K em todas as conexões. Usa muito mais dados e bateria e pode ser lenta em telefones fracos.</string>
-    <string name="video_quality_auto">Automática</string>
+    <string name="video_quality_subtitle">Para vídeos musicais e para um vídeo musical mostrado como Canvas de uma música. Qualidade máxima usa até 4K. Usa muito mais dados e bateria e pode ser lenta em telefones fracos.</string>
+    <string name="video_quality_mobile">Dados móveis</string>
     <string name="video_quality_max">Qualidade máxima</string>
     <string name="high_performance_mode">Modo de alto desempenho</string>
     <string name="high_performance_subtitle">Usa animações completas e desfoque, e solicita uma taxa de atualização de tela mais alta</string>
