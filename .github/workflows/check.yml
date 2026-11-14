@@ -1,8 +1,10 @@
 name: Check
 
+# Runs for each pull request, and for each push to main (the latest release)
+# and to next (the changes for the subsequent release; test builds come from it).
 on:
   push:
-    branches: [main]
+    branches: [main, next]
   pull_request:
 
 concurrency:
