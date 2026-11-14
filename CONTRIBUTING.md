@@ -7,9 +7,19 @@ Thank you for contributing to BitChord. Follow these guidelines to ensure an eff
 - Straightforward bug fixes, documentation improvements, or minor corrections can be submitted directly as a Pull Request.
 
 ## Branch and Pull Request Workflow
-Always check the repository for the current active version or development branch before starting work.
+This repository has two long-lived branches:
 
-New work should normally be based on the latest active version or development branch rather than `main`, unless maintainers explicitly instruct otherwise. For example, during the `v1.6.x` release cycle, contributions branch from `v1.6.1`. As new release cycles begin, the target branch will advance accordingly.
+- `main` contains the latest release. Do not open a pull request for a change against `main`.
+- `next` contains the changes for the subsequent release.
+
+Obey these rules:
+
+1. Make a new branch from `next` for each change.
+2. Open one pull request for each change, with `next` as its base branch. Thus one change can be reverted, or sent to BitChord, without the other changes.
+3. Merge the pull request with a merge commit. Do not squash many changes into one commit.
+4. Get the test build from `next`. The Check workflow builds the arm64 test APK for each pull request, and for each push to `next` and to `main`.
+5. For a release, set the version and write `RELEASE_NOTES.md` on `next`. Then merge `next` into `main` with a merge commit. The Release workflow publishes the release only when a push to `main` changes `RELEASE_NOTES.md`.
+6. Do not force-push to `main` or to `next`.
 
 When contributing:
 - Fork the repository and create a descriptive branch (e.g., `fix/streaming-buffer`, `docs/translation-guide`).
