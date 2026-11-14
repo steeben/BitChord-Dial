@@ -249,6 +249,8 @@
     <string name="high_performance_active">已請求 %1$d Hz。Android 可能會在需要時降低此數值。</string>
     <string name="beta">測試版</string>
     <string name="refresh_rate">重新整理率</string>
+    <string name="disable_haptics">停用觸覺回饋</string>
+    <string name="disable_haptics_subtitle">停止 Dial 中的所有震動回饋</string>
     <string name="high_performance_before_enabling">啟用前</string>
     <string name="high_performance_battery_warning">請先將 Dial 的電量使用設定為“不受限制”。更高的重新整理率會消耗更多電量、CPU 和 GPU 資源，並可能使裝置發熱。</string>
     <string name="open_battery_settings">開啟電量設定</string>

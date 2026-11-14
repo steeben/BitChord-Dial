@@ -299,6 +299,8 @@
     <string name="high_performance_active">Đã yêu cầu %1$d Hz. Android có thể giảm tần số khi cần.</string>
     <string name="beta">Beta</string>
     <string name="refresh_rate">Tần số quét</string>
+    <string name="disable_haptics">Tắt phản hồi xúc giác</string>
+    <string name="disable_haptics_subtitle">Dừng mọi phản hồi rung trong Dial</string>
     <string name="high_performance_before_enabling">Trước khi bật</string>
     <string name="high_performance_battery_warning">Trước tiên hãy đặt mức sử dụng pin của Dial thành Không hạn chế. Tần số quét cao hơn sử dụng nhiều pin, CPU và GPU hơn, đồng thời có thể làm thiết bị ấm lên.</string>
     <string name="open_battery_settings">Mở cài đặt pin</string>

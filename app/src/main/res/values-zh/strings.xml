@@ -247,6 +247,8 @@
     <string name="high_performance_active">已请求 %1$d Hz。Android 可能会在需要时降低此数值。</string>
     <string name="beta">测试版</string>
     <string name="refresh_rate">刷新率</string>
+    <string name="disable_haptics">关闭触感反馈</string>
+    <string name="disable_haptics_subtitle">停止 Dial 中的所有振动反馈</string>
     <string name="high_performance_before_enabling">启用前</string>
     <string name="high_performance_battery_warning">请先将 Dial 的电量使用设置为“不受限制”。更高的刷新率会消耗更多电量、CPU 和 GPU 资源，并可能使设备发热。</string>
     <string name="open_battery_settings">打开电量设置</string>

@@ -666,6 +666,10 @@ class MainActivity : AppCompatActivity() {
                     com.music.bitchord.ui.components.LocalFrostedSurface provides frosted,
                     com.music.bitchord.ui.components.LocalFrostedFields provides frostedFields,
                     LocalOverscrollFactory provides iosOverscrollFactory,
+                    // Compose's own haptics (slider ticks, long presses) obey
+                    // the "Disable haptics" switch, as Haptics.play does.
+                    androidx.compose.ui.platform.LocalHapticFeedback provides
+                        com.music.bitchord.ui.haptics.rememberGatedHapticFeedback(),
                     // Glass, Frost and Solid share one layout; the app style
                     // only decides what its surfaces are made of.
                     LocalLiquidGlassEnabled provides true,

@@ -292,6 +292,8 @@
     <string name="high_performance_active">%1$d Hz istendi. Android gerektiğinde bunu düşürebilir.</string>
     <string name="beta">Beta</string>
     <string name="refresh_rate">Yenileme hızı</string>
+    <string name="disable_haptics">Dokunsal geri bildirimi kapat</string>
+    <string name="disable_haptics_subtitle">Dial\'daki tüm titreşimleri durdurur</string>
     <string name="high_performance_before_enabling">Etkinleştirmeden önce</string>
     <string name="high_performance_battery_warning">Önce Dial\'ın pil kullanımını Sınırsız olarak ayarlayın. Daha yüksek yenileme hızları daha fazla pil, CPU ve GPU kullanır ve cihazınızı ısıtabilir.</string>
     <string name="open_battery_settings">Pil ayarlarını aç</string>

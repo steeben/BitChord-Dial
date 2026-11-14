@@ -1,6 +1,10 @@
 package com.music.bitchord.ui.haptics
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 
 /**
  * What a touch *meant*, not what it should feel like — the shape of the buzz is
@@ -72,3 +76,34 @@ expect class Haptics {
 /** `val haptics = rememberHaptics()`, then `haptics.play(Haptic.Select)`. */
 @Composable
 expect fun rememberHaptics(): Haptics
+
+/**
+ * The app's own "Disable haptics" switch, and the one check every buzz goes
+ * through. [Haptics.play] reads it, and so does the [HapticFeedback] that
+ * [rememberGatedHapticFeedback] puts under the whole app, which covers the
+ * Compose calls (slider ticks, long presses, text handles).
+ *
+ * A plain volatile flag and not a state: it is read at the moment of a touch,
+ * never during composition, so nothing has to redraw when it changes.
+ */
+object HapticsGate {
+    @Volatile
+    var enabled: Boolean = true
+}
+
+/** Passes each call on to [delegate] only while [HapticsGate.enabled]. */
+class GatedHapticFeedback(private val delegate: HapticFeedback) : HapticFeedback {
+    override fun performHapticFeedback(hapticFeedbackType: HapticFeedbackType) {
+        if (HapticsGate.enabled) delegate.performHapticFeedback(hapticFeedbackType)
+    }
+}
+
+/**
+ * The platform's [LocalHapticFeedback] behind [HapticsGate], to be provided
+ * back as [LocalHapticFeedback] at the root of the app.
+ */
+@Composable
+fun rememberGatedHapticFeedback(): HapticFeedback {
+    val platform = LocalHapticFeedback.current
+    return remember(platform) { GatedHapticFeedback(platform) }
+}

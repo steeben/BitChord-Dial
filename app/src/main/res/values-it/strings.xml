@@ -310,6 +310,8 @@
     <string name="high_performance_active">%1$d Hz richiesti. Android potrebbe ridurli quando necessario.</string>
     <string name="beta">Beta</string>
     <string name="refresh_rate">Frequenza di aggiornamento</string>
+    <string name="disable_haptics">Disattiva feedback aptico</string>
+    <string name="disable_haptics_subtitle">Interrompe tutte le vibrazioni in Dial</string>
     <string name="high_performance_before_enabling">Prima di attivare</string>
     <string name="high_performance_battery_warning">Imposta prima l\'uso della batteria di Dial su Illimitato. Frequenze di aggiornamento più alte usano più batteria, CPU e GPU e possono scaldare il dispositivo.</string>
     <string name="open_battery_settings">Apri impostazioni batteria</string>

@@ -434,6 +434,8 @@
     <string name="high_performance_active">%1$d Hz requested. Android may lower it when needed.</string>
     <string name="beta">Beta</string>
     <string name="refresh_rate">Refresh rate</string>
+    <string name="disable_haptics">Disable haptics</string>
+    <string name="disable_haptics_subtitle">Stops all vibration feedback in Dial</string>
     <string name="high_performance_before_enabling">Before enabling</string>
     <string name="high_performance_battery_warning">First set Dial\'s battery usage to Unrestricted. Higher refresh rates use more battery, CPU and GPU, and may warm your device.</string>
     <string name="open_battery_settings">Open battery settings</string>

@@ -250,6 +250,8 @@
     <string name="high_performance_active">Zażądano %1$d Hz. Android może ją obniżyć, jeśli to konieczne.</string>
     <string name="beta">Beta</string>
     <string name="refresh_rate">Częstotliwość odświeżania</string>
+    <string name="disable_haptics">Wyłącz haptykę</string>
+    <string name="disable_haptics_subtitle">Wyłącza wszystkie wibracje w Dial</string>
     <string name="high_performance_before_enabling">Przed włączeniem</string>
     <string name="high_performance_battery_warning">Najpierw ustaw użycie baterii przez Dial na Bez ograniczeń. Wyższe częstotliwości odświeżania zużywają więcej baterii, procesora i układu graficznego oraz mogą nagrzewać urządzenie.</string>
     <string name="open_battery_settings">Otwórz ustawienia baterii</string>

@@ -369,6 +369,8 @@
     <string name="high_performance_active">%1$d Hz 요청됨. 필요한 경우 Android에서 더 낮게 둘 수 있습니다.</string>
     <string name="beta">베타</string>
     <string name="refresh_rate">주사율</string>
+    <string name="disable_haptics">햅틱 끄기</string>
+    <string name="disable_haptics_subtitle">Dial의 모든 진동 피드백을 끕니다</string>
     <string name="high_performance_before_enabling">켜기 전에</string>
     <string name="high_performance_battery_warning">먼저 Dial의 배터리 사용을 제한 없음으로 설정하세요. 주사율이 높을수록 배터리, CPU, GPU를 더 사용하며, 기기가 뜨거워질 수 있습니다.</string>
     <string name="open_battery_settings">배터리 설정 열기</string>

@@ -262,6 +262,8 @@
     <string name="high_performance_active">Запрошена частота %1$d Гц. Android может снизить её при необходимости.</string>
     <string name="beta">Бета</string>
     <string name="refresh_rate">Частота обновления</string>
+    <string name="disable_haptics">Отключить виброотклик</string>
+    <string name="disable_haptics_subtitle">Отключает все вибрации в Dial</string>
     <string name="high_performance_before_enabling">Перед включением</string>
     <string name="high_performance_battery_warning">Сначала установите для использования батареи Dial значение «Без ограничений». Более высокая частота обновления расходует больше заряда батареи, ресурсов процессора и графического процессора и может нагревать устройство.</string>
     <string name="open_battery_settings">Открыть настройки батареи</string>
