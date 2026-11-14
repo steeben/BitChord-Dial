@@ -254,6 +254,8 @@
     <string name="beta">בטא</string>
     <string name="refresh_rate">קצב רענון</string>
     <string name="high_performance_battery_needed">הגדר את השימוש בסוללה של Dial ללא הגבלה. הקש כאן כדי לפתוח את ההגדרות.</string>
+    <string name="disable_haptics">השבתת משוב רטט</string>
+    <string name="disable_haptics_subtitle">מפסיק את כל משוב הרטט ב-Dial</string>
     <string name="enable">הפעל</string>
     <string name="activity">פעילות</string>
     <string name="activity_competing">מתחרה</string>

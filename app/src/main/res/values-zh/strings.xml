@@ -248,6 +248,8 @@
     <string name="beta">测试版</string>
     <string name="refresh_rate">刷新率</string>
     <string name="high_performance_battery_needed">请将 Dial 的电量使用设置为“不受限制”。点按此处打开设置。</string>
+    <string name="disable_haptics">关闭触感反馈</string>
+    <string name="disable_haptics_subtitle">停止 Dial 中的所有振动反馈</string>
     <string name="enable">启用</string>
     <string name="activity">活动</string>
     <string name="activity_competing">竞赛</string>

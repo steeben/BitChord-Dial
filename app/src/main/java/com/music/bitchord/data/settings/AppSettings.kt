@@ -473,6 +473,12 @@ object AppSettings {
     val keepHome = MutableStateFlow(true)
     private var lowRamDevice = false
 
+    /**
+     * Stops every haptic in the app. The flag itself is read from
+     * [com.music.bitchord.ui.haptics.HapticsGate], which this keeps in step.
+     */
+    val disableHaptics = MutableStateFlow(false)
+
     /** Preferred UI refresh rate while [highPerformanceMode] is enabled. */
     val performanceRefreshRate = MutableStateFlow(DEFAULT_PERFORMANCE_REFRESH_RATE)
 
@@ -1056,6 +1062,8 @@ object AppSettings {
         showListenTogetherButton.value = prefs.getBoolean(KEY_LISTEN_TOGETHER_BUTTON, true)
         reduceAnimation.value = prefs.getBoolean(KEY_REDUCE_ANIMATION, false)
         highPerformanceMode.value = prefs.getBoolean(KEY_HIGH_PERFORMANCE_MODE, false)
+        disableHaptics.value = prefs.getBoolean(KEY_DISABLE_HAPTICS, false)
+        com.music.bitchord.ui.haptics.HapticsGate.enabled = !disableHaptics.value
         performanceRefreshRate.value = normalizePerformanceRefreshRate(
             prefs.getInt(KEY_PERFORMANCE_REFRESH_RATE, DEFAULT_PERFORMANCE_REFRESH_RATE),
         )
@@ -1577,6 +1585,12 @@ object AppSettings {
     fun setKeepHome(value: Boolean) {
         keepHome.value = value
         prefs.edit().putBoolean(KEY_KEEP_HOME, value).apply()
+    }
+
+    fun setDisableHaptics(value: Boolean) {
+        disableHaptics.value = value
+        com.music.bitchord.ui.haptics.HapticsGate.enabled = !value
+        prefs.edit().putBoolean(KEY_DISABLE_HAPTICS, value).apply()
     }
 
     fun setPerformanceRefreshRate(value: Int) {
@@ -2430,6 +2444,7 @@ object AppSettings {
     private const val KEY_CACHE_LIMIT = "audio_cache_limit_bytes"
     private const val KEY_REDUCE_ANIMATION = "reduce_animation"
     private const val KEY_HIGH_PERFORMANCE_MODE = "high_performance_mode"
+    private const val KEY_DISABLE_HAPTICS = "disable_haptics"
     private const val KEY_PERFORMANCE_REFRESH_RATE = "performance_refresh_rate"
     private const val KEY_PERFORMANCE_MODE = "performance_mode"
     private const val KEY_PERFORMANCE_MODE_SAVED = "performance_mode_saved"

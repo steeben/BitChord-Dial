@@ -248,6 +248,8 @@
     <string name="beta">ベータ</string>
     <string name="refresh_rate">リフレッシュレート</string>
     <string name="high_performance_battery_needed">Dialのバッテリー使用を「制限なし」に設定してください。ここをタップすると設定が開きます。</string>
+    <string name="disable_haptics">触覚フィードバックを無効にする</string>
+    <string name="disable_haptics_subtitle">Dialのすべての振動フィードバックを停止します</string>
     <string name="enable">有効にする</string>
     <string name="activity">アクティビティ</string>
     <string name="activity_competing">参加中</string>

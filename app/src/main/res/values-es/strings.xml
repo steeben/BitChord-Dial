@@ -281,6 +281,8 @@
     <string name="beta">Beta</string>
     <string name="refresh_rate">Frecuencia de actualización</string>
     <string name="high_performance_battery_needed">Configura el uso de batería de Dial como Sin restricciones. Toca aquí para abrir los ajustes.</string>
+    <string name="disable_haptics">Desactivar la respuesta háptica</string>
+    <string name="disable_haptics_subtitle">Detiene todas las vibraciones de Dial</string>
     <string name="enable">Activar</string>
     <string name="activity">Actividad</string>
     <string name="activity_competing">Compitiendo</string>

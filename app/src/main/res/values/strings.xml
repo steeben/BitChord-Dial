@@ -435,6 +435,8 @@
     <string name="beta">Beta</string>
     <string name="refresh_rate">Refresh rate</string>
     <string name="high_performance_battery_needed">Set the battery usage of Dial to Unrestricted. Tap here to open the settings.</string>
+    <string name="disable_haptics">Disable haptics</string>
+    <string name="disable_haptics_subtitle">Stops all vibration feedback in Dial</string>
     <string name="enable">Enable</string>
     <string name="activity">Activity</string>
     <string name="activity_competing">Competing</string>

@@ -249,6 +249,8 @@
     <string name="beta">測試版</string>
     <string name="refresh_rate">重新整理率</string>
     <string name="high_performance_battery_needed">請將 Dial 的電量使用設定為“不受限制”。點選這裡開啟設定。</string>
+    <string name="disable_haptics">停用觸覺回饋</string>
+    <string name="disable_haptics_subtitle">停止 Dial 中的所有震動回饋</string>
     <string name="enable">啟用</string>
     <string name="activity">活動</string>
     <string name="activity_competing">競賽</string>

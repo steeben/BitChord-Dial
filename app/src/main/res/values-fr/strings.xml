@@ -254,6 +254,8 @@
     <string name="beta">Bêta</string>
     <string name="refresh_rate">Taux de rafraîchissement</string>
     <string name="high_performance_battery_needed">Réglez l\'utilisation de la batterie de Dial sur Illimitée. Touchez ici pour ouvrir les paramètres.</string>
+    <string name="disable_haptics">Désactiver le retour haptique</string>
+    <string name="disable_haptics_subtitle">Arrête toutes les vibrations dans Dial</string>
     <string name="enable">Activer</string>
     <string name="activity">Activité</string>
     <string name="activity_competing">Compétition</string>
