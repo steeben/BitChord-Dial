@@ -478,6 +478,7 @@ import com.music.bitchord.ui.utils.guardSheetFromContentTouches
 import com.music.bitchord.ui.utils.rememberIosOverscrollFactory
 import com.music.bitchord.ui.performance.describeForLog
 import com.music.bitchord.ui.performance.performanceModeId
+import com.music.bitchord.ui.performance.refreshRateRefused
 import com.music.bitchord.ui.performance.resolvePerformanceRefreshRate
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
@@ -627,11 +628,23 @@ class MainActivity : AppCompatActivity() {
             val logRecording by com.music.bitchord.data.LogRecorder.recording.collectAsStateWithLifecycle()
             LaunchedEffect(highPerformance, performanceRefreshRate, composeView, logRecording) {
                 applyPerformanceMode(highPerformance, performanceRefreshRate, composeView)
-                if (!logRecording) return@LaunchedEffect
-                logPerformanceMode("applied", highPerformance, performanceRefreshRate, composeView)
+                if (logRecording) logPerformanceMode("applied", highPerformance, performanceRefreshRate, composeView)
+                if (!highPerformance && !logRecording) return@LaunchedEffect
                 // And once the display has had time to switch, or not to.
                 delay(PERFORMANCE_LOG_SETTLE_MS)
-                logPerformanceMode("settled", highPerformance, performanceRefreshRate, composeView)
+                if (logRecording) logPerformanceMode("settled", highPerformance, performanceRefreshRate, composeView)
+                if (!highPerformance) return@LaunchedEffect
+                // The display changes mode for the window in front, so only a
+                // window that has been in front for a while says what its own
+                // request did. At launch the splash is in front of this one.
+                var waits = 0
+                while (!hasWindowFocus() && waits++ < PERFORMANCE_FOCUS_WAITS) delay(PERFORMANCE_FOCUS_WAIT_MS)
+                delay(PERFORMANCE_LOG_SETTLE_MS)
+                if (withdrawRefusedRefreshRate(performanceRefreshRate, composeView) && logRecording) {
+                    logPerformanceMode("taken back", highPerformance, performanceRefreshRate, composeView)
+                    delay(PERFORMANCE_LOG_SETTLE_MS)
+                    logPerformanceMode("settled", highPerformance, performanceRefreshRate, composeView)
+                }
             }
             // Frame times go into a log session while one is recording, so a
             // report of stutter comes with the page and the numbers.
@@ -742,27 +755,64 @@ class MainActivity : AppCompatActivity() {
      */
     private fun applyPerformanceMode(enabled: Boolean, refreshRate: Int, composeView: View) {
         val supportedRefreshRate = composeView.display.resolvePerformanceRefreshRate(refreshRate)
+        // Not a rate this display has already turned down: see
+        // [withdrawRefusedRefreshRate].
+        val ask = enabled && supportedRefreshRate != refusedRefreshRate
         window.attributes = window.attributes.apply {
-            preferredRefreshRate = if (enabled) supportedRefreshRate.toFloat() else 0f
+            preferredRefreshRate = if (ask) supportedRefreshRate.toFloat() else 0f
             // The mode itself as well as the rate. A preferred rate is only a
             // vote, and several phones answer it with their everyday ceiling
             // (120 on a 165Hz panel); naming the mode is the stronger ask. The
             // mode named has the resolution already in use, so this still
             // never changes that.
-            preferredDisplayModeId = if (enabled) {
+            preferredDisplayModeId = if (ask) {
                 composeView.display.performanceModeId(supportedRefreshRate)
             } else {
                 0
             }
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-            window.setFrameRatePowerSavingsBalanced(!enabled)
-            composeView.requestedFrameRate = if (enabled) {
+            window.setFrameRatePowerSavingsBalanced(!ask)
+            composeView.requestedFrameRate = if (ask) {
                 supportedRefreshRate.toFloat()
             } else {
                 View.REQUESTED_FRAME_RATE_CATEGORY_DEFAULT
             }
         }
+    }
+
+    /**
+     * The rate this display was asked for and answered with less, in this run
+     * of the app. Not asked for again: see [withdrawRefusedRefreshRate].
+     */
+    private var refusedRefreshRate = 0
+
+    /**
+     * Takes the request for a refresh rate back if the display has answered
+     * it with a slower one, and says whether it did.
+     *
+     * The request is meant to raise the rate. A 165Hz OnePlus ran the app at
+     * 120Hz for as long as it asked for 165, mode and rate both, and at 165Hz
+     * when it asked for nothing: there the phone gives its top rate only to a
+     * window with no request of its own, and the request was what held the
+     * app down. With it taken back the window is as it is with high
+     * performance mode off, which is the most such a phone gives.
+     *
+     * A phone that takes the request runs the mode asked for, and nothing
+     * changes for it.
+     */
+    private fun withdrawRefusedRefreshRate(refreshRate: Int, composeView: View): Boolean {
+        if (!hasWindowFocus()) return false
+        val display = composeView.display ?: return false
+        val asked = display.resolvePerformanceRefreshRate(refreshRate)
+        if (asked == refusedRefreshRate) return false
+        // The mode's rate and the rate the app is given: either one at the
+        // rate asked for is the request taken.
+        val running = maxOf(display.refreshRate, display.mode?.refreshRate ?: 0f)
+        if (!refreshRateRefused(askedHz = asked, runningHz = running)) return false
+        refusedRefreshRate = asked
+        applyPerformanceMode(true, refreshRate, composeView)
+        return true
     }
 
     /** What was asked of the display and what it is doing; see [describeForLog]. */
@@ -8874,6 +8924,10 @@ private const val TAB_PLAYLISTS = 4
 private const val TAB_KEY = "tab:"
 /** How long after asking for a display mode the log reads back what the display did. */
 private const val PERFORMANCE_LOG_SETTLE_MS = 1_500L
+
+/** How long, at most, the refresh rate check waits for the window to be the one in front. */
+private const val PERFORMANCE_FOCUS_WAITS = 20
+private const val PERFORMANCE_FOCUS_WAIT_MS = 500L
 
 /** How often a pinned mix's cover is asked for at launch before giving up, and the first wait between. */
 private const val PIN_ART_TRIES = 3
