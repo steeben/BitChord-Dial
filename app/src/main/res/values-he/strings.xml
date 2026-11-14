@@ -248,6 +248,10 @@
     <string name="filter_non_music_audio">סנן שמע שאינו מוזיקה</string>
     <string name="filter_non_music_audio_subtitle">מסתיר קטעים קצרים מ-30 שניות, קבצי WAV, הודעות קוליות, הקלטות וצלילי מערכת</string>
     <string name="performance">ביצועים</string>
+    <string name="video_quality">איכות וידאו</string>
+    <string name="video_quality_subtitle">לקליפים ולקליפ שמוצג כ-Canvas של שיר. איכות מרבית משתמשת בעד 4K. היא צורכת הרבה יותר נתונים וסוללה, ועלולה להיות איטית בטלפונים חלשים.</string>
+    <string name="video_quality_mobile">נתונים סלולריים</string>
+    <string name="video_quality_max">איכות מרבית</string>
     <string name="high_performance_mode">מצב ביצועים גבוהים</string>
     <string name="high_performance_subtitle">משתמש באנימציות מלאות וטשטוש, ומבקש קצב רענון מסך גבוה יותר</string>
     <string name="high_performance_active">%1$d הרץ התבקש. מערכת אנדרואיד עשויה להפחית זאת במידת הצורך.</string>

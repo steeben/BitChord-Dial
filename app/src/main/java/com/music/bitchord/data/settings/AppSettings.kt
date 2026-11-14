@@ -540,6 +540,16 @@ object AppSettings {
      */
     val canvasOverCellular = MutableStateFlow(false)
 
+    /** The video quality on Wi-Fi, from Settings, Performance. See [VideoQuality]. */
+    val videoQualityWifi = MutableStateFlow(VideoQuality.WIFI_DEFAULT)
+
+    /** The video quality on mobile data, which is a metered connection. */
+    val videoQualityMobile = MutableStateFlow(VideoQuality.MOBILE_DEFAULT)
+
+    /** The video quality for the connection the phone has now. */
+    val videoQualityNow: VideoQuality
+        get() = VideoQuality.forConnection(videoQualityWifi.value, videoQualityMobile.value, meteredConnection.value)
+
     /** Automatically collapses the lower controls after Spotify Canvas settles. */
     val spotifyCanvasAutoHide = MutableStateFlow(true)
 
@@ -1073,6 +1083,10 @@ object AppSettings {
         performanceMode.value = prefs.getBoolean(KEY_PERFORMANCE_MODE, false)
         keepHome.value = prefs.getBoolean(KEY_KEEP_HOME, !lowRamDevice)
         canvasOverCellular.value = prefs.getBoolean(KEY_CANVAS_OVER_CELLULAR, false)
+        videoQualityWifi.value =
+            VideoQuality.decode(prefs.getString(KEY_VIDEO_QUALITY_WIFI, null), VideoQuality.WIFI_DEFAULT)
+        videoQualityMobile.value =
+            VideoQuality.decode(prefs.getString(KEY_VIDEO_QUALITY_MOBILE, null), VideoQuality.MOBILE_DEFAULT)
         spotifyCanvasAutoHide.value = prefs.getBoolean(KEY_SPOTIFY_CANVAS_AUTO_HIDE, true)
         prioritizeSpotifyCanvas.value = prefs.getBoolean(KEY_PRIORITIZE_SPOTIFY_CANVAS, false)
         animatedArt.value = com.music.bitchord.data.canvas.AnimatedArtPrefs(
@@ -1754,6 +1768,16 @@ object AppSettings {
     fun setCanvasOverCellular(value: Boolean) {
         canvasOverCellular.value = value
         prefs.edit().putBoolean(KEY_CANVAS_OVER_CELLULAR, value).apply()
+    }
+
+    fun setVideoQualityWifi(value: VideoQuality) {
+        videoQualityWifi.value = value
+        prefs.edit().putString(KEY_VIDEO_QUALITY_WIFI, value.name).apply()
+    }
+
+    fun setVideoQualityMobile(value: VideoQuality) {
+        videoQualityMobile.value = value
+        prefs.edit().putString(KEY_VIDEO_QUALITY_MOBILE, value.name).apply()
     }
 
     fun setSpotifyCanvasAutoHide(value: Boolean) {
@@ -2465,6 +2489,8 @@ object AppSettings {
     private const val KEY_TRANSLATION_LANGUAGE = "translation_language"
     private const val KEY_ANIMATED_CANVAS = "animated_canvas"
     private const val KEY_CANVAS_OVER_CELLULAR = "canvas_over_cellular"
+    private const val KEY_VIDEO_QUALITY_WIFI = "video_quality_wifi"
+    private const val KEY_VIDEO_QUALITY_MOBILE = "video_quality_mobile"
     private const val KEY_SPOTIFY_CANVAS_AUTO_HIDE = "spotify_canvas_auto_hide"
     private const val KEY_PRIORITIZE_SPOTIFY_CANVAS = "prioritize_spotify_canvas"
     private const val KEY_ANIMATED_ART_ORDER = "animated_art_order"

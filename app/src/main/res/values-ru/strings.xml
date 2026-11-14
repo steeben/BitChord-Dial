@@ -257,6 +257,10 @@
     <string name="filter_non_music_audio">Фильтровать немузыкальное аудио</string>
     <string name="filter_non_music_audio_subtitle">Скрывает клипы короче 30 секунд, файлы WAV, голосовые заметки, записи и системные звуки</string>
     <string name="performance">Производительность</string>
+    <string name="video_quality">Качество видео</string>
+    <string name="video_quality_subtitle">Для музыкальных клипов и для клипа, который показывается как Canvas песни. «Максимальное качество» использует до 4K. Оно расходует намного больше трафика и заряда и может работать медленно на слабых телефонах.</string>
+    <string name="video_quality_mobile">Мобильный интернет</string>
+    <string name="video_quality_max">Максимальное качество</string>
     <string name="high_performance_mode">Режим высокой производительности</string>
     <string name="high_performance_subtitle">Использует полную анимацию и размытие, а также запрашивает более высокую частоту обновления экрана</string>
     <string name="high_performance_active">Запрошена частота %1$d Гц. Android может снизить её при необходимости.</string>
