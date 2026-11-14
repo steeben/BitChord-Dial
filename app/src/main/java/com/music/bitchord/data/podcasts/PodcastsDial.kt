@@ -8,22 +8,45 @@ import com.music.bitchord.data.settings.CustomizationSettings
 import com.music.bitchord.data.settings.speedDialId
 
 /**
- * What YouTube Music has for the Podcasts page: the shows for its dial after
- * the pins ([picks]), and the shelves under the dial ([shelves]).
+ * What YouTube Music has for the Podcasts page.
+ *
+ * @property picks The shows for the dial after the pins.
+ * @property forYou The shows for the row of large cards under the dial:
+ * "Shows for you" when YouTube has it or had it before, else the first shelf
+ * of shows there is. Null when there is none.
+ * @property shelves The shelves of Home's podcasts page read so far, in its
+ * order: episodes by category, and now and then a shelf of shows.
+ * @property landing The Podcasts landing page's shelves, which go after
+ * [shelves] once those have ended: the popular episodes, and shows by category.
+ * @property continuation The token for more of [shelves], null once they have ended.
+ * @property pages How many pages of [shelves] were read.
  */
 data class PodcastsFeed(
     val picks: List<ShelfItem>,
+    val forYou: HomeShelf?,
     val shelves: List<HomeShelf>,
+    val landing: List<HomeShelf>,
+    val continuation: String?,
+    val pages: Int = 1,
 )
 
 /**
- * The Podcasts page's dial: the shows pinned to it, then the shows YouTube
- * Music recommends. Those are the ones it picked for the listener ("Shows
- * for you", on Home under its Podcasts chip, which is not in every answer),
- * then the Podcasts landing page's: the shows to start with, the popular
- * ones, and the ones it lists by category.
+ * The Podcasts page: its dial, and what is under it.
+ *
+ * The dial is the shows pinned to it, then the shows YouTube Music
+ * recommends. Those are the ones it picked for the listener ("Shows for
+ * you", on Home under its Podcasts chip, which is not in every answer), then
+ * the Podcasts landing page's: the shows to start with, the popular ones, and
+ * the ones it lists by category.
+ *
+ * Under the dial are the picked shows again as a row of large cards, then
+ * Home's podcast shelves (episodes by category), read a page at a time as
+ * the list is scrolled, then the landing page's shelves.
  */
 object PodcastsDial {
+
+    /** How many pages of Home's podcast shelves are read at most; each has about three shelves. */
+    const val MAX_PAGES = 12
 
     /** The shelves of shows among [shelves], each with only its shows. */
     fun showShelves(shelves: List<HomeShelf>): List<HomeShelf> = shelves.mapNotNull { shelf ->
@@ -42,14 +65,44 @@ object PodcastsDial {
             .distinctBy { it.browseId }
 
     /**
-     * The feed from the two pages it is read from. The shelves under the dial
-     * are the shelves of shows, [home]'s first, each title once: the landing
-     * page repeats "Popular shows", which Home's podcasts page ends with.
+     * The feed from the first page of each of the two pages it is read from.
+     * [savedForYou] is the "Shows for you" shelf as Home last had it, which
+     * stands in when this answer of [home] has no shelf of shows.
      */
-    fun feed(home: List<HomeShelf>, landing: List<HomeShelf>): PodcastsFeed = PodcastsFeed(
-        picks = picks(home, landing),
-        shelves = (showShelves(home) + showShelves(landing)).distinctBy { it.title.trim().lowercase() },
-    )
+    fun feed(
+        home: List<HomeShelf>,
+        continuation: String?,
+        landing: List<HomeShelf>,
+        savedForYou: HomeShelf? = null,
+    ): PodcastsFeed {
+        val fromHome = showShelves(home).firstOrNull()
+        val forYou = fromHome
+            ?: savedForYou?.let { showShelves(listOf(it)).firstOrNull() }
+            ?: showShelves(landing).firstOrNull()
+        return PodcastsFeed(
+            // The saved shelf's shows are still the listener's own: ahead of the landing page's.
+            picks = picks(home + listOfNotNull(forYou.takeIf { fromHome == null }), landing),
+            forYou = forYou,
+            shelves = playable(home),
+            landing = playable(landing),
+            continuation = continuation,
+        )
+    }
+
+    /** [feed] with one more page of Home's podcast shelves; the paging stops at [MAX_PAGES]. */
+    fun more(feed: PodcastsFeed, shelves: List<HomeShelf>, continuation: String?): PodcastsFeed {
+        val pages = feed.pages + 1
+        return feed.copy(
+            shelves = feed.shelves + playable(shelves),
+            continuation = continuation.takeIf { pages < MAX_PAGES },
+            pages = pages,
+        )
+    }
+
+    /** The shelves the page can draw: those of episodes as they are, and those of shows with only their shows. */
+    private fun playable(shelves: List<HomeShelf>): List<HomeShelf> = shelves.mapNotNull { shelf ->
+        if (shelf.layout == ShelfLayout.VIDEO) shelf.takeIf { it.items.isNotEmpty() } else showShelves(listOf(shelf)).firstOrNull()
+    }
 
     /**
      * The dial's tiles: [pins] first, then [picks], without what was taken
@@ -62,6 +115,18 @@ object PodcastsDial {
             .take(CustomizationSettings.SPEED_DIAL_SIZE)
 
     /**
+     * The shelves under the dial and the row of large cards: Home's, then the
+     * landing page's once Home's have ended. Each title once (the landing
+     * page repeats "Popular shows", which Home's podcasts page ends with),
+     * and without the shelf that the large cards are.
+     */
+    fun shelvesUnder(feed: PodcastsFeed): List<HomeShelf> {
+        val cards = feed.forYou?.title?.let(::titleKey)
+        val listed = if (feed.continuation == null) feed.shelves + feed.landing else feed.shelves
+        return listed.filter { titleKey(it.title) != cards }.distinctBy { titleKey(it.title) }
+    }
+
+    /**
      * The page as it is drawn: the dial as the shelf that leads it, under the
      * title the speed dial goes by so that it is drawn as one, then [shelves].
      * No dial shelf when there is nothing to put on it.
@@ -72,4 +137,6 @@ object PodcastsDial {
         } else {
             listOf(HomeShelf(CustomizationSettings.SPEED_DIAL_TITLE, tiles)) + shelves
         }
+
+    private fun titleKey(title: String): String = title.trim().lowercase()
 }

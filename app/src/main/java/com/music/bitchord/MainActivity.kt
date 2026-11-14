@@ -2529,6 +2529,8 @@ private fun BitChordApp(
                 artist = InnertubeParser.artistFromSubtitle(item.subtitle),
                 thumbnailUrl = item.thumbnailUrl,
                 isVideo = item.isVideo,
+                // Only a podcast episode's card states one.
+                durationText = item.durationText,
             )
         }
     }
@@ -4764,6 +4766,13 @@ private fun BitChordApp(
                             contentPadding = listPadding,
                             onItemLongPress = onShelfLongPress,
                             onDialItemLongPress = onDialLongPress,
+                            // An episode plays as a track on Home does, with
+                            // what YouTube queues after it to follow.
+                            onPlayEpisode = { item, shelfTitle ->
+                                shelfSong(item)?.let { episode ->
+                                    playRadio(episode, QueueSource(shelfTitle, PlaybackSourceType.HOME))
+                                }
+                            },
                         )
                         // The mood this page is for, held while it closes: by
                         // then no mood is selected, and it would shrink away

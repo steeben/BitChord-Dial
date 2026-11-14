@@ -37,6 +37,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.data.model.HomeShelf
 import com.music.bitchord.data.model.ShelfItem
 import com.music.bitchord.data.model.Song
+import com.music.bitchord.data.model.TopPick
+import com.music.bitchord.data.model.TopPickKind
 import com.music.bitchord.data.model.UiState
 import com.music.bitchord.data.podcasts.PodcastsDial
 import com.music.bitchord.data.settings.CustomizationSettings
@@ -82,13 +84,15 @@ internal object PodcastsTab {
 
 /**
  * The Podcasts page: a dial of shows (the ones pinned to it, then the ones
- * YouTube Music recommends), then shelves of shows under it. It is Home's
- * page drawn from another feed, so the dial, its pins and the shelves look
- * and act as Home's do.
+ * YouTube Music recommends), under it those shows again as a row of large
+ * cards, then shelves of episodes by category, each with its length in the
+ * corner of its picture. It is Home's page drawn from another feed, so the
+ * dial, its pins, the cards and the shelves look and act as Home's do.
  *
  * The feed is asked for when the page is first opened, not at launch. Until
- * it is in, the page shows the dial it showed last time, or placeholders the
- * first time, and the tiles change once at most.
+ * it is in, the page shows the dial and the cards it showed last time, or
+ * placeholders the first time, and the tiles change once at most. The
+ * shelves of episodes are read a page at a time, as the list nears its end.
  */
 @Composable
 internal fun PodcastsTabPage(
@@ -98,9 +102,12 @@ internal fun PodcastsTabPage(
     contentPadding: PaddingValues,
     onItemLongPress: (ShelfItem) -> Unit,
     onDialItemLongPress: (ShelfItem, Boolean) -> Unit,
+    /** Plays an episode, with the title of the shelf it is on. */
+    onPlayEpisode: (ShelfItem, String) -> Unit,
 ) {
     val feed by viewModel.podcasts.collectAsStateWithLifecycle()
     val refreshing by viewModel.podcastsRefreshing.collectAsStateWithLifecycle()
+    val loadingMore by viewModel.podcastsLoadingMore.collectAsStateWithLifecycle()
     // Another account's recommendations are another feed.
     val account by viewModel.account.collectAsStateWithLifecycle()
     val signedIn by viewModel.signedIn.collectAsStateWithLifecycle()
@@ -121,8 +128,9 @@ internal fun PodcastsTabPage(
             .takeIf { it.isNotEmpty() }
             ?.let { UiState.Success(PodcastsDial.page(it, emptyList())) }
         when (val current = feed) {
-            is UiState.Success ->
-                UiState.Success(PodcastsDial.page(PodcastsDial.tiles(pins, current.data.picks, hidden), current.data.shelves))
+            is UiState.Success -> UiState.Success(
+                PodcastsDial.page(PodcastsDial.tiles(pins, current.data.picks, hidden), PodcastsDial.shelvesUnder(current.data)),
+            )
             is UiState.Loading -> saved ?: UiState.Loading
             is UiState.Error -> saved ?: current
         }
@@ -131,6 +139,24 @@ internal fun PodcastsTabPage(
     LaunchedEffect(feed, pins, hidden) {
         val fresh = (feed as? UiState.Success)?.data ?: return@LaunchedEffect
         CustomizationSettings.setLastPodcastDial(PodcastsDial.tiles(pins, fresh.picks, hidden))
+    }
+
+    // The row of large cards under the dial: this feed's, or until it is in, the row as it last was.
+    val savedShows by CustomizationSettings.podcastShowsForYou.collectAsStateWithLifecycle()
+    val forYou = when (val current = feed) {
+        is UiState.Success -> current.data.forYou
+        else -> savedShows
+    }
+    val showCards = remember(forYou) {
+        forYou?.items?.map { show ->
+            TopPick(
+                kind = TopPickKind.PODCAST_SHOW,
+                title = show.title,
+                subtitle = show.subtitle,
+                images = listOfNotNull(show.thumbnailUrl),
+                browseId = show.browseId,
+            )
+        }
     }
 
     val pullState = rememberPullToRefreshState()
@@ -142,7 +168,7 @@ internal fun PodcastsTabPage(
     HomeScreen(
         state = state,
         listState = PodcastsTab.listState,
-        onItemClick = { item, _ ->
+        onItemClick = { item, shelfTitle ->
             // Hoisted because ShelfItem lives in :shared, and Kotlin will not
             // smart-cast a public nullable property declared in another module.
             val browseId = item.browseId
@@ -153,6 +179,8 @@ internal fun PodcastsTabPage(
                     subtitle = item.subtitle,
                     thumbnailUrl = item.thumbnailUrl,
                 )
+            } else if (item.videoId != null) {
+                onPlayEpisode(item, shelfTitle)
             }
         },
         onRetry = viewModel::loadPodcasts,
@@ -164,6 +192,10 @@ internal fun PodcastsTabPage(
         title = stringResource(R.string.podcasts),
         onItemLongPress = onItemLongPress,
         onDialItemLongPress = onDialItemLongPress,
+        onLoadMore = viewModel::loadMorePodcasts,
+        loadingMore = loadingMore,
+        // An episode shelf that leads the page (no dial, no cards) is still a row of episodes.
+        leadHero = false,
         currentSong = currentSong,
         isPlaying = isPlaying,
         speedDialPinned = pinnedIds,
@@ -174,6 +206,25 @@ internal fun PodcastsTabPage(
         dialPinIcon = pinIcon,
         skeletonSpeedDialFirst = true,
         skeletonShowRecents = false,
+        topPicks = showCards,
+        topPicksTitle = forYou?.title,
+        onTopPickClick = { pick, _ ->
+            val browseId = pick.browseId
+            if (browseId != null) {
+                viewModel.openDetail(
+                    browseId = browseId,
+                    title = pick.title,
+                    subtitle = pick.subtitle,
+                    thumbnailUrl = pick.images.firstOrNull(),
+                )
+            }
+        },
+        onTopPickLongPress = { pick ->
+            val browseId = pick.browseId
+            if (browseId != null) {
+                onItemLongPress(ShelfItem(pick.title, pick.subtitle, pick.images.firstOrNull(), null, browseId))
+            }
+        },
     )
 }
 

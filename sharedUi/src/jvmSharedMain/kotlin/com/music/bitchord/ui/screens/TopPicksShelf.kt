@@ -151,6 +151,8 @@ internal fun TopPicksShelf(
     /** The card, and the title it was showing — the station's name for the queue. */
     onClick: (TopPick, String) -> Unit,
     onLongPress: ((TopPick) -> Unit)?,
+    /** The row's heading, for a row that is not Home's: null is "Top Picks for You". */
+    title: String? = null,
 ) {
     val rowState = rememberLazyListState()
     // Which cards turned out to have a clip, by index, and which one plays.
@@ -163,7 +165,7 @@ internal fun TopPicksShelf(
             .collect { (scrolling, next) -> if (!scrolling) owner = next }
     }
     Column(Modifier.padding(bottom = 26.dp)) {
-        SectionHeader(stringResource(Res.string.top_picks_for_you))
+        SectionHeader(title ?: stringResource(Res.string.top_picks_for_you))
         BoxWithConstraints {
             val cardWidth = topPickWidth(maxWidth)
             PausedWhileScrolling(rowState) {
@@ -183,7 +185,10 @@ internal fun TopPicksShelf(
                                 pick = pick,
                                 listenerName = listenerName,
                                 onClick = onClick,
-                                onLongPress = onLongPress?.takeIf { pick.kind == TopPickKind.LATEST_RELEASE },
+                                // The cards that open a page have that page's menu; a station has none.
+                                onLongPress = onLongPress?.takeIf {
+                                    pick.kind == TopPickKind.LATEST_RELEASE || pick.kind == TopPickKind.PODCAST_SHOW
+                                },
                                 modifier = Modifier.width(cardWidth),
                             )
                         }
@@ -265,6 +270,8 @@ private fun cardText(pick: TopPick, listenerName: String?): CardText {
             title = stringResource(Res.string.top_pick_discovery_station),
             subtitle = "",
         )
+        // A show's card says its name, and under it who publishes it.
+        TopPickKind.PODCAST_SHOW -> CardText(eyebrow = "", title = pick.title, subtitle = pick.subtitle)
     }
 }
 
@@ -327,6 +334,12 @@ private fun TopPickCard(
                 eyebrowColor = PhotoEyebrow
                 branded = false
             }
+            TopPickKind.PODCAST_SHOW -> {
+                // A show's cover is square, as a release's is: the same card, with no clip to look for.
+                ReleaseArt(pick.images.firstOrNull(), Modifier.fillMaxSize())
+                eyebrowColor = PhotoEyebrow
+                branded = false
+            }
             TopPickKind.FEATURED_ARTIST -> {
                 AsyncImage(
                     model = pick.images.firstOrNull().croppedAt(HEADER_ART_PX * 3 / 4, HEADER_ART_PX).whenArtworkReady(),
@@ -375,13 +388,16 @@ private fun CardCaption(text: CardText, eyebrowColor: Color, modifier: Modifier)
             .fillMaxWidth()
             .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
     ) {
-        Text(
-            text = text.eyebrow,
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 16.sp),
-            color = eyebrowColor,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        // A card with nothing to say above its title (a podcast show) has no line there.
+        if (text.eyebrow.isNotBlank()) {
+            Text(
+                text = text.eyebrow,
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 16.sp),
+                color = eyebrowColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         Text(
             text = text.title,
             style = MaterialTheme.typography.titleMedium.copy(

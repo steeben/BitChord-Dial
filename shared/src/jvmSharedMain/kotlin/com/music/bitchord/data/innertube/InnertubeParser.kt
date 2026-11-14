@@ -909,16 +909,33 @@ object InnertubeParser {
     /**
      * "2 hr 43 min" as the "2:43:00" every other row states its runtime in,
      * which is what [com.music.bitchord.data.model.durationMillis] reads.
-     * Null for anything it can't read, such as another language's units.
+     *
+     * YouTube writes the runtime in the app's language ("1 h 5 min", "1 Std.
+     * 5 Min.", "1時間5分"), so where the English units are not found it is
+     * read by its numbers: two are hours and minutes, and one is minutes
+     * unless the words beside it say hours. Null for anything with no number
+     * in it, or with more than three.
      */
-    private fun episodeRuntime(text: String): String? {
+    internal fun episodeRuntime(text: String): String? {
         var seconds = 0L
-        RUNTIME_PART.findAll(text).forEach { part ->
-            val count = part.groupValues[1].toLong()
-            seconds += when (part.groupValues[2].lowercase(Locale.ROOT).first()) {
-                'h' -> count * 3_600
-                'm' -> count * 60
-                else -> count
+        val numbers = RUNTIME_NUMBER.findAll(text).map { it.value.toLong() }.toList()
+        val english = RUNTIME_PART.findAll(text).toList()
+        // Only when every number has an English unit: "1 h 5 min" has one for the 5 alone.
+        if (english.size == numbers.size) {
+            english.forEach { part ->
+                val count = part.groupValues[1].toLong()
+                seconds += when (part.groupValues[2].lowercase(Locale.ROOT).first()) {
+                    'h' -> count * 3_600
+                    'm' -> count * 60
+                    else -> count
+                }
+            }
+        } else {
+            seconds = when (numbers.size) {
+                1 -> numbers[0] * if (HOUR_WORD.containsMatchIn(text)) 3_600 else 60
+                2 -> numbers[0] * 3_600 + numbers[1] * 60
+                3 -> numbers[0] * 3_600 + numbers[1] * 60 + numbers[2]
+                else -> 0L
             }
         }
         if (seconds == 0L) return null
@@ -1797,6 +1814,16 @@ object InnertubeParser {
     private val DURATION = Regex("""\d+:\d{2}""")
     /** One unit of an episode's runtime — "2 hr", "43 min", "10 sec". */
     private val RUNTIME_PART = Regex("""(\d+)\s*(hours?|hr|min|sec)""", RegexOption.IGNORE_CASE)
+    private val RUNTIME_NUMBER = Regex("""\d+""")
+    /**
+     * A word for hours in the languages the app is offered in, for a runtime
+     * of whole hours ("2 h", "2 Std.", "2 ч", "2時間"): the one case a single
+     * number is not minutes.
+     */
+    private val HOUR_WORD = Regex(
+        """\bh\b|\bhs?\.|hora|heure|\bstd|stunde|godz|\bjam\b|\bore?\b|\bsaat|giờ|ч|час|שע|घंट|時間|时|시간|ชั่วโมง|ชม""",
+        RegexOption.IGNORE_CASE,
+    )
     private val YEAR = Regex("""\d{4}""")
     /**
      * A counted quantity rather than a name — "12.4M plays", "13 songs",

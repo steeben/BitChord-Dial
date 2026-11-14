@@ -2153,6 +2153,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** Whether a pull on the Podcasts page is reading its feed again. */
     val podcastsRefreshing: StateFlow<Boolean> = _podcastsRefreshing.asStateFlow()
 
+    private val _podcastsLoadingMore = MutableStateFlow(false)
+
+    /** Whether the next page of the Podcasts page's shelves is on its way. */
+    val podcastsLoadingMore: StateFlow<Boolean> = _podcastsLoadingMore.asStateFlow()
+
     /** Whose feed [podcasts] holds or is waiting for, once one was asked for. */
     private var podcastsListener: String? = null
     private var podcastsAsked = false
@@ -2199,19 +2204,55 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
+     * The next page of the Podcasts page's shelves, as its list nears its
+     * end. A page that fails ends the paging, and the landing page's shelves
+     * follow what is there.
+     */
+    fun loadMorePodcasts() {
+        val current = (_podcasts.value as? UiState.Success)?.data ?: return
+        val token = current.continuation ?: return
+        if (_podcastsLoadingMore.value) return
+        val identity = listenerKey()
+        _podcastsLoadingMore.value = true
+        viewModelScope.launch {
+            try {
+                val result = YtMusicRepository.morePodcastsHome(token)
+                // Only onto the feed the page was asked of: a pull or another listener's has its own.
+                val latest = (_podcasts.value as? UiState.Success)?.data
+                if (identity != listenerKey() || latest == null || latest.continuation != token) return@launch
+                _podcasts.value = UiState.Success(
+                    result.fold(
+                        onSuccess = { page -> PodcastsDial.more(latest, page.shelves, page.continuation) },
+                        onFailure = { latest.copy(continuation = null) },
+                    ),
+                )
+            } finally {
+                _podcastsLoadingMore.value = false
+            }
+        }
+    }
+
+    /**
      * Home's podcasts page and the Podcasts landing page, asked for together.
-     * Either one is enough for a dial, so only both failing is an error.
+     * Either one is enough for the page, so only both failing is an error.
      */
     private suspend fun fetchPodcasts(): UiState<PodcastsFeed> = coroutineScope {
+        val identity = listenerKey()
         val home = async { YtMusicRepository.podcastsHome() }
         val landing = async { YtMusicRepository.podcastsLanding() }
         val homeResult = home.await()
         val landingResult = landing.await()
+        val homeShelves = homeResult.getOrNull()?.shelves.orEmpty()
+        // "Shows for you" is not in every answer: kept when it is, for the ones it is not in.
+        PodcastsDial.showShelves(homeShelves).firstOrNull()
+            ?.let { CustomizationSettings.setPodcastShowsForYou(it, identity) }
         val feed = PodcastsDial.feed(
-            home = homeResult.getOrNull()?.shelves.orEmpty(),
+            home = homeShelves,
+            continuation = homeResult.getOrNull()?.continuation,
             landing = landingResult.getOrNull().orEmpty(),
+            savedForYou = CustomizationSettings.podcastShowsFor(identity),
         )
-        if (feed.picks.isNotEmpty()) {
+        if (feed.picks.isNotEmpty() || feed.shelves.isNotEmpty()) {
             UiState.Success(feed)
         } else {
             val failure = landingResult.exceptionOrNull() ?: homeResult.exceptionOrNull()

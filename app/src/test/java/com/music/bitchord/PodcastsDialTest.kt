@@ -6,6 +6,7 @@ import com.music.bitchord.data.model.ShelfLayout
 import com.music.bitchord.data.podcasts.PodcastsDial
 import com.music.bitchord.data.settings.CustomizationSettings
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -51,15 +52,86 @@ class PodcastsDialTest {
     }
 
     @Test
-    fun feed_listsAShelfTitleOnce_homesFirst() {
-        val home = listOf(shows("Shows for you", "a"), shows("Popular shows", "b"))
+    fun feed_takesHomesShowsForTheCards_andKeepsTheShelvesApart() {
+        val home = listOf(episodes("Comedy", "e1"), shows("Shows for you", "a", "b"), episodes("News", "e2"))
+        val landing = listOf(shows("Start exploring", "c"), episodes("Popular episodes", "e3"))
+
+        val feed = PodcastsDial.feed(home, "more", landing)
+
+        assertEquals("Shows for you", feed.forYou?.title)
+        assertEquals(listOf("Comedy", "Shows for you", "News"), feed.shelves.map { it.title })
+        assertEquals(listOf("Start exploring", "Popular episodes"), feed.landing.map { it.title })
+        assertEquals(listOf("a", "b", "c"), ids(feed.picks))
+        assertEquals("more", feed.continuation)
+    }
+
+    @Test
+    fun feed_usesTheSavedShows_whenThisAnswerHasNone_aheadOfTheLandingPages() {
+        val home = listOf(episodes("Comedy", "e1"))
+        val landing = listOf(shows("Start exploring", "c", "a"))
+        val saved = shows("Shows for you", "a", "b")
+
+        val feed = PodcastsDial.feed(home, null, landing, savedForYou = saved)
+
+        assertEquals(saved, feed.forYou)
+        assertEquals(listOf("a", "b", "c"), ids(feed.picks))
+    }
+
+    @Test
+    fun feed_usesTheLandingPagesFirstShows_whenThereAreNoOthers() {
+        val home = listOf(episodes("Comedy", "e1"))
+        val landing = listOf(episodes("Popular episodes", "e3"), shows("Start exploring", "c"), shows("Popular shows", "d"))
+
+        val feed = PodcastsDial.feed(home, null, landing)
+
+        assertEquals("Start exploring", feed.forYou?.title)
+        assertEquals(listOf("c", "d"), ids(feed.picks))
+        assertNull(PodcastsDial.feed(home, null, emptyList()).forYou)
+    }
+
+    @Test
+    fun shelvesUnder_areHomesAlone_untilTheyHaveEnded_thenTheLandingPagesToo() {
+        val home = listOf(shows("Shows for you", "a"), episodes("Comedy", "e1"))
+        val landing = listOf(shows("Start exploring", "c"), episodes("Popular episodes", "e3"))
+
+        val reading = PodcastsDial.feed(home, "more", landing)
+        // The shelf that the large cards are is not listed again.
+        assertEquals(listOf("Comedy"), PodcastsDial.shelvesUnder(reading).map { it.title })
+
+        val ended = PodcastsDial.more(reading, listOf(episodes("News", "e2")), null)
+        assertEquals(
+            listOf("Comedy", "News", "Start exploring", "Popular episodes"),
+            PodcastsDial.shelvesUnder(ended).map { it.title },
+        )
+    }
+
+    @Test
+    fun shelvesUnder_listAShelfTitleOnce_homesFirst() {
+        val home = listOf(episodes("Comedy", "e1"), shows("Popular shows", "b"))
         val landing = listOf(shows("Start exploring", "c"), shows("popular shows ", "d"), shows("Comedy", "e"))
 
-        val feed = PodcastsDial.feed(home, landing)
+        val feed = PodcastsDial.feed(home, null, landing)
 
-        assertEquals(listOf("Shows for you", "Popular shows", "Start exploring", "Comedy"), feed.shelves.map { it.title })
+        assertEquals(
+            listOf("Comedy", "Start exploring"),
+            PodcastsDial.shelvesUnder(feed).map { it.title },
+        )
         // A show on a shelf that is left out is still one for the dial.
-        assertEquals(listOf("a", "b", "c", "d", "e"), ids(feed.picks))
+        assertEquals(listOf("b", "c", "d", "e"), ids(feed.picks))
+    }
+
+    @Test
+    fun more_addsAPage_andStopsAtTheMostPages() {
+        var feed = PodcastsDial.feed(listOf(episodes("Comedy", "e1")), "t1", emptyList())
+        feed = PodcastsDial.more(feed, listOf(episodes("News", "e2"), HomeShelf("Empty", emptyList())), "t2")
+
+        assertEquals(listOf("Comedy", "News"), feed.shelves.map { it.title })
+        assertEquals("t2", feed.continuation)
+        assertEquals(2, feed.pages)
+
+        repeat(PodcastsDial.MAX_PAGES - 2) { feed = PodcastsDial.more(feed, listOf(episodes("Page $it", "p$it")), "next") }
+        assertEquals(PodcastsDial.MAX_PAGES, feed.pages)
+        assertNull(feed.continuation)
     }
 
     @Test

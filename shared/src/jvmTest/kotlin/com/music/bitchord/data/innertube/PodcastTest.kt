@@ -238,4 +238,29 @@ class PodcastTest {
         assertEquals("MPSPPLccc", shelves[1].items.single().browseId)
         assertNull(InnertubeParser.continuationToken(page))
     }
+
+    @Test
+    fun runtime_isReadInTheAppsLanguage() {
+        val read = InnertubeParser::episodeRuntime
+        // English, as before.
+        assertEquals("2:43:00", read(" • 2 hr 43 min"))
+        assertEquals("34:00", read("34 min"))
+        assertEquals("0:45", read("45 sec"))
+        assertEquals("2:00:00", read("2 hours"))
+        // Other languages: hours and minutes by their numbers.
+        assertEquals("1:05:00", read(" • 1 h 5 min"))
+        assertEquals("1:05:00", read("1 Std. 5 Min."))
+        assertEquals("1:05:00", read("1時間5分"))
+        assertEquals("1:05:00", read("1 ч 5 мин"))
+        // One number is minutes, unless the word beside it is one for hours.
+        assertEquals("20:00", read("20 Min."))
+        assertEquals("20:00", read("20分"))
+        assertEquals("20:00", read("20 мин"))
+        assertEquals("2:00:00", read("2 Std."))
+        assertEquals("2:00:00", read("2時間"))
+        assertEquals("2:00:00", read("2 ч"))
+        assertEquals("2:00:00", read("2 horas"))
+        assertNull(read(""))
+        assertNull(read("Live"))
+    }
 }

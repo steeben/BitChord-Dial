@@ -264,6 +264,16 @@ object CustomizationSettings {
     /** The Podcasts page's dial as it last showed, for the page to open on at once; see [lastSpeedDial]. */
     val lastPodcastDial = MutableStateFlow<List<ShelfItem>>(emptyList())
 
+    /**
+     * "Shows for you" as YouTube Music last gave it, under the title it had.
+     * YouTube leaves that shelf out of some answers; this stands in then, and
+     * is the Podcasts page's row of large cards until its feed is in.
+     */
+    val podcastShowsForYou = MutableStateFlow<HomeShelf?>(null)
+
+    /** Whose [podcastShowsForYou] is: another listener's shows are not this one's. */
+    private var podcastShowsListener = ""
+
     fun init(prefs: SharedPreferences) {
         this.prefs = prefs
         readAll()
@@ -380,6 +390,10 @@ object CustomizationSettings {
         artistDialPins.value = readPins(p.getString(KEY_ARTIST_DIAL_PINS, null))
         podcastDialPins.value = readPins(p.getString(KEY_PODCAST_DIAL_PINS, null))
         lastPodcastDial.value = readPins(p.getString(KEY_LAST_PODCAST_DIAL, null))
+        podcastShowsListener = p.getString(KEY_PODCAST_SHOWS_LISTENER, null).orEmpty()
+        podcastShowsForYou.value = readPins(p.getString(KEY_PODCAST_SHOWS_FOR_YOU, null))
+            .takeIf { it.isNotEmpty() }
+            ?.let { HomeShelf(p.getString(KEY_PODCAST_SHOWS_TITLE, null).orEmpty(), it) }
         // The artist dial used to be on unless switched off. Someone who never
         // touched the switch but pinned artists to that dial keeps it, rather
         // than having those pins left on a page that is no longer shown.
@@ -563,6 +577,22 @@ object CustomizationSettings {
         if (value == lastPodcastDial.value) return
         lastPodcastDial.value = value
         prefs?.edit()?.putString(KEY_LAST_PODCAST_DIAL, writeItems(value))?.apply()
+    }
+
+    /** [podcastShowsForYou], when it is [listener]'s (null is a guest); null when it is someone else's. */
+    fun podcastShowsFor(listener: String?): HomeShelf? =
+        podcastShowsForYou.value.takeIf { podcastShowsListener == listener.orEmpty() }
+
+    /** Keeps [listener]'s "Shows for you" shelf for the answers that leave it out. */
+    fun setPodcastShowsForYou(shelf: HomeShelf, listener: String?) {
+        if (shelf == podcastShowsForYou.value && podcastShowsListener == listener.orEmpty()) return
+        podcastShowsForYou.value = shelf
+        podcastShowsListener = listener.orEmpty()
+        prefs?.edit()
+            ?.putString(KEY_PODCAST_SHOWS_FOR_YOU, writeItems(shelf.items))
+            ?.putString(KEY_PODCAST_SHOWS_TITLE, shelf.title)
+            ?.putString(KEY_PODCAST_SHOWS_LISTENER, podcastShowsListener)
+            ?.apply()
     }
 
     fun setFeelingLucky(value: Boolean) {
@@ -1048,6 +1078,9 @@ object CustomizationSettings {
     private const val KEY_ARTIST_DIAL_PINS = "custom_artist_dial_pins"
     private const val KEY_PODCAST_DIAL_PINS = "custom_podcast_dial_pins"
     private const val KEY_LAST_PODCAST_DIAL = "custom_last_podcast_dial"
+    private const val KEY_PODCAST_SHOWS_FOR_YOU = "custom_podcast_shows_for_you"
+    private const val KEY_PODCAST_SHOWS_TITLE = "custom_podcast_shows_title"
+    private const val KEY_PODCAST_SHOWS_LISTENER = "custom_podcast_shows_listener"
     private const val KEY_HIDDEN_FROM_DIAL = "custom_hidden_from_dial"
     private const val KEY_DIAL_HIDDEN_LABELS = "custom_dial_hidden_labels"
     private const val KEY_DIAL_PIN_ICON = "custom_dial_pin_icon"
