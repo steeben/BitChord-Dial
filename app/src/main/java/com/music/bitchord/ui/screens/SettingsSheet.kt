@@ -17,7 +17,6 @@ import android.widget.Toast
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -206,11 +205,7 @@ import com.music.bitchord.playback.AudioOutputStatus
 import com.music.bitchord.playback.audio.bitperfect.BitPerfectOutput
 import com.music.bitchord.data.settings.AutomixPerformanceMode
 import com.music.bitchord.R
-import com.music.bitchord.ui.components.frostedThumbFill
-import com.music.bitchord.ui.components.frostedGlassFill
-import com.music.bitchord.ui.components.frostedTrackTint
 import com.music.bitchord.ui.components.lightweightLiquidGlass
-import com.music.bitchord.ui.components.rememberFrostedGlassDensity
 import com.music.bitchord.ui.components.SquareLogo
 import com.music.bitchord.ui.theme.AccentRed
 import com.music.bitchord.ui.theme.LocalNowPlayingTint
@@ -3955,7 +3950,6 @@ internal fun DestructiveRow(
     }
 }
 
-/** Sliding pill selector, for the handful of settings with two or three states. */
 /** One line of the video quality setting: the connection name above its three choices. */
 @Composable
 private fun VideoQualityChoice(
@@ -3976,86 +3970,6 @@ private fun VideoQualityChoice(
         onSelect = { index -> onSelect(VideoQuality.entries[index]) },
         modifier = Modifier.padding(start = TEXT_INSET, end = ROW_INSET, bottom = 14.dp),
     )
-}
-
-@Composable
-internal fun SegmentedControl(
-    options: List<String>,
-    selectedIndex: Int,
-    onSelect: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    /** A glass track (liquid glass when that is on, a frosted film otherwise) for over the page's backdrop. */
-    glass: Boolean = false,
-) {
-    val haptics = LocalHapticFeedback.current
-    val trackShape = RoundedCornerShape(10.dp)
-    val pillShape = RoundedCornerShape(8.dp)
-    // Frosted like the settings' switches: a see-through track with a sheen
-    // and a light rim, and the chosen option on a pill made exactly like the
-    // switches' white thumb, rather than a solid grey slab with a solid
-    // accent block in it.
-    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val glassDensity = rememberFrostedGlassDensity()
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .then(
-                if (glass) {
-                    Modifier.lightweightLiquidGlass(
-                        shape = trackShape,
-                        fallbackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
-                    )
-                } else {
-                    Modifier.frostedGlassFill(frostedTrackTint(dark, glassDensity), trackShape, dark)
-                },
-            )
-            // Enough of a margin for the track to read as a track. At 2dp the
-            // selected pill sat all but flush against the container's own edge,
-            // so the two rounded rectangles merged into one shape and the
-            // control stopped looking like something with a position in it.
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        options.forEachIndexed { index, label ->
-            val chosen = index == selectedIndex
-            val pill by animateFloatAsState(
-                targetValue = if (chosen) 1f else 0f,
-                animationSpec = tween(160),
-                label = "segmentPill",
-            )
-            val labelColor by animateColorAsState(
-                // Dark on the white pill, as the switch's thumb would carry it.
-                targetValue = if (chosen) {
-                    Color.Black.copy(alpha = 0.87f)
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                animationSpec = tween(160),
-                label = "segmentLabel",
-            )
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .frostedThumbFill(pillShape, dark, pill)
-                    .clickable(enabled = enabled) {
-                        if (!chosen) {
-                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onSelect(index)
-                        }
-                    }
-                    .padding(vertical = 9.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = labelColor,
-                    maxLines = 1,
-                )
-            }
-        }
-    }
 }
 
 /** This app's own repository, linked from the foot of the page. */
