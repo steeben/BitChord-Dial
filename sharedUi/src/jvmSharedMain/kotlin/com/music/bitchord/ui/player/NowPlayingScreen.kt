@@ -109,9 +109,11 @@ import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.positionOnScreen
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.geometry.lerp
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.clipRect
@@ -169,6 +171,8 @@ import com.music.bitchord.ui.theme.rememberArtworkTopBandLuminance
 import com.music.bitchord.ui.theme.topBandScrimAlpha
 import com.music.bitchord.ui.LyricsProviderState
 import com.music.bitchord.ui.components.optimizedHazeEffect
+import com.music.bitchord.ui.components.THUMBNAIL_BORDER_WIDTH
+import com.music.bitchord.ui.components.thumbnailBorderColor
 import com.music.bitchord.ui.haptics.Haptic
 import com.music.bitchord.ui.haptics.rememberHaptics
 import com.music.bitchord.ui.icons.BitChordIcons
@@ -4144,6 +4148,7 @@ fun NowPlayingScreen(
                 // Whether the mini player's thumbnail is standing in for the
                 // cover inside the sleeve, until the larger copies arrive.
                 var rowArtLoaded by remember(art) { mutableStateOf(false) }
+                val coverEdgeColor = thumbnailBorderColor()
                 // Any picture at all in the sleeve: what its shadow and clip
                 // wait on. Not the full-size cover alone, which can arrive from
                 // disk only after the open has finished, and the shadow it
@@ -4291,6 +4296,22 @@ fun NowPlayingScreen(
                         // up into that edge as it collapses.
                         .drawWithContent {
                             drawContent()
+                            // The mini player's hairline round its cover,
+                            // coming in as the artwork lands on it rather than
+                            // all at once when the cover takes over.
+                            val edge = dock?.miniArtEdge() ?: 0f
+                            if (edge > 0f) {
+                                val width = THUMBNAIL_BORDER_WIDTH.toPx()
+                                val radius = (sleeveCorner().toPx() - width / 2f).coerceAtLeast(0f)
+                                drawRoundRect(
+                                    color = coverEdgeColor,
+                                    topLeft = Offset(width / 2f, width / 2f),
+                                    size = Size(size.width - width, size.height - width),
+                                    cornerRadius = CornerRadius(radius, radius),
+                                    style = Stroke(width),
+                                    alpha = edge,
+                                )
+                            }
                             val shown = sleeveShown()
                             if (shown > 0f) {
                                 drawRect(

@@ -22,11 +22,19 @@ import com.music.bitchord.data.model.Song
 
 fun Modifier.thumbnailBorder(shape: Shape): Modifier = composed {
     this.border(
-        width = 1.dp,
-        color = if (isSystemInDarkTheme()) Color.White.copy(alpha = 0.15f) else Color.Black.copy(alpha = 0.15f),
+        width = THUMBNAIL_BORDER_WIDTH,
+        color = thumbnailBorderColor(),
         shape = shape
     )
 }
+
+/** The hairline [thumbnailBorder] draws, for a cover that draws its own. */
+val THUMBNAIL_BORDER_WIDTH = 1.dp
+
+/** The colour of [thumbnailBorder]'s hairline. */
+@Composable
+fun thumbnailBorderColor(): Color =
+    if (isSystemInDarkTheme()) Color.White.copy(alpha = 0.15f) else Color.Black.copy(alpha = 0.15f)
 
 /** A song title with the catalogue-standard outlined E for explicit audio. */
 @Composable
