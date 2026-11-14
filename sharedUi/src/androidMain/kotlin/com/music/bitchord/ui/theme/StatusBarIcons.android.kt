@@ -1,6 +1,8 @@
 package com.music.bitchord.ui.theme
 
 import android.app.Activity
+import android.os.Build
+import android.view.View
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
@@ -10,7 +12,10 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Dp
+import androidx.core.graphics.Insets
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsAnimationCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 
@@ -60,6 +65,7 @@ private fun BarsAway(hidden: Boolean, statusOnly: Boolean) {
     DisposableEffect(window, hidden) {
         if (!hidden) return@DisposableEffect onDispose {}
         val controller = WindowCompat.getInsetsController(window, view)
+        if (statusOnly) keepStatusBarInset(view)
         if (statusOnly) statusBarAway++ else allBarsAway++
         applyBarsAway(controller)
         onDispose {
@@ -86,6 +92,54 @@ private fun applyBarsAway(controller: WindowInsetsControllerCompat) {
             behaviorBefore = null
         }
     }
+}
+
+// The app's pages that have had their status bar inset pinned, so it is done
+// once for each activity.
+private val pinnedPages = java.util.WeakHashMap<View, Boolean>()
+
+/**
+ * Keeps the status bar's inset on the app's pages at the bar's full height,
+ * whether the bar is showing or not.
+ *
+ * The player is a window of its own over the pages, but the status bar it
+ * hides is the one bar of the screen: the pages' window lost its top inset
+ * too, and everything on them that sits under the bar (the top bar, the
+ * logo, the dials) went up by the bar's height as the player landed and came
+ * back down as it left. The player hides them while it is up, but not during
+ * the trip, which is when the jump showed.
+ *
+ * Done on the activity's content view, above Compose's own listener, so every
+ * reader of `WindowInsets.statusBars` on the pages gets the pinned value, on
+ * each step of the bar's own slide as well.
+ */
+private fun keepStatusBarInset(view: View) {
+    var context = view.context
+    while (context is android.content.ContextWrapper && context !is Activity) context = context.baseContext
+    val content = (context as? Activity)?.window?.decorView?.findViewById<View>(android.R.id.content) ?: return
+    if (pinnedPages.put(content, true) != null) return
+    val statusBars = WindowInsetsCompat.Type.statusBars()
+    var full = Insets.NONE
+    fun pinned(insets: WindowInsetsCompat): WindowInsetsCompat =
+        if (full == Insets.NONE) insets else WindowInsetsCompat.Builder(insets).setInsets(statusBars, full).build()
+    ViewCompat.setOnApplyWindowInsetsListener(content) { _, insets ->
+        full = insets.getInsetsIgnoringVisibility(statusBars)
+        pinned(insets)
+    }
+    // Before Android 11 a bar does not slide its inset in steps, so there is
+    // nothing more to pin.
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        ViewCompat.setWindowInsetsAnimationCallback(
+            content,
+            object : WindowInsetsAnimationCompat.Callback(DISPATCH_MODE_CONTINUE_ON_SUBTREE) {
+                override fun onProgress(
+                    insets: WindowInsetsCompat,
+                    runningAnimations: MutableList<WindowInsetsAnimationCompat>,
+                ): WindowInsetsCompat = pinned(insets)
+            },
+        )
+    }
+    ViewCompat.requestApplyInsets(content)
 }
 
 // Walks up the Compose view hierarchy to find a DialogWindowProvider (e.g. modal player) before falling back to Activity context.
