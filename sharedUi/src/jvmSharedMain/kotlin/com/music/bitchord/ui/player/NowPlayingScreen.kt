@@ -165,6 +165,7 @@ import coil3.compose.LocalPlatformContext
 import coil3.SingletonImageLoader
 import com.music.bitchord.ui.theme.rememberScreenOrientation
 import com.music.bitchord.ui.theme.HideStatusBar
+import com.music.bitchord.ui.theme.PageStatusBarIcons
 import com.music.bitchord.ui.theme.StatusBarIcons
 import com.music.bitchord.ui.theme.rememberArtworkLuminance
 import com.music.bitchord.ui.theme.rememberArtworkControlsBandLuminance
@@ -3606,7 +3607,10 @@ fun NowPlayingScreen(
         // and so keep light icons.
         val statusIconsDark = heroMode && !spotifyCanvasPresentation && !playerSubviewOpen &&
             (artTopLuminance ?: 0f) >= STATUS_ICONS_DARK_LUMINANCE
-        StatusBarIcons(dark = statusIconsDark)
+        // On the way to or from the mini player the page is what is under the
+        // bar, not this artwork: the glyphs are the page's for the trip, and
+        // this cover's only once the player has landed.
+        StatusBarIcons(dark = if (dockMoving) PageStatusBarIcons.dark else statusIconsDark)
         // "Hide status bar": away while the player is fully up, and back as it
         // starts down (a drag, a back swipe or a close), so the page under the
         // player has its bar, and its own top inset, before much of it shows.
