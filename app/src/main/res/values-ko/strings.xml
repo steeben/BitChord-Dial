@@ -364,6 +364,10 @@
     <string name="filter_non_music_audio">음악이 아닌 소리 필터링</string>
     <string name="filter_non_music_audio_subtitle">30초 미만의 클립, WAV 파일, 음성 기록, 녹음, 시스템 소리를 숨깁니다</string>
     <string name="performance">성능</string>
+    <string name="video_quality">동영상 화질</string>
+    <string name="video_quality_subtitle">뮤직비디오와 노래의 Canvas로 표시되는 뮤직비디오에 적용됩니다. 최고 화질은 최대 4K를 사용합니다. 데이터와 배터리를 훨씬 많이 쓰며 성능이 낮은 휴대전화에서는 느릴 수 있습니다.</string>
+    <string name="video_quality_mobile">모바일 데이터</string>
+    <string name="video_quality_max">최고 화질</string>
     <string name="high_performance_mode">고성능 모드</string>
     <string name="high_performance_subtitle">애니메이션과 흐림 효과를 모두 적용하고, 더 높은 화면 주사율을 요청합니다</string>
     <string name="high_performance_active">%1$d Hz 요청됨. 필요한 경우 Android에서 더 낮게 둘 수 있습니다.</string>
