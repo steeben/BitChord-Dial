@@ -112,7 +112,8 @@ class FrameTally {
  * A report of stutter says nothing about where or why. With logging on
  * (Settings, Advanced, Enable logging), this writes a line for each stretch of
  * frames: the page they were on, how many were late, and where a late frame's
- * time went. While frames are drawn, [AppThreadWatch] also writes what the
+ * time went, and a second line for how evenly its frames came (see
+ * [FramePacing]). While frames are drawn, [AppThreadWatch] also writes what the
  * app's thread was in the middle of each time it was busy for longer than a
  * few frames. Nothing is measured, and no listener is attached, with logging
  * off.
@@ -168,6 +169,7 @@ object FrameLog {
         val thread = HandlerThread("FrameLog").also { it.start() }
         val handler = Handler(thread.looper)
         val tally = FrameTally()
+        val pacing = FramePacing()
         var stretchPage = ""
         var stretchStart = 0L
         // Before Android 12 a frame does not say how long it was given, so the
@@ -184,6 +186,8 @@ object FrameLog {
             val line = tally.summary(span * 1_000_000L) ?: return
             TrackLog.toSession('I', TAG, "$stretchPage, ${"%.1f".format(Locale.ROOT, span / 1000.0)}s: $line")
             tally.reset()
+            pacing.summary()?.let { TrackLog.toSession('I', TAG, "$stretchPage pacing: $it") }
+            pacing.reset()
         }
         val startedAt = SystemClock.elapsedRealtime()
         var memoryAt = 0L
@@ -270,6 +274,7 @@ object FrameLog {
                 renderNanos = renderNanos,
                 gpuNanos = gpuNanos,
             )
+            pacing.add(metrics.getMetric(FrameMetrics.VSYNC_TIMESTAMP), totalNanos)
             // A frame this long is seen as a stop. It gets a line of its own,
             // at the time it happened, so the lines around it in the log say
             // what the app was doing.
