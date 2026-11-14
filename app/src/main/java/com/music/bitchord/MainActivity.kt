@@ -9211,8 +9211,9 @@ private fun rememberHomeFeed(
         }
     }
     // The artists' dial: a page of its own under the speed dial, of the
-    // artists pinned there and then the ones played most (from the app's own
-    // listening stats). Only while it is on in Settings › Layout.
+    // artists pinned there, then the ones played most (from the app's own
+    // listening stats), then the library's and the feed's. Only while it is
+    // on in Settings › Layout.
     val artistDialOn by CustomizationSettings.artistDial.collectAsStateWithLifecycle()
     val artistDialPins by CustomizationSettings.artistDialPins.collectAsStateWithLifecycle()
     val artistDialPinnedIds = remember(artistDialPins) { artistDialPins.mapNotNullTo(HashSet()) { it.speedDialId } }
@@ -9234,12 +9235,25 @@ private fun rememberHomeFeed(
                 }
         }.getOrDefault(emptyList())
     }
-    val arrangedHomeState = remember(baseHomeState, artistDialOn, artistDialPins, topArtists, hiddenFromDial) {
+    // The account's library artists and the feed's fill the tiles the pins
+    // and the most played leave, so the dial shows before anything is played.
+    val libraryState by viewModel.library.collectAsStateWithLifecycle()
+    val arrangedHomeState = remember(
+        baseHomeState, artistDialOn, artistDialPins, topArtists, hiddenFromDial, libraryState,
+    ) {
         val base = baseHomeState
-        val artists = (artistDialPins + topArtists)
-            .distinctBy { it.speedDialId }
-            .filterNot { it.speedDialId in hiddenFromDial }
-            .take(CustomizationSettings.SPEED_DIAL_SIZE)
+        val artists = if (artistDialOn) {
+            com.music.bitchord.data.settings.ArtistDialFill.tiles(
+                pins = artistDialPins,
+                mostPlayed = topArtists,
+                library = (libraryState as? UiState.Success)?.data?.shelves.orEmpty(),
+                feed = (base as? UiState.Success)?.data.orEmpty(),
+                hidden = hiddenFromDial,
+                size = CustomizationSettings.SPEED_DIAL_SIZE,
+            )
+        } else {
+            emptyList()
+        }
         if (!artistDialOn || artists.isEmpty() || base !is UiState.Success ||
             base.data.firstOrNull()?.title != CustomizationSettings.SPEED_DIAL_TITLE
         ) {
