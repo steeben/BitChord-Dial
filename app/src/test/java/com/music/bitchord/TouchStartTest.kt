@@ -63,8 +63,9 @@ class TouchStartTest {
                 "a late frame took on average 12.0ms on the app thread " +
                 "(input 0.0, animation and composition 12.0, layout 0.0, draw 0.0), " +
                 "0.0ms on the render thread, 0.0ms on the GPU; " +
-                "frames as gap/time in ms, * late, | the finger's first move, [] what the app did in the frame after it: " +
-                "rest/4.0 | 8.0/4.0 6.0/12.0* 12.0/4.0 6.0/4.0",
+                "frames as gap/time in ms, (app) the app thread's part of it from 5ms, * late, " +
+                "| the finger's first move, [] what the app did in the frame after it: " +
+                "rest/4.0 | 8.0/4.0 6.0/12.0(app 12.0)* 12.0/4.0 6.0/4.0",
             touch.summary("mode #5 165.0Hz"),
         )
         // Written once.
@@ -82,7 +83,8 @@ class TouchStartTest {
             "touch on Library: display mode #5 165.0Hz at the touch and after 400ms; " +
                 "1 touch samples in 1 events, the first 10.0ms after the touch; " +
                 "5 frames in 400ms, 0 late, 0 after a missed beat (beat 6.00ms); " +
-                "frames as gap/time in ms, * late, | the finger's first move, [] what the app did in the frame after it: " +
+                "frames as gap/time in ms, (app) the app thread's part of it from 5ms, * late, " +
+                "| the finger's first move, [] what the app did in the frame after it: " +
                 "-/4.0 | 6.0/4.0 6.0/4.0 6.0/4.0 6.0/4.0",
             touch.summary("mode #5 165.0Hz"),
         )
@@ -109,8 +111,9 @@ class TouchStartTest {
                 "a late frame took on average 12.0ms on the app thread " +
                 "(input 0.0, animation and composition 12.0, layout 0.0, draw 0.0), " +
                 "0.0ms on the render thread, 0.0ms on the GPU; " +
-                "frames as gap/time in ms, * late, | the finger's first move, [] what the app did in the frame after it: " +
-                "-/4.0 | 6.0/4.0 [bar small] 6.0/12.0* 12.0/12.0* 12.0/4.0",
+                "frames as gap/time in ms, (app) the app thread's part of it from 5ms, * late, " +
+                "| the finger's first move, [] what the app did in the frame after it: " +
+                "-/4.0 | 6.0/4.0 [bar small] 6.0/12.0(app 12.0)* 12.0/12.0(app 12.0)* 12.0/4.0",
             touch.summary("mode #5 165.0Hz"),
         )
     }
@@ -137,7 +140,8 @@ class TouchStartTest {
             "touch on Home: display mode #5 165.0Hz after 400ms; " +
                 "1 touch samples in 1 events, the first 10.0ms after the touch; " +
                 "5 frames in 400ms, 0 late, 0 after a missed beat (beat 6.00ms); " +
-                "frames as gap/time in ms, * late, | the finger's first move, [] what the app did in the frame after it: " +
+                "frames as gap/time in ms, (app) the app thread's part of it from 5ms, * late, " +
+                "| the finger's first move, [] what the app did in the frame after it: " +
                 "76.0/4.0 | 6.0/4.0 6.0/4.0 6.0/4.0 6.0/4.0",
             touch.summary("mode #5 165.0Hz"),
         )

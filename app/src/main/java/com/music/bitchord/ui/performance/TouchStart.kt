@@ -10,7 +10,8 @@ import java.util.Locale
  * times over, and then every frame the same. A stretch's lines cannot say
  * why, they are counts over five seconds. This keeps each frame of the first
  * [WINDOW_NANOS] after a finger comes down: the time since the frame before
- * it and how long it took. With that, the three things it could be read
+ * it, how long it took, and the app thread's part of that where it is most of
+ * a beat. With that, the three things it could be read
  * differently:
  *
  *  - the app's frames are slow as a scroll starts: frames marked late, with
@@ -41,6 +42,7 @@ class TouchStart {
 
     private val gaps = LongArray(MAX_FRAMES)
     private val totals = LongArray(MAX_FRAMES)
+    private val apps = LongArray(MAX_FRAMES)
     private val lates = BooleanArray(MAX_FRAMES)
     private val vsyncs = LongArray(MAX_FRAMES)
     private val markNanos = LongArray(MAX_MARKS)
@@ -126,6 +128,7 @@ class TouchStart {
         val late = budgetNanos > 0L && totalNanos > budgetNanos
         gaps[frames] = if (before == 0L) 0L else vsyncNanos - before
         totals[frames] = totalNanos
+        apps[frames] = inputNanos + animationNanos + layoutNanos + drawNanos
         lates[frames] = late
         vsyncs[frames] = vsyncNanos
         frames++
@@ -178,6 +181,9 @@ class TouchStart {
                 },
             )
             each.append('/').append(millis(totals[i], 1))
+            // A frame the app's thread held for most of a beat or more: with
+            // this the line says whether a slow frame was the app's own work.
+            if (apps[i] >= APP_SHOWN_NANOS) each.append("(app ").append(millis(apps[i], 1)).append(')')
             if (lates[i]) each.append('*')
         }
         val display = when {
@@ -198,7 +204,8 @@ class TouchStart {
         return "touch on $page: $display; $samples touch samples in $events events, " +
             "the first ${millis(firstMoveNanos - down, 1)}ms after the touch; " +
             "$frames frames in ${WINDOW_NANOS / 1_000_000}ms, $late late, $missed after a missed beat$beatText$lateSplit; " +
-            "frames as gap/time in ms, * late, | the finger's first move, [] what the app did in the frame after it:$each"
+            "frames as gap/time in ms, (app) the app thread's part of it from ${APP_SHOWN_NANOS / 1_000_000}ms, * late, " +
+            "| the finger's first move, [] what the app did in the frame after it:$each"
     }
 
     private fun millis(nanos: Long, places: Int): String = "%.${places}f".format(Locale.ROOT, nanos / 1_000_000.0)
@@ -213,5 +220,6 @@ class TouchStart {
         const val SHORTEST_GAP_NANOS = 2_000_000L
         const val REST_NANOS = 100_000_000L
         const val MISSED_BEATS = 1.6
+        const val APP_SHOWN_NANOS = 5_000_000L
     }
 }
