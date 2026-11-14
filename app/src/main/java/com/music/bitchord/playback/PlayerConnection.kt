@@ -25,11 +25,13 @@ import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionToken
 import com.music.bitchord.data.SongMetadataFixes
 import com.music.bitchord.data.model.ArtistRef
+import com.music.bitchord.data.model.EpisodeInfo
 import com.music.bitchord.data.model.NOTIFICATION_ART_PX
 import com.music.bitchord.data.model.PlaybackSourceType
 import com.music.bitchord.data.model.QueueTier
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.model.artworkAt
+import com.music.bitchord.data.model.isEpisode
 import com.music.bitchord.data.sources.SourceRegistry
 import com.music.bitchord.data.sources.TrackMatcher
 import com.music.bitchord.download.Downloads
@@ -248,6 +250,8 @@ fun Song.toSongBundle(): Bundle = bundleOf(
     "albumName" to albumName,
     "isVideo" to isVideo,
     "isVideoOrigin" to isVideoOrigin,
+    "isEpisode" to isEpisode,
+    "showId" to episode?.showId,
     "setVideoId" to setVideoId,
     "fromAutoplay" to fromAutoplay,
     "radioName" to radioName,
@@ -284,6 +288,7 @@ fun songFromBundle(b: Bundle): Song {
         albumName = b.getString("albumName"),
         isVideo = b.getBoolean("isVideo"),
         isVideoOrigin = b.getBoolean("isVideoOrigin"),
+        episode = if (b.getBoolean("isEpisode")) EpisodeInfo(showId = b.getString("showId")) else null,
         setVideoId = b.getString("setVideoId"),
         radioName = b.getString("radioName"),
         localUri = b.getString("localUri"),
@@ -510,6 +515,11 @@ fun MediaItem.toSong() = Song(
     isVideo = mediaMetadata.extras?.getBoolean(EXTRA_IS_VIDEO) == true,
     isVideoOrigin = mediaMetadata.extras?.getBoolean(EXTRA_VIDEO_ORIGIN) == true ||
         mediaMetadata.extras?.getBoolean(EXTRA_IS_VIDEO) == true,
+    // Only that it is one, and its show: what its row said of it stays on
+    // its show's page.
+    episode = if (mediaMetadata.extras?.getBoolean(EXTRA_EPISODE) == true) {
+        EpisodeInfo(showId = mediaMetadata.extras?.getString(EXTRA_SHOW_ID))
+    } else null,
     setVideoId = mediaMetadata.extras?.getString(EXTRA_SET_VIDEO_ID),
     sourceQuality = mediaMetadata.extras?.getString(EXTRA_SOURCE_QUALITY),
     sourceHiRes = mediaMetadata.extras?.getBoolean(EXTRA_SOURCE_HI_RES) == true,
@@ -625,6 +635,12 @@ private const val EXTRA_SOURCE_HI_RES = "bitchord.sourceHiRes"
 private const val EXTRA_IS_VIDEO = "bitchord.isVideo"
 private const val EXTRA_VIDEO_ORIGIN = "bitchord.isVideoOrigin"
 
+/** A podcast episode — see [com.music.bitchord.data.model.isEpisode]. */
+private const val EXTRA_EPISODE = "bitchord.isEpisode"
+
+/** The show a podcast episode is of (its "MPSP…" browse id), where it is known. */
+private const val EXTRA_SHOW_ID = "bitchord.showId"
+
 /** Set only on the replacement item produced by [QualityUpgrade]. */
 const val EXTRA_QUALITY_UPGRADED = "bitchord.qualityUpgraded"
 
@@ -686,7 +702,8 @@ private fun Song.matchQuery(): String = buildString {
     // `m` controls source routing, not player policy. A converted catalogue
     // track keeps [isVideoOrigin] for AutoMix, but is intentionally audio here
     // so the normal source-quality upgrade path can improve it.
-    if (isVideo) append("&m=1")
+    // An episode is the YouTube upload too: there is no other recording of it to look for.
+    if (isVideo || isEpisode) append("&m=1")
 }
 
 /**
@@ -794,7 +811,7 @@ private fun Song.buildMediaItem(): MediaItem {
                 if (queueTier != QueueTier.CONTEXT || queueEntryId != null || fromAutoplay ||
                     offlineUri != null || durationText != null ||
                     artistId != null || albumId != null || setVideoId != null ||
-                    isExplicit != null || isVideo || isVideoOrigin || radioName != null ||
+                    isExplicit != null || isVideo || isVideoOrigin || isEpisode || radioName != null ||
                     sourceQuality != null ||
                     playbackSource != null || playbackSourceType != null || playbackSourceId != null
                 ) {
@@ -816,6 +833,8 @@ private fun Song.buildMediaItem(): MediaItem {
                             EXTRA_EXPLICIT to isExplicit,
                             EXTRA_IS_VIDEO to isVideo,
                             EXTRA_VIDEO_ORIGIN to isVideoOrigin,
+                            EXTRA_EPISODE to isEpisode,
+                            EXTRA_SHOW_ID to episode?.showId,
                             EXTRA_SOURCE_QUALITY to sourceQuality,
                             EXTRA_SOURCE_HI_RES to sourceHiRes,
                         ),
@@ -877,6 +896,7 @@ fun Song.hasYouTubeOriginal(): Boolean =
         !videoId.startsWith("content://") &&
         !videoId.startsWith("file://") &&
         !isVideo &&
+        !isEpisode &&
         SourceRegistry.parseTrackKey(videoId) == null
 
 /** A playback URI carrying this is explicitly requested YouTube, never a substitute. */

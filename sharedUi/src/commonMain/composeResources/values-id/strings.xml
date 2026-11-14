@@ -24,6 +24,11 @@
     <string name="choose_lyrics_provider">Pilih penyedia lirik</string>
     <string name="clear">Hapus</string>
     <string name="close_lyrics">Tutup lirik</string>
+    <string name="comments">Komentar</string>
+    <string name="comments_off">Komentar dinonaktifkan</string>
+    <string name="comments_unavailable">Tidak dapat memuat komentar</string>
+    <string name="more_comments">Komentar lainnya</string>
+    <string name="no_comments">Tidak ada komentar</string>
     <string name="data_saver">Data-Saver</string>
     <string name="decrease_lyrics_offset">Decrease lyrics offset</string>
     <string name="downgraded_from">↓ dari %1$s</string>

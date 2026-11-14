@@ -53,6 +53,11 @@ import com.music.bitchord.data.model.ArtistPage
 import com.music.bitchord.data.model.BrowseType
 import com.music.bitchord.data.model.DetailPage
 import com.music.bitchord.data.model.HomeShelf
+import com.music.bitchord.data.podcasts.PodcastsDial
+import com.music.bitchord.data.podcasts.PodcastsFeed
+import com.music.bitchord.data.spotify.SpotifyPodcasts
+import com.music.bitchord.data.spotify.SpotifyRecommendations
+import com.music.bitchord.data.podcasts.PodcastSearch
 import com.music.bitchord.data.model.withoutRepeatsOf
 import com.music.bitchord.data.model.LibraryPage
 import com.music.bitchord.data.model.LibraryState
@@ -604,8 +609,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         durationMs: Long,
         album: String? = null,
         localUri: String? = null,
+        /** A podcast episode: it has no lyrics, so none are looked for. */
+        episode: Boolean = false,
     ) {
-        reloadLyrics = { loadLyrics(videoId, title, artist, durationMs, album, localUri) }
+        reloadLyrics = { loadLyrics(videoId, title, artist, durationMs, album, localUri, episode) }
         // Looked up whether or not "Synced lyrics" is on: that setting only
         // hides the strip on the player, and the lyrics button still opens them.
         val sources = AppSettings.lyricsSources.value
@@ -652,6 +659,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _lyricsInstrumental.value = videoId in AppSettings.instrumentalTracks.value
         if (_lyricsInstrumental.value) {
             // Marked instrumental: nothing to look up and nothing to show.
+            _lyricsChecked.value = true
+            return
+        }
+        if (episode) {
+            // Talk, not a song: no service is asked, and the player offers
+            // the episode's comments where the lyrics would be.
             _lyricsChecked.value = true
             return
         }
@@ -2420,6 +2433,166 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (_detailStack.value.isNotEmpty()) _detailStack.value = emptyList()
     }
 
+    // ── Podcasts ────────────────────────────────────────────────────────
+
+    private val _podcasts = MutableStateFlow<UiState<PodcastsFeed>>(UiState.Loading)
+
+    /** The Podcasts page's feed. Read when the page is first opened, not at launch. */
+    val podcasts: StateFlow<UiState<PodcastsFeed>> = _podcasts.asStateFlow()
+
+    private val _podcastsRefreshing = MutableStateFlow(false)
+
+    /** Whether a pull on the Podcasts page is reading its feed again. */
+    val podcastsRefreshing: StateFlow<Boolean> = _podcastsRefreshing.asStateFlow()
+
+    private val _podcastsLoadingMore = MutableStateFlow(false)
+
+    /** Whether the next page of the Podcasts page's shelves is on its way. */
+    val podcastsLoadingMore: StateFlow<Boolean> = _podcastsLoadingMore.asStateFlow()
+
+    private val _podcastSpotify = MutableStateFlow<List<ShelfItem>?>(null)
+
+    /**
+     * The shows Spotify recommends, found on YouTube Music, for the Podcasts
+     * page's dial when its source is Spotify or both. Null until they are in;
+     * empty when Spotify has none or cannot be reached.
+     */
+    val podcastSpotify: StateFlow<List<ShelfItem>?> = _podcastSpotify.asStateFlow()
+    private var podcastSpotifyJob: Job? = null
+
+    /**
+     * The Podcasts page's dial takes Spotify's shows: reads them, unless that
+     * is under way. They are kept for a while (see [SpotifyPodcasts]), so
+     * most calls cost nothing; [fresh] asks Spotify again, for a pull.
+     */
+    fun loadPodcastSpotify(fresh: Boolean = false) {
+        if (podcastSpotifyJob?.isActive == true) return
+        podcastSpotifyJob = viewModelScope.launch {
+            _podcastSpotify.value = SpotifyPodcasts.shows(fresh)
+        }
+    }
+
+    /** Whose feed [podcasts] holds or is waiting for, once one was asked for. */
+    private var podcastsListener: String? = null
+    private var podcastsAsked = false
+    private var podcastsJob: Job? = null
+
+    /**
+     * The Podcasts page is up: reads its feed, unless this listener's is in
+     * already or on its way. A feed that failed is asked for again.
+     */
+    fun openPodcasts() {
+        if (podcastsAsked && podcastsListener == listenerKey() && _podcasts.value !is UiState.Error) return
+        loadPodcasts()
+    }
+
+    /** Reads the Podcasts page's feed from the start: for a new listener, and its retry button. */
+    fun loadPodcasts() {
+        val identity = listenerKey()
+        podcastsListener = identity
+        podcastsAsked = true
+        podcastsJob?.cancel()
+        _podcasts.value = UiState.Loading
+        podcastsJob = viewModelScope.launch {
+            val state = fetchPodcasts()
+            if (identity == listenerKey()) _podcasts.value = state
+        }
+    }
+
+    /** A pull on the Podcasts page. One that fails leaves the page as it is. */
+    fun refreshPodcasts() {
+        if (_podcastsRefreshing.value) return
+        val identity = listenerKey()
+        _podcastsRefreshing.value = true
+        // Spotify's shows too, when the dial takes them.
+        val source = CustomizationSettings.podcastSource.value.effective(SpotifyRecommendations.connected())
+        if (source.usesSpotify) loadPodcastSpotify(fresh = true)
+        viewModelScope.launch {
+            try {
+                val state = fetchPodcasts()
+                val current = identity == listenerKey() && identity == podcastsListener
+                if (current && (state is UiState.Success || _podcasts.value !is UiState.Success)) {
+                    _podcasts.value = state
+                }
+            } finally {
+                _podcastsRefreshing.value = false
+            }
+        }
+    }
+
+    /**
+     * The next page of the Podcasts page's shelves, as its list nears its
+     * end. A page that fails ends the paging, and the landing page's shelves
+     * follow what is there.
+     */
+    fun loadMorePodcasts() {
+        val current = (_podcasts.value as? UiState.Success)?.data ?: return
+        val token = current.continuation ?: return
+        if (_podcastsLoadingMore.value) return
+        val identity = listenerKey()
+        _podcastsLoadingMore.value = true
+        viewModelScope.launch {
+            try {
+                val result = YtMusicRepository.morePodcastsHome(token)
+                // Only onto the feed the page was asked of: a pull or another listener's has its own.
+                val latest = (_podcasts.value as? UiState.Success)?.data
+                if (identity != listenerKey() || latest == null || latest.continuation != token) return@launch
+                _podcasts.value = UiState.Success(
+                    result.fold(
+                        onSuccess = { page -> PodcastsDial.more(latest, page.shelves, page.continuation) },
+                        onFailure = { latest.copy(continuation = null) },
+                    ),
+                )
+            } finally {
+                _podcastsLoadingMore.value = false
+            }
+        }
+    }
+
+    /**
+     * Home's podcasts page and the Podcasts landing page, asked for together.
+     * Either one is enough for the page, so only both failing is an error.
+     */
+    private suspend fun fetchPodcasts(): UiState<PodcastsFeed> = coroutineScope {
+        val identity = listenerKey()
+        val home = async { YtMusicRepository.podcastsHome() }
+        val landing = async { YtMusicRepository.podcastsLanding() }
+        // The followed shows' newest episodes, and the shows themselves for
+        // their tiles. Only an account has them, and the page does not wait
+        // on a failure of either: there is then no show to bring forward.
+        val signedIn = _signedIn.value
+        val newEpisodes = async {
+            if (signedIn) YtMusicRepository.newEpisodes().getOrNull().orEmpty() else emptyList()
+        }
+        val followed = async {
+            if (signedIn) YtMusicRepository.followedShows().getOrNull().orEmpty() else emptyList()
+        }
+        val homeResult = home.await()
+        val landingResult = landing.await()
+        val homeShelves = homeResult.getOrNull()?.shelves.orEmpty()
+        val landingShelves = landingResult.getOrNull().orEmpty()
+        // "Shows for you" is not in every answer: kept when it is, for the ones it is not in.
+        PodcastsDial.showShelves(homeShelves).firstOrNull()
+            ?.let { CustomizationSettings.setPodcastShowsForYou(it, identity) }
+        val feed = PodcastsDial.feed(
+            home = homeShelves,
+            continuation = homeResult.getOrNull()?.continuation,
+            landing = landingShelves,
+            savedForYou = CustomizationSettings.podcastShowsFor(identity),
+            fresh = PodcastsDial.fresh(
+                episodes = newEpisodes.await(),
+                followed = followed.await(),
+                known = PodcastsDial.picks(homeShelves, landingShelves),
+            ),
+        )
+        if (feed.picks.isNotEmpty() || feed.shelves.isNotEmpty()) {
+            UiState.Success(feed)
+        } else {
+            val failure = landingResult.exceptionOrNull() ?: homeResult.exceptionOrNull()
+            UiState.Error(failure?.friendly() ?: text(R.string.nothing_to_explore))
+        }
+    }
+
     fun loadHome() {
         val identity = listenerKey()
         val generation = homeLoadGeneration.incrementAndGet()
@@ -2927,6 +3100,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * a blank placeholder.
      */
     fun searchFor(term: String) {
+        if (PodcastSearch.active.value) {
+            _query.value = term
+            PodcastSearch.submit(viewModelScope, term)
+            return
+        }
         _query.value = term
         searchSubmitted = true
         _suggestions.value = emptyList()
@@ -2943,6 +3121,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onQueryChange(newValue: String) {
         _query.value = newValue
+        // Opened from the Podcasts tab: the field searches podcasts alone.
+        if (PodcastSearch.active.value) {
+            PodcastSearch.onQuery(viewModelScope, newValue)
+            return
+        }
         if (newValue.isBlank()) {
             searchSubmitted = false
             _suggestions.value = emptyList()
@@ -2977,6 +3160,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * full search, and records the term in history for future recall.
      */
     fun submitSearch() {
+        if (PodcastSearch.active.value) {
+            PodcastSearch.submit(viewModelScope, _query.value)
+            return
+        }
         val q = _query.value.trim()
         if (q.isEmpty() || _searchSource.value == SearchSource.LIBRARY) return
         searchSubmitted = true

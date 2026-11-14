@@ -33,6 +33,15 @@
     <string name="audio_files_on_device">File audio sul dispositivo</string>
     <string name="on_device">Sul dispositivo</string>
     <string name="playlists">Playlist</string>
+    <string name="podcasts">Podcast</string>
+    <string name="podcasts_dial_menu">Opzioni dei podcast</string>
+    <string name="podcast">Podcast</string>
+    <string name="read_more">Leggi tutto</string>
+    <string name="about_podcast">Informazioni sul podcast</string>
+    <string name="new_episode">Nuovo episodio</string>
+    <string name="episodes_for_later">Episodi per dopo</string>
+    <string name="podcast_source">Programmi consigliati</string>
+    <string name="podcast_source_both">Entrambi</string>
     <string name="new_playlist">Nuova playlist</string>
     <string name="saved_to_youtube_music">Salvato su YouTube Music</string>
     <string name="sign_in">Accedi</string>
@@ -1403,4 +1412,13 @@
     <string name="old_app_notice_body">Impostazioni, libreria, cronologia d\'ascolto e accessi della vecchia app non vengono trasferiti da soli. Nella vecchia app apri Impostazioni, poi I tuoi dati, e tocca Esporta dati. Poi tocca Importa dati qui e scegli quel file. Dovrai accedere di nuovo.</string>
     <string name="old_app_notice_take_me_there">Portami lì</string>
     <string name="old_app_notice_got_it">Ho capito</string>
+    <string name="episode_info">Info</string>
+    <string name="episode_play_video">Riproduci video</string>
+    <string name="search_podcasts_hint">Cerca podcast</string>
+    <string name="podcast_search_hint">Cerca programmi ed episodi.</string>
+    <string name="podcast_search_library_hint">Cerca tra i programmi che segui, quelli del tuo dial e i tuoi episodi da ascoltare dopo.</string>
+    <string name="podcast_search_failed">Impossibile cercare. Riprova.</string>
+    <string name="podcast_search_none">Nessun programma o episodio per “%1$s”.</string>
+    <string name="podcast_search_shows">Programmi</string>
+    <string name="podcast_search_episodes">Episodi</string>
 </resources>

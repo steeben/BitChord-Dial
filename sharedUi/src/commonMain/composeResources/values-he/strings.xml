@@ -24,6 +24,11 @@
     <string name="choose_lyrics_provider">בחירת ספק מילים</string>
     <string name="clear">ניקוי</string>
     <string name="close_lyrics">סגור מילים</string>
+    <string name="comments">תגובות</string>
+    <string name="comments_off">התגובות כבויות</string>
+    <string name="comments_unavailable">לא ניתן לטעון את התגובות</string>
+    <string name="more_comments">עוד תגובות</string>
+    <string name="no_comments">אין תגובות</string>
     <string name="data_saver">Data-Saver</string>
     <string name="decrease_lyrics_offset">Decrease lyrics offset</string>
     <string name="downgraded_from">↓ מ-%1$s</string>

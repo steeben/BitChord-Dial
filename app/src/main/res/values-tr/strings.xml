@@ -32,6 +32,15 @@
     <string name="audio_files_on_device">Cihazdaki ses dosyaları</string>
     <string name="on_device">Cihazda</string>
     <string name="playlists">Çalma listeleri</string>
+    <string name="podcasts">Podcast\'ler</string>
+    <string name="podcasts_dial_menu">Podcast seçenekleri</string>
+    <string name="podcast">Podcast</string>
+    <string name="read_more">Devamını oku</string>
+    <string name="about_podcast">Podcast hakkında</string>
+    <string name="new_episode">Yeni bölüm</string>
+    <string name="episodes_for_later">Sonraya bırakılan bölümler</string>
+    <string name="podcast_source">Önerilen programlar</string>
+    <string name="podcast_source_both">İkisi de</string>
     <string name="new_playlist">Yeni çalma listesi</string>
     <string name="saved_to_youtube_music">YouTube Music\'e kaydedildi</string>
     <string name="sign_in">Giriş yap</string>
@@ -1421,4 +1430,13 @@
     <string name="old_app_notice_body">Eski uygulamadaki ayarlar, kitaplık, dinleme geçmişi ve oturumlar kendiliğinden taşınmaz. Eski uygulamada Ayarlar\'ı, ardından Verileriniz bölümünü aç ve Verileri dışa aktar\'a dokun. Sonra burada Verileri içe aktar\'a dokunup o dosyayı seç. Yeniden oturum açman gerekecek.</string>
     <string name="old_app_notice_take_me_there">Beni Oraya Götür</string>
     <string name="old_app_notice_got_it">Anladım</string>
+    <string name="episode_info">Bilgi</string>
+    <string name="episode_play_video">Videoyu oynat</string>
+    <string name="search_podcasts_hint">Podcast ara</string>
+    <string name="podcast_search_hint">Program ve bölüm arayın.</string>
+    <string name="podcast_search_library_hint">Takip ettiğiniz programlarda, kadranınızdaki programlarda ve sonraya bıraktığınız bölümlerde arayın.</string>
+    <string name="podcast_search_failed">Arama yapılamadı. Tekrar deneyin.</string>
+    <string name="podcast_search_none">“%1$s” için program veya bölüm yok.</string>
+    <string name="podcast_search_shows">Programlar</string>
+    <string name="podcast_search_episodes">Bölümler</string>
 </resources>

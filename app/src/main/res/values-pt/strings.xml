@@ -34,6 +34,15 @@
     <string name="audio_files_on_device">Arquivos de áudio no dispositivo</string>
     <string name="on_device">No dispositivo</string>
     <string name="playlists">Playlists</string>
+    <string name="podcasts">Podcasts</string>
+    <string name="podcasts_dial_menu">Opções de podcasts</string>
+    <string name="podcast">Podcast</string>
+    <string name="read_more">Ler mais</string>
+    <string name="about_podcast">Sobre o podcast</string>
+    <string name="new_episode">Novo episódio</string>
+    <string name="episodes_for_later">Episódios para mais tarde</string>
+    <string name="podcast_source">Programas recomendados</string>
+    <string name="podcast_source_both">Ambos</string>
     <string name="new_playlist">Nova playlist</string>
     <string name="saved_to_youtube_music">Salva no YouTube Music</string>
     <string name="sign_in">Entrar</string>
@@ -1469,4 +1478,13 @@
     <string name="old_app_notice_body">Suas configurações, biblioteca, histórico de audição e logins do app antigo não vêm sozinhos. No app antigo, abra Configurações, depois Seus dados, e toque em Exportar dados. Depois toque em Importar dados aqui e escolha esse arquivo. Você precisará entrar de novo.</string>
     <string name="old_app_notice_take_me_there">Levar até lá</string>
     <string name="old_app_notice_got_it">Entendi</string>
+    <string name="episode_info">Informações</string>
+    <string name="episode_play_video">Reproduzir vídeo</string>
+    <string name="search_podcasts_hint">Pesquisar podcasts</string>
+    <string name="podcast_search_hint">Pesquise programas e episódios.</string>
+    <string name="podcast_search_library_hint">Pesquise nos programas que você segue, nos programas do seu dial e nos seus episódios para depois.</string>
+    <string name="podcast_search_failed">Não foi possível pesquisar. Tente novamente.</string>
+    <string name="podcast_search_none">Nenhum programa ou episódio para “%1$s”.</string>
+    <string name="podcast_search_shows">Programas</string>
+    <string name="podcast_search_episodes">Episódios</string>
 </resources>

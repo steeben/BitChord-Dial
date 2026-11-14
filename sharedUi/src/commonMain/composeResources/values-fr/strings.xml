@@ -24,6 +24,11 @@
     <string name="choose_lyrics_provider">Choisir la source des paroles</string>
     <string name="clear">Effacer</string>
     <string name="close_lyrics">Fermer les paroles</string>
+    <string name="comments">Commentaires</string>
+    <string name="comments_off">Les commentaires sont désactivés</string>
+    <string name="comments_unavailable">Impossible de charger les commentaires</string>
+    <string name="more_comments">Plus de commentaires</string>
+    <string name="no_comments">Aucun commentaire</string>
     <string name="data_saver">Data-Saver</string>
     <string name="decrease_lyrics_offset">Decrease lyrics offset</string>
     <string name="downgraded_from">↓ depuis %1$s</string>

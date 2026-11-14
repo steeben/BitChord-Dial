@@ -34,6 +34,15 @@
     <string name="audio_files_on_device">Аудиофайлы на устройстве</string>
     <string name="on_device">На устройстве</string>
     <string name="playlists">Плейлисты</string>
+    <string name="podcasts">Подкасты</string>
+    <string name="podcasts_dial_menu">Параметры подкастов</string>
+    <string name="podcast">Подкаст</string>
+    <string name="read_more">Читать далее</string>
+    <string name="about_podcast">О подкасте</string>
+    <string name="new_episode">Новый выпуск</string>
+    <string name="episodes_for_later">Выпуски на потом</string>
+    <string name="podcast_source">Рекомендуемые шоу</string>
+    <string name="podcast_source_both">Оба</string>
     <string name="new_playlist">Новый плейлист</string>
     <string name="saved_to_youtube_music">Сохранено в YouTube Music</string>
     <string name="sign_in">Войти</string>
@@ -1496,4 +1505,13 @@
     <string name="old_app_notice_body">Настройки, медиатека, история прослушивания и входы из старого приложения сами не перенесутся. В старом приложении откройте Настройки, затем Ваши данные, и нажмите Экспорт данных. Потом нажмите здесь Импорт данных и выберите этот файл. Войти в аккаунты нужно будет заново.</string>
     <string name="old_app_notice_take_me_there">Перейти туда</string>
     <string name="old_app_notice_got_it">Понятно</string>
+    <string name="episode_info">Сведения</string>
+    <string name="episode_play_video">Воспроизводить видео</string>
+    <string name="search_podcasts_hint">Поиск подкастов</string>
+    <string name="podcast_search_hint">Ищите шоу и выпуски.</string>
+    <string name="podcast_search_library_hint">Поиск по шоу, на которые вы подписаны, шоу на вашем диске и выпускам на потом.</string>
+    <string name="podcast_search_failed">Не удалось выполнить поиск. Повторите попытку.</string>
+    <string name="podcast_search_none">Нет шоу или выпусков по запросу «%1$s».</string>
+    <string name="podcast_search_shows">Шоу</string>
+    <string name="podcast_search_episodes">Выпуски</string>
 </resources>

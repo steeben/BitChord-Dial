@@ -6,6 +6,7 @@ import com.music.bitchord.data.innertube.InnertubeParser
 import com.music.bitchord.data.model.Account
 import com.music.bitchord.data.model.AccountChannel
 import com.music.bitchord.data.model.isExactArtistMatch
+import com.music.bitchord.data.model.isPodcastShow
 import com.music.bitchord.data.model.normalizedArtistName
 import com.music.bitchord.data.model.ArtistPage
 import com.music.bitchord.data.model.BrowseType
@@ -15,6 +16,7 @@ import com.music.bitchord.data.model.LibraryPage
 import com.music.bitchord.data.model.LibraryState
 import com.music.bitchord.data.model.LikeStatus
 import com.music.bitchord.data.model.MoodGenreSection
+import com.music.bitchord.data.model.PODCAST_SHOW_PREFIX
 import com.music.bitchord.data.model.playlistMoves
 import com.music.bitchord.data.model.PlaylistPrivacy
 import com.music.bitchord.data.model.SearchFilter
@@ -131,6 +133,99 @@ object YtMusicRepository {
             continuation = InnertubeParser.continuationToken(response),
         )
     }
+
+    /**
+     * Home under its Podcasts chip: now and then a shelf of shows picked for
+     * the listener ("Shows for you"), and always shelves of episodes by
+     * category, three to a page. See [InnertubeParser.parsePodcastShelves].
+     */
+    suspend fun podcastsHome(): Result<HomeFeed> = call("podcasts") {
+        val response = Innertube.browse("FEmusic_home", PODCASTS_CHIP_PARAMS)
+        HomeFeed(InnertubeParser.parsePodcastShelves(response), InnertubeParser.continuationToken(response))
+    }
+
+    /** More of [podcastsHome]'s shelves, by its continuation. */
+    suspend fun morePodcastsHome(token: String): Result<HomeFeed> = call("podcasts:more") {
+        val response = Innertube.browseContinuation(token)
+        HomeFeed(InnertubeParser.parsePodcastShelves(response), InnertubeParser.continuationToken(response))
+    }
+
+    /**
+     * The Podcasts landing page: shows to start with, the popular shows and
+     * episodes, then shows by category. The same for everyone, and always
+     * there, where [podcastsHome]'s picked shows are not.
+     */
+    suspend fun podcastsLanding(): Result<List<HomeShelf>> = call("podcasts:landing") {
+        InnertubeParser.parsePodcastShelves(Innertube.browse("FEmusic_non_music_audio"))
+    }
+
+    /**
+     * The newest episodes of the shows the account follows: YouTube Music's
+     * own "New episodes" playlist, first page. Each names its show
+     * ([com.music.bitchord.data.model.EpisodeInfo.showId]) and says how much
+     * of it was played. For a signed-in account; a guest has no such list.
+     */
+    suspend fun newEpisodes(): Result<List<Song>> = call("podcasts:new") {
+        val response = Innertube.browse(NEW_EPISODES)
+        InnertubeParser.parsePlaylistShelf(response)?.songs
+            ?: InnertubeParser.collectSongsDeep(response)
+    }
+
+    /** The shows the account follows, as the library lists them: first page. */
+    suspend fun followedShows(): Result<List<ShelfItem>> = call("podcasts:followed") {
+        InnertubeParser.parseLibraryItems(Innertube.browse(LIBRARY_PODCASTS)).filter { it.isPodcastShow }
+    }
+
+    /**
+     * The podcast shows a search for [query] finds, best first: for finding
+     * on YouTube Music a show that is known by its name only. Asked of the
+     * search's Podcasts tab, and where that has none, of the whole search.
+     */
+    suspend fun searchShows(query: String): Result<List<ShelfItem>> = call("search:shows") {
+        fun shows(response: JsonObject): List<ShelfItem> =
+            InnertubeParser.parseSearchPage(response, includeVideos = false).rows
+                .filterIsInstance<SearchResult.Browse>()
+                .map { it.item }
+                .filter { it.browseId.startsWith(PODCAST_SHOW_PREFIX) }
+                // "Podcast • Publisher": the tile's second line is who publishes it.
+                .map { ShelfItem(it.title, it.subtitle.substringAfterLast("•").trim(), it.thumbnailUrl, null, it.browseId) }
+        shows(Innertube.search(query, PODCASTS_SEARCH_PARAMS)).ifEmpty { shows(Innertube.search(query)) }
+    }
+
+    /**
+     * The podcast episodes a search for [query] finds, best first: the
+     * search's Episodes tab. Each names its show. Where that tab has none,
+     * the episodes of the whole search.
+     */
+    suspend fun searchEpisodes(query: String): Result<List<Song>> = call("search:episodes") {
+        fun episodes(response: JsonObject): List<Song> =
+            InnertubeParser.parseSearchPage(response, includeVideos = false).rows
+                .mapNotNull { row ->
+                    when (row) {
+                        is SearchResult.Track -> row.song
+                        is SearchResult.TopTrack -> row.song
+                        else -> null
+                    }
+                }
+                .filter { it.episode != null }
+                .distinctBy { it.videoId }
+        episodes(Innertube.search(query, EPISODES_SEARCH_PARAMS)).ifEmpty { episodes(Innertube.search(query)) }
+    }
+
+    /** The search's Episodes tab, in the form of [PODCASTS_SEARCH_PARAMS]. */
+    private const val EPISODES_SEARCH_PARAMS = "EgWKAQJIAWoKEAkQChAFEAMQBA=="
+
+    /** What Home's Podcasts chip sends as its browse params. */
+    private const val PODCASTS_CHIP_PARAMS = "ggMGSgQIDBAD"
+
+    /** The search's Podcasts tab, in the form of the other tabs' params (see [SearchFilter]). */
+    private const val PODCASTS_SEARCH_PARAMS = "EgWKAQJQAWoKEAkQChAFEAMQBA=="
+
+    /** YouTube Music's playlist of the followed shows' newest episodes. */
+    private const val NEW_EPISODES = "VLRDPN"
+
+    /** The library's list of followed shows. */
+    private const val LIBRARY_PODCASTS = "FEmusic_library_non_music_audio_list"
 
     /**
      * The lead shelf: the account's listening history, newest first.
@@ -1087,7 +1182,7 @@ object YtMusicRepository {
         "Albums" to "FEmusic_liked_albums",
         "Artists" to "FEmusic_library_corpus_track_artists",
         "Subscriptions" to "FEmusic_library_corpus_artists",
-        "Podcasts" to "FEmusic_library_non_music_audio_list",
+        "Podcasts" to LIBRARY_PODCASTS,
     )
 
     // ---- Writes -------------------------------------------------------------

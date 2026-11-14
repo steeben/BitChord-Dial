@@ -165,6 +165,8 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         com.music.bitchord.playback.BoundedContextPersistence.init(this)
         com.music.bitchord.data.settings.PlayedCollections.init(this)
         com.music.bitchord.data.settings.DevicePlays.init(this)
+        // Only told where its file is: it is read when a show's page or playback first needs it.
+        com.music.bitchord.data.podcasts.EpisodeProgress.init(this)
         com.music.bitchord.playback.PartyPersonalQueueStash.init(this)
         // Which tracks the listener has reverted to YouTube's own upload. Read
         // by [Song.toMediaItem], so it has to be open before the restart

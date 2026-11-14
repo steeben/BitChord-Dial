@@ -38,6 +38,11 @@
     <string name="choose_lyrics_provider">Choose lyrics provider</string>
     <string name="clear">Clear</string>
     <string name="close_lyrics">Close lyrics</string>
+    <string name="comments">Comments</string>
+    <string name="comments_off">Comments are off</string>
+    <string name="comments_unavailable">Cannot load the comments</string>
+    <string name="more_comments">More comments</string>
+    <string name="no_comments">No comments</string>
     <string name="data_saver">Data-Saver</string>
     <string name="decrease_lyrics_offset">Decrease lyrics offset</string>
     <string name="downgraded_from">↓ from %1$s</string>

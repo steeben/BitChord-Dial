@@ -31,6 +31,15 @@
     <string name="audio_files_on_device">ไฟล์เสียงในอุปกรณ์</string>
     <string name="on_device">ในอุปกรณ์</string>
     <string name="playlists">เพลย์ลิสต์</string>
+    <string name="podcasts">พอดแคสต์</string>
+    <string name="podcasts_dial_menu">ตัวเลือกพอดแคสต์</string>
+    <string name="podcast">พอดแคสต์</string>
+    <string name="read_more">อ่านเพิ่มเติม</string>
+    <string name="about_podcast">เกี่ยวกับพอดแคสต์</string>
+    <string name="new_episode">ตอนใหม่</string>
+    <string name="episodes_for_later">ตอนสำหรับฟังภายหลัง</string>
+    <string name="podcast_source">รายการแนะนำ</string>
+    <string name="podcast_source_both">ทั้งคู่</string>
     <string name="new_playlist">เพลย์ลิสต์ใหม่</string>
     <string name="saved_to_youtube_music">บันทึกลง YouTube Music แล้ว</string>
     <string name="sign_in">ลงชื่อเข้าใช้</string>
@@ -1447,4 +1456,13 @@
     <string name="old_app_notice_body">การตั้งค่า คลังเพลง ประวัติการฟัง และการลงชื่อเข้าใช้จากแอปเดิมจะไม่ย้ายมาเอง ในแอปเดิม เปิดการตั้งค่า แล้วข้อมูลของคุณ แตะส่งออกข้อมูล จากนั้นแตะนำเข้าข้อมูลที่นี่และเลือกไฟล์นั้น คุณจะต้องลงชื่อเข้าใช้อีกครั้ง</string>
     <string name="old_app_notice_take_me_there">พาไปที่นั่น</string>
     <string name="old_app_notice_got_it">เข้าใจแล้ว</string>
+    <string name="episode_info">ข้อมูล</string>
+    <string name="episode_play_video">เล่นวิดีโอ</string>
+    <string name="search_podcasts_hint">ค้นหาพอดแคสต์</string>
+    <string name="podcast_search_hint">ค้นหารายการและตอน</string>
+    <string name="podcast_search_library_hint">ค้นหาในรายการที่คุณติดตาม รายการบนแป้นหมุน และตอนที่เก็บไว้ฟังภายหลัง</string>
+    <string name="podcast_search_failed">ค้นหาไม่ได้ ลองอีกครั้ง</string>
+    <string name="podcast_search_none">ไม่มีรายการหรือตอนสำหรับ “%1$s”</string>
+    <string name="podcast_search_shows">รายการ</string>
+    <string name="podcast_search_episodes">ตอน</string>
 </resources>

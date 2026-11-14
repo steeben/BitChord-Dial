@@ -24,6 +24,11 @@
     <string name="choose_lyrics_provider">Выбрать источник текстов</string>
     <string name="clear">Очистить</string>
     <string name="close_lyrics">Закрыть текст песни</string>
+    <string name="comments">Комментарии</string>
+    <string name="comments_off">Комментарии отключены</string>
+    <string name="comments_unavailable">Не удалось загрузить комментарии</string>
+    <string name="more_comments">Ещё комментарии</string>
+    <string name="no_comments">Нет комментариев</string>
     <string name="data_saver">Data-Saver</string>
     <string name="decrease_lyrics_offset">Decrease lyrics offset</string>
     <string name="downgraded_from">↓ с %1$s</string>

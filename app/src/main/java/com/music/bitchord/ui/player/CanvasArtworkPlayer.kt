@@ -1231,7 +1231,31 @@ private fun AndroidMusicVideoCanvas(videoId: String, spec: CanvasVideoSpec, modi
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .matchParentSize()
-                .graphicsLayer { this.alpha = currentPresentationAlpha() },
+                .graphicsLayer {
+                    this.alpha = currentPresentationAlpha()
+                    // Offscreen so the fade below erases the frame rather
+                    // than whatever is drawn behind it.
+                    compositingStrategy = CompositingStrategy.Offscreen
+                }
+                // The banner's bottom fade, as the frame below puts it on the
+                // live picture. Left off, a podcast episode's video came back
+                // with a hard bottom edge as the player opened, until the live
+                // picture took over and the fade popped in.
+                .drawWithContent {
+                    drawContent()
+                    val fade = spec.bottomFade
+                    val endY = (spec.bottomFadeEndPx ?: size.height).coerceIn(0f, size.height)
+                    if (fade > 0.001f && endY > 0f) {
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(Color.Black, Color.Transparent),
+                                startY = endY * (1f - fade.coerceAtMost(1f)),
+                                endY = endY,
+                            ),
+                            blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
+                        )
+                    }
+                },
         )
     }
     AndroidView(
@@ -1264,11 +1288,16 @@ private fun AndroidMusicVideoCanvas(videoId: String, spec: CanvasVideoSpec, modi
         update = { frame ->
             val view = frame.getChildAt(0) as TextureView
             view.alpha = alpha * spec.presentationAlpha()
-            // Always cropped to cover: the video is the whole screen's backdrop.
+            // Always cropped to cover: the video is the whole screen's
+            // backdrop, or a podcast episode's picture in the cover's place.
             if (frame.applied.transformDiffers(engineAspect, CanvasContentMode.CROP, false, view.width, view.height)) {
                 view.applyContentTransform(engineAspect, CanvasContentMode.CROP, false)
             }
             frame.wipe = wipe.value
+            // The banner's dissolve into the backdrop, for an episode's picture
+            // that runs as the banner. None is asked for under the whole screen.
+            frame.fadeFraction = spec.bottomFade
+            frame.fadeEndPx = spec.bottomFadeEndPx
         },
         onRelease = { frame ->
             if (textureView === frame.getChildAt(0)) textureView = null

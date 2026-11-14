@@ -215,6 +215,8 @@ fun HomeScreen(
      * drawn by a caller that can act on it, i.e. passes [onTopPickClick].
      */
     topPicks: List<TopPick>? = null,
+    /** The row's heading, for a page whose row is not Home's own: null is "Top Picks for You". */
+    topPicksTitle: String? = null,
     topPicksLoading: Boolean = false,
     /** The signed-in account's name, for the personal station's "Name's Station". */
     listenerName: String? = null,
@@ -302,6 +304,7 @@ fun HomeScreen(
                                     listenerName = listenerName,
                                     onClick = onTopPickClick,
                                     onLongPress = onTopPickLongPress,
+                                    title = topPicksTitle,
                                 )
                             }
                         }
@@ -1656,6 +1659,20 @@ fun VideoShelfCard(
                 modifier = Modifier.fillMaxSize(),
             )
             if (isCurrent && isPlaying) SearchPlayingBars(Modifier.align(Alignment.Center))
+            // A podcast episode says how long it is, in the still's corner.
+            item.durationText?.let { duration ->
+                Text(
+                    text = duration,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White,
+                    maxLines = 1,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(8.dp)
+                        .background(Color.Black.copy(alpha = 0.72f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                )
+            }
         }
         Spacer(Modifier.height(10.dp))
         Text(
