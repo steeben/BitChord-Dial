@@ -4085,7 +4085,7 @@ private fun BitChordApp(
                 }
                 // The page itself is made once; what it draws is this composition's.
                 val latestHomeBody by rememberUpdatedState(homeBody)
-                val homePage = remember { movableContentOf<Boolean> { shown -> latestHomeBody(shown) } }
+                val keptHomeContent = remember { movableContentOf<Boolean> { shown -> latestHomeBody(shown) } }
                 pages.AnimatedContent(
                     // Library pages pan: one pushed from the Library slides in
                     // from the right as the page it was opened from goes off to
@@ -4836,7 +4836,7 @@ private fun BitChordApp(
                         if (key.startsWith(MOOD_PAGE_KEY)) TAB_EXPLORE else key.removePrefix(TAB_KEY).toIntOrNull() ?: selectedTab
                     ) {
                         TAB_HOME -> if (key == HOME_PAGE_KEY) {
-                            keptHome.Place(transition, pages) { homePage(true) }
+                            keptHome.Place(transition, pages) { keptHomeContent(true) }
                         } else {
                             homeBody(true)
                         }
@@ -5234,7 +5234,7 @@ private fun BitChordApp(
                 }
                 // Home, kept while another page is up. After the pages, so that
                 // this is composed in the same pass in which they let go of it.
-                keptHome.OffStage(pages) { homePage(false) }
+                keptHome.OffStage(pages) { keptHomeContent(false) }
 
                 // ---- Settings sub-screen overlays ----
                 // When a sub-screen is opened from Settings, AnimatedContent keeps
