@@ -178,6 +178,7 @@ import com.music.bitchord.data.canvas.CanvasSource
 import com.music.bitchord.data.canvas.AnimatedArtKind
 import com.music.bitchord.data.canvas.kind
 import com.music.bitchord.data.AudioOnlyVideos
+import com.music.bitchord.data.EpisodeVideo
 import com.music.bitchord.data.CanvasAudioFixes
 import com.music.bitchord.data.VideoCanvases
 import com.music.bitchord.data.lyrics.LyricLine
@@ -1207,7 +1208,10 @@ fun NowPlayingScreen(
     val mixing by PlayerSettings.smartMixInProgress.collectAsStateWithLifecycle()
     // A music video plays its own picture where the sleeve is — see
     // [MusicVideoSurface] — and takes the place of any animated cover.
-    val musicVideo = showsMusicVideo(song) && song.videoId !in audioOnlyVideos
+    // An episode plays its video only while the "…" menu's switch is on.
+    val episodeVideoOn by EpisodeVideo.on.collectAsStateWithLifecycle()
+    val musicVideo = showsMusicVideo(song) && song.videoId !in audioOnlyVideos &&
+        (song.isVideo || !song.isEpisode || episodeVideoOn)
     val restoredPlayerScreen = remember { PlayerSettings.lastPlayerScreen.value }
     var queueOpen by remember {
         mutableStateOf(restoredPlayerScreen == LastPlayerScreen.QUEUE)

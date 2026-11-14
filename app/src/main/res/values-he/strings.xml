@@ -1477,4 +1477,13 @@
     <string name="old_app_notice_body">ההגדרות, הספרייה, היסטוריית ההאזנה וההתחברויות מהאפליקציה הישנה לא עוברים מעצמם. באפליקציה הישנה פתחו הגדרות, ואז הנתונים שלך, והקישו על ייצוא נתונים. אחר כך הקישו כאן על ייבוא נתונים ובחרו את הקובץ. תצטרכו להתחבר מחדש.</string>
     <string name="old_app_notice_take_me_there">קח אותי לשם</string>
     <string name="old_app_notice_got_it">הבנתי</string>
+    <string name="episode_info">מידע</string>
+    <string name="episode_play_video">הפעלת וידאו</string>
+    <string name="search_podcasts_hint">חיפוש פודקאסטים</string>
+    <string name="podcast_search_hint">חפשו תוכניות ופרקים.</string>
+    <string name="podcast_search_library_hint">חפשו בתוכניות שאתם עוקבים אחריהן, בתוכניות בחוגה ובפרקים לשמיעה מאוחרת.</string>
+    <string name="podcast_search_failed">לא ניתן לחפש. נסו שוב.</string>
+    <string name="podcast_search_none">אין תוכניות או פרקים עבור “%1$s”.</string>
+    <string name="podcast_search_shows">תוכניות</string>
+    <string name="podcast_search_episodes">פרקים</string>
 </resources>

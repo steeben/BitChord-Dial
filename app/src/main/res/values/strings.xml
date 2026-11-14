@@ -1314,4 +1314,13 @@
     <string name="old_app_notice_body">Your settings, library, listening history and sign-ins from the old app don\'t come over on their own. In the old app, open Settings, then Your data, and tap Export data. Then tap Import data here and pick that file. You\'ll need to sign in again.</string>
     <string name="old_app_notice_take_me_there">Take Me There</string>
     <string name="old_app_notice_got_it">Got It</string>
+    <string name="episode_info">Info</string>
+    <string name="episode_play_video">Play video</string>
+    <string name="search_podcasts_hint">Search podcasts</string>
+    <string name="podcast_search_hint">Search for shows and episodes.</string>
+    <string name="podcast_search_library_hint">Search the shows you follow, the shows on your dial and your episodes for later.</string>
+    <string name="podcast_search_failed">Could not search. Try again.</string>
+    <string name="podcast_search_none">No shows or episodes for “%1$s”.</string>
+    <string name="podcast_search_shows">Shows</string>
+    <string name="podcast_search_episodes">Episodes</string>
 </resources>

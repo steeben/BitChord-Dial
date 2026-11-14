@@ -1429,4 +1429,13 @@
     <string name="old_app_notice_body">Eski uygulamadaki ayarlar, kitaplık, dinleme geçmişi ve oturumlar kendiliğinden taşınmaz. Eski uygulamada Ayarlar\'ı, ardından Verileriniz bölümünü aç ve Verileri dışa aktar\'a dokun. Sonra burada Verileri içe aktar\'a dokunup o dosyayı seç. Yeniden oturum açman gerekecek.</string>
     <string name="old_app_notice_take_me_there">Beni Oraya Götür</string>
     <string name="old_app_notice_got_it">Anladım</string>
+    <string name="episode_info">Bilgi</string>
+    <string name="episode_play_video">Videoyu oynat</string>
+    <string name="search_podcasts_hint">Podcast ara</string>
+    <string name="podcast_search_hint">Program ve bölüm arayın.</string>
+    <string name="podcast_search_library_hint">Takip ettiğiniz programlarda, kadranınızdaki programlarda ve sonraya bıraktığınız bölümlerde arayın.</string>
+    <string name="podcast_search_failed">Arama yapılamadı. Tekrar deneyin.</string>
+    <string name="podcast_search_none">“%1$s” için program veya bölüm yok.</string>
+    <string name="podcast_search_shows">Programlar</string>
+    <string name="podcast_search_episodes">Bölümler</string>
 </resources>

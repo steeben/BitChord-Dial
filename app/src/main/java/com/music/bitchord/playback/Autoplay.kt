@@ -6,6 +6,8 @@ import com.music.bitchord.data.model.SearchFilter
 import com.music.bitchord.data.model.SearchResult
 import com.music.bitchord.data.model.QueueTier
 import com.music.bitchord.data.model.Song
+import com.music.bitchord.data.model.isEpisode
+import com.music.bitchord.data.podcasts.EpisodeAutoplay
 import com.music.bitchord.data.sources.SourceRegistry
 import com.music.bitchord.data.sources.TrackMatcher
 import com.music.bitchord.data.spotify.SpotifyRecommendations
@@ -102,6 +104,20 @@ suspend fun loadAutoplayTracks(
     seedSong: Song,
     limit: Int = MAX_QUEUED_AUTOPLAY,
 ): Result<List<Song>> {
+    // A podcast episode plays on with episodes: its show's next one, or else
+    // recommended shows' episodes. Never a station of songs.
+    if (seedSong.isEpisode) {
+        val episodes = runCatching { EpisodeAutoplay.tracks(existing, seedSong, limit) }
+            .getOrElse { if (it is CancellationException) throw it else return Result.failure(it) }
+        return Result.success(episodes.map {
+            it.copy(
+                radioName = seedSong.radioName,
+                playbackSource = seedSong.playbackSource,
+                playbackSourceType = seedSong.playbackSourceType,
+                playbackSourceId = seedSong.playbackSourceId,
+            ).asQueueEntry(QueueTier.AUTOPLAY)
+        })
+    }
     val seed = youtubeSeedFor(seedSong) ?: return Result.success(emptyList())
     // A music video plays on with music videos, as YouTube Music does.
     val videos = seedSong.isVideo && seed == seedSong.videoId

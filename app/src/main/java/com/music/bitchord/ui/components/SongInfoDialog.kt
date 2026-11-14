@@ -24,6 +24,7 @@ import com.music.bitchord.data.SongInfo
 import com.music.bitchord.data.SongInfoRepository
 import com.music.bitchord.data.compactCount
 import com.music.bitchord.data.model.Song
+import com.music.bitchord.data.model.isEpisode
 import com.music.bitchord.ui.theme.ArtworkPalette
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
@@ -63,7 +64,7 @@ internal fun SongInfoDialog(song: Song, onDismiss: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = stringResource(R.string.song_info),
+                    text = stringResource(if (song.isEpisode) R.string.episode_info else R.string.song_info),
                     style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp, fontWeight = FontWeight.W600),
                     color = onSurface,
                     textAlign = TextAlign.Center,
@@ -195,7 +196,7 @@ internal fun SongInfoPage(song: Song, palette: ArtworkPalette, onBack: () -> Uni
             }
             Column(Modifier.weight(1f)) {
                 Text(
-                    text = stringResource(R.string.song_info),
+                    text = stringResource(if (song.isEpisode) R.string.episode_info else R.string.song_info),
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onBackground,
                 )

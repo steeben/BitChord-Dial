@@ -192,6 +192,29 @@ object YtMusicRepository {
         shows(Innertube.search(query, PODCASTS_SEARCH_PARAMS)).ifEmpty { shows(Innertube.search(query)) }
     }
 
+    /**
+     * The podcast episodes a search for [query] finds, best first: the
+     * search's Episodes tab. Each names its show. Where that tab has none,
+     * the episodes of the whole search.
+     */
+    suspend fun searchEpisodes(query: String): Result<List<Song>> = call("search:episodes") {
+        fun episodes(response: JsonObject): List<Song> =
+            InnertubeParser.parseSearchPage(response, includeVideos = false).rows
+                .mapNotNull { row ->
+                    when (row) {
+                        is SearchResult.Track -> row.song
+                        is SearchResult.TopTrack -> row.song
+                        else -> null
+                    }
+                }
+                .filter { it.episode != null }
+                .distinctBy { it.videoId }
+        episodes(Innertube.search(query, EPISODES_SEARCH_PARAMS)).ifEmpty { episodes(Innertube.search(query)) }
+    }
+
+    /** The search's Episodes tab, in the form of [PODCASTS_SEARCH_PARAMS]. */
+    private const val EPISODES_SEARCH_PARAMS = "EgWKAQJIAWoKEAkQChAFEAMQBA=="
+
     /** What Home's Podcasts chip sends as its browse params. */
     private const val PODCASTS_CHIP_PARAMS = "ggMGSgQIDBAD"
 

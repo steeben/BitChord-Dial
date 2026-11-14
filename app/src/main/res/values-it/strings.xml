@@ -1411,4 +1411,13 @@
     <string name="old_app_notice_body">Impostazioni, libreria, cronologia d\'ascolto e accessi della vecchia app non vengono trasferiti da soli. Nella vecchia app apri Impostazioni, poi I tuoi dati, e tocca Esporta dati. Poi tocca Importa dati qui e scegli quel file. Dovrai accedere di nuovo.</string>
     <string name="old_app_notice_take_me_there">Portami lì</string>
     <string name="old_app_notice_got_it">Ho capito</string>
+    <string name="episode_info">Info</string>
+    <string name="episode_play_video">Riproduci video</string>
+    <string name="search_podcasts_hint">Cerca podcast</string>
+    <string name="podcast_search_hint">Cerca programmi ed episodi.</string>
+    <string name="podcast_search_library_hint">Cerca tra i programmi che segui, quelli del tuo dial e i tuoi episodi da ascoltare dopo.</string>
+    <string name="podcast_search_failed">Impossibile cercare. Riprova.</string>
+    <string name="podcast_search_none">Nessun programma o episodio per “%1$s”.</string>
+    <string name="podcast_search_shows">Programmi</string>
+    <string name="podcast_search_episodes">Episodi</string>
 </resources>

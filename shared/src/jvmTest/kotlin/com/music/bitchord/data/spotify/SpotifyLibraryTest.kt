@@ -176,4 +176,27 @@ class SpotifyLibraryTest {
             parsePlaylistHead(root),
         )
     }
+
+    @Test
+    fun searchShowsAreTheSearchsPodcasts_eachOnce() {
+        fun show(id: String, name: String) =
+            """{"__typename":"PodcastResponseWrapper","data":{"__typename":"Podcast","name":"$name",
+              "uri":"spotify:show:$id","publisher":{"name":"Publisher of $name"},
+              "coverArt":{"sources":[{"url":"https://img/$id/64"},{"url":"https://img/$id/640"}]}}}"""
+        val root = json.parseToJsonElement(
+            """
+            {"data":{"searchV2":{
+              "tracksV2":{"items":[]},
+              "podcasts":{"items":[${show("s1", "Show One")},
+                {"__typename":"AudiobookResponseWrapper","data":{"__typename":"Audiobook","name":"A book","uri":"spotify:show:b1"}},
+                ${show("s2", "Show Two")},${show("s1", "Show One")}]}
+            }}}
+            """.trimIndent(),
+        ).jsonObject
+        val shows = parseSearchShows(root)
+        assertEquals(listOf("s1", "s2"), shows.map { it.id })
+        assertEquals("Show One", shows.first().name)
+        assertEquals("Publisher of Show One", shows.first().publisher)
+        assertEquals(emptyList(), parseSearchShows(json.parseToJsonElement("""{"data":{"searchV2":{}}}""").jsonObject))
+    }
 }

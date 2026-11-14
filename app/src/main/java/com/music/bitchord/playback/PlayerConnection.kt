@@ -251,6 +251,7 @@ fun Song.toSongBundle(): Bundle = bundleOf(
     "isVideo" to isVideo,
     "isVideoOrigin" to isVideoOrigin,
     "isEpisode" to isEpisode,
+    "showId" to episode?.showId,
     "setVideoId" to setVideoId,
     "fromAutoplay" to fromAutoplay,
     "radioName" to radioName,
@@ -287,7 +288,7 @@ fun songFromBundle(b: Bundle): Song {
         albumName = b.getString("albumName"),
         isVideo = b.getBoolean("isVideo"),
         isVideoOrigin = b.getBoolean("isVideoOrigin"),
-        episode = if (b.getBoolean("isEpisode")) EpisodeInfo() else null,
+        episode = if (b.getBoolean("isEpisode")) EpisodeInfo(showId = b.getString("showId")) else null,
         setVideoId = b.getString("setVideoId"),
         radioName = b.getString("radioName"),
         localUri = b.getString("localUri"),
@@ -495,8 +496,11 @@ fun MediaItem.toSong() = Song(
     isVideo = mediaMetadata.extras?.getBoolean(EXTRA_IS_VIDEO) == true,
     isVideoOrigin = mediaMetadata.extras?.getBoolean(EXTRA_VIDEO_ORIGIN) == true ||
         mediaMetadata.extras?.getBoolean(EXTRA_IS_VIDEO) == true,
-    // Only that it is one: what its row said of it stays on its show's page.
-    episode = if (mediaMetadata.extras?.getBoolean(EXTRA_EPISODE) == true) EpisodeInfo() else null,
+    // Only that it is one, and its show: what its row said of it stays on
+    // its show's page.
+    episode = if (mediaMetadata.extras?.getBoolean(EXTRA_EPISODE) == true) {
+        EpisodeInfo(showId = mediaMetadata.extras?.getString(EXTRA_SHOW_ID))
+    } else null,
     setVideoId = mediaMetadata.extras?.getString(EXTRA_SET_VIDEO_ID),
     sourceQuality = mediaMetadata.extras?.getString(EXTRA_SOURCE_QUALITY),
     sourceHiRes = mediaMetadata.extras?.getBoolean(EXTRA_SOURCE_HI_RES) == true,
@@ -614,6 +618,9 @@ private const val EXTRA_VIDEO_ORIGIN = "bitchord.isVideoOrigin"
 
 /** A podcast episode — see [com.music.bitchord.data.model.isEpisode]. */
 private const val EXTRA_EPISODE = "bitchord.isEpisode"
+
+/** The show a podcast episode is of (its "MPSP…" browse id), where it is known. */
+private const val EXTRA_SHOW_ID = "bitchord.showId"
 
 /** Set only on the replacement item produced by [QualityUpgrade]. */
 const val EXTRA_QUALITY_UPGRADED = "bitchord.qualityUpgraded"
@@ -808,6 +815,7 @@ private fun Song.buildMediaItem(): MediaItem {
                             EXTRA_IS_VIDEO to isVideo,
                             EXTRA_VIDEO_ORIGIN to isVideoOrigin,
                             EXTRA_EPISODE to isEpisode,
+                            EXTRA_SHOW_ID to episode?.showId,
                             EXTRA_SOURCE_QUALITY to sourceQuality,
                             EXTRA_SOURCE_HI_RES to sourceHiRes,
                         ),

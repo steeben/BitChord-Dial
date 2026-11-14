@@ -1450,4 +1450,13 @@
     <string name="old_app_notice_body">以前のアプリの設定、ライブラリ、再生履歴、ログイン情報は自動では移りません。以前のアプリで「設定」→「あなたのデータ」を開き、「データをエクスポート」をタップします。次にここで「データをインポート」をタップしてそのファイルを選びます。ログインはやり直しが必要です。</string>
     <string name="old_app_notice_take_me_there">そこへ移動</string>
     <string name="old_app_notice_got_it">OK</string>
+    <string name="episode_info">情報</string>
+    <string name="episode_play_video">動画を再生</string>
+    <string name="search_podcasts_hint">ポッドキャストを検索</string>
+    <string name="podcast_search_hint">番組とエピソードを検索します。</string>
+    <string name="podcast_search_library_hint">フォロー中の番組、ダイヤルの番組、後で聴くエピソードを検索します。</string>
+    <string name="podcast_search_failed">検索できませんでした。もう一度お試しください。</string>
+    <string name="podcast_search_none">「%1$s」の番組やエピソードはありません。</string>
+    <string name="podcast_search_shows">番組</string>
+    <string name="podcast_search_episodes">エピソード</string>
 </resources>

@@ -57,6 +57,7 @@ import com.music.bitchord.data.podcasts.PodcastsDial
 import com.music.bitchord.data.podcasts.PodcastsFeed
 import com.music.bitchord.data.spotify.SpotifyPodcasts
 import com.music.bitchord.data.spotify.SpotifyRecommendations
+import com.music.bitchord.data.podcasts.PodcastSearch
 import com.music.bitchord.data.model.withoutRepeatsOf
 import com.music.bitchord.data.model.LibraryPage
 import com.music.bitchord.data.model.LibraryState
@@ -2818,6 +2819,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * a blank placeholder.
      */
     fun searchFor(term: String) {
+        if (PodcastSearch.active.value) {
+            _query.value = term
+            PodcastSearch.submit(viewModelScope, term)
+            return
+        }
         _query.value = term
         searchSubmitted = true
         _suggestions.value = emptyList()
@@ -2834,6 +2840,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onQueryChange(newValue: String) {
         _query.value = newValue
+        // Opened from the Podcasts tab: the field searches podcasts alone.
+        if (PodcastSearch.active.value) {
+            PodcastSearch.onQuery(viewModelScope, newValue)
+            return
+        }
         if (newValue.isBlank()) {
             searchSubmitted = false
             _suggestions.value = emptyList()
@@ -2865,6 +2876,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * full search, and records the term in history for future recall.
      */
     fun submitSearch() {
+        if (PodcastSearch.active.value) {
+            PodcastSearch.submit(viewModelScope, _query.value)
+            return
+        }
         val q = _query.value.trim()
         if (q.isEmpty() || _searchSource.value == SearchSource.LIBRARY) return
         searchSubmitted = true

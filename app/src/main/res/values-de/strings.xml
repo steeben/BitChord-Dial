@@ -1472,4 +1472,13 @@
     <string name="old_app_notice_body">Einstellungen, Mediathek, Hörverlauf und Anmeldungen aus der alten App kommen nicht von selbst mit. Öffne in der alten App Einstellungen, dann Deine Daten, und tippe auf Daten exportieren. Tippe dann hier auf Daten importieren und wähle diese Datei. Danach musst du dich erneut anmelden.</string>
     <string name="old_app_notice_take_me_there">Dorthin</string>
     <string name="old_app_notice_got_it">Verstanden</string>
+    <string name="episode_info">Info</string>
+    <string name="episode_play_video">Video abspielen</string>
+    <string name="search_podcasts_hint">Podcasts suchen</string>
+    <string name="podcast_search_hint">Suche nach Sendungen und Folgen.</string>
+    <string name="podcast_search_library_hint">Durchsuche die Sendungen, denen du folgst, die Sendungen auf deinem Dial und deine Folgen für später.</string>
+    <string name="podcast_search_failed">Suche nicht möglich. Versuche es erneut.</string>
+    <string name="podcast_search_none">Keine Sendungen oder Folgen für „%1$s“.</string>
+    <string name="podcast_search_shows">Sendungen</string>
+    <string name="podcast_search_episodes">Folgen</string>
 </resources>

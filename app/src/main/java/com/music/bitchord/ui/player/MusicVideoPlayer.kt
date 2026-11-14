@@ -33,6 +33,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import com.music.bitchord.data.AudioOnlyVideos
 import com.music.bitchord.data.CanvasAudioFixes
+import com.music.bitchord.data.EpisodeVideo
 import com.music.bitchord.data.VideoCanvases
 import com.music.bitchord.data.Http
 import com.music.bitchord.data.TrackLog
@@ -338,6 +339,8 @@ object MusicVideoEngine {
         val song = controller?.currentMediaItem?.toSong() ?: return null
         // A podcast episode's picture is its own too, though it is filed as audio.
         if (song.isVideo || song.isEpisode) {
+            // An episode set to audio only has no picture to decode.
+            if (!song.isVideo && !EpisodeVideo.on.value) return null
             return (song.videoId to null).takeIf {
                 song.videoId !in noPicture && song.videoId !in AudioOnlyVideos && song.videoId !in stillVideos
             }

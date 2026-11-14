@@ -1449,4 +1449,13 @@
     <string name="old_app_notice_body">旧应用中的设置、资料库、收听记录和登录信息不会自动迁移。在旧应用中打开“设置”>“你的数据”，点按“导出数据”。然后在这里点按“导入数据”并选择该文件。你需要重新登录。</string>
     <string name="old_app_notice_take_me_there">带我去</string>
     <string name="old_app_notice_got_it">知道了</string>
+    <string name="episode_info">信息</string>
+    <string name="episode_play_video">播放视频</string>
+    <string name="search_podcasts_hint">搜索播客</string>
+    <string name="podcast_search_hint">搜索节目和单集。</string>
+    <string name="podcast_search_library_hint">在你关注的节目、拨盘上的节目和稍后收听的单集中搜索。</string>
+    <string name="podcast_search_failed">无法搜索，请重试。</string>
+    <string name="podcast_search_none">没有与“%1$s”相关的节目或单集。</string>
+    <string name="podcast_search_shows">节目</string>
+    <string name="podcast_search_episodes">单集</string>
 </resources>

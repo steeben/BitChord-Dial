@@ -1477,4 +1477,13 @@
     <string name="old_app_notice_body">Suas configurações, biblioteca, histórico de audição e logins do app antigo não vêm sozinhos. No app antigo, abra Configurações, depois Seus dados, e toque em Exportar dados. Depois toque em Importar dados aqui e escolha esse arquivo. Você precisará entrar de novo.</string>
     <string name="old_app_notice_take_me_there">Levar até lá</string>
     <string name="old_app_notice_got_it">Entendi</string>
+    <string name="episode_info">Informações</string>
+    <string name="episode_play_video">Reproduzir vídeo</string>
+    <string name="search_podcasts_hint">Pesquisar podcasts</string>
+    <string name="podcast_search_hint">Pesquise programas e episódios.</string>
+    <string name="podcast_search_library_hint">Pesquise nos programas que você segue, nos programas do seu dial e nos seus episódios para depois.</string>
+    <string name="podcast_search_failed">Não foi possível pesquisar. Tente novamente.</string>
+    <string name="podcast_search_none">Nenhum programa ou episódio para “%1$s”.</string>
+    <string name="podcast_search_shows">Programas</string>
+    <string name="podcast_search_episodes">Episódios</string>
 </resources>

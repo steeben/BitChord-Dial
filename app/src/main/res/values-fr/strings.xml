@@ -1473,4 +1473,13 @@
     <string name="old_app_notice_body">Vos réglages, votre bibliothèque, votre historique d\'écoute et vos connexions ne sont pas transférés automatiquement. Dans l\'ancienne app, ouvrez Paramètres, puis Vos données, et touchez Exporter les données. Touchez ensuite Importer des données ici et choisissez ce fichier. Vous devrez vous reconnecter.</string>
     <string name="old_app_notice_take_me_there">M\'y emmener</string>
     <string name="old_app_notice_got_it">Compris</string>
+    <string name="episode_info">Infos</string>
+    <string name="episode_play_video">Lire la vidéo</string>
+    <string name="search_podcasts_hint">Rechercher des podcasts</string>
+    <string name="podcast_search_hint">Recherchez des émissions et des épisodes.</string>
+    <string name="podcast_search_library_hint">Recherchez dans les émissions que vous suivez, celles de votre cadran et vos épisodes à écouter plus tard.</string>
+    <string name="podcast_search_failed">Recherche impossible. Réessayez.</string>
+    <string name="podcast_search_none">Aucune émission ni aucun épisode pour « %1$s ».</string>
+    <string name="podcast_search_shows">Émissions</string>
+    <string name="podcast_search_episodes">Épisodes</string>
 </resources>

@@ -1512,4 +1512,13 @@
     <string name="old_app_notice_body">Ustawienia, biblioteka, historia słuchania i logowania ze starej aplikacji nie przeniosą się same. W starej aplikacji otwórz Ustawienia, potem Twoje dane, i stuknij Wyeksportuj dane. Następnie stuknij tutaj Importuj dane i wybierz ten plik. Trzeba będzie zalogować się ponownie.</string>
     <string name="old_app_notice_take_me_there">Zabierz mnie tam</string>
     <string name="old_app_notice_got_it">Rozumiem</string>
+    <string name="episode_info">Informacje</string>
+    <string name="episode_play_video">Odtwórz wideo</string>
+    <string name="search_podcasts_hint">Szukaj podcastów</string>
+    <string name="podcast_search_hint">Szukaj audycji i odcinków.</string>
+    <string name="podcast_search_library_hint">Przeszukaj obserwowane audycje, audycje na tarczy i odcinki na później.</string>
+    <string name="podcast_search_failed">Nie udało się wyszukać. Spróbuj ponownie.</string>
+    <string name="podcast_search_none">Brak audycji i odcinków dla „%1$s”.</string>
+    <string name="podcast_search_shows">Audycje</string>
+    <string name="podcast_search_episodes">Odcinki</string>
 </resources>

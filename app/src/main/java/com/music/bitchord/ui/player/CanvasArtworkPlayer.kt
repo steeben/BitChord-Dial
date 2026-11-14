@@ -1231,7 +1231,31 @@ private fun AndroidMusicVideoCanvas(videoId: String, spec: CanvasVideoSpec, modi
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .matchParentSize()
-                .graphicsLayer { this.alpha = currentPresentationAlpha() },
+                .graphicsLayer {
+                    this.alpha = currentPresentationAlpha()
+                    // Offscreen so the fade below erases the frame rather
+                    // than whatever is drawn behind it.
+                    compositingStrategy = CompositingStrategy.Offscreen
+                }
+                // The banner's bottom fade, as the frame below puts it on the
+                // live picture. Left off, a podcast episode's video came back
+                // with a hard bottom edge as the player opened, until the live
+                // picture took over and the fade popped in.
+                .drawWithContent {
+                    drawContent()
+                    val fade = spec.bottomFade
+                    val endY = (spec.bottomFadeEndPx ?: size.height).coerceIn(0f, size.height)
+                    if (fade > 0.001f && endY > 0f) {
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(Color.Black, Color.Transparent),
+                                startY = endY * (1f - fade.coerceAtMost(1f)),
+                                endY = endY,
+                            ),
+                            blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
+                        )
+                    }
+                },
         )
     }
     AndroidView(

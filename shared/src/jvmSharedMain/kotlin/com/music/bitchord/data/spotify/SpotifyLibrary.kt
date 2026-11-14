@@ -239,6 +239,25 @@ object SpotifyLibrary {
         parseSearchTracks(gql("searchDesktop", SEARCH, variables, authHeaders()))
     }
 
+    /**
+     * Spotify's catalogue searched for [query], podcast shows only: the same
+     * search page query as [searchTracks], which lists shows beside songs.
+     */
+    suspend fun searchShows(query: String, limit: Int = 20): List<SpotifyShow> = withContext(Dispatchers.IO) {
+        val variables = buildJsonObject {
+            put("searchTerm", query)
+            put("offset", 0)
+            put("limit", limit)
+            put("numberOfTopResults", 5)
+            put("includeAudiobooks", false)
+            put("includeArtistHasConcertsField", false)
+            put("includePreReleases", false)
+            put("includeLocalConcertsField", false)
+            put("includeAuthors", false)
+        }
+        parseSearchShows(gql("searchDesktop", SEARCH, variables, authHeaders()))
+    }
+
     private fun playlistPage(headers: Map<String, String>, offset: Int): Triple<List<SpotifyPlaylist>, Int, Int> {
         val variables = buildJsonObject {
             putJsonArray("filters") { add("Playlists") }
@@ -503,6 +522,29 @@ internal fun parseSearchTracks(root: JsonObject): List<SpotifyTrack> {
             imageUrl = album?.obj("coverArt")?.arr("sources")?.lastUrl(),
         )
     }
+}
+
+/**
+ * The podcast shows of a `searchDesktop` answer, in Spotify's order:
+ * `searchV2.podcasts.items`, each wrapping its show under `data`.
+ */
+internal fun parseSearchShows(root: JsonObject): List<SpotifyShow> {
+    val search = root.obj("data")?.obj("searchV2")
+        ?: throw IllegalStateException("Spotify search response was empty")
+    return search.obj("podcasts")?.arr("items").orEmpty().mapNotNull { element ->
+        val wrapper = element.jsonObject
+        val data = wrapper.obj("data") ?: wrapper.obj("item")?.obj("data") ?: return@mapNotNull null
+        if (data.str("__typename").let { it != null && it != "Podcast" }) return@mapNotNull null
+        val uri = (data.str("uri") ?: wrapper.str("_uri"))?.takeIf { it.startsWith(SPOTIFY_SHOW_PREFIX) }
+            ?: return@mapNotNull null
+        val name = data.str("name")?.trim()?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+        SpotifyShow(
+            id = uri.removePrefix(SPOTIFY_SHOW_PREFIX),
+            name = name,
+            publisher = data.obj("publisher")?.str("name")?.takeIf { it.isNotBlank() },
+            imageUrl = data.obj("coverArt")?.arr("sources")?.lastUrl(),
+        )
+    }.distinctBy { it.id }
 }
 
 /** The Liked Songs page: `me.library.tracks`, each entry wrapping the track under `track`. */

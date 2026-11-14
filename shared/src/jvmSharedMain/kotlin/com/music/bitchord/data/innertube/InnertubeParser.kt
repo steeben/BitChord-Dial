@@ -887,7 +887,7 @@ object InnertubeParser {
             // and a "video" is dropped from the All tab's results.
             isVideo = !episode && (rowType == "video" || thumbnails.isNotSquare()),
             // What the player knows an episode by: it shows the episode's own picture.
-            episode = if (episode) EpisodeInfo() else null,
+            episode = if (episode) EpisodeInfo(showId = showIdFromRuns(subtitleRuns)) else null,
             isExplicit = renderer.hasExplicitBadge(),
             // Extract the "Remove from history" feedback token from the row's menu, if present.
             feedbackToken = extractFeedbackToken(renderer),
@@ -1016,6 +1016,13 @@ object InnertubeParser {
     }
 
     /** The show an episode row's subtitle links to, by the page type that link opens. */
+    /** The browse id ("MPSP…") of the show an episode row links to, where it links to one. */
+    private fun showIdFromRuns(runs: List<JsonElement>): String? =
+        runs.firstNotNullOfOrNull { run ->
+            run.o("navigationEndpoint").o("browseEndpoint").s("browseId")
+                ?.takeIf { it.startsWith(PODCAST_SHOW_PREFIX) }
+        }
+
     private fun showNameFromRuns(runs: List<JsonElement>): String? =
         runs.firstOrNull { run ->
             run.o("navigationEndpoint").o("browseEndpoint")

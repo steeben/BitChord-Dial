@@ -366,6 +366,9 @@ import com.music.bitchord.playback.rememberPlayerState
 import com.music.bitchord.playback.setQueueDragActive
 import com.music.bitchord.ui.MainViewModel
 import com.music.bitchord.ui.SearchSource
+import com.music.bitchord.data.podcasts.EpisodeShows
+import com.music.bitchord.data.podcasts.PodcastSearch
+import com.music.bitchord.ui.screens.PodcastSearchScreen
 import com.music.bitchord.ui.components.BottomFadeScrim
 import com.music.bitchord.ui.components.TopFadeScrim
 import com.music.bitchord.ui.components.FloatingBarsTapGuard
@@ -3213,7 +3216,19 @@ private fun BitChordApp(
             // picture, and the page fills its own in once loaded.
             onOpenArtist = { id, name ->
                 dismissPlayer()
-                if (id != null) {
+                // An episode's credit is its show: it opens the show's page,
+                // not an artist of that name.
+                if (song.isEpisode) {
+                    scope.launch {
+                        val showId = EpisodeShows.idOf(song)
+                        if (showId != null) {
+                            viewModel.openDetail(browseId = showId, title = name, subtitle = "", thumbnailUrl = null)
+                        } else {
+                            Toast.makeText(context, context.getString(R.string.couldnt_find, name), Toast.LENGTH_SHORT)
+                                .show()
+                        }
+                    }
+                } else if (id != null) {
                     viewModel.openDetail(
                         id,
                         name,
@@ -4826,7 +4841,29 @@ private fun BitChordApp(
                             pullState = explorePull,
                             contentPadding = listPadding,
                         )
-                        TAB_SEARCH -> SearchScreen(
+                        TAB_SEARCH -> if (PodcastSearch.active.collectAsStateWithLifecycle().value) {
+                            PodcastSearchScreen(
+                                query = query,
+                                currentSong = player.song,
+                                isPlaying = player.isPlaying,
+                                onOpenShow = { show ->
+                                    show.browseId?.let { id ->
+                                        viewModel.openDetail(
+                                            browseId = id,
+                                            title = show.title,
+                                            subtitle = show.subtitle,
+                                            thumbnailUrl = show.thumbnailUrl,
+                                        )
+                                    }
+                                },
+                                onPlayEpisode = { song ->
+                                    playRadio(song, QueueSource(context.getString(R.string.podcasts), PlaybackSourceType.SEARCH))
+                                },
+                                onEpisodeLongPress = openSongMenu,
+                                contentPadding = listPadding,
+                                topPadding = topBarContentPadding(),
+                            )
+                        } else SearchScreen(
                             query = query,
                             onQueryChange = viewModel::onQueryChange,
                             filter = filter,
@@ -5583,7 +5620,9 @@ private fun BitChordApp(
                                 shape = CircleShape,
                                 height = 44.dp,
                                 modifier = artworkPageSurface(shape = CircleShape, hazeState = hazeState),
-                                placeholder = if (searchSource == SearchSource.ADDONS) {
+                                placeholder = if (PodcastSearch.active.collectAsStateWithLifecycle().value) {
+                                    stringResource(R.string.search_podcasts_hint)
+                                } else if (searchSource == SearchSource.ADDONS) {
                                     stringResource(R.string.search_addons_hint)
                                 } else if (searchSource == SearchSource.SPOTIFY) {
                                     stringResource(R.string.search_spotify_hint)
@@ -6014,6 +6053,8 @@ private fun BitChordApp(
                     // first; opened from anywhere else it goes back to YouTube
                     // if the Library was what it was last left on.
                     if (index == TAB_SEARCH && selectedTab != TAB_SEARCH) {
+                        // Opened from the Podcasts tab, it searches podcasts alone.
+                        PodcastSearch.setActive(selectedTab == TAB_PODCASTS, viewModel.signedIn.value)
                         when {
                             selectedTab == TAB_LIBRARY -> onSearchSourceChange(SearchSource.LIBRARY)
                             searchSource == SearchSource.LIBRARY -> onSearchSourceChange(SearchSource.YOUTUBE)
