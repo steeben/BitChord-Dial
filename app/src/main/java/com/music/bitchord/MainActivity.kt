@@ -282,6 +282,7 @@ import com.music.bitchord.ui.screens.LibrarySuggestion
 import com.music.bitchord.ui.screens.LIBRARY_GROUP_PREFIX
 import com.music.bitchord.ui.screens.dealLibraryFeed
 import com.music.bitchord.ui.screens.libraryGroupId
+import com.music.bitchord.ui.screens.rememberHomeListState
 import com.music.bitchord.ui.screens.rememberLibraryFeedLabels
 import com.music.bitchord.ui.screens.KeptPage
 import com.music.bitchord.ui.screens.KeptPageLocals
@@ -1567,7 +1568,7 @@ private fun BitChordApp(
         }
     }
 
-    val homeListState = rememberLazyListState()
+    val homeListState = rememberHomeListState()
     val exploreListState = rememberLazyListState()
     val moodGenreListState = rememberLazyListState()
     val libraryListState = rememberLazyListState()

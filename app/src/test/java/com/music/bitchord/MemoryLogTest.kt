@@ -39,6 +39,16 @@ class MemoryLogTest {
     }
 
     @Test
+    fun `a reading taken with the screen moving says so`() {
+        val reading = MemoryLog.Reading(totalKb = 2048, javaKb = 1024, nativeKb = 1024, graphicsKb = 0, codeKb = 0)
+        assertEquals(
+            "memory on tab:0: 2MB (java 1MB, native 1MB, graphics 0MB, code 0MB, other 0MB); " +
+                "keep Home loaded=true; read while the screen moved",
+            MemoryLog.line("tab:0", reading, homeKept = true, moving = true),
+        )
+    }
+
+    @Test
     fun `the device line says what the phone has`() {
         assertEquals(
             "device memory 16.0GB, 6.5GB free, low memory device=false, app heap limit 512MB",

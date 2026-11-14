@@ -128,9 +128,15 @@ object FrameLog {
     private const val SLOW_FRAME_NANOS = 40_000_000L
 
     /**
-     * The least time between two memory lines. A line is written only once
-     * the screen has gone still: reading the memory can hold the app up for a
+     * The least time between two memory lines. A line is written once the
+     * screen has gone still: reading the memory can hold the app up for a
      * moment, and a stop made by the log itself would be read as the app's.
+     *
+     * Some screens are never still (the ambient background moves for as long
+     * as it is up), and a log of them had no memory line at all. So a page
+     * that has had frames for a whole stretch gets its line with the screen
+     * moving, this long after the last one, and the line says how it was
+     * read. Never as the page changes: that is the moment a log is read for.
      */
     private const val MEMORY_GAP_MS = 10_000L
 
@@ -179,22 +185,30 @@ object FrameLog {
             TrackLog.toSession('I', TAG, "$stretchPage, ${"%.1f".format(Locale.ROOT, span / 1000.0)}s: $line")
             tally.reset()
         }
+        val startedAt = SystemClock.elapsedRealtime()
         var memoryAt = 0L
 
-        fun writeMemory() {
+        fun writeMemory(moving: Boolean) {
             val now = SystemClock.elapsedRealtime()
-            if (memoryAt != 0L && now - memoryAt < MEMORY_GAP_MS) return
+            // With the screen moving, not in a launch's first seconds either.
+            val last = if (moving) maxOf(memoryAt, startedAt) else memoryAt
+            if (last != 0L && now - last < MEMORY_GAP_MS) return
             memoryAt = now
             val reading = MemoryLog.read() ?: return
             TrackLog.toSession(
                 'I',
                 TAG,
-                MemoryLog.line(page.ifEmpty { "launch" }, reading, homeKept = AppSettings.keepHome.value),
+                MemoryLog.line(
+                    page.ifEmpty { "launch" },
+                    reading,
+                    homeKept = AppSettings.keepHome.value,
+                    moving = moving,
+                ),
             )
         }
         val idle = Runnable {
             write()
-            writeMemory()
+            writeMemory(moving = false)
         }
 
         val listener = Window.OnFrameMetricsAvailableListener { _, metrics, _ ->
@@ -236,7 +250,11 @@ object FrameLog {
                 return@OnFrameMetricsAvailableListener
             }
             val current = page.ifEmpty { "launch" }
-            if (tally.frames > 0 && (current != stretchPage || now - stretchStart >= STRETCH_MS)) write()
+            if (tally.frames > 0 && (current != stretchPage || now - stretchStart >= STRETCH_MS)) {
+                val samePage = current == stretchPage
+                write()
+                if (samePage) writeMemory(moving = true)
+            }
             if (tally.frames == 0) {
                 stretchPage = current
                 stretchStart = now

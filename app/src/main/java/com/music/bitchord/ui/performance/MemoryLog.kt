@@ -43,12 +43,16 @@ object MemoryLog {
         ).takeIf { it.totalKb > 0 }
     }.getOrNull()
 
-    /** The line for [reading], taken on [page]. */
-    fun line(page: String, reading: Reading, homeKept: Boolean): String =
+    /**
+     * The line for [reading], taken on [page]. [moving]: it was read while
+     * frames were drawn, so a stop on the lines next to it may be the read's.
+     */
+    fun line(page: String, reading: Reading, homeKept: Boolean, moving: Boolean = false): String =
         "memory on $page: ${megabytes(reading.totalKb)} " +
             "(java ${megabytes(reading.javaKb)}, native ${megabytes(reading.nativeKb)}, " +
             "graphics ${megabytes(reading.graphicsKb)}, code ${megabytes(reading.codeKb)}, " +
-            "other ${megabytes(reading.otherKb)}); keep Home loaded=$homeKept"
+            "other ${megabytes(reading.otherKb)}); keep Home loaded=$homeKept" +
+            if (moving) "; read while the screen moved" else ""
 
     /** What the phone has, once a log: the frame of reference for every memory line after it. */
     fun deviceLine(context: Context): String? = runCatching {
