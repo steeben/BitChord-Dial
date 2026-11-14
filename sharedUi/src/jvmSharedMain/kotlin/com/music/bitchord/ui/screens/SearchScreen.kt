@@ -77,6 +77,15 @@ import com.music.bitchord.data.model.ROW_ART_PX
 import com.music.bitchord.data.model.SearchFilter
 import com.music.bitchord.data.model.artworkAt
 import com.music.bitchord.data.model.SearchResult
+import com.music.bitchord.data.model.SearchTopPick
+import com.music.bitchord.data.model.SourceSearch
+import com.music.bitchord.data.model.isUnresolvedSpotify
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.model.playingRowMatcher
 import com.music.bitchord.data.model.UiState
@@ -168,9 +177,17 @@ fun SearchScreen(
     spotifyResults: UiState<List<Song>>? = null,
     /** The Library source's tracks for [query]; null while nothing is typed. */
     libraryResults: UiState<List<Song>>? = null,
-    /** The Library source's artists for [query], listed above its tracks; see [onLibraryArtistClick]. */
-    libraryArtists: List<BrowseItem> = emptyList(),
-    onLibraryArtistClick: (BrowseItem) -> Unit = {},
+    /**
+     * The artist, album and playlist rows of the Spotify, Library or Addons
+     * source for [query]. With that source's songs they make its tabs and its
+     * top result card; see [SourceSearch].
+     */
+    sourceBrowse: List<BrowseItem> = emptyList(),
+    onSourceBrowseClick: (BrowseItem) -> Unit = {},
+    /** The top result that the source names itself; null lets the page pick the best name match. */
+    sourceTopPick: SearchTopPick? = null,
+    /** The Playlist button of a source's top result card, when that result is a song. */
+    onSourceTopPlaylist: (Song) -> Unit = {},
     /** Files on the device are a running order to play through, not a station seed. */
     onLibrarySongClick: (List<Song>, Int) -> Unit = onSongClick,
     /**
@@ -202,6 +219,23 @@ fun SearchScreen(
     // MainViewModel.suggestions. Nothing below it is worth showing while it is
     // up: the results are for whatever was searched before this edit began,
     // and so are the filter tabs above them.
+    val searchingSource = searchingLibrary || searchingAddons || searchingSpotify
+    val sourceResults = when {
+        searchingSpotify -> spotifyResults
+        searchingAddons -> addonResults
+        searchingLibrary -> libraryResults
+        else -> null
+    }
+    // These sources give all their hits at one time, so their tabs only
+    // narrow the list in hand. Each source keeps its own tab.
+    var sourceFilter by rememberSaveable(searchingSpotify, searchingAddons) { mutableStateOf(SearchFilter.ALL) }
+    val sourceSongs = (sourceResults as? UiState.Success)?.data.orEmpty()
+    val sourceFilters = remember(sourceSongs, sourceBrowse, searchingSource) {
+        if (searchingSource) SourceSearch.filters(sourceSongs, sourceBrowse) else emptyList()
+    }
+    // A tab that the new hits do not have falls back to All.
+    val shownSourceFilter = sourceFilter.takeIf { it in sourceFilters } ?: SearchFilter.ALL
+    val scope = rememberCoroutineScope()
     val suggesting = suggestions.isNotEmpty() && !searchingLibrary && !searchingAddons && !searchingSpotify
     // Live media results arrive from the parallel typeahead pipeline; show
     // them only while the user is still typing (suggestions visible), so they
@@ -258,8 +292,19 @@ fun SearchScreen(
             // they stay up for an empty or failed search too, or picking a filter
             // that finds nothing would take away the control needed to leave it.
             // They are YouTube's categories, so the Library source has none.
-            if (results != null && !suggesting && !searchingLibrary && !searchingAddons && !searchingSpotify) {
+            if (results != null && !suggesting && !searchingSource) {
                 SearchFilterTabs(filter = filter, onFilterChange = onFilterChange)
+            }
+            // The other sources show only the tabs that have hits.
+            if (sourceFilters.isNotEmpty()) {
+                SearchFilterTabs(
+                    filter = shownSourceFilter,
+                    onFilterChange = { picked ->
+                        if (picked != shownSourceFilter) scope.launch { listState.scrollToItem(0) }
+                        sourceFilter = picked
+                    },
+                    filters = sourceFilters,
+                )
             }
         }
 
@@ -269,15 +314,15 @@ fun SearchScreen(
             contentPadding = PaddingValues(bottom = contentPadding.calculateBottomPadding()),
         ) {
             when {
-                searchingLibrary || searchingAddons || searchingSpotify -> librarySearchResults(
+                searchingSource -> librarySearchResults(
                     query = query.trim(),
-                    results = when {
-                        searchingSpotify -> spotifyResults
-                        searchingAddons -> addonResults
-                        else -> libraryResults
-                    },
-                    artists = if (searchingLibrary && !searchingAddons && !searchingSpotify) libraryArtists else emptyList(),
-                    onArtistClick = onLibraryArtistClick,
+                    results = sourceResults,
+                    browse = sourceBrowse,
+                    onBrowseClick = onSourceBrowseClick,
+                    filter = shownSourceFilter,
+                    tabbed = sourceFilters.isNotEmpty(),
+                    topPick = sourceTopPick,
+                    onTopPlaylist = onSourceTopPlaylist,
                     addons = searchingAddons,
                     spotify = searchingSpotify,
                     addonHistory = addonHistory,
@@ -347,7 +392,10 @@ fun SearchScreen(
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
                                 TopResultCard(
-                                    song = topResult.song,
+                                    title = topResult.song.title,
+                                    subtitle = topResult.song.artist,
+                                    thumbnailUrl = topResult.song.thumbnailUrl,
+                                    onClick = { onTopResultPlay(topResult.song) },
                                     onPlay = { onTopResultPlay(topResult.song) },
                                     onPlaylist = { onTopResultPlaylist(topResult.song) },
                                     onLongPress = { onSongLongPress(topResult.song) },
@@ -438,16 +486,21 @@ private fun searchSections(rows: List<SearchResult>, filter: SearchFilter): List
 }
 
 /**
- * The Library source's page: the Local Music folder's artists whose name
- * matches, each opening their page, then its tracks that match as plain song
- * rows. An album hit needs no row of its own — every track on it matches too,
- * so they are already here. The Addons and Spotify sources pass no [artists].
+ * The page of the Spotify, Library and Addons sources, set out as the YouTube
+ * search is: a top result card, then the hits by kind under a title. The All
+ * tab shows the first rows of each kind when the tabs give the full lists;
+ * a tab shows all the rows of its kind. [browse] holds the artist, album and
+ * playlist rows; the songs are [results].
  */
 private fun LazyListScope.librarySearchResults(
     query: String,
     results: UiState<List<Song>>?,
-    artists: List<BrowseItem> = emptyList(),
-    onArtistClick: (BrowseItem) -> Unit = {},
+    browse: List<BrowseItem> = emptyList(),
+    onBrowseClick: (BrowseItem) -> Unit = {},
+    filter: SearchFilter = SearchFilter.ALL,
+    tabbed: Boolean = false,
+    topPick: SearchTopPick? = null,
+    onTopPlaylist: (Song) -> Unit = {},
     addons: Boolean,
     spotify: Boolean = false,
     addonHistory: List<String>,
@@ -476,7 +529,7 @@ private fun LazyListScope.librarySearchResults(
         }
         UiState.Loading -> songListSkeleton(keyPrefix = "skeleton:search:library")
         is UiState.Error -> item(key = "library:error") { MessageState(results.message) }
-        is UiState.Success -> if (results.data.isEmpty()) {
+        is UiState.Success -> if (results.data.isEmpty() && browse.isEmpty()) {
             item(key = "library:no-match") {
                 MessageState(
                     if (spotify) {
@@ -491,50 +544,105 @@ private fun LazyListScope.librarySearchResults(
         } else {
             val tracks = results.data
             val isCurrentRow = playingRowMatcher(tracks, currentSong)
-            if (artists.isNotEmpty()) {
-                item(key = "library:artists-header") { LibrarySectionTitle("Artists") }
-                itemsIndexed(artists, key = { _, artist -> "library_artist_${artist.browseId}" }) { index, artist ->
-                    BrowseRow(item = artist, onClick = { onArtistClick(artist) })
-                    if (index < artists.lastIndex) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = ROW_DIVIDER_INSET),
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outline,
+            val prefix = when {
+                spotify -> "spotify"
+                addons -> "addon"
+                else -> "library"
+            }
+            val all = filter == SearchFilter.ALL
+            if (all) {
+                when (val top = SourceSearch.topResult(query, tracks, browse, topPick)) {
+                    is SearchResult.TopTrack -> item(key = "$prefix:top-result") {
+                        val song = top.song
+                        val play = { onSongClick(tracks, tracks.indexOf(song).coerceAtLeast(0)) }
+                        SwipeToQueueBox(
+                            onSwipeToQueue = { onSongSwipe(song, it) },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            TopResultCard(
+                                title = song.title,
+                                subtitle = song.artist,
+                                thumbnailUrl = song.thumbnailUrl,
+                                onClick = play,
+                                onPlay = play,
+                                // A Spotify song has nothing to add to a playlist
+                                // until its YouTube Music match is found.
+                                onPlaylist = if (song.isUnresolvedSpotify) null else ({ onTopPlaylist(song) }),
+                                onLongPress = { onSongLongPress(song) },
+                            )
+                        }
+                    }
+                    is SearchResult.Browse -> item(key = "$prefix:top-result") {
+                        // An artist, album or playlist opens its page. It has no
+                        // Play or Playlist button: its songs are not in hand yet.
+                        TopResultCard(
+                            title = top.item.title,
+                            subtitle = top.item.subtitle.ifBlank { browseTypeName(top.item.type) },
+                            thumbnailUrl = top.item.thumbnailUrl,
+                            round = top.item.type == BrowseType.ARTIST,
+                            onClick = { onBrowseClick(top.item) },
                         )
                     }
+                    else -> Unit
                 }
-                item(key = "library:songs-header") { LibrarySectionTitle("Songs") }
             }
-            itemsIndexed(tracks, key = { index, song ->
-                val prefix = when {
-                    spotify -> "spotify"
-                    addons -> "addon"
-                    else -> "library"
-                }
-                "${prefix}_${song.videoId}_$index"
-            }) { index, song ->
-                SongRow(
-                    song = song,
-                    onClick = { onSongClick(tracks, index) },
-                    onLongPress = { onSongLongPress(song) },
-                    onSwipeToQueue = { onSongSwipe(song, it) },
-                    isCurrent = isCurrentRow(song),
-                    isPlaying = isPlaying && isCurrentRow(song),
-                    searchPlayingStyle = true,
-                    activeTint = PlayingAccent,
-                    showSourceQuality = addons,
-                )
-                if (index < tracks.lastIndex) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = ROW_DIVIDER_INSET),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outline,
-                    )
+            // The Library keeps its artists and albums above its songs, which
+            // can be many. The other sources use the YouTube search's order.
+            val order = if (spotify || addons) {
+                listOf(SearchFilter.SONGS, SearchFilter.ARTISTS, SearchFilter.ALBUMS, SearchFilter.PLAYLISTS)
+            } else {
+                listOf(SearchFilter.ARTISTS, SearchFilter.ALBUMS, SearchFilter.PLAYLISTS, SearchFilter.SONGS)
+            }
+            order.filter { all || it == filter }.forEach { kind ->
+                // The Library's songs are the last section, so they stay whole.
+                val preview = all && tabbed && (kind != SearchFilter.SONGS || spotify || addons)
+                if (kind == SearchFilter.SONGS) {
+                    if (tracks.isEmpty()) return@forEach
+                    val rows = if (preview) tracks.take(SourceSearch.PREVIEW_ROWS) else tracks
+                    if (all) item(key = "$prefix:header:${kind.name}") { LibrarySectionTitle(kind.label) }
+                    itemsIndexed(rows, key = { index, song -> "${prefix}_${song.videoId}_$index" }) { index, song ->
+                        SongRow(
+                            song = song,
+                            onClick = { onSongClick(tracks, index) },
+                            onLongPress = { onSongLongPress(song) },
+                            onSwipeToQueue = { onSongSwipe(song, it) },
+                            isCurrent = isCurrentRow(song),
+                            isPlaying = isPlaying && isCurrentRow(song),
+                            searchPlayingStyle = true,
+                            activeTint = PlayingAccent,
+                            showSourceQuality = addons,
+                        )
+                        if (index < rows.lastIndex) RowDivider()
+                    }
+                } else {
+                    val type = SourceSearch.browseType(kind) ?: return@forEach
+                    val items = browse.filter { it.type == type }
+                    if (items.isEmpty()) return@forEach
+                    val rows = if (preview) items.take(SourceSearch.PREVIEW_ROWS) else items
+                    if (all) item(key = "$prefix:header:${kind.name}") { LibrarySectionTitle(kind.label) }
+                    itemsIndexed(rows, key = { index, item -> "${prefix}_browse_${item.browseId}_$index" }) { index, item ->
+                        BrowseRow(item = item, onClick = { onBrowseClick(item) })
+                        if (index < rows.lastIndex) RowDivider()
+                    }
                 }
             }
         }
     }
 }
+
+/** The line between two rows of a section. */
+@Composable
+private fun RowDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(start = ROW_DIVIDER_INSET),
+        thickness = 0.5.dp,
+        color = MaterialTheme.colorScheme.outline,
+    )
+}
+
+/** "Artist", "Album" or "Playlist": what a row is when it has no line of its own. */
+private fun browseTypeName(type: BrowseType): String =
+    type.name.lowercase(Locale.ROOT).replaceFirstChar { it.uppercase(Locale.ROOT) }
 
 /** A section's name in the Library source's results, set as YouTube's sections are. */
 @Composable
@@ -550,14 +658,20 @@ private fun LibrarySectionTitle(title: String) {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TopResultCard(
-    song: Song,
-    onPlay: () -> Unit,
-    onPlaylist: () -> Unit,
-    onLongPress: () -> Unit,
+    title: String,
+    subtitle: String,
+    thumbnailUrl: String?,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    /** An artist's picture is a circle, as it is in the rows. */
+    round: Boolean = false,
+    /** The buttons and the menu are there only for a result that can use them. */
+    onPlay: (() -> Unit)? = null,
+    onPlaylist: (() -> Unit)? = null,
+    onLongPress: (() -> Unit)? = null,
 ) {
     // A rounded frosted card, faintly tinted with the artwork's own colour.
-    val tint = com.music.bitchord.ui.theme.rememberArtworkPalette(song.thumbnailUrl, artPx = ROW_ART_PX).accent
+    val tint = com.music.bitchord.ui.theme.rememberArtworkPalette(thumbnailUrl, artPx = ROW_ART_PX).accent
     val cardColor = tint.copy(alpha = 0.16f)
         .compositeOver(frostedOr(MaterialTheme.colorScheme.surfaceVariant))
     val cardShape = RoundedCornerShape(20.dp)
@@ -568,7 +682,7 @@ private fun TopResultCard(
             .padding(start = PAGE_GUTTER, end = PAGE_GUTTER, top = 18.dp, bottom = 8.dp)
             .clip(cardShape)
             .background(cardColor, cardShape)
-            .longPressMenuClickable(onClick = onPlay, onLongClick = onLongPress)
+            .longPressMenuClickable(onClick = onClick, onLongClick = onLongPress)
             .contextClick(onLongPress)
             .padding(14.dp),
     ) {
@@ -580,15 +694,15 @@ private fun TopResultCard(
         Spacer(Modifier.height(10.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(
-                model = song.thumbnailUrl?.artworkAt(ROW_ART_PX),
+                model = thumbnailUrl?.artworkAt(ROW_ART_PX),
                 contentDescription = null,
-                modifier = Modifier.size(72.dp).clip(RoundedCornerShape(10.dp)),
+                modifier = Modifier.size(72.dp).clip(if (round) CircleShape else RoundedCornerShape(10.dp)),
                 contentScale = com.music.bitchord.ui.components.thumbnailContentScale(),
             )
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    text = song.title,
+                    text = title,
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
@@ -596,43 +710,47 @@ private fun TopResultCard(
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = song.artist,
+                    text = subtitle,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            RowMoreButton(
-                onClick = onLongPress,
-                tint = MaterialTheme.colorScheme.onSurface,
-                iconSize = 24.dp,
-            )
-        }
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            // Filled, so they stand out against the tinted card.
-            Button(
-                onClick = onPlay,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.onSurface,
-                    contentColor = MaterialTheme.colorScheme.surface,
-                ),
-            ) {
-                Icon(Icons.Rounded.PlayArrow, contentDescription = null)
-                Spacer(Modifier.width(6.dp))
-                Text(stringResource(Res.string.play))
+            if (onLongPress != null) {
+                RowMoreButton(
+                    onClick = onLongPress,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    iconSize = 24.dp,
+                )
             }
-            Button(
-                onClick = onPlaylist,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f),
-                    contentColor = MaterialTheme.colorScheme.onSurface,
-                ),
-            ) {
-                Icon(Icons.AutoMirrored.Rounded.PlaylistAdd, contentDescription = null)
-                Spacer(Modifier.width(6.dp))
-                Text(stringResource(Res.string.playlist_action))
+        }
+        if (onPlay != null || onPlaylist != null) {
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                // Filled, so they stand out against the tinted card.
+                if (onPlay != null) Button(
+                    onClick = onPlay,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.onSurface,
+                        contentColor = MaterialTheme.colorScheme.surface,
+                    ),
+                ) {
+                    Icon(Icons.Rounded.PlayArrow, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(Res.string.play))
+                }
+                if (onPlaylist != null) Button(
+                    onClick = onPlaylist,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f),
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
+                ) {
+                    Icon(Icons.AutoMirrored.Rounded.PlaylistAdd, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(Res.string.playlist_action))
+                }
             }
         }
     }
@@ -1106,7 +1224,12 @@ private fun BrowseRow(item: BrowseItem, onClick: () -> Unit, onLongPress: (() ->
  * text, and the gutter padding sits inside the scroll so it scrolls with them.
  */
 @Composable
-private fun SearchFilterTabs(filter: SearchFilter, onFilterChange: (SearchFilter) -> Unit) {
+private fun SearchFilterTabs(
+    filter: SearchFilter,
+    onFilterChange: (SearchFilter) -> Unit,
+    /** The tabs to show; the Spotify, Library and Addons sources give only those that have hits. */
+    filters: List<SearchFilter> = SearchFilter.entries,
+) {
     val haptics = rememberHaptics()
     Row(
         modifier = Modifier
@@ -1116,7 +1239,7 @@ private fun SearchFilterTabs(filter: SearchFilter, onFilterChange: (SearchFilter
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SearchFilter.entries.forEach { entry ->
+        filters.forEach { entry ->
             val selected = entry == filter
             Box(
                 modifier = Modifier

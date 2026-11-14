@@ -5099,8 +5099,19 @@ private fun BitChordApp(
                             },
                             searchingLibrary = searchSource == SearchSource.LIBRARY,
                             libraryResults = libraryResults,
-                            libraryArtists = viewModel.libraryArtistResults.collectAsStateWithLifecycle().value,
-                            onLibraryArtistClick = viewModel::openLibraryArtist,
+                            sourceBrowse = viewModel.sourceBrowseResults.collectAsStateWithLifecycle().value,
+                            onSourceBrowseClick = viewModel::openSourceBrowse,
+                            sourceTopPick = viewModel.sourceTopPick.collectAsStateWithLifecycle().value,
+                            // As the song menu's "add to playlist" does: a file on
+                            // the device goes to the app's own playlists.
+                            onSourceTopPlaylist = { song ->
+                                if (song.localUri != null) {
+                                    offlinePlaylistTarget = listOf(song)
+                                } else {
+                                    viewModel.loadPlaylists()
+                                    playlistTarget = listOf(song)
+                                }
+                            },
                             searchingAddons = searchSource == SearchSource.ADDONS,
                             addonResults = addonResults,
                             searchingSpotify = searchSource == SearchSource.SPOTIFY,

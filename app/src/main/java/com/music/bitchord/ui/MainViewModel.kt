@@ -129,6 +129,12 @@ import com.music.bitchord.data.DuplicateGroup
 import com.music.bitchord.data.ArtistOnDevice
 import com.music.bitchord.data.DeviceArtists
 import com.music.bitchord.data.LibraryArtists
+import com.music.bitchord.data.LibraryAlbums
+import com.music.bitchord.data.model.SearchTopPick
+import com.music.bitchord.data.model.SourceSearch
+import com.music.bitchord.data.spotify.SpotifySearch
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import com.music.bitchord.data.canvas.AppleArtistArtRepository
 import com.music.bitchord.data.model.BrowseItem
 import kotlinx.coroutines.flow.map
@@ -341,43 +347,119 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }.flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    /** An artist or album made of a source's own songs: its row on the search page and its tracks. */
+    private class SongGroupHit(val item: BrowseItem, val songs: List<Song>)
+
     /**
-     * The Library source's artists for the current query: everyone in the
-     * Library's songs whose name matches, each a row above the songs that
-     * opens their page. Empty while the field is.
+     * The artists and albums among [songs] whose name has [query] in it, for
+     * the Library and Addons sources: artists first, then albums. Each opens
+     * as a page of its own songs ([openSourceBrowse]).
      */
-    private val libraryArtistHits: StateFlow<List<Pair<String, List<Song>>>> =
+    private fun songGroupHits(songs: List<Song>, query: String): List<SongGroupHit> {
+        val resources = getApplication<Application>().resources
+        val artists = LibraryArtists.search(songs, query).map { (name, tracks) ->
+            SongGroupHit(
+                BrowseItem(
+                    browseId = libraryGroupId(BrowseType.ARTIST, name),
+                    title = name,
+                    subtitle = resources.getQuantityString(R.plurals.song_count_plural, tracks.size, tracks.size),
+                    thumbnailUrl = AppleArtistArtRepository.cached(name)?.heroUrl
+                        ?: tracks.firstNotNullOfOrNull { it.thumbnailUrl },
+                    type = BrowseType.ARTIST,
+                ),
+                tracks,
+            )
+        }
+        val albums = LibraryAlbums.search(songs, query).map { album ->
+            SongGroupHit(
+                BrowseItem(
+                    browseId = libraryGroupId(BrowseType.ALBUM, album.name, album.artist),
+                    title = album.name,
+                    subtitle = album.artist,
+                    thumbnailUrl = album.tracks.firstNotNullOfOrNull { it.thumbnailUrl },
+                    type = BrowseType.ALBUM,
+                ),
+                album.tracks,
+            )
+        }
+        return artists + albums
+    }
+
+    /** The Library source's artists and albums for the current query. Empty while the field is. */
+    private val libraryGroupHits: StateFlow<List<SongGroupHit>> =
         combine(_librarySongs, _query) { state, query ->
-            if (state is UiState.Success) LibraryArtists.search(state.data, query) else emptyList()
+            if (state is UiState.Success) songGroupHits(state.data, query) else emptyList()
         }.flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** [libraryArtistHits] as the rows the search page draws. */
-    val libraryArtistResults: StateFlow<List<BrowseItem>> = libraryArtistHits.map { hits ->
-        val resources = getApplication<Application>().resources
-        hits.map { (name, tracks) ->
-            BrowseItem(
-                browseId = libraryGroupId(BrowseType.ARTIST, name),
-                title = name,
-                subtitle = resources.getQuantityString(R.plurals.song_count_plural, tracks.size, tracks.size),
-                thumbnailUrl = AppleArtistArtRepository.cached(name)?.heroUrl
-                    ?: tracks.firstNotNullOfOrNull { it.thumbnailUrl },
-                type = BrowseType.ARTIST,
-            )
+    /** The Addons source's artists and albums, found among the songs of [addonResults]. */
+    private val _addonGroupHits = MutableStateFlow<List<SongGroupHit>>(emptyList())
+
+    /** The Spotify source's artists, albums and playlists for the submitted query. */
+    private val _spotifyBrowse = MutableStateFlow<List<BrowseItem>>(emptyList())
+
+    /** Spotify's own top result for the submitted query, when its answer names one. */
+    private val _spotifyTopPick = MutableStateFlow<SearchTopPick?>(null)
+
+    /**
+     * The artist, album and playlist rows of the source the Search tab looks
+     * at, for its tabs and its top result card. YouTube's rows come with its
+     * results, so this is empty for it.
+     */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val sourceBrowseResults: StateFlow<List<BrowseItem>> = _searchSource.flatMapLatest { source ->
+        when (source) {
+            SearchSource.LIBRARY -> libraryGroupHits.map { hits -> hits.map { it.item } }
+            SearchSource.ADDONS -> _addonGroupHits.map { hits -> hits.map { it.item } }
+            SearchSource.SPOTIFY -> _spotifyBrowse
+            SearchSource.YOUTUBE -> flowOf(emptyList<BrowseItem>())
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** Opens the page of a [libraryArtistResults] row, as the Library's own artist list does. */
-    fun openLibraryArtist(item: BrowseItem) {
-        val tracks = libraryArtistHits.value.firstOrNull { it.first == item.title }?.second ?: return
-        openSongGroup(
-            browseId = item.browseId,
-            title = item.title,
-            subtitle = "",
-            thumbnailUrl = null,
-            type = BrowseType.ARTIST,
-            songs = tracks,
-        )
+    /** The top result the source names itself; null lets the page pick by name. */
+    val sourceTopPick: StateFlow<SearchTopPick?> = combine(_searchSource, _spotifyTopPick) { source, pick ->
+        pick.takeIf { source == SearchSource.SPOTIFY }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /**
+     * Opens a [sourceBrowseResults] row. A Library or Addons artist or album
+     * is a page of its own songs. A Spotify playlist opens as Spotify
+     * playlists do. Spotify has no artist or album page here, so those open
+     * the YouTube Music page of the same name, or say that there is none.
+     */
+    fun openSourceBrowse(item: BrowseItem) {
+        if (item.browseId.startsWith(LIBRARY_GROUP_PREFIX)) {
+            val hit = (libraryGroupHits.value + _addonGroupHits.value)
+                .firstOrNull { it.item.browseId == item.browseId } ?: return
+            openSongGroup(
+                browseId = item.browseId,
+                title = item.title,
+                subtitle = if (item.type == BrowseType.ALBUM) item.subtitle else "",
+                thumbnailUrl = null,
+                type = item.type,
+                songs = hit.songs,
+            )
+            return
+        }
+        if (item.browseId.startsWith(SPOTIFY_PAGE_PREFIX)) {
+            openDetail(item.browseId, item.title, item.subtitle, item.thumbnailUrl, BrowseType.PLAYLIST)
+            return
+        }
+        viewModelScope.launch {
+            val found = if (item.type == BrowseType.ARTIST) {
+                YtMusicRepository.findArtistPageId(item.title).getOrNull()
+                    ?.let { item.copy(browseId = it, subtitle = text(R.string.artist)) }
+            } else {
+                YtMusicRepository.search("${item.title} ${item.subtitle}".trim(), SearchFilter.ALBUMS).getOrNull()
+                    ?.filterIsInstance<SearchResult.Browse>()
+                    ?.let { rows -> SourceSearch.matchAlbum(item.title, rows.map { it.item }) }
+            }
+            if (found == null) {
+                toast(getApplication<Application>().getString(R.string.couldnt_find, item.title))
+            } else {
+                openDetail(found.browseId, found.title, found.subtitle, found.thumbnailUrl ?: item.thumbnailUrl, found.type)
+            }
+        }
     }
 
     // The search pipeline's own state. Declared here, above [init], because
@@ -2868,8 +2950,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             _results.value = null
             addonSearchJob?.cancel()
             _addonResults.value = null
+            _addonGroupHits.value = emptyList()
             spotifySearchJob?.cancel()
             _spotifyResults.value = null
+            _spotifyBrowse.value = emptyList()
+            _spotifyTopPick.value = null
             // The list is about to switch from search results to recent
             // searches (or the empty state) — without this it can keep
             // whatever scroll offset the results list was left at, landing
@@ -2923,6 +3008,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         _addonResults.value = UiState.Loading
+        _addonGroupHits.value = emptyList()
         addonSearchJob = viewModelScope.launch {
             val perAddon = coroutineScope {
                 addons.map { addon ->
@@ -2937,6 +3023,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 val longest = perAddon.maxOfOrNull { it.size } ?: 0
                 for (i in 0 until longest) perAddon.forEach { rows -> rows.getOrNull(i)?.let(::add) }
             }
+            _addonGroupHits.value = withContext(Dispatchers.Default) { songGroupHits(merged, q) }
             _addonResults.value = UiState.Success(merged)
         }
     }
@@ -2974,14 +3061,24 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         _spotifyResults.value = UiState.Loading
+        _spotifyBrowse.value = emptyList()
+        _spotifyTopPick.value = null
         spotifySearchJob = viewModelScope.launch {
-            val tracks = runCatching { SpotifyLibrary.searchTracks(q, limit = SPOTIFY_SEARCH_LIMIT) }.getOrElse {
+            val search = runCatching { SpotifyLibrary.search(q, limit = SPOTIFY_SEARCH_LIMIT) }.getOrElse {
                 if (it is kotlinx.coroutines.CancellationException) throw it
                 spotifySearchTracks = emptyList()
                 _spotifyResults.value = UiState.Error(it.message ?: text(R.string.failed))
                 return@launch
             }
+            val tracks = search.tracks
             spotifySearchTracks = tracks
+            val browse = spotifyBrowseRows(search)
+            _spotifyBrowse.value = browse
+            _spotifyTopPick.value = search.topUri?.let { uri ->
+                val song = tracks.indexOfFirst { "spotify:track:${it.id}" == uri }
+                val row = browse.firstOrNull { it.browseId == uri }
+                if (song >= 0 || row != null) SearchTopPick(song, row) else null
+            }
             _spotifyResults.value = UiState.Success(tracks.map { it.asPendingSong() })
             val gate = Semaphore(SPOTIFY_MATCH_PARALLELISM)
             coroutineScope {
@@ -2991,6 +3088,19 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
     }
+
+    /**
+     * The artist, album and playlist hits of [search] as search rows. Each
+     * row's id is its Spotify URI; see [openSourceBrowse] for what it opens.
+     */
+    private fun spotifyBrowseRows(search: SpotifySearch): List<BrowseItem> =
+        search.artists.map {
+            BrowseItem("spotify:artist:${it.id}", it.name, "", it.imageUrl, BrowseType.ARTIST)
+        } + search.albums.map {
+            BrowseItem("spotify:album:${it.id}", it.name, it.artist, it.imageUrl, BrowseType.ALBUM)
+        } + search.playlists.map {
+            BrowseItem(SPOTIFY_PAGE_PREFIX + it.id, it.name, it.owner.orEmpty(), it.imageUrl, BrowseType.PLAYLIST)
+        }
 
     /** Finds [track] on YouTube Music and swaps it into row [index], unless that row has moved on. */
     private suspend fun matchSpotifySearchRow(index: Int, track: SpotifyTrack): Song {
