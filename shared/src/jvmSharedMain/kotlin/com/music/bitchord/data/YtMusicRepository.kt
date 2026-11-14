@@ -510,6 +510,7 @@ object YtMusicRepository {
             return paired
         }
         val target = TrackMatcher.targetOf(song)
+        val seen = mutableListOf<Song>()
         for (query in TrackMatcher.queries(target)) {
             val candidates = search(query, SearchFilter.VIDEOS)
                 .getOrNull()
@@ -521,6 +522,15 @@ object YtMusicRepository {
                 videoVersionCache[song.videoId] = match
                 return match
             }
+            seen += candidates
+        }
+        // No title the matcher could read. The artist's own channel carrying
+        // a video as long as the song, with the song's title in its own, is
+        // the song's video however the upload is worded.
+        ArtistUploads.best(seen, song)?.let { match ->
+            Log.d(TAG, "video switch: '${song.title}' -> '${match.title}' (same length, on ${match.artist}'s channel)")
+            videoVersionCache[song.videoId] = match
+            return match
         }
         Log.w(TAG, "video switch: no video match for '${song.title}' by '${song.artist}'")
         videoVersionCache[song.videoId] = null
