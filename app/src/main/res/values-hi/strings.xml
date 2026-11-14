@@ -1481,4 +1481,10 @@
     <string name="podcast_search_none">“%1$s” के लिए कोई शो या एपिसोड नहीं।</string>
     <string name="podcast_search_shows">शो</string>
     <string name="podcast_search_episodes">एपिसोड</string>
+    <string name="episode_filter">एपिसोड फ़िल्टर करें</string>
+    <string name="episode_filter_all">सभी</string>
+    <string name="episode_filter_unplayed">नहीं चलाए गए</string>
+    <string name="episode_filter_in_progress">जारी</string>
+    <string name="episode_filter_played">चलाए गए</string>
+    <string name="episode_filter_none">इस फ़िल्टर में कोई एपिसोड नहीं।</string>
 </resources>

@@ -61,6 +61,35 @@ class PodcastTest {
     )
 
     @Test
+    fun showPage_saveToLibraryLikesTheShowsPlaylist() {
+        // As a show's header comes: a save toggle and a menu, no play button.
+        val header = json(
+            """
+            { "contents": { "musicResponsiveHeaderRenderer": {
+              "title": { "runs": [ { "text": "Huberman Lab" } ] },
+              "buttons": [
+                { "buttonRenderer": { "icon": { "iconType": "SHARE" } } },
+                { "toggleButtonRenderer": {
+                  "isToggled": true, "isDisabled": false,
+                  "defaultIcon": { "iconType": "BOOKMARK_BORDER" },
+                  "toggledIcon": { "iconType": "BOOKMARK" }
+                } },
+                { "menuRenderer": { "items": [
+                  { "menuServiceItemRenderer": {
+                    "icon": { "iconType": "SEARCH" },
+                    "serviceEndpoint": { "playlistFilterSearchEndpoint": { "playlistId": "PLshow" } }
+                  } }
+                ] } }
+              ]
+            } } }
+            """,
+        )
+        val state = InnertubeParser.parseLibraryState(header)
+        assertEquals("PLshow", state?.playlistId)
+        assertEquals(true, state?.saved)
+    }
+
+    @Test
     fun showPage_listsItsEpisodesAsPlayableTracks() {
         val show = InnertubeParser.podcastShow(showPage)
         assertEquals("Huberman Lab", show)

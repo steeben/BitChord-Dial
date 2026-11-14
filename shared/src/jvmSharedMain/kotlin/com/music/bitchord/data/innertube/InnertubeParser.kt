@@ -1703,6 +1703,15 @@ object InnertubeParser {
         return LibraryState(
             playlistId = play.o("watchPlaylistEndpoint").s("playlistId")
                 ?: play.o("watchEndpoint").s("playlistId")
+                // A podcast show's header has no play button. Its "Find in
+                // show" row names the show's own playlist, which is what the
+                // save likes, as an album's play button does.
+                ?: buttons.firstNotNullOfOrNull { button ->
+                    button.o("menuRenderer").a("items")?.firstNotNullOfOrNull {
+                        it.o("menuServiceItemRenderer").o("serviceEndpoint")
+                            .o("playlistFilterSearchEndpoint").s("playlistId")
+                    }
+                }
                 ?: return null,
             // The toggle carries the answer directly, rather than the
             // which-icon-leads reading a menu toggle needs: a button that is

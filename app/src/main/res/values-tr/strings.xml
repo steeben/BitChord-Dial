@@ -1438,4 +1438,10 @@
     <string name="podcast_search_none">“%1$s” için program veya bölüm yok.</string>
     <string name="podcast_search_shows">Programlar</string>
     <string name="podcast_search_episodes">Bölümler</string>
+    <string name="episode_filter">Bölümleri filtrele</string>
+    <string name="episode_filter_all">Tümü</string>
+    <string name="episode_filter_unplayed">Oynatılmadı</string>
+    <string name="episode_filter_in_progress">Devam ediyor</string>
+    <string name="episode_filter_played">Oynatıldı</string>
+    <string name="episode_filter_none">Bu filtrede bölüm yok.</string>
 </resources>

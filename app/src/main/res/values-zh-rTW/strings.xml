@@ -1460,4 +1460,10 @@
     <string name="podcast_search_none">沒有與「%1$s」相關的節目或單集。</string>
     <string name="podcast_search_shows">節目</string>
     <string name="podcast_search_episodes">單集</string>
+    <string name="episode_filter">篩選單集</string>
+    <string name="episode_filter_all">全部</string>
+    <string name="episode_filter_unplayed">未播放</string>
+    <string name="episode_filter_in_progress">播放中</string>
+    <string name="episode_filter_played">已播放</string>
+    <string name="episode_filter_none">此篩選條件下沒有單集。</string>
 </resources>

@@ -1249,4 +1249,10 @@
     <string name="podcast_search_none">“%1$s”에 대한 프로그램이나 에피소드가 없습니다.</string>
     <string name="podcast_search_shows">프로그램</string>
     <string name="podcast_search_episodes">에피소드</string>
+    <string name="episode_filter">에피소드 필터</string>
+    <string name="episode_filter_all">전체</string>
+    <string name="episode_filter_unplayed">재생 안 함</string>
+    <string name="episode_filter_in_progress">재생 중</string>
+    <string name="episode_filter_played">재생함</string>
+    <string name="episode_filter_none">이 필터에 해당하는 에피소드가 없습니다.</string>
 </resources>

@@ -69,6 +69,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.ui.graphics.luminance
 import com.music.bitchord.data.model.LibraryState
 import androidx.compose.material.icons.rounded.Close
@@ -91,6 +92,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -153,6 +155,7 @@ import com.music.bitchord.data.model.BrowseType
 import com.music.bitchord.data.model.DetailPage
 import com.music.bitchord.data.model.PODCAST_SHOW_PREFIX
 import com.music.bitchord.data.podcasts.EpisodeProgress
+import com.music.bitchord.data.podcasts.EpisodeFilter
 import com.music.bitchord.data.model.CARD_ART_PX
 import com.music.bitchord.data.model.HEADER_ART_PX
 import com.music.bitchord.data.model.ROW_ART_PX
@@ -574,7 +577,22 @@ fun DetailScreen(
     songSort: SongSort = SongSort.DEFAULT,
 ) {
     val rawSongs = (page.songs as? UiState.Success)?.data.orEmpty()
-    val songs = remember(rawSongs, songSort) { rawSongs.sortedForDetail(songSort) }
+    // A podcast show's page: its rows are episodes, drawn by [EpisodeRow].
+    val isShow = page.browseId.startsWith(PODCAST_SHOW_PREFIX)
+    // A show's filter, where Shuffle is on a release: all, unplayed, in
+    // progress or played. The app's own count is read only while a filter is
+    // on, so the page is not composed again for each percent played.
+    var episodeFilter by rememberSaveable(page.browseId) { mutableStateOf(EpisodeFilter.ALL) }
+    val playedInAppState = EpisodeProgress.played.collectAsStateWithLifecycle()
+    val playedForFilter = if (isShow && episodeFilter != EpisodeFilter.ALL) playedInAppState.value else null
+    val songs = remember(rawSongs, songSort, episodeFilter, playedForFilter) {
+        rawSongs.sortedForDetail(songSort).let { sorted ->
+            if (playedForFilter != null) episodeFilter.apply(sorted, playedForFilter) else sorted
+        }
+    }
+    val filterControl = if (isShow && rawSongs.isNotEmpty()) {
+        EpisodeFilterControl(episodeFilter) { episodeFilter = episodeFilter.next() }
+    } else null
     // A Spotify playlist swaps each row for its match as it is found. The row
     // stays the same row through that, artwork included (see [HeldRowArt]).
     val swapsInPlace = page.browseId.startsWith(SPOTIFY_PAGE_PREFIX)
@@ -589,8 +607,6 @@ fun DetailScreen(
         rawSongs.withIndex().associate { (i, s) -> s.videoId to i + 1 }
     }
     val isArtist = page.type == BrowseType.ARTIST
-    // A podcast show's page: its rows are episodes, drawn by [EpisodeRow].
-    val isShow = page.browseId.startsWith(PODCAST_SHOW_PREFIX)
     // What is played of these from now on is counted, and what was counted
     // before is read, for the bar along the foot of each row.
     val episodeIds = remember(rawSongs) { rawSongs.filter { it.episode != null }.map { it.videoId } }
@@ -1284,6 +1300,7 @@ fun DetailScreen(
                         songs = songs,
                         onPlay = { onSongClick(songs, 0) },
                         onShuffle = { onShuffle(songs) },
+                        episodeFilter = filterControl,
                         searching = searching,
                         playRowShown = !playRowFolded,
                         onSearch = toggleSearch,
@@ -1491,7 +1508,13 @@ fun DetailScreen(
                     val numbered = page.type == BrowseType.ALBUM
                     if (matches.isEmpty() && state.data.isNotEmpty()) {
                         item(key = "no-matches") {
-                            MessageState(stringResource(R.string.nothing_matches, query))
+                            MessageState(
+                                if (query.isBlank() && episodeFilter != EpisodeFilter.ALL) {
+                                    stringResource(R.string.episode_filter_none)
+                                } else {
+                                    stringResource(R.string.nothing_matches, query)
+                                },
+                            )
                         }
                     }
                     itemsIndexed(
@@ -1727,6 +1750,7 @@ fun DetailScreen(
                                 songs = songs,
                                 onPlay = { onSongClick(songs, 0) },
                                 onShuffle = { onShuffle(songs) },
+                                episodeFilter = filterControl,
                                 searching = searching,
                                 playRowShown = !playRowFolded,
                                 onSearch = toggleSearch,
@@ -1822,6 +1846,8 @@ private fun ReleaseHeader(
     searching: Boolean,
     onSearch: () -> Unit,
     onArtistClick: (String, String) -> Unit,
+    /** A show's episode filter, in Shuffle's place; null on a release. */
+    episodeFilter: EpisodeFilterControl? = null,
     /** False while Play and Shuffle are folded away (see [DetailScreen]). */
     playRowShown: Boolean = true,
     /**
@@ -1928,13 +1954,15 @@ private fun ReleaseHeader(
 
             // Action buttons — live inside the header so there is zero gap
             // between the cover zone and the first song row.
-            if (songs.isNotEmpty() || page.songs is UiState.Loading) {
+            // A show's filter stays when nothing is in it, to be tapped on.
+            if (songs.isNotEmpty() || episodeFilter != null || page.songs is UiState.Loading) {
                 Spacer(Modifier.height(14.dp))
                 ReleaseActions(
                     palette = palette,
                     songs = songs,
                     onPlay = onPlay,
                     onShuffle = onShuffle,
+                    episodeFilter = episodeFilter,
                     searching = searching,
                     playRowShown = playRowShown,
                     onSearch = onSearch,
@@ -1972,6 +2000,8 @@ private fun ReleaseActions(
     searching: Boolean,
     onSearch: () -> Unit,
     modifier: Modifier = Modifier,
+    /** A show's episode filter, drawn in Shuffle's place; null on a release. */
+    episodeFilter: EpisodeFilterControl? = null,
     playRowShown: Boolean = true,
     /**
      * Where the Search circle sits inside these controls, in px: its top and
@@ -2001,7 +2031,7 @@ private fun ReleaseActions(
         alpha = 1f - rowFold
     }
     AnimatedContent(
-        targetState = songs.isNotEmpty(),
+        targetState = songs.isNotEmpty() || episodeFilter != null,
         transitionSpec = {
             fadeIn(tween(HEADER_FADE_MS)) togetherWith fadeOut(tween(HEADER_FADE_MS))
         },
@@ -2026,7 +2056,25 @@ private fun ReleaseActions(
             // Shuffle, the round Search, then Play on the right. Shuffle gives
             // up the room the circle takes, so Play keeps half the row.
             ReleaseActionsRow(
-                shuffle = {
+                shuffle = if (episodeFilter != null) {
+                    {
+                        // A show's episodes are listened to in order, so its
+                        // filter takes Shuffle's place. Each tap goes to the
+                        // next filter, and the pill names the one that is on.
+                        GlassPill(
+                            icon = Icons.Rounded.FilterList,
+                            label = stringResource(episodeFilter.filter.label()),
+                            contentDescription = stringResource(R.string.episode_filter) + ", " +
+                                stringResource(episodeFilter.filter.label()),
+                            onClick = episodeFilter.onNext,
+                            haptic = Haptic.Select,
+                            enabled = !searching,
+                            compact = true,
+                            modifier = it.then(folding),
+                        )
+                    }
+                } else {
+                    {
                     // Icon only: beside the circle there is no room for the word.
                     GlassPill(
                         icon = BitChordIcons.Shuffle,
@@ -2037,6 +2085,7 @@ private fun ReleaseActions(
                         enabled = !searching,
                         modifier = it.then(folding),
                     )
+                    }
                 },
                 search = {
                     SearchCircle(
@@ -2189,6 +2238,8 @@ private fun GlassPill(
     contentDescription: String? = null,
     haptic: Haptic = Haptic.Tap,
     enabled: Boolean = true,
+    /** Smaller icon and text, for a word that has to fit beside the Search circle. */
+    compact: Boolean = false,
 ) {
     val haptics = rememberHaptics()
     val dent = rememberPressDent()
@@ -2210,17 +2261,22 @@ private fun GlassPill(
                     Modifier
                 },
             )
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = if (compact) 10.dp else 12.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val tint = MaterialTheme.colorScheme.onSurface
-        Icon(imageVector = icon, contentDescription = null, tint = tint, modifier = Modifier.size(if (label == null) 22.dp else 18.dp))
+        val iconSize = when {
+            label == null -> 22.dp
+            compact -> 16.dp
+            else -> 18.dp
+        }
+        Icon(imageVector = icon, contentDescription = null, tint = tint, modifier = Modifier.size(iconSize))
         if (label != null) {
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(if (compact) 6.dp else 8.dp))
             Text(
                 text = label,
-                style = MaterialTheme.typography.titleMedium,
+                style = if (compact) MaterialTheme.typography.labelLarge else MaterialTheme.typography.titleMedium,
                 color = tint,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -4010,4 +4066,16 @@ private fun DockedTitle(
             }
         },
     )
+}
+
+/** A show's episode filter for the header: the one that is on, and a tap to go to the next. */
+@Immutable
+internal class EpisodeFilterControl(val filter: EpisodeFilter, val onNext: () -> Unit)
+
+/** The name of [this] filter, as the pill shows it. */
+private fun EpisodeFilter.label(): Int = when (this) {
+    EpisodeFilter.ALL -> R.string.episode_filter_all
+    EpisodeFilter.UNPLAYED -> R.string.episode_filter_unplayed
+    EpisodeFilter.IN_PROGRESS -> R.string.episode_filter_in_progress
+    EpisodeFilter.PLAYED -> R.string.episode_filter_played
 }

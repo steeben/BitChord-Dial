@@ -1398,4 +1398,10 @@
     <string name="podcast_search_none">Không có chương trình hoặc tập nào cho “%1$s”.</string>
     <string name="podcast_search_shows">Chương trình</string>
     <string name="podcast_search_episodes">Tập</string>
+    <string name="episode_filter">Lọc tập</string>
+    <string name="episode_filter_all">Tất cả</string>
+    <string name="episode_filter_unplayed">Chưa phát</string>
+    <string name="episode_filter_in_progress">Đang nghe dở</string>
+    <string name="episode_filter_played">Đã phát</string>
+    <string name="episode_filter_none">Không có tập nào trong bộ lọc này.</string>
 </resources>

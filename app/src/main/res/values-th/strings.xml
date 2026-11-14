@@ -1464,4 +1464,10 @@
     <string name="podcast_search_none">ไม่มีรายการหรือตอนสำหรับ “%1$s”</string>
     <string name="podcast_search_shows">รายการ</string>
     <string name="podcast_search_episodes">ตอน</string>
+    <string name="episode_filter">กรองตอน</string>
+    <string name="episode_filter_all">ทั้งหมด</string>
+    <string name="episode_filter_unplayed">ยังไม่ได้เล่น</string>
+    <string name="episode_filter_in_progress">กำลังเล่น</string>
+    <string name="episode_filter_played">เล่นแล้ว</string>
+    <string name="episode_filter_none">ไม่มีตอนในตัวกรองนี้</string>
 </resources>

@@ -1458,4 +1458,10 @@
     <string name="podcast_search_none">没有与“%1$s”相关的节目或单集。</string>
     <string name="podcast_search_shows">节目</string>
     <string name="podcast_search_episodes">单集</string>
+    <string name="episode_filter">筛选单集</string>
+    <string name="episode_filter_all">全部</string>
+    <string name="episode_filter_unplayed">未播放</string>
+    <string name="episode_filter_in_progress">播放中</string>
+    <string name="episode_filter_played">已播放</string>
+    <string name="episode_filter_none">此筛选条件下没有单集。</string>
 </resources>

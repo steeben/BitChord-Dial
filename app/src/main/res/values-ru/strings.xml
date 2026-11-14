@@ -1513,4 +1513,10 @@
     <string name="podcast_search_none">Нет шоу или выпусков по запросу «%1$s».</string>
     <string name="podcast_search_shows">Шоу</string>
     <string name="podcast_search_episodes">Выпуски</string>
+    <string name="episode_filter">Фильтр выпусков</string>
+    <string name="episode_filter_all">Все</string>
+    <string name="episode_filter_unplayed">Не прослушаны</string>
+    <string name="episode_filter_in_progress">Начаты</string>
+    <string name="episode_filter_played">Прослушаны</string>
+    <string name="episode_filter_none">Нет выпусков с этим фильтром.</string>
 </resources>

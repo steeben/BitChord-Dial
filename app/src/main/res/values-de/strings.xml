@@ -1481,4 +1481,10 @@
     <string name="podcast_search_none">Keine Sendungen oder Folgen für „%1$s“.</string>
     <string name="podcast_search_shows">Sendungen</string>
     <string name="podcast_search_episodes">Folgen</string>
+    <string name="episode_filter">Folgen filtern</string>
+    <string name="episode_filter_all">Alle</string>
+    <string name="episode_filter_unplayed">Nicht gehört</string>
+    <string name="episode_filter_in_progress">Begonnen</string>
+    <string name="episode_filter_played">Gehört</string>
+    <string name="episode_filter_none">Keine Folgen in diesem Filter.</string>
 </resources>

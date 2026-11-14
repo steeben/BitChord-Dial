@@ -1458,4 +1458,10 @@
     <string name="podcast_search_none">Tidak ada acara atau episode untuk “%1$s”.</string>
     <string name="podcast_search_shows">Acara</string>
     <string name="podcast_search_episodes">Episode</string>
+    <string name="episode_filter">Filter episode</string>
+    <string name="episode_filter_all">Semua</string>
+    <string name="episode_filter_unplayed">Belum diputar</string>
+    <string name="episode_filter_in_progress">Sedang diputar</string>
+    <string name="episode_filter_played">Sudah diputar</string>
+    <string name="episode_filter_none">Tidak ada episode di filter ini.</string>
 </resources>

@@ -1486,4 +1486,10 @@
     <string name="podcast_search_none">אין תוכניות או פרקים עבור “%1$s”.</string>
     <string name="podcast_search_shows">תוכניות</string>
     <string name="podcast_search_episodes">פרקים</string>
+    <string name="episode_filter">סינון פרקים</string>
+    <string name="episode_filter_all">הכול</string>
+    <string name="episode_filter_unplayed">לא הושמעו</string>
+    <string name="episode_filter_in_progress">בהשמעה</string>
+    <string name="episode_filter_played">הושמעו</string>
+    <string name="episode_filter_none">אין פרקים במסנן הזה.</string>
 </resources>
