@@ -1331,4 +1331,10 @@
     <string name="podcast_search_none">No shows or episodes for “%1$s”.</string>
     <string name="podcast_search_shows">Shows</string>
     <string name="podcast_search_episodes">Episodes</string>
+    <string name="episode_filter">Filter episodes</string>
+    <string name="episode_filter_all">All</string>
+    <string name="episode_filter_unplayed">Unplayed</string>
+    <string name="episode_filter_in_progress">In progress</string>
+    <string name="episode_filter_played">Played</string>
+    <string name="episode_filter_none">No episodes in this filter.</string>
 </resources>

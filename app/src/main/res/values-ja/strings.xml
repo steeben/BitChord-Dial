@@ -1464,4 +1464,10 @@
     <string name="podcast_search_none">「%1$s」の番組やエピソードはありません。</string>
     <string name="podcast_search_shows">番組</string>
     <string name="podcast_search_episodes">エピソード</string>
+    <string name="episode_filter">エピソードを絞り込む</string>
+    <string name="episode_filter_all">すべて</string>
+    <string name="episode_filter_unplayed">未再生</string>
+    <string name="episode_filter_in_progress">再生中</string>
+    <string name="episode_filter_played">再生済み</string>
+    <string name="episode_filter_none">この条件のエピソードはありません。</string>
 </resources>

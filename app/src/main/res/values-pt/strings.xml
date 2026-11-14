@@ -1491,4 +1491,10 @@
     <string name="podcast_search_none">Nenhum programa ou episódio para “%1$s”.</string>
     <string name="podcast_search_shows">Programas</string>
     <string name="podcast_search_episodes">Episódios</string>
+    <string name="episode_filter">Filtrar episódios</string>
+    <string name="episode_filter_all">Todos</string>
+    <string name="episode_filter_unplayed">Não reproduzidos</string>
+    <string name="episode_filter_in_progress">Em andamento</string>
+    <string name="episode_filter_played">Reproduzidos</string>
+    <string name="episode_filter_none">Nenhum episódio neste filtro.</string>
 </resources>

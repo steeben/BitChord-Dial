@@ -1526,4 +1526,10 @@
     <string name="podcast_search_none">Brak audycji i odcinków dla „%1$s”.</string>
     <string name="podcast_search_shows">Audycje</string>
     <string name="podcast_search_episodes">Odcinki</string>
+    <string name="episode_filter">Filtruj odcinki</string>
+    <string name="episode_filter_all">Wszystkie</string>
+    <string name="episode_filter_unplayed">Nieodtworzone</string>
+    <string name="episode_filter_in_progress">W trakcie</string>
+    <string name="episode_filter_played">Odtworzone</string>
+    <string name="episode_filter_none">Brak odcinków w tym filtrze.</string>
 </resources>
