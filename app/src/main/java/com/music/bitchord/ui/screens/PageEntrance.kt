@@ -53,19 +53,54 @@ internal object PageEntrance {
      * Spotify track swapped for its YouTube Music match is a new row to the
      * list), and what replaces it carries on from where the first had got to
      * rather than starting over.
+     *
+     * The turns are counted from the first thing drawn, not from the top of
+     * the page: on a page scrolled part of the way down before its songs
+     * landed, the rows in view came in after a wait as long as if every row
+     * above them were in view too, and the rows further down, past the last
+     * slot, were there before them. That left a gap with rows under it.
      */
     class Run(val startedAtMs: Long) {
         private val starts = HashMap<Int, Long>()
 
+        /** The slot of the first thing this entrance drew: the top of what it brings in. */
+        private var top: Int? = null
+
+        @Volatile
+        private var hurriedAtMs: Long? = null
+
         /**
          * When the item in [slot], drawn at [nowMs], sets off, or null when
          * it has no part in this entrance and is simply there (see [plays]).
+         * One first drawn after a scroll ([hurry]) is simply there.
          */
         @Synchronized
         fun startOf(slot: Int, nowMs: Long): Long? {
             starts[slot]?.let { return it }
-            if (!plays(slot, startedAtMs, nowMs)) return null
-            return (nowMs + delayMs(slot)).also { starts[slot] = it }
+            if (hurriedAtMs != null) return null
+            if (!plays(0, startedAtMs, nowMs)) return null
+            val first = top ?: slot.also { top = it }
+            // One above the first (not seen so far) has no wait.
+            val place = (slot - first).coerceAtLeast(0)
+            if (!plays(place, startedAtMs, nowMs)) return null
+            return (nowMs + delayMs(place)).also { starts[slot] = it }
+        }
+
+        /**
+         * The list was scrolled at [nowMs], with the entrance still going.
+         * Nothing waits for its turn any longer: what was waiting sets off
+         * now (see [setOff]), and what the scroll brings into view is simply
+         * there. Left to their turns, rows the scroll had carried up the
+         * page were still to come in while the rows under them were there.
+         */
+        fun hurry(nowMs: Long) {
+            if (hurriedAtMs == null) hurriedAtMs = nowMs
+        }
+
+        /** When a slot given [startAtMs] sets off, now that a scroll may have hurried it. */
+        fun setOff(startAtMs: Long): Long {
+            val hurried = hurriedAtMs
+            return if (hurried != null && hurried < startAtMs) hurried else startAtMs
         }
     }
 

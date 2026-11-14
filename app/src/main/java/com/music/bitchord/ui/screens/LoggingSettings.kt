@@ -28,8 +28,8 @@ import java.io.File
 
 /**
  * Advanced's "Enable logging": a switch that records everything the app logs
- * until it is switched off (or the app closes), then offers the log to share
- * or to save to the phone's storage.
+ * until it is switched off, then offers the log to share or to save to the
+ * phone's storage. It stays on over a launch of the app: see [LogRecorder].
  */
 @Composable
 internal fun EnableLoggingRow(title: String) {
@@ -54,7 +54,7 @@ internal fun EnableLoggingRow(title: String) {
         if (on) {
             LogRecorder.start(context)
         } else {
-            finished = LogRecorder.stop()
+            finished = LogRecorder.stop(context)
         }
     }
 

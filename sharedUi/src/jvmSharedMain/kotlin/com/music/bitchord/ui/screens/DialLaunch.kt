@@ -19,6 +19,8 @@ import androidx.compose.ui.geometry.translate
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.graphics.layer.GraphicsLayer
@@ -127,6 +129,14 @@ class DialOrigin(
 
     /** Whether its page has been seen on its way back down: see [behindLaunchOnto]. */
     internal var closeSeen = false
+
+    /**
+     * The tile itself, as the page it is on has it placed now (see
+     * [DialLaunch.placed]): where its page closes to. Not [bounds] alone,
+     * which is where the tile was when it was tapped: the page under a
+     * closing one can be scrolled before the close is over.
+     */
+    internal var tile: LayoutCoordinates? = null
 }
 
 /**
@@ -171,6 +181,22 @@ object DialLaunch {
      * there while the page is growing or shrinking; read while drawing.
      */
     internal val windows = mutableStateMapOf<String, () -> RoundRect?>()
+
+    /** Each page on screen, by its key: where it is laid out, for a tile on it to be found against. */
+    internal val pages = HashMap<String, LayoutCoordinates>()
+
+    /**
+     * Told by a tile on the shelf called [shelf] (a card's, when [card]) that
+     * opens the page [key], each time it is placed: [at] is where. Kept for
+     * the tile's launch, when it has one, so its page closes onto the tile
+     * where it is, not where it was.
+     */
+    internal fun placed(key: String, shelf: String, card: Boolean, at: LayoutCoordinates) {
+        // Not a read for the layout to be redone over: nothing is laid out by it.
+        val launches = Snapshot.withoutReadObservation { stack }
+        if (launches.isEmpty()) return
+        launches.lastOrNull { it.key == key && it.card == card && it.shelfTitle == shelf }?.tile = at
+    }
 
     /** The dial page Home should open on: the one a launched tile is on. */
     internal fun pageOf(shelfTitle: String): Int = stack.lastOrNull { it.shelfTitle == shelfTitle }?.page ?: 0
@@ -283,6 +309,12 @@ fun DialLaunchPage(
     val pageAt = remember { mutableStateOf(Offset.Zero) }
     val pageSize = remember { mutableStateOf(IntSize.Zero) }
     val density = LocalDensity.current
+    // Where this page is laid out, for the tiles on it: see [TileFollow].
+    val placedAs = remember { arrayOfNulls<LayoutCoordinates>(1) }
+    DisposableEffect(key) {
+        onDispose { if (DialLaunch.pages[key] === placedAs[0]) DialLaunch.pages.remove(key) }
+    }
+    val follow = remember { TileFollow() }
     if (origin != null) {
         // Told to whatever sits behind this page (the top bar of the page
         // under it), so that can stay drawn and be covered by it.
@@ -295,7 +327,9 @@ fun DialLaunchPage(
                 val from = if (closing) origin.bounds else origin.bounds.scaled(origin.pressedScale)
                 val tile = from.translate(-pageAt.value)
                 val seen = from.intersect(origin.visible).translate(-pageAt.value)
-                val shown = seen.launched(w, h, tile.center, p).translate(pageAt.value)
+                // Gone with its tile: nothing is in flight.
+                val moved = (if (closing) follow.shift(p) else Offset.Zero) ?: return@window null
+                val shown = seen.launched(w, h, tile.center, p).translate(pageAt.value + moved)
                 val tileScale = if (closing) 1f else origin.pressedScale
                 val corner = (with(density) { origin.corner.toPx() } * tileScale)
                     .coerceAtMost(minOf(tile.width, tile.height) / 2f)
@@ -333,12 +367,39 @@ fun DialLaunchPage(
             .onPlaced {
                 pageAt.value = it.positionInRoot()
                 pageSize.value = it.size
+                placedAs[0] = it
+                DialLaunch.pages[key] = it
             }
             .then(
                 if (origin == null) {
                     Modifier
                 } else {
                     Modifier
+                        // A closing page goes to its tile where the tile is
+                        // now. The page under it can be scrolled as soon as
+                        // it is back, and the close has a third of a second
+                        // of its bounce still to run by then: drawn where the
+                        // tile had been, the page stood still over a list
+                        // that moved, and then was gone.
+                        //
+                        // Moved as it is drawn, after this frame's layout, so
+                        // it is on the tile in the same frame; and in a layer
+                        // of its own, so a frame of this redraws nothing else.
+                        .graphicsLayer { }
+                        .drawWithContent {
+                            if (closing) {
+                                // Read, so each frame of the close looks again.
+                                val p = progress
+                                follow.look(origin, pageAt.value)
+                                val moved = follow.shift(p)
+                                // Its tile has been scrolled off the page: nothing to land on.
+                                if (moved != null) {
+                                    translate(moved.x, moved.y) { this@drawWithContent.drawContent() }
+                                }
+                            } else {
+                                drawContent()
+                            }
+                        }
                         .graphicsLayer {
                             val p = progress
                             // Out from the tile as it was let go of, pressed in;
@@ -441,6 +502,40 @@ fun DialLaunchPage(
             }
         }
     }
+}
+
+/**
+ * How far a closing page's tile has moved from where it was tapped, for the
+ * page to go to it where it is: see [DialOrigin.tile].
+ */
+private class TileFollow {
+    private var moved = Offset.Zero
+    private var seen = false
+    private var gone = false
+
+    /** Looks at where [origin]'s tile is now. [pageAt] is where the closing page is laid out, in the root. */
+    fun look(origin: DialOrigin, pageAt: Offset) {
+        val tile = origin.tile ?: return
+        val page = DialLaunch.pages[origin.parent]
+        if (page == null || !page.isAttached || !tile.isAttached) {
+            // It was there and is not: scrolled out of its list. One never
+            // seen has yet to be placed, and the page goes to where it was.
+            gone = seen
+            return
+        }
+        // Against its own page, not the root: that page is brought forward
+        // (scaled) under this one, which is not the tile moving.
+        val now = page.localBoundingBoxOf(tile, clipBounds = false)
+        moved = now.center - origin.bounds.translate(-pageAt).center
+        seen = true
+        gone = false
+    }
+
+    /**
+     * How far to move the page at launch [progress]: all of the way once it
+     * is down to its tile, none of it at full size. Null when the tile is gone.
+     */
+    fun shift(progress: Float): Offset? = if (gone) null else moved * (1f - progress.coerceIn(0f, 1f))
 }
 
 /**
@@ -677,7 +772,10 @@ fun Modifier.launchArt(launch: CardLaunch?): Modifier =
         this
     } else {
         this
-            .onPlaced { launch.coordinates = it }
+            .onPlaced {
+                launch.coordinates = it
+                DialLaunch.placed(launch.key, launch.row?.title.orEmpty(), card = true, at = it)
+            }
             .graphicsLayer { alpha = if (DialLaunch.isOut(launch.key, launch.row?.title.orEmpty())) 0f else 1f }
             .drawWithContent {
                 launch.layer.record { this@drawWithContent.drawContent() }

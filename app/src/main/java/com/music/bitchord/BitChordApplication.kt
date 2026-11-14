@@ -59,6 +59,8 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         // The player is drawn by the shared UI module; this is what it reads
         // underneath — settings, the Canvas decoder, outputs, the party.
         AndroidStreamHooks.installEarly()
+        // A log left on carries on from here, so that it has the launch.
+        com.music.bitchord.data.LogRecorder.resumeAtLaunch(this)
         PlayerPlatform.install(AndroidPlayerHost(this))
         com.music.bitchord.ui.AppUi.install(com.music.bitchord.ui.AndroidAppUiHost)
         // Per-song Canvas/audio fixes, from the player's ⋯ menu.
