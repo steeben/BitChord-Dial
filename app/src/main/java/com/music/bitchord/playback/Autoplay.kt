@@ -15,6 +15,21 @@ import kotlinx.coroutines.CancellationException
 /** Most AutoPlay-suggested tracks kept queued ahead of the current one at once. */
 const val MAX_QUEUED_AUTOPLAY = 10
 
+/** How many tracks a station starts with, behind its seed. */
+const val INITIAL_RADIO_TRACKS = 24
+
+/**
+ * This song as the seed of its own station: named for it, and the source every
+ * track of the station is filed under. The same wherever a station is made
+ * ready, so one made ready ahead of time is the one that would be loaded.
+ */
+fun Song.asRadioSeed(): Song = copy(
+    radioName = title,
+    playbackSource = title,
+    playbackSourceType = com.music.bitchord.data.model.PlaybackSourceType.SHARED_LINK,
+    playbackSourceId = videoId,
+)
+
 /**
  * Whether AutoPlay is on for the music this device is playing.
  *

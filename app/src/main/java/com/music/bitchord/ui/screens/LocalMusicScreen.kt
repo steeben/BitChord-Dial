@@ -257,6 +257,28 @@ fun LocalMusicScreen(
         .collectAsStateWithLifecycle()
     val viewType = tabViews.getOrElse(selectedTab) { LibraryViewType.LIST }
     val sortedSongs = remember(songs, sortOrder) { songs.sortedForLibrary(sortOrder) }
+    // The Artists and Albums tabs group the whole library by its credits and
+    // its tags. For a large library that is some tens of milliseconds, and it
+    // was done on the frame a tap on either tab landed on, which stopped for
+    // it. Worked out here off the app's thread as soon as the songs are in, so
+    // the tap finds its list made. A tap that comes first works it out on the
+    // spot, as it always did.
+    val groupsAhead = remember { LibraryGroupsAhead() }
+    val albumArtAhead by AlbumArtChoices.choices.collectAsStateWithLifecycle()
+    androidx.compose.runtime.LaunchedEffect(sortedSongs, collections, albumArtAhead) {
+        val songsNow = sortedSongs
+        val collectionsNow = collections
+        val artNow = albumArtAhead
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            groupsAhead.artists = LibraryGroupsAhead.Artists(songsNow, groupedArtists(songsNow))
+            groupsAhead.albums = LibraryGroupsAhead.Albums(
+                songsNow,
+                collectionsNow,
+                artNow,
+                albumEntries(songsNow, collectionsNow, artNow),
+            )
+        }
+    }
     var selectedDownloadIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     // Kept separately from the tracks selected for deletion: different albums
     // can share tracks, so inferring an album's selection from those track ids
@@ -458,12 +480,9 @@ fun LocalMusicScreen(
 
                 key == "tab:$LOCAL_TAB_ARTISTS" -> {
                     val artists = remember(sortedSongs, searchQuery) {
-                        // A collaboration is each of its artists' — see LibraryArtists.
-                        LibraryArtists.group(sortedSongs)
-                            .associateTo(LinkedHashMap()) { it }
-                            .entries
-                            .filter { searchQuery.isBlank() || it.key.contains(searchQuery, ignoreCase = true) }
-                            .sortedByIndexKey { it.key }
+                        val all = groupsAhead.artists?.takeIf { it.songs === sortedSongs }?.groups
+                            ?: groupedArtists(sortedSongs)
+                        all.filter { searchQuery.isBlank() || it.key.contains(searchQuery, ignoreCase = true) }
                     }
                     ArtistsTab(
                         listState = scroll.list(LOCAL_TAB_ARTISTS),
@@ -531,7 +550,11 @@ fun LocalMusicScreen(
                     // LOCAL_TAB_ALBUMS
                     val albumArt by AlbumArtChoices.choices.collectAsStateWithLifecycle()
                     val albums = remember(sortedSongs, collections, searchQuery, albumArt) {
-                        albumEntries(sortedSongs, collections, albumArt).filter {
+                        val all = groupsAhead.albums
+                            ?.takeIf { it.songs === sortedSongs && it.collections === collections && it.art === albumArt }
+                            ?.entries
+                            ?: albumEntries(sortedSongs, collections, albumArt)
+                        all.filter {
                             searchQuery.isBlank() ||
                                 it.title.contains(searchQuery, ignoreCase = true) ||
                                 it.artist.contains(searchQuery, ignoreCase = true)
@@ -1201,6 +1224,37 @@ private class AlbumEntry(
      */
     val key: String,
 )
+
+/**
+ * The Artists tab's rows, in the A-Z index's order: each artist with their
+ * songs. A collaboration is each of its artists' (see [LibraryArtists]).
+ */
+private fun groupedArtists(songs: List<Song>): List<Map.Entry<String, List<Song>>> =
+    LibraryArtists.group(songs)
+        .associateTo(LinkedHashMap()) { it }
+        .entries
+        .sortedByIndexKey { it.key }
+
+/**
+ * The Artists and Albums tabs' rows, worked out before either tab is opened.
+ * Each is kept with what it was made from, and is used only for exactly that.
+ */
+private class LibraryGroupsAhead {
+    class Artists(val songs: List<Song>, val groups: List<Map.Entry<String, List<Song>>>)
+
+    class Albums(
+        val songs: List<Song>,
+        val collections: List<DownloadedCollection>,
+        val art: Map<String, String>,
+        val entries: List<AlbumEntry>,
+    )
+
+    @Volatile
+    var artists: Artists? = null
+
+    @Volatile
+    var albums: Albums? = null
+}
 
 /**
  * The Albums tab's rows: the releases downloaded whole, then whatever else the

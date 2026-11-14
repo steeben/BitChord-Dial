@@ -2,6 +2,7 @@ package com.music.bitchord.ui.screens
 
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
@@ -15,6 +16,9 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.lerp
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.sin
 import androidx.compose.animation.core.spring
@@ -166,9 +170,11 @@ private fun ShelfItem.dialId(): String = videoId ?: browseId ?: title
 
 /**
  * "I'm Feeling Lucky" on the speed dial: a die drawn as a tile, last on the
- * first page. [onRoll] is called on every tap, as the die starts to roll.
+ * first page. [onRoll] is called on every tap, as the die starts to roll, and
+ * is handed what to call once the song it rolled is sounding (or once there
+ * will be none): the die goes on round until then, and lands with the song.
  */
-class SpeedDialLucky(val label: String, val onRoll: () -> Unit)
+class SpeedDialLucky(val label: String, val onRoll: (landed: () -> Unit) -> Unit)
 
 /** The die's place in the dial's order: never a real item, only matched on. */
 private val LUCKY_TILE = ShelfItem(
@@ -604,6 +610,7 @@ internal fun SpeedDialShelf(
                                     SpeedDialTile(
                                         item = item,
                                         spot = tileSpots.getOrPut(id) { TileSpot() },
+                                        launchShelf = shelf.title,
                                         pinned = pinnedTile && showPinIcon,
                                         newRelease = if (id in newReleaseIds) newReleaseLabel else null,
                                         source = if (sourceTags) mixSourceOf(item) else null,
@@ -855,6 +862,8 @@ private fun SpeedDialTile(
     dim: () -> Float = { 0f },
     /** Where it is and its picture, for whoever needs them: see [TileSpot]. */
     spot: TileSpot = remember { TileSpot() },
+    /** The shelf it is on, for a tile whose page closes back onto it: see [DialLaunch.placed]. */
+    launchShelf: String? = null,
 ) {
     val shape = RoundedCornerShape(10.dp)
     val press = rememberTilePress()
@@ -865,7 +874,13 @@ private fun SpeedDialTile(
     Box(
         modifier = modifier
             .dialTileOutset()
-            .onPlaced { spot.coordinates = it }
+            .onPlaced { placed ->
+                spot.coordinates = placed
+                val opens = item.browseId
+                if (launchShelf != null && opens != null) {
+                    DialLaunch.placed(opens, launchShelf, card = false, at = placed)
+                }
+            }
             .tilePress(press)
             .drawWithContent {
                 drawn.record { this@drawWithContent.drawContent() }
@@ -1174,7 +1189,7 @@ private fun DimOverlay(dim: () -> Float) {
 @Composable
 private fun LuckyDiceTile(
     label: String,
-    onRoll: () -> Unit,
+    onRoll: (landed: () -> Unit) -> Unit,
     dim: () -> Float,
     modifier: Modifier = Modifier,
 ) {
@@ -1201,7 +1216,8 @@ private fun LuckyDiceTile(
                 press.tap {}
                 if (rolling) return@clickable
                 rolling = true
-                onRoll()
+                val sounding = CompletableDeferred<Unit>()
+                onRoll { sounding.complete(Unit) }
                 scope.launch {
                     try {
                         spin.snapTo(0f)
@@ -1214,6 +1230,24 @@ private fun LuckyDiceTile(
                             if (now != square) {
                                 square = now
                                 haptics.play(Haptic.Tick)
+                            }
+                        }
+                        // The song is not sounding yet: the lights go on
+                        // round, slower, and the die lands when it is. A die
+                        // that landed first and a song that came after read
+                        // as a button that was slow to answer.
+                        if (!sounding.isCompleted) {
+                            coroutineScope {
+                                val chase = launch {
+                                    while (true) {
+                                        spin.animateTo(
+                                            spin.value + DICE_RING.size,
+                                            tween(DICE_WAIT_LAP_MS, easing = LinearEasing),
+                                        )
+                                    }
+                                }
+                                withTimeoutOrNull(DICE_WAIT_MAX_MS) { sounding.await() }
+                                chase.cancelAndJoin()
                             }
                         }
                         face = (1..6).random()
@@ -1348,6 +1382,14 @@ private const val DICE_ROLL_STEPS = 16f
 private const val DICE_ROLL_MS = 950
 private const val DICE_TAIL = 3.2f
 private const val DICE_FADE_MS = 140
+
+/**
+ * Once round while the song is still on its way, and the longest the die
+ * waits for it. Whoever was asked for the song stops waiting sooner than
+ * this; it is here so that a die can never be left turning.
+ */
+private const val DICE_WAIT_LAP_MS = 720
+private const val DICE_WAIT_MAX_MS = 12_000L
 
 /** The jiggle while a tile is moved: how far pinned tiles shrink, how far they rock and how fast. */
 private const val WIGGLE_SHRINK = 0.08f
