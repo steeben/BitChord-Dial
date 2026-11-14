@@ -58,8 +58,9 @@ private val WHITESPACE = Regex("""\s+""")
 
 /**
  * One podcast episode on its show's page. Taller than a track's row: the
- * episode's still, its title, when it came out and how long it is, then two
- * lines of its notes, which "Read more" opens in full. A thin bar along the
+ * episode's still, its title, when it came out, how long it is and how many
+ * times it was played, then two lines of its notes, which "Read more" (on the
+ * right, under them) opens in full. A thin bar along the
  * foot of the row, in the page's own colour, is as long as the part of the
  * episode that was played; an episode that was not started has none.
  *
@@ -91,7 +92,8 @@ internal fun EpisodeRow(
     val playedInApp by EpisodeProgress.played.collectAsStateWithLifecycle()
     val played = EpisodeProgress.shown(info.playedPercent, playedInApp[song.videoId])
     val released = remember(info.released) { EpisodeDate.label(info.released) }
-    val meta = listOfNotNull(released, song.durationText).joinToString(" • ")
+    // When it came out, how long it is, and how many times it was played.
+    val meta = listOfNotNull(released, song.durationText, info.views).joinToString(" • ")
 
     val notes = info.description
     var open by rememberSaveable { mutableStateOf(false) }
@@ -178,7 +180,9 @@ internal fun EpisodeRow(
                         style = MaterialTheme.typography.labelLarge,
                         color = palette.accent,
                         modifier = Modifier
-                            .padding(start = PAGE_GUTTER - 6.dp, top = 2.dp)
+                            // At the end of the notes it opens, on the right.
+                            .align(Alignment.End)
+                            .padding(end = PAGE_GUTTER - 6.dp, top = 2.dp)
                             .clip(RoundedCornerShape(6.dp))
                             .clickable { open = !open }
                             .padding(horizontal = 6.dp, vertical = 4.dp),

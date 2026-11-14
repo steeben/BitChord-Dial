@@ -24,6 +24,11 @@
     <string name="choose_lyrics_provider">लिरिक्स प्रदाता चुनें</string>
     <string name="clear">साफ़ करें</string>
     <string name="close_lyrics">लिरिक्स बंद करें</string>
+    <string name="comments">टिप्पणियाँ</string>
+    <string name="comments_off">टिप्पणियाँ बंद हैं</string>
+    <string name="comments_unavailable">टिप्पणियाँ लोड नहीं हो सकीं</string>
+    <string name="more_comments">और टिप्पणियाँ</string>
+    <string name="no_comments">कोई टिप्पणी नहीं</string>
     <string name="data_saver">Data-Saver</string>
     <string name="decrease_lyrics_offset">Decrease lyrics offset</string>
     <string name="downgraded_from">↓ %1$s से</string>

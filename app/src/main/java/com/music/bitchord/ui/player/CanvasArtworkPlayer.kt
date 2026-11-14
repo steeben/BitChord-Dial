@@ -1264,11 +1264,16 @@ private fun AndroidMusicVideoCanvas(videoId: String, spec: CanvasVideoSpec, modi
         update = { frame ->
             val view = frame.getChildAt(0) as TextureView
             view.alpha = alpha * spec.presentationAlpha()
-            // Always cropped to cover: the video is the whole screen's backdrop.
+            // Always cropped to cover: the video is the whole screen's
+            // backdrop, or a podcast episode's picture in the cover's place.
             if (frame.applied.transformDiffers(engineAspect, CanvasContentMode.CROP, false, view.width, view.height)) {
                 view.applyContentTransform(engineAspect, CanvasContentMode.CROP, false)
             }
             frame.wipe = wipe.value
+            // The banner's dissolve into the backdrop, for an episode's picture
+            // that runs as the banner. None is asked for under the whole screen.
+            frame.fadeFraction = spec.bottomFade
+            frame.fadeEndPx = spec.bottomFadeEndPx
         },
         onRelease = { frame ->
             if (textureView === frame.getChildAt(0)) textureView = null

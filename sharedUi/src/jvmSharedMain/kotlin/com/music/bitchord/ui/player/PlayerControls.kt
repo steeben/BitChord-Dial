@@ -616,6 +616,12 @@ internal fun PlayerActionRow(
     onOpenListenTogetherMembers: () -> Unit,
     /** Held lyrics glyph: the provider drawer. Null leaves the glyph tap-only. */
     onChooseLyricsProvider: (() -> Unit)? = null,
+    /**
+     * A podcast episode is playing: it has comments and no lyrics, so the
+     * glyph is the bubble without its quotation marks, and [onToggleLyrics]
+     * opens them.
+     */
+    comments: Boolean = false,
 ) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         // Sized for the wider of the two capsules — the three-up one — in both
@@ -629,13 +635,19 @@ internal fun PlayerActionRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             BottomGlyph(
-                icon = BitChordIcons.LyricsQuote,
-                contentDescription = stringResource(if (lyricsOpen) Res.string.close_lyrics else Res.string.open_lyrics),
+                icon = if (comments) BitChordIcons.Comments else BitChordIcons.LyricsQuote,
+                contentDescription = stringResource(
+                    when {
+                        comments -> Res.string.comments
+                        lyricsOpen -> Res.string.close_lyrics
+                        else -> Res.string.open_lyrics
+                    },
+                ),
                 // Lyrics and the queue are two things to show in one place, so
                 // opening either closes the other; lit to say which is up.
                 onClick = onToggleLyrics,
                 onLongClick = onChooseLyricsProvider,
-                highlighted = lyricsOpen,
+                highlighted = lyricsOpen && !comments,
             )
             // One capsule for both states, so its glass and its outline stay put
             // as the queue opens and closes; only the glyphs inside it trade

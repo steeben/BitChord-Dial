@@ -1,5 +1,6 @@
 package com.music.bitchord.data.innertube
 
+import com.music.bitchord.data.model.isEpisode
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
@@ -7,6 +8,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /** Shapes trimmed from YouTube Music's own responses for a podcast show (`MPSPP…`). */
 class PodcastTest {
@@ -86,6 +88,7 @@ class PodcastTest {
         val episode = InnertubeParser.collectSongsDeep(row, "Huberman Lab").single().episode!!
         assertEquals("How to build endurance.\n\nSponsors below.", episode.description)
         assertEquals("2d ago", episode.released)
+        assertEquals("128K", episode.views)
         assertEquals(37, episode.playedPercent)
 
         // Not started, and nothing written about it.
@@ -179,6 +182,50 @@ class PodcastTest {
         assertEquals("Y566_T-YlNQ", song.videoId)
         assertEquals("Figuring Out With Raj Shamani", song.artist)
         assertFalse(song.isVideo)
+        // What the player knows it by: it shows its picture and looks for no lyrics.
+        assertTrue(song.isEpisode)
+    }
+
+    @Test
+    fun views_areTheCountAlone_whereTheTextIsEnglish() {
+        fun runs(vararg parts: String) = json(
+            """{ "runs": [ ${parts.joinToString(""", { "text": " • " }, """) { """{ "text": "$it" }""" }} ] }""",
+        )["runs"] as kotlinx.serialization.json.JsonArray
+        val read = InnertubeParser::episodeViews
+        assertEquals("489K", read(runs("489K views", "1d ago")))
+        assertEquals("1.4M", read(runs("1.4M views", "Oct 24")))
+        assertEquals("1", read(runs("1 view", "Nov 14, 2025")))
+        assertEquals("12,345", read(runs("12,345 views")))
+        // Another language: YouTube Music's own words, where a date follows them.
+        assertEquals("48.9万 回視聴", read(runs("48.9万 回視聴", "1 日前")))
+        // The date alone is not a count.
+        assertNull(read(runs("1d ago")))
+        assertNull(read(runs("Oct 24")))
+        assertNull(read(null))
+    }
+
+    @Test
+    fun watchQueue_knowsAnEpisodeFromAMusicVideo() {
+        fun row(videoId: String, type: String) = """
+            { "playlistPanelVideoRenderer": {
+              "videoId": "$videoId",
+              "title": { "runs": [ { "text": "Title $videoId" } ] },
+              "longBylineText": { "runs": [ { "text": "Someone" }, { "text": " • " }, { "text": "128K views" } ] },
+              "lengthText": { "runs": [ { "text": "34:00" } ] },
+              "navigationEndpoint": { "watchEndpoint": { "watchEndpointMusicSupportedConfigs": {
+                "watchEndpointMusicConfig": { "musicVideoType": "$type" }
+              } } }
+            } }
+        """
+        val queue = InnertubeParser.parseWatchQueue(
+            json(
+                """{ "contents": [ ${row("NlVu0P1RdHs", "MUSIC_VIDEO_TYPE_PODCAST_EPISODE")},
+                    ${row("eYSOabR3YP0", "MUSIC_VIDEO_TYPE_OMV")} ] }""",
+            ),
+        )
+        assertEquals(listOf(true, false), queue.map { it.isEpisode })
+        // An episode's byline counts its views too, and it is no music video.
+        assertEquals(listOf(false, true), queue.map { it.isVideo })
     }
 
     private fun showCard(playlistId: String, title: String, publisher: String) = """

@@ -31,13 +31,24 @@ data class ArtistRef(
  * 0 when it was not started, or when no account is signed in.
  * @property showId The `MPSP…` page of the show it is an episode of, where
  * the row is away from that page and so names its show ("New episodes").
+ * @property views How many times it was played, as its row says it: "489K"
+ * where YouTube Music's text is English, its whole text ("48.9万 回視聴")
+ * otherwise.
  */
 data class EpisodeInfo(
     val description: String? = null,
     val released: String? = null,
     val playedPercent: Int = 0,
     val showId: String? = null,
+    val views: String? = null,
 )
+
+/**
+ * Whether this is a podcast episode. The player shows an episode's own
+ * picture where the cover is, looks for no lyrics for it, and offers its
+ * comments in their place.
+ */
+val Song.isEpisode: Boolean get() = episode != null
 
 /** A playable YouTube Music track. */
 data class Song(

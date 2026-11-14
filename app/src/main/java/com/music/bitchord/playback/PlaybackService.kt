@@ -133,6 +133,7 @@ import com.music.bitchord.data.innertube.PlayerClient
 import com.music.bitchord.data.innertube.StreamResolver
 import com.music.bitchord.data.model.LikeStatus
 import com.music.bitchord.data.model.Song
+import com.music.bitchord.data.model.isEpisode
 import com.music.bitchord.data.model.isUnresolvedSpotify
 import com.music.bitchord.data.scrobbling.LastFM
 import com.music.bitchord.data.scrobbling.ListenBrainzManager
@@ -2045,6 +2046,8 @@ class PlaybackService : MediaLibraryService() {
     private suspend fun loopMixLyrics(item: MediaItem, durationMs: Long): List<LyricLine>? {
         if (!AppSettings.syncedLyrics.value) return null
         val song = item.toSong()
+        // A podcast episode has no lyrics to look for.
+        if (song.isEpisode) return null
         return kotlinx.coroutines.withTimeoutOrNull(LOOP_MIX_LYRICS_TIMEOUT_MS) {
             song.localUri?.let { EmbeddedLyrics.forUri(this@PlaybackService, it) }
                 ?: LyricsRepository.lyrics(
@@ -8571,7 +8574,8 @@ class PlaybackService : MediaLibraryService() {
             return
         }
 
-        if (!lyricsOnNotification()) {
+        // Nor for a podcast episode, which has none.
+        if (!lyricsOnNotification() || currentSong.isEpisode) {
             serviceLyricsJob?.cancel()
             serviceLyrics = null
             stopLyricsTicker()

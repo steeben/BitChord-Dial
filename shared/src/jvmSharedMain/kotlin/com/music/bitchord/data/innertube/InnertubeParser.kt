@@ -886,6 +886,8 @@ object InnertubeParser {
             // episode, whose art is a widescreen still too: it is listened to,
             // and a "video" is dropped from the All tab's results.
             isVideo = !episode && (rowType == "video" || thumbnails.isNotSquare()),
+            // What the player knows an episode by: it shows the episode's own picture.
+            episode = if (episode) EpisodeInfo() else null,
             isExplicit = renderer.hasExplicitBadge(),
             // Extract the "Remove from history" feedback token from the row's menu, if present.
             feedbackToken = extractFeedbackToken(renderer),
@@ -930,6 +932,7 @@ object InnertubeParser {
             episode = EpisodeInfo(
                 description = renderer.o("description").runs().trim().takeIf { it.isNotEmpty() },
                 released = episodeReleased(renderer.o("subtitle").a("runs")),
+                views = episodeViews(renderer.o("subtitle").a("runs")),
                 playedPercent = ((progress?.get("playbackProgressPercentage") as? JsonPrimitive)?.intOrNull ?: 0)
                     .coerceIn(0, 100),
                 showId = renderer.o("secondTitle").a("runs").orEmpty().firstNotNullOfOrNull { run ->
@@ -950,6 +953,23 @@ object InnertubeParser {
             .mapNotNull { it.s("text")?.trim() }
             .filter { part -> part.any { it.isLetterOrDigit() } }
         return parts.lastOrNull()?.takeIf { parts.size >= 2 }
+    }
+
+    /**
+     * How many times an episode was played, off the first part of its row's
+     * subtitle ("489K views • 1d ago"): the count alone ("489K") where the
+     * text is English, and YouTube Music's whole text in another language,
+     * where the count and its unit cannot be told apart safely. Null for a
+     * subtitle with no count in it.
+     */
+    internal fun episodeViews(runs: JsonArray?): String? {
+        val parts = runs.orEmpty()
+            .mapNotNull { it.s("text")?.trim() }
+            .filter { part -> part.any { it.isLetterOrDigit() } }
+        val first = parts.firstOrNull() ?: return null
+        ENGLISH_VIEWS.matchEntire(first)?.let { return it.groupValues[1].replace(" ", "") }
+        // In another language the count is known only by its place: ahead of the date.
+        return first.takeIf { parts.size >= 2 && it.any(Char::isDigit) }
     }
 
     /**
@@ -1494,6 +1514,8 @@ object InnertubeParser {
         // Those same runs link out to the artist and album pages, which is
         // how a track started from the queue knows where it came from.
         val credits = creditsOf(bylineRuns)
+        // What follows an episode in its queue is more episodes.
+        val episode = renderer.musicVideoType() == PODCAST_EPISODE_TYPE
         return Song(
             videoId = videoId,
             title = title,
@@ -1506,8 +1528,10 @@ object InnertubeParser {
             albumName = credits.albumName,
             // A catalogue track is credited "Artist • Album • Year"; the
             // matching music video is "Artist • 417M views • 2.4M likes".
-            isVideo = byline.any { it.contains("views", ignoreCase = true) },
+            // An episode's byline counts its views too, and it is no music video.
+            isVideo = !episode && byline.any { it.contains("views", ignoreCase = true) },
             isExplicit = renderer.hasExplicitBadge(),
+            episode = if (episode) EpisodeInfo() else null,
         )
     }
 
@@ -1935,7 +1959,12 @@ private fun JsonElement?.hasKey(key: String): Boolean = when (this) {
 
 /** Whether a row plays a podcast episode, by the type its play action states. */
 private fun JsonObject.isPodcastEpisode(): Boolean =
-    findString("musicVideoType") == "MUSIC_VIDEO_TYPE_PODCAST_EPISODE"
+    findString("musicVideoType") == PODCAST_EPISODE_TYPE
+
+private const val PODCAST_EPISODE_TYPE = "MUSIC_VIDEO_TYPE_PODCAST_EPISODE"
+
+/** "489K views", "1.2M views", "1 view", "12,345 views": the count is group 1. */
+private val ENGLISH_VIEWS = Regex("""([\d.,]+\s?[KMB]?)\s+views?""", RegexOption.IGNORE_CASE)
 
 /**
  * Whether a track row says it is one of the signed-in user's own uploads.

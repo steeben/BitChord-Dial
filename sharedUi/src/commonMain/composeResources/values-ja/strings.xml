@@ -24,6 +24,11 @@
     <string name="choose_lyrics_provider">歌詞の提供元を選択</string>
     <string name="clear">消去</string>
     <string name="close_lyrics">歌詞を閉じる</string>
+    <string name="comments">コメント</string>
+    <string name="comments_off">コメントはオフになっています</string>
+    <string name="comments_unavailable">コメントを読み込めません</string>
+    <string name="more_comments">コメントをもっと見る</string>
+    <string name="no_comments">コメントはありません</string>
     <string name="data_saver">Data-Saver</string>
     <string name="decrease_lyrics_offset">Decrease lyrics offset</string>
     <string name="downgraded_from">↓ %1$sから</string>

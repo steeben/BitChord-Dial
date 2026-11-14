@@ -82,6 +82,32 @@ object BitChordIcons {
         }.build()
     }
 
+    /** The lyrics glyph's bubble with nothing in it: the comments under a podcast episode. */
+    val Comments: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "bc_comments", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f,
+        ).apply {
+            path(
+                stroke = stroke, strokeLineWidth = 2f,
+                strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round,
+            ) {
+                moveTo(6f, 3.5f)
+                lineTo(18f, 3.5f)
+                quadTo(21f, 3.5f, 21f, 6.5f)
+                lineTo(21f, 15f)
+                quadTo(21f, 18f, 18f, 18f)
+                lineTo(10f, 18f)
+                lineTo(6f, 21f)
+                lineTo(6f, 18f)
+                quadTo(3f, 18f, 3f, 15f)
+                lineTo(3f, 6.5f)
+                quadTo(3f, 3.5f, 6f, 3.5f)
+                close()
+            }
+        }.build()
+    }
+
     val Play: ImageVector by lazy {
         ImageVector.Builder(
             name = "bc_play",

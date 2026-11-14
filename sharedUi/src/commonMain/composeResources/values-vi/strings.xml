@@ -24,6 +24,11 @@
     <string name="choose_lyrics_provider">Chọn nguồn lời bài hát</string>
     <string name="clear">Xóa</string>
     <string name="close_lyrics">Đóng lời bài hát</string>
+    <string name="comments">Bình luận</string>
+    <string name="comments_off">Bình luận đã bị tắt</string>
+    <string name="comments_unavailable">Không thể tải bình luận</string>
+    <string name="more_comments">Thêm bình luận</string>
+    <string name="no_comments">Không có bình luận</string>
     <string name="data_saver">Data-Saver</string>
     <string name="decrease_lyrics_offset">Decrease lyrics offset</string>
     <string name="downgraded_from">↓ từ %1$s</string>

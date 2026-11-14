@@ -1511,7 +1511,13 @@ fun DetailScreen(
                             placeheld = placeheld && position < placeholderRows,
                             placeholder = { SongRowSkeleton(index = position) },
                         ) {
-                        val episode = song.episode
+                        // An episode's own row where its row says more than a track's
+                        // does, as on its show's page. One listed among tracks (a
+                        // playlist, a search) says only that it is an episode, and
+                        // keeps a track's row.
+                        val episode = song.episode?.takeIf {
+                            it.description != null || it.released != null || it.views != null
+                        }
                         if (episode != null) {
                             EpisodeRow(
                                 song = song,

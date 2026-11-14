@@ -24,6 +24,11 @@
     <string name="choose_lyrics_provider">選擇歌詞來源</string>
     <string name="clear">清除</string>
     <string name="close_lyrics">關閉歌詞</string>
+    <string name="comments">留言</string>
+    <string name="comments_off">留言已關閉</string>
+    <string name="comments_unavailable">無法載入留言</string>
+    <string name="more_comments">更多留言</string>
+    <string name="no_comments">沒有留言</string>
     <string name="data_saver">Data-Saver</string>
     <string name="decrease_lyrics_offset">Decrease lyrics offset</string>
     <string name="downgraded_from">↓ 來自 %1$s</string>

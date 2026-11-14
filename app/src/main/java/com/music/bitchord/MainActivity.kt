@@ -215,10 +215,12 @@ import com.music.bitchord.data.model.SearchFilter
 import com.music.bitchord.data.model.SearchResult
 import com.music.bitchord.data.model.ShelfItem
 import com.music.bitchord.data.model.Song
+import com.music.bitchord.data.model.isEpisode
 import com.music.bitchord.data.model.isUnresolvedSpotify
 import com.music.bitchord.data.model.UiState
 import com.music.bitchord.data.model.UserPlaylist
 import com.music.bitchord.data.model.EntityType
+import com.music.bitchord.data.model.EpisodeInfo
 import com.music.bitchord.data.model.SearchHistoryEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -1542,6 +1544,7 @@ private fun BitChordApp(
                 player.durationMs.takeIf { ms -> ms > 0L } ?: it.durationMillis(),
                 it.albumName,
                 it.localUri,
+                episode = it.isEpisode,
             )
         }
     }
@@ -2531,6 +2534,7 @@ private fun BitChordApp(
                 isVideo = item.isVideo,
                 // Only a podcast episode's card states one.
                 durationText = item.durationText,
+                episode = item.durationText?.let { EpisodeInfo() },
             )
         }
     }

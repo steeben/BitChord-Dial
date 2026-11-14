@@ -62,12 +62,20 @@ import kotlinx.coroutines.delay
 /** How long the controls stay over a playing video untouched. */
 private const val VIDEO_CONTROLS_IDLE_MS = 3_500L
 
+/** How much a podcast episode's whole picture is dimmed while its controls are up. */
+private const val EPISODE_CONTROLS_DIM = 0.28f
+
 /**
  * A music video on a phone held sideways: the picture is the whole screen,
  * letterboxed in black, with the system bars away. A tap brings the controls
  * up over it — the title, the scrubber and the transport — and they stand
  * down again a few seconds after the last touch while it plays, as in every
  * video player. [onExitFullscreen] goes back to the ordinary landscape player.
+ *
+ * A podcast [episode] is watched here too. It may have no picture at all (a
+ * show that is sound alone), so its cover stands in until a frame lands, and
+ * for good where none does; and the whole of it is dimmed a little while the
+ * controls are up, as a video player dims what it plays.
  */
 @Composable
 internal fun FullscreenVideoPlayer(
@@ -80,6 +88,7 @@ internal fun FullscreenVideoPlayer(
     scrubber: @Composable () -> Unit,
     transport: @Composable () -> Unit,
     modifier: Modifier = Modifier,
+    episode: Boolean = false,
 ) {
     HideSystemBars(true)
     var controlsShown by remember { mutableStateOf(true) }
@@ -101,8 +110,20 @@ internal fun FullscreenVideoPlayer(
                 indication = null,
             ) { controlsShown = !controlsShown },
     ) {
-        // Black with a spinner until the picture's first frame lands.
-        if (!rendered) VideoLoadingBackdrop(Modifier.fillMaxSize())
+        // Black with a spinner until the picture's first frame lands; an
+        // episode's cover, fitted as its picture will be.
+        if (!rendered) {
+            if (episode) {
+                AsyncImage(
+                    model = artRequest,
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                VideoLoadingBackdrop(Modifier.fillMaxSize())
+            }
+        }
         MusicVideoSurface(
             videoId = song.videoId,
             fit = true,
@@ -119,6 +140,7 @@ internal fun FullscreenVideoPlayer(
             Box(
                 Modifier
                     .fillMaxSize()
+                    .then(if (episode) Modifier.background(Color.Black.copy(alpha = EPISODE_CONTROLS_DIM)) else Modifier)
                     .background(
                         Brush.verticalGradient(
                             0f to Color.Black.copy(alpha = 0.62f),

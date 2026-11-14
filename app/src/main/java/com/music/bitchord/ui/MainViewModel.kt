@@ -520,8 +520,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         durationMs: Long,
         album: String? = null,
         localUri: String? = null,
+        /** A podcast episode: it has no lyrics, so none are looked for. */
+        episode: Boolean = false,
     ) {
-        reloadLyrics = { loadLyrics(videoId, title, artist, durationMs, album, localUri) }
+        reloadLyrics = { loadLyrics(videoId, title, artist, durationMs, album, localUri, episode) }
         // Looked up whether or not "Synced lyrics" is on: that setting only
         // hides the strip on the player, and the lyrics button still opens them.
         val sources = AppSettings.lyricsSources.value
@@ -568,6 +570,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _lyricsInstrumental.value = videoId in AppSettings.instrumentalTracks.value
         if (_lyricsInstrumental.value) {
             // Marked instrumental: nothing to look up and nothing to show.
+            _lyricsChecked.value = true
+            return
+        }
+        if (episode) {
+            // Talk, not a song: no service is asked, and the player offers
+            // the episode's comments where the lyrics would be.
             _lyricsChecked.value = true
             return
         }

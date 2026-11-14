@@ -39,6 +39,7 @@ import com.music.bitchord.data.TrackLog
 import com.music.bitchord.data.canvas.CanvasDownloads
 import com.music.bitchord.data.innertube.InnerTubeXResolver
 import com.music.bitchord.data.model.Song
+import com.music.bitchord.data.model.isEpisode
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.playback.ChunkedDataSource
 import com.music.bitchord.playback.toSong
@@ -335,7 +336,8 @@ object MusicVideoEngine {
      */
     private fun wanted(): Pair<String, Song?>? {
         val song = controller?.currentMediaItem?.toSong() ?: return null
-        if (song.isVideo) {
+        // A podcast episode's picture is its own too, though it is filed as audio.
+        if (song.isVideo || song.isEpisode) {
             return (song.videoId to null).takeIf {
                 song.videoId !in noPicture && song.videoId !in AudioOnlyVideos && song.videoId !in stillVideos
             }
