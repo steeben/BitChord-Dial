@@ -16,6 +16,7 @@ import com.music.bitchord.data.model.LibraryPage
 import com.music.bitchord.data.model.LibraryState
 import com.music.bitchord.data.model.LikeStatus
 import com.music.bitchord.data.model.MoodGenreSection
+import com.music.bitchord.data.model.PODCAST_SHOW_PREFIX
 import com.music.bitchord.data.model.playlistMoves
 import com.music.bitchord.data.model.PlaylistPrivacy
 import com.music.bitchord.data.model.SearchFilter
@@ -175,8 +176,27 @@ object YtMusicRepository {
         InnertubeParser.parseLibraryItems(Innertube.browse(LIBRARY_PODCASTS)).filter { it.isPodcastShow }
     }
 
+    /**
+     * The podcast shows a search for [query] finds, best first: for finding
+     * on YouTube Music a show that is known by its name only. Asked of the
+     * search's Podcasts tab, and where that has none, of the whole search.
+     */
+    suspend fun searchShows(query: String): Result<List<ShelfItem>> = call("search:shows") {
+        fun shows(response: JsonObject): List<ShelfItem> =
+            InnertubeParser.parseSearchPage(response, includeVideos = false).rows
+                .filterIsInstance<SearchResult.Browse>()
+                .map { it.item }
+                .filter { it.browseId.startsWith(PODCAST_SHOW_PREFIX) }
+                // "Podcast • Publisher": the tile's second line is who publishes it.
+                .map { ShelfItem(it.title, it.subtitle.substringAfterLast("•").trim(), it.thumbnailUrl, null, it.browseId) }
+        shows(Innertube.search(query, PODCASTS_SEARCH_PARAMS)).ifEmpty { shows(Innertube.search(query)) }
+    }
+
     /** What Home's Podcasts chip sends as its browse params. */
     private const val PODCASTS_CHIP_PARAMS = "ggMGSgQIDBAD"
+
+    /** The search's Podcasts tab, in the form of the other tabs' params (see [SearchFilter]). */
+    private const val PODCASTS_SEARCH_PARAMS = "EgWKAQJQAWoKEAkQChAFEAMQBA=="
 
     /** YouTube Music's playlist of the followed shows' newest episodes. */
     private const val NEW_EPISODES = "VLRDPN"

@@ -31,6 +31,14 @@ data class SpotifyPlaylist(
     val imageUrl: String?,
 )
 
+/** A podcast show Spotify recommends: its name, who publishes it, and its cover. */
+data class SpotifyShow(
+    val id: String,
+    val name: String,
+    val publisher: String?,
+    val imageUrl: String?,
+)
+
 data class SpotifyTrack(
     val id: String,
     val title: String,
@@ -129,6 +137,28 @@ object SpotifyLibrary {
             }
             parseHomeSectionPlaylists(gql("homeSection", HOME_SECTION, variables, headers))
         }
+    }
+
+    /**
+     * The podcast shows Spotify recommends to this account, in its order:
+     * the shows of the episodes on its home page ("Episodes you might like",
+     * "Episodes to try"), and any shows that page lists as shows. Spotify has
+     * no shelf of recommended shows for every account, but it has these.
+     */
+    suspend fun recommendedShows(): List<SpotifyShow> = withContext(Dispatchers.IO) {
+        val headers = authHeaders()
+        val variables = buildJsonObject {
+            put("homeEndUserIntegration", "INTEGRATION_WEB_PLAYER")
+            put("timeZone", java.util.TimeZone.getDefault().id)
+            put("sp_t", "")
+            put("facet", "")
+            put("sectionItemsLimit", 20)
+            put("includeEpisodeContentRatingsV2", false)
+        }
+        HOME.firstNotNullOfOrNull { hash ->
+            runCatching { parseHomeShows(gql("home", hash, variables, headers)) }
+                .getOrNull()?.takeIf { it.isNotEmpty() }
+        }.orEmpty()
     }
 
     /** The id of the library's playlist called [name], if there is one. */
@@ -352,6 +382,40 @@ internal fun parseHomeTopMixes(root: JsonObject): List<SpotifyPlaylist> {
         }
     return shelf?.let(::sectionPlaylists).orEmpty()
 }
+
+/**
+ * The podcast shows on a home page response, each once, in the page's order:
+ * a show card is one, and an episode card gives the show it is an episode of.
+ */
+internal fun parseHomeShows(root: JsonObject): List<SpotifyShow> {
+    val sections = root.obj("data")?.obj("home")?.obj("sectionContainer")?.obj("sections")?.arr("items").orEmpty()
+    val out = LinkedHashMap<String, SpotifyShow>()
+    sections.forEach { section ->
+        section.jsonObject.obj("sectionItems")?.arr("items").orEmpty().forEach { element ->
+            val data = element.jsonObject.obj("content")?.obj("data") ?: return@forEach
+            val show = when (data.str("__typename")) {
+                "Podcast" -> data
+                "Episode" -> data.obj("podcastV2")?.obj("data")
+                else -> null
+            } ?: return@forEach
+            val uri = show.str("uri")?.takeIf { it.startsWith(SPOTIFY_SHOW_PREFIX) } ?: return@forEach
+            val name = show.str("name")?.trim()?.takeIf { it.isNotEmpty() } ?: return@forEach
+            out.putIfAbsent(
+                uri,
+                SpotifyShow(
+                    id = uri.removePrefix(SPOTIFY_SHOW_PREFIX),
+                    name = name,
+                    publisher = show.obj("publisher")?.str("name")?.takeIf { it.isNotBlank() },
+                    imageUrl = show.obj("coverArt")?.arr("sources")?.lastUrl(),
+                ),
+            )
+        }
+    }
+    return out.values.toList()
+}
+
+/** What a podcast show's Spotify uri starts with. */
+private const val SPOTIFY_SHOW_PREFIX = "spotify:show:"
 
 /** The playlists of a home shelf asked for on its own. */
 internal fun parseHomeSectionPlaylists(root: JsonObject): List<SpotifyPlaylist> =

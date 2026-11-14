@@ -41,7 +41,9 @@ import com.music.bitchord.data.model.TopPick
 import com.music.bitchord.data.model.TopPickKind
 import com.music.bitchord.data.model.UiState
 import com.music.bitchord.data.podcasts.EpisodeProgress
+import com.music.bitchord.data.podcasts.PodcastSources
 import com.music.bitchord.data.podcasts.PodcastsDial
+import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.CustomizationSettings
 import com.music.bitchord.data.settings.speedDialId
 import com.music.bitchord.ui.MainViewModel
@@ -136,7 +138,18 @@ internal fun PodcastsTabPage(
     // What was started in this app since the feed was read is only known once its file is.
     LaunchedEffect(fresh.isNotEmpty()) { if (fresh.isNotEmpty()) EpisodeProgress.load() }
 
-    val state: UiState<List<HomeShelf>> = remember(feed, pins, hidden, lastDial, fresh) {
+    // Whose recommended shows follow them: YouTube Music's, Spotify's, or the two in turn.
+    val source by CustomizationSettings.podcastSource.collectAsStateWithLifecycle()
+    val spotifySession by AppSettings.spotifySpdcToken.collectAsStateWithLifecycle()
+    val effectiveSource = source.effective(spotifySession.isNotBlank())
+    val spotifyShows by viewModel.podcastSpotify.collectAsStateWithLifecycle()
+    LaunchedEffect(effectiveSource.usesSpotify, spotifySession) {
+        if (effectiveSource.usesSpotify) viewModel.loadPodcastSpotify()
+    }
+    // Spotify's shows are looked for one at a time, so they come after the feed.
+    val spotifyPending = effectiveSource.usesSpotify && spotifyShows == null
+
+    val state: UiState<List<HomeShelf>> = remember(feed, pins, hidden, lastDial, fresh, effectiveSource, spotifyShows) {
         // Nothing from the network (yet): the dial as it last was, when there is one.
         val saved = PodcastsDial.tiles(pins, lastDial, hidden)
             .takeIf { it.isNotEmpty() }
@@ -144,7 +157,17 @@ internal fun PodcastsTabPage(
         when (val current = feed) {
             is UiState.Success -> UiState.Success(
                 PodcastsDial.page(
-                    PodcastsDial.tiles(pins, current.data.picks, hidden, fresh),
+                    PodcastsDial.tiles(
+                        pins = pins,
+                        // Until Spotify's shows are in, the dial as it last was: it then changes once, not twice.
+                        picks = if (spotifyPending && lastDial.isNotEmpty()) {
+                            lastDial
+                        } else {
+                            PodcastSources.picks(current.data.picks, spotifyShows.orEmpty(), effectiveSource)
+                        },
+                        hidden = hidden,
+                        fresh = fresh,
+                    ),
                     PodcastsDial.shelvesUnder(current.data),
                 ),
             )
@@ -153,9 +176,11 @@ internal fun PodcastsTabPage(
         }
     }
     // Saved once the fresh dial is what is showing, for the next time the page opens.
-    LaunchedEffect(feed, pins, hidden, fresh) {
+    LaunchedEffect(feed, pins, hidden, fresh, effectiveSource, spotifyShows) {
         val latest = (feed as? UiState.Success)?.data ?: return@LaunchedEffect
-        CustomizationSettings.setLastPodcastDial(PodcastsDial.tiles(pins, latest.picks, hidden, fresh))
+        if (spotifyPending) return@LaunchedEffect
+        val picks = PodcastSources.picks(latest.picks, spotifyShows.orEmpty(), effectiveSource)
+        CustomizationSettings.setLastPodcastDial(PodcastsDial.tiles(pins, picks, hidden, fresh))
     }
 
     // "Episodes for later", in the die's place: YouTube Music's own list, which only an account has.

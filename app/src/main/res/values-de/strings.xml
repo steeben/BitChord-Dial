@@ -39,6 +39,8 @@
     <string name="about_podcast">Über den Podcast</string>
     <string name="new_episode">Neue Folge</string>
     <string name="episodes_for_later">Folgen für später</string>
+    <string name="podcast_source">Empfohlene Sendungen</string>
+    <string name="podcast_source_both">Beide</string>
     <string name="new_playlist">Neue Playlist</string>
     <string name="saved_to_youtube_music">In YouTube Music gespeichert</string>
     <string name="sign_in">Anmelden</string>

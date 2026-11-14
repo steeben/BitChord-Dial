@@ -55,6 +55,8 @@ import com.music.bitchord.data.model.DetailPage
 import com.music.bitchord.data.model.HomeShelf
 import com.music.bitchord.data.podcasts.PodcastsDial
 import com.music.bitchord.data.podcasts.PodcastsFeed
+import com.music.bitchord.data.spotify.SpotifyPodcasts
+import com.music.bitchord.data.spotify.SpotifyRecommendations
 import com.music.bitchord.data.model.withoutRepeatsOf
 import com.music.bitchord.data.model.LibraryPage
 import com.music.bitchord.data.model.LibraryState
@@ -2158,6 +2160,28 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** Whether the next page of the Podcasts page's shelves is on its way. */
     val podcastsLoadingMore: StateFlow<Boolean> = _podcastsLoadingMore.asStateFlow()
 
+    private val _podcastSpotify = MutableStateFlow<List<ShelfItem>?>(null)
+
+    /**
+     * The shows Spotify recommends, found on YouTube Music, for the Podcasts
+     * page's dial when its source is Spotify or both. Null until they are in;
+     * empty when Spotify has none or cannot be reached.
+     */
+    val podcastSpotify: StateFlow<List<ShelfItem>?> = _podcastSpotify.asStateFlow()
+    private var podcastSpotifyJob: Job? = null
+
+    /**
+     * The Podcasts page's dial takes Spotify's shows: reads them, unless that
+     * is under way. They are kept for a while (see [SpotifyPodcasts]), so
+     * most calls cost nothing; [fresh] asks Spotify again, for a pull.
+     */
+    fun loadPodcastSpotify(fresh: Boolean = false) {
+        if (podcastSpotifyJob?.isActive == true) return
+        podcastSpotifyJob = viewModelScope.launch {
+            _podcastSpotify.value = SpotifyPodcasts.shows(fresh)
+        }
+    }
+
     /** Whose feed [podcasts] holds or is waiting for, once one was asked for. */
     private var podcastsListener: String? = null
     private var podcastsAsked = false
@@ -2190,6 +2214,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (_podcastsRefreshing.value) return
         val identity = listenerKey()
         _podcastsRefreshing.value = true
+        // Spotify's shows too, when the dial takes them.
+        val source = CustomizationSettings.podcastSource.value.effective(SpotifyRecommendations.connected())
+        if (source.usesSpotify) loadPodcastSpotify(fresh = true)
         viewModelScope.launch {
             try {
                 val state = fetchPodcasts()

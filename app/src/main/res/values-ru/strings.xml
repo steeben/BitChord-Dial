@@ -41,6 +41,8 @@
     <string name="about_podcast">О подкасте</string>
     <string name="new_episode">Новый выпуск</string>
     <string name="episodes_for_later">Выпуски на потом</string>
+    <string name="podcast_source">Рекомендуемые шоу</string>
+    <string name="podcast_source_both">Оба</string>
     <string name="new_playlist">Новый плейлист</string>
     <string name="saved_to_youtube_music">Сохранено в YouTube Music</string>
     <string name="sign_in">Войти</string>

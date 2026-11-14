@@ -45,6 +45,8 @@
     <string name="about_podcast">About the podcast</string>
     <string name="new_episode">New episode</string>
     <string name="episodes_for_later">Episodes for later</string>
+    <string name="podcast_source">Recommended shows</string>
+    <string name="podcast_source_both">Both</string>
     <string name="new_playlist">New playlist</string>
     <string name="saved_to_youtube_music">Saved to YouTube Music</string>
     <string name="sign_in">Sign in</string>

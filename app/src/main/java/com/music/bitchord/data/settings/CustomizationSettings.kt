@@ -4,6 +4,7 @@ import android.content.SharedPreferences
 import com.music.bitchord.data.model.HomeShelf
 import com.music.bitchord.data.model.ShelfItem
 import com.music.bitchord.data.model.isPodcastShow
+import com.music.bitchord.data.podcasts.PodcastSource
 import com.music.bitchord.ui.components.DialTileStyle
 import com.music.bitchord.ui.components.GlassTint
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -280,6 +281,9 @@ object CustomizationSettings {
      */
     val podcastEpisodesForLater = MutableStateFlow(false)
 
+    /** Whose recommended shows fill the Podcasts page's dial after the pins. */
+    val podcastSource = MutableStateFlow(PodcastSource.YOUTUBE)
+
     fun init(prefs: SharedPreferences) {
         this.prefs = prefs
         readAll()
@@ -397,6 +401,8 @@ object CustomizationSettings {
         podcastDialPins.value = readPins(p.getString(KEY_PODCAST_DIAL_PINS, null))
         lastPodcastDial.value = readPins(p.getString(KEY_LAST_PODCAST_DIAL, null))
         podcastEpisodesForLater.value = p.getBoolean(KEY_PODCAST_EPISODES_FOR_LATER, false)
+        podcastSource.value = PodcastSource.entries
+            .firstOrNull { it.name == p.getString(KEY_PODCAST_SOURCE, null) } ?: PodcastSource.YOUTUBE
         podcastShowsListener = p.getString(KEY_PODCAST_SHOWS_LISTENER, null).orEmpty()
         podcastShowsForYou.value = readPins(p.getString(KEY_PODCAST_SHOWS_FOR_YOU, null))
             .takeIf { it.isNotEmpty() }
@@ -600,6 +606,11 @@ object CustomizationSettings {
             ?.putString(KEY_PODCAST_SHOWS_TITLE, shelf.title)
             ?.putString(KEY_PODCAST_SHOWS_LISTENER, podcastShowsListener)
             ?.apply()
+    }
+
+    fun setPodcastSource(value: PodcastSource) {
+        podcastSource.value = value
+        prefs?.edit()?.putString(KEY_PODCAST_SOURCE, value.name)?.apply()
     }
 
     fun setPodcastEpisodesForLater(value: Boolean) {
@@ -1094,6 +1105,7 @@ object CustomizationSettings {
     private const val KEY_PODCAST_SHOWS_TITLE = "custom_podcast_shows_title"
     private const val KEY_PODCAST_SHOWS_LISTENER = "custom_podcast_shows_listener"
     private const val KEY_PODCAST_EPISODES_FOR_LATER = "custom_podcast_episodes_for_later"
+    private const val KEY_PODCAST_SOURCE = "custom_podcast_source"
     private const val KEY_HIDDEN_FROM_DIAL = "custom_hidden_from_dial"
     private const val KEY_DIAL_HIDDEN_LABELS = "custom_dial_hidden_labels"
     private const val KEY_DIAL_PIN_ICON = "custom_dial_pin_icon"

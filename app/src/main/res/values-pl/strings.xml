@@ -42,6 +42,8 @@
     <string name="about_podcast">O podcaście</string>
     <string name="new_episode">Nowy odcinek</string>
     <string name="episodes_for_later">Odcinki na później</string>
+    <string name="podcast_source">Polecane programy</string>
+    <string name="podcast_source_both">Oba</string>
     <string name="new_playlist">Nowa playlista</string>
     <string name="saved_to_youtube_music">Zapisano do YouTube Music</string>
     <string name="sign_in">Zaloguj</string>
