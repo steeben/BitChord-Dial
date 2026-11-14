@@ -241,6 +241,8 @@
     <string name="hide_volume_bar_subtitle">Убирает ползунок громкости с главного плеера</string>
     <string name="hide_song_status">Скрыть статус песни</string>
     <string name="hide_song_status_subtitle">Скрывает текст «Играет из» или «Воспроизводит» в основном плеере</string>
+    <string name="hide_player_status_bar">Скрыть строку состояния</string>
+    <string name="hide_player_status_bar_subtitle">Скрывает строку состояния и верхнюю тень в основном плеере</string>
     <string name="off">Выкл</string>
     <string name="low">Низкое</string>
     <string name="medium">Среднее</string>

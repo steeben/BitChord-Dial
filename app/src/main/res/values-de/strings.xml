@@ -231,6 +231,8 @@
     <string name="hide_volume_bar_subtitle">Entfernt den Lautstärkeregler aus dem Hauptplayer</string>
     <string name="hide_song_status">Songstatus ausblenden</string>
     <string name="hide_song_status_subtitle">Blendet den Text „Wiedergabe aus“ bzw. „Abgespielt von“ im Player aus</string>
+    <string name="hide_player_status_bar">Statusleiste ausblenden</string>
+    <string name="hide_player_status_bar_subtitle">Blendet die Statusleiste und den oberen Schatten im Hauptplayer aus</string>
     <string name="off">Aus</string>
     <string name="low">Niedrig</string>
     <string name="medium">Mittel</string>

@@ -57,6 +57,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.offset
@@ -161,11 +162,13 @@ import coil3.request.ImageRequest
 import coil3.compose.LocalPlatformContext
 import coil3.SingletonImageLoader
 import com.music.bitchord.ui.theme.rememberScreenOrientation
+import com.music.bitchord.ui.theme.HideStatusBar
 import com.music.bitchord.ui.theme.StatusBarIcons
 import com.music.bitchord.ui.theme.rememberArtworkLuminance
 import com.music.bitchord.ui.theme.rememberArtworkControlsBandLuminance
 import com.music.bitchord.ui.theme.controlsBandLuminance
 import com.music.bitchord.ui.theme.rememberArtworkTopBandLuminance
+import com.music.bitchord.ui.theme.stableStatusBarTop
 import com.music.bitchord.ui.theme.topBandScrimAlpha
 import com.music.bitchord.ui.LyricsProviderState
 import com.music.bitchord.ui.components.optimizedHazeEffect
@@ -1193,6 +1196,7 @@ fun NowPlayingScreen(
     val hideVolumeBar by PlayerSettings.hideVolumeBar.collectAsStateWithLifecycle()
     val showNerdStats by PlayerSettings.showNerdStats.collectAsStateWithLifecycle()
     val hideSongStatus by PlayerSettings.hideSongStatus.collectAsStateWithLifecycle()
+    val hidePlayerStatusBar by PlayerSettings.hidePlayerStatusBar.collectAsStateWithLifecycle()
 
     // Animated cover art: the looping video some labels publish alongside a
     // release, laid over the sleeve. A miss is the normal answer — see
@@ -2219,7 +2223,14 @@ fun NowPlayingScreen(
     fun clipFadeFractionOf(clipBottom: Dp): Float = if (clipBottom > 0.dp) {
         (heroHeight.value * HERO_FADE_FRACTION / clipBottom.value).coerceIn(0f, 1f)
     } else 0f
-    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    // With "Hide status bar" on, the bar's height whether or not it is showing:
+    // the bar goes as the player lands and comes back as it leaves, and the
+    // player must not move under it either time.
+    val statusBarTop = if (hidePlayerStatusBar) {
+        stableStatusBarTop()
+    } else {
+        WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    }
     // What sits between the status bar and the artwork: the drag strip. Read
     // in three places — the strip itself,
     // the scrim drawn over it and the banner's own height — which all have to
@@ -3547,10 +3558,15 @@ fun NowPlayingScreen(
         val statusIconsDark = heroMode && !spotifyCanvasPresentation && !playerSubviewOpen &&
             (artTopLuminance ?: 0f) >= STATUS_ICONS_DARK_LUMINANCE
         StatusBarIcons(dark = statusIconsDark)
+        // "Hide status bar": away while the player is fully up, and back as it
+        // starts down (a drag, a back swipe or a close), so the page under the
+        // player has its bar, and its own top inset, before much of it shows.
+        HideStatusBar(hidden = hidePlayerStatusBar && !dockMoving)
         // Read in the scrim's draw pass only, so the fade redraws that strip
-        // without recomposing the player.
+        // without recomposing the player. With the status bar hidden there is
+        // nothing for the scrim to hold up, so it goes with the bar.
         val topScrimFade = animateFloatAsState(
-            targetValue = if (statusIconsDark) 0f else 1f,
+            targetValue = if (statusIconsDark || hidePlayerStatusBar) 0f else 1f,
             animationSpec = tween(durationMillis = 450, easing = FastOutSlowInEasing),
             label = "statusScrimFade",
         )
@@ -3571,7 +3587,15 @@ fun NowPlayingScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
+                .then(
+                    if (hidePlayerStatusBar) {
+                        // The same space as statusBarsPadding(), kept while
+                        // the bar is hidden — see statusBarTop.
+                        Modifier.padding(top = statusBarTop).consumeWindowInsets(WindowInsets.statusBars)
+                    } else {
+                        Modifier.statusBarsPadding()
+                    },
+                )
                 .navigationBarsPadding()
                 // Observe unclaimed taps across the whole Canvas. Buttons and
                 // the compact metadata row consume their own taps first; empty

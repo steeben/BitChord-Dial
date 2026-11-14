@@ -369,6 +369,7 @@ fun SettingsScreen(
     val ambientBackground by CustomizationSettings.ambientBackground.collectAsStateWithLifecycle()
     val ambientFollowsArtwork by CustomizationSettings.ambientFollowsArtwork.collectAsStateWithLifecycle()
     val hideSongStatus by AppSettings.hideSongStatus.collectAsStateWithLifecycle()
+    val hidePlayerStatusBar by AppSettings.hidePlayerStatusBar.collectAsStateWithLifecycle()
     val showQueueHistory by AppSettings.showQueueHistory.collectAsStateWithLifecycle()
     val dontRepeatSuggestions by AppSettings.dontRepeatSuggestions.collectAsStateWithLifecycle()
     val smartVersionAlignment by AppSettings.smartVersionAlignment.collectAsStateWithLifecycle()
@@ -2049,6 +2050,21 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { AppSettings.setHideSongStatus(!hideSongStatus) },
+                )
+            }
+            val hidePlayerStatusBarTitle = stringResource(R.string.hide_player_status_bar)
+            row(hidePlayerStatusBarTitle, "player", "status bar", "full screen", "immersive", "vignette") {
+                SettingsRow(
+                    icon = Icons.Rounded.Fullscreen,
+                    title = hidePlayerStatusBarTitle,
+                    subtitle = stringResource(R.string.hide_player_status_bar_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = hidePlayerStatusBar,
+                            onCheckedChange = AppSettings::setHidePlayerStatusBar,
+                        )
+                    },
+                    onClick = { AppSettings.setHidePlayerStatusBar(!hidePlayerStatusBar) },
                 )
             }
             val showQueueHistoryTitle = stringResource(R.string.show_queue_history)

@@ -259,6 +259,8 @@
     <string name="hide_volume_bar_subtitle">Quita el control de volumen del reproductor principal</string>
     <string name="hide_song_status">Ocultar estado de la canción</string>
     <string name="hide_song_status_subtitle">Oculta el texto «Reproduciendo desde» o «Reproducido por» en el reproductor principal</string>
+    <string name="hide_player_status_bar">Ocultar la barra de estado</string>
+    <string name="hide_player_status_bar_subtitle">Oculta la barra de estado y la sombra superior en el reproductor principal</string>
     <string name="off">Desactivado</string>
     <string name="low">Baja</string>
     <string name="medium">Media</string>
