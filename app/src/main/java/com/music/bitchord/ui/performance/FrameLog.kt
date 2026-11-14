@@ -6,6 +6,7 @@ import android.os.HandlerThread
 import android.os.Process
 import android.os.SystemClock
 import android.view.FrameMetrics
+import android.view.MotionEvent
 import android.view.Window
 import com.music.bitchord.data.TrackLog
 import com.music.bitchord.data.settings.AppSettings
@@ -113,7 +114,8 @@ class FrameTally {
  * (Settings, Advanced, Enable logging), this writes a line for each stretch of
  * frames: the page they were on, how many were late, and where a late frame's
  * time went, and a second line for how evenly its frames came (see
- * [FramePacing]). While frames are drawn, [AppThreadWatch] also writes what the
+ * [FramePacing]). A touch that moved has a line with each of its first
+ * frames (see [TouchStart]). While frames are drawn, [AppThreadWatch] also writes what the
  * app's thread was in the middle of each time it was busy for longer than a
  * few frames. Nothing is measured, and no listener is attached, with logging
  * off.
@@ -146,6 +148,8 @@ object FrameLog {
     var page: String = ""
 
     private var thread: HandlerThread? = null
+    private var handler: Handler? = null
+    private val touchStart = TouchStart()
     private var listener: Window.OnFrameMetricsAvailableListener? = null
     private var watched = java.lang.ref.WeakReference<Window>(null)
 
@@ -212,6 +216,7 @@ object FrameLog {
         }
         val idle = Runnable {
             write()
+            writeTouch()
             writeMemory(moving = false)
         }
 
@@ -234,7 +239,7 @@ object FrameLog {
             if (displayBudget == 0L) {
                 val refreshRate = window.decorView.display?.refreshRate?.takeIf { it > 0f } ?: 60f
                 displayBudget = (1_000_000_000.0 / refreshRate).toLong()
-                TrackLog.toSession('I', TAG, "display ${refreshRate}Hz")
+                TrackLog.toSession('I', TAG, "display ${refreshRate}Hz${arrLine(window)}")
             }
             // A window's first frame builds everything. It is not stutter, so
             // it is kept out of the count and written on its own line.
@@ -274,7 +279,20 @@ object FrameLog {
                 renderNanos = renderNanos,
                 gpuNanos = gpuNanos,
             )
-            pacing.add(metrics.getMetric(FrameMetrics.VSYNC_TIMESTAMP), totalNanos)
+            val vsyncNanos = metrics.getMetric(FrameMetrics.VSYNC_TIMESTAMP)
+            pacing.add(vsyncNanos, totalNanos)
+            val touchOver = touchStart.frame(
+                vsyncNanos = vsyncNanos,
+                totalNanos = totalNanos,
+                budgetNanos = if (hasDeadline) metrics.getMetric(FrameMetrics.DEADLINE) else displayBudget,
+                inputNanos = inputNanos,
+                animationNanos = animationNanos,
+                layoutNanos = layoutNanos,
+                drawNanos = drawNanos,
+                renderNanos = renderNanos,
+                gpuNanos = gpuNanos,
+            )
+            if (touchOver) writeTouch()
             // A frame this long is seen as a stop. It gets a line of its own,
             // at the time it happened, so the lines around it in the log say
             // what the app was doing.
@@ -296,6 +314,7 @@ object FrameLog {
         }
         window.addOnFrameMetricsAvailableListener(listener, handler)
         this.thread = thread
+        this.handler = handler
         this.listener = listener
         watched = java.lang.ref.WeakReference(window)
         TrackLog.toSession('I', TAG, "frame times on; ${effectsLine()}")
@@ -313,6 +332,57 @@ object FrameLog {
     }
 
     private fun millis(nanos: Long): String = "%.1fms".format(Locale.ROOT, nanos / 1_000_000.0)
+
+    /**
+     * A touch on the window, as the activity is given it. With a log
+     * recording, the first frames of a touch that moves get a line: see
+     * [TouchStart]. This is on the app's thread and in the path of every
+     * touch, so it keeps two numbers and reads nothing; the display is asked
+     * what it is doing on the log's own thread.
+     */
+    fun touch(event: MotionEvent) {
+        val handler = handler ?: return
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                touchStart.down(event.eventTime * NANOS_PER_MILLI, page.ifEmpty { "launch" })
+                handler.post { touchStart.displayAtDown(displayNow()) }
+            }
+            MotionEvent.ACTION_MOVE -> touchStart.move(event.eventTime * NANOS_PER_MILLI, event.historySize + 1)
+        }
+    }
+
+    private const val NANOS_PER_MILLI = 1_000_000L
+
+    /**
+     * Something the app did just now that a touch's first frames may have
+     * paid for. It is shown in the touch's line at the frame it fell in.
+     */
+    fun mark(what: String) {
+        if (handler == null) return
+        touchStart.mark(System.nanoTime(), what)
+    }
+
+    private fun writeTouch() {
+        touchStart.summary(displayNow())?.let { TrackLog.toSession('I', TAG, it) }
+    }
+
+    /** The display's mode and rate at this moment, in a few words. */
+    private fun displayNow(): String {
+        val display = watched.get()?.decorView?.display ?: return "unknown"
+        return "mode #${display.mode?.modeId} ${"%.1f".format(Locale.ROOT, display.refreshRate)}Hz"
+    }
+
+    /**
+     * Whether the display takes a rate for each frame (Android's adaptive
+     * refresh rate, from Android 16). Asked by name: the answer is for the
+     * log only, and an Android without the question has no answer to give.
+     */
+    private fun arrLine(window: Window): String {
+        val display = window.decorView.display ?: return ""
+        val answer = runCatching { display.javaClass.getMethod("hasArrSupport").invoke(display) }.getOrNull()
+            ?: return ""
+        return ", adaptive refresh rate support: $answer"
+    }
 
     /**
      * A line about what the app did to a page, between the frame lines: that
@@ -335,6 +405,7 @@ object FrameLog {
         watched.get()?.let { runCatching { it.removeOnFrameMetricsAvailableListener(listener) } }
         watched = java.lang.ref.WeakReference<Window>(null)
         thread?.quitSafely()
+        handler = null
         this.listener = null
         thread = null
     }

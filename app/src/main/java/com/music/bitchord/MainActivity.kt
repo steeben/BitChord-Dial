@@ -832,6 +832,12 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
+    /** Every touch on the window goes by here: the frame log times the first frames of a swipe. */
+    override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
+        com.music.bitchord.ui.performance.FrameLog.touch(ev)
+        return super.dispatchTouchEvent(ev)
+    }
+
     /**
      * The other half of the relay. This activity is `singleTask`, so once it is
      * running a second tap on the widget does not rebuild anything — it arrives
@@ -3492,6 +3498,14 @@ private fun BitChordApp(
     val dialShowing = homePage != HomePage.EXPLORE && selectedTab == TAB_HOME && detail == null &&
         selectedMoodGenre == null && libraryShowAll == null && !showSettings
     LaunchedEffect(dialShowing, navBarScroll) { navBarScroll.holdExpanded = dialShowing }
+    // For the frame log: the bar changes its form as a scroll starts, and
+    // the log shows which of a swipe's first frames that fell in. Read as a
+    // flow, so the change recomposes nothing here.
+    LaunchedEffect(navBarScroll) {
+        androidx.compose.runtime.snapshotFlow { navBarScroll.isInline }.collect { inline ->
+            com.music.bitchord.ui.performance.FrameLog.mark(if (inline) "bar small" else "bar full")
+        }
+    }
     // The system splash stays up until Home has something to show (or,
     // starting on another page, for a moment). See LaunchGate.
     var splashTimedOut by remember { mutableStateOf(false) }
