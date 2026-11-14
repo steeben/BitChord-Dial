@@ -448,8 +448,36 @@ object AppSettings {
     /** Freezes the main player's mesh gradient instead of letting it drift/crossfade. */
     val reduceAnimation = MutableStateFlow(false)
 
-    /** Requests a sustained high-refresh UI. Off keeps Android's automatic policy. */
+    /**
+     * Requests a sustained high-refresh UI. Off keeps Android's automatic
+     * policy. It is a request to the display and nothing else: the app style
+     * and Reduce animations are settings of their own and do not change it,
+     * nor it them.
+     */
     val highPerformanceMode = MutableStateFlow(false)
+
+    /**
+     * Performance mode: a preset that sets the settings in [EffectSettings]
+     * to their low-cost values, and puts them back when it is turned off.
+     * Not to be confused with [highPerformanceMode], which is the display's
+     * refresh rate and is not one of them.
+     */
+    val performanceMode = MutableStateFlow(false)
+
+    /**
+     * Keep Home built while another page is up, so that coming back to it
+     * builds nothing: see `KeptPage`. It costs the memory of Home's pictures
+     * for as long as the app is open, so a phone that Android itself calls
+     * low on memory starts with it off.
+     */
+    val keepHome = MutableStateFlow(true)
+    private var lowRamDevice = false
+
+    /**
+     * Stops every haptic in the app. The flag itself is read from
+     * [com.music.bitchord.ui.haptics.HapticsGate], which this keeps in step.
+     */
+    val disableHaptics = MutableStateFlow(false)
 
     /** Preferred UI refresh rate while [highPerformanceMode] is enabled. */
     val performanceRefreshRate = MutableStateFlow(DEFAULT_PERFORMANCE_REFRESH_RATE)
@@ -947,6 +975,9 @@ object AppSettings {
             likedTitle = context.getString(com.music.bitchord.R.string.auto_liked),
         )
         LastPlayed.init(context)
+        lowRamDevice = runCatching {
+            (context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager).isLowRamDevice
+        }.getOrDefault(false)
         readAll()
         watchConnection(context)
     }
@@ -1031,6 +1062,8 @@ object AppSettings {
         showListenTogetherButton.value = prefs.getBoolean(KEY_LISTEN_TOGETHER_BUTTON, true)
         reduceAnimation.value = prefs.getBoolean(KEY_REDUCE_ANIMATION, false)
         highPerformanceMode.value = prefs.getBoolean(KEY_HIGH_PERFORMANCE_MODE, false)
+        disableHaptics.value = prefs.getBoolean(KEY_DISABLE_HAPTICS, false)
+        com.music.bitchord.ui.haptics.HapticsGate.enabled = !disableHaptics.value
         performanceRefreshRate.value = normalizePerformanceRefreshRate(
             prefs.getInt(KEY_PERFORMANCE_REFRESH_RATE, DEFAULT_PERFORMANCE_REFRESH_RATE),
         )
@@ -1046,11 +1079,9 @@ object AppSettings {
         lyricsOffsetMs.value = prefs.getInt(KEY_LYRICS_OFFSET_MS, 0)
             .coerceIn(MIN_LYRICS_OFFSET_MS, MAX_LYRICS_OFFSET_MS)
         translationLanguage.value = prefs.getString(KEY_TRANSLATION_LANGUAGE, "").orEmpty()
-        if (highPerformanceMode.value) {
-            reduceAnimation.value = false
-            reduceDynamicBlur.value = false
-        }
         animatedCanvas.value = prefs.getBoolean(KEY_ANIMATED_CANVAS, true)
+        performanceMode.value = prefs.getBoolean(KEY_PERFORMANCE_MODE, false)
+        keepHome.value = prefs.getBoolean(KEY_KEEP_HOME, !lowRamDevice)
         canvasOverCellular.value = prefs.getBoolean(KEY_CANVAS_OVER_CELLULAR, false)
         spotifyCanvasAutoHide.value = prefs.getBoolean(KEY_SPOTIFY_CANVAS_AUTO_HIDE, true)
         prioritizeSpotifyCanvas.value = prefs.getBoolean(KEY_PRIORITIZE_SPOTIFY_CANVAS, false)
@@ -1454,10 +1485,7 @@ object AppSettings {
 
     fun setReduceAnimation(value: Boolean) {
         reduceAnimation.value = value
-        if (value) highPerformanceMode.value = false
-        val editor = prefs.edit().putBoolean(KEY_REDUCE_ANIMATION, value)
-        if (value) editor.putBoolean(KEY_HIGH_PERFORMANCE_MODE, false)
-        editor.apply()
+        prefs.edit().putBoolean(KEY_REDUCE_ANIMATION, value).apply()
     }
 
     fun setStopOnTaskRemoved(value: Boolean) {
@@ -1492,10 +1520,7 @@ object AppSettings {
 
     fun setReduceDynamicBlur(value: Boolean) {
         reduceDynamicBlur.value = value
-        if (value) highPerformanceMode.value = false
-        val editor = prefs.edit().putBoolean(KEY_REDUCE_BLUR, value)
-        if (value) editor.putBoolean(KEY_HIGH_PERFORMANCE_MODE, false)
-        editor.apply()
+        prefs.edit().putBoolean(KEY_REDUCE_BLUR, value).apply()
     }
 
     /** Sets what the app's surfaces are made of: both switches behind [AppStyle] at once. */
@@ -1511,16 +1536,63 @@ object AppSettings {
 
     fun setHighPerformanceMode(value: Boolean) {
         highPerformanceMode.value = value
+        prefs.edit().putBoolean(KEY_HIGH_PERFORMANCE_MODE, value).apply()
+    }
+
+    /** The settings Performance mode is a preset over, as they stand now. */
+    private fun effectSettings() = EffectSettings(
+        appStyle = AppStyle.of(liquidGlass.value, reduceDynamicBlur.value),
+        reduceAnimation = reduceAnimation.value,
+        ambientBackground = CustomizationSettings.ambientBackground.value,
+        dialTileStyle = CustomizationSettings.dialTileStyle.value,
+        lyricsBlur = lyricsBlur.value,
+        animatedCanvas = animatedCanvas.value,
+        disableHaptics = disableHaptics.value,
+    )
+
+    private fun applyEffectSettings(target: EffectSettings) {
+        setAppStyle(target.appStyle)
+        setReduceAnimation(target.reduceAnimation)
+        CustomizationSettings.setAmbientBackground(target.ambientBackground)
+        CustomizationSettings.setDialTileStyle(target.dialTileStyle)
+        setLyricsBlur(target.lyricsBlur)
+        setAnimatedCanvas(target.animatedCanvas)
+        setDisableHaptics(target.disableHaptics)
+    }
+
+    /**
+     * Turns Performance mode on or off. On keeps the settings as they were
+     * and sets [EffectSettings.LOW_COST]; off puts back what was kept, see
+     * [EffectSettings.restored].
+     */
+    fun setPerformanceMode(value: Boolean) {
+        if (performanceMode.value == value) return
         if (value) {
-            reduceAnimation.value = false
-            reduceDynamicBlur.value = false
+            prefs.edit()
+                .putBoolean(KEY_PERFORMANCE_MODE, true)
+                .putString(KEY_PERFORMANCE_MODE_SAVED, effectSettings().encode())
+                .apply()
+            applyEffectSettings(EffectSettings.LOW_COST)
+        } else {
+            val saved = EffectSettings.decode(prefs.getString(KEY_PERFORMANCE_MODE_SAVED, null))
+            prefs.edit()
+                .putBoolean(KEY_PERFORMANCE_MODE, false)
+                .remove(KEY_PERFORMANCE_MODE_SAVED)
+                .apply()
+            if (saved != null) applyEffectSettings(EffectSettings.restored(saved, effectSettings()))
         }
-        val editor = prefs.edit().putBoolean(KEY_HIGH_PERFORMANCE_MODE, value)
-        if (value) {
-            editor.putBoolean(KEY_REDUCE_ANIMATION, false)
-            editor.putBoolean(KEY_REDUCE_BLUR, false)
-        }
-        editor.apply()
+        performanceMode.value = value
+    }
+
+    fun setKeepHome(value: Boolean) {
+        keepHome.value = value
+        prefs.edit().putBoolean(KEY_KEEP_HOME, value).apply()
+    }
+
+    fun setDisableHaptics(value: Boolean) {
+        disableHaptics.value = value
+        com.music.bitchord.ui.haptics.HapticsGate.enabled = !value
+        prefs.edit().putBoolean(KEY_DISABLE_HAPTICS, value).apply()
     }
 
     fun setPerformanceRefreshRate(value: Int) {
@@ -2374,7 +2446,11 @@ object AppSettings {
     private const val KEY_CACHE_LIMIT = "audio_cache_limit_bytes"
     private const val KEY_REDUCE_ANIMATION = "reduce_animation"
     private const val KEY_HIGH_PERFORMANCE_MODE = "high_performance_mode"
+    private const val KEY_DISABLE_HAPTICS = "disable_haptics"
     private const val KEY_PERFORMANCE_REFRESH_RATE = "performance_refresh_rate"
+    private const val KEY_PERFORMANCE_MODE = "performance_mode"
+    private const val KEY_PERFORMANCE_MODE_SAVED = "performance_mode_saved"
+    private const val KEY_KEEP_HOME = "keep_home"
     private const val KEY_STOP_ON_TASK_REMOVED = "stop_on_task_removed"
     private const val KEY_HIDE_VOLUME_BAR = "hide_volume_bar"
     private const val KEY_HIDE_SONG_STATUS = "hide_song_status"

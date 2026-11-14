@@ -121,6 +121,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -281,7 +282,10 @@ import com.music.bitchord.ui.screens.LibrarySuggestion
 import com.music.bitchord.ui.screens.LIBRARY_GROUP_PREFIX
 import com.music.bitchord.ui.screens.dealLibraryFeed
 import com.music.bitchord.ui.screens.libraryGroupId
+import com.music.bitchord.ui.screens.rememberHomeListState
 import com.music.bitchord.ui.screens.rememberLibraryFeedLabels
+import com.music.bitchord.ui.screens.KeptPage
+import com.music.bitchord.ui.screens.KeptPageLocals
 import com.music.bitchord.ui.screens.LibraryFolderTabPill
 import com.music.bitchord.ui.screens.LibraryFolderTabsCovered
 import com.music.bitchord.ui.screens.LibraryFolderScroll
@@ -322,6 +326,9 @@ import com.music.bitchord.data.model.TopPickKind
 import com.music.bitchord.playback.commitRadioQueue
 import com.music.bitchord.playback.fromAutoplay
 import com.music.bitchord.playback.hasYouTubeOriginal
+import com.music.bitchord.playback.INITIAL_RADIO_TRACKS
+import com.music.bitchord.playback.asRadioSeed
+import com.music.bitchord.playback.awaitSounding
 import com.music.bitchord.playback.loadAutoplayTracks
 import com.music.bitchord.playback.playSongs
 import com.music.bitchord.playback.playBoundedContext
@@ -471,6 +478,7 @@ import com.music.bitchord.ui.utils.guardSheetFromContentTouches
 import com.music.bitchord.ui.utils.rememberIosOverscrollFactory
 import com.music.bitchord.ui.performance.describeForLog
 import com.music.bitchord.ui.performance.performanceModeId
+import com.music.bitchord.ui.performance.refreshRateRefused
 import com.music.bitchord.ui.performance.resolvePerformanceRefreshRate
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
@@ -492,7 +500,8 @@ private const val TOP_FADE_RAMP = 0.3f
 
 /** How long the blur along Explore's top takes to come and go. */
 
-private const val INITIAL_RADIO_TRACKS = 24
+/** How long whoever asked for a station waits for its first song to sound before no longer waiting. */
+private const val RADIO_START_WAIT_MS = 8_000L
 
 /** How long the Library page waits on its songs and shelves before dealing without them. */
 private const val LIBRARY_DEAL_WAIT_MS = 15_000L
@@ -591,6 +600,9 @@ class MainActivity : AppCompatActivity() {
                         }
                     },
                 )
+                // The first frame is held for the splash: the time to start
+                // what can only be started on this thread.
+                com.music.bitchord.data.WebViewWarmUp.behindSplash(this)
             } else {
                 LaunchGate.open = true
             }
@@ -616,11 +628,29 @@ class MainActivity : AppCompatActivity() {
             val logRecording by com.music.bitchord.data.LogRecorder.recording.collectAsStateWithLifecycle()
             LaunchedEffect(highPerformance, performanceRefreshRate, composeView, logRecording) {
                 applyPerformanceMode(highPerformance, performanceRefreshRate, composeView)
-                if (!logRecording) return@LaunchedEffect
-                logPerformanceMode("applied", highPerformance, performanceRefreshRate, composeView)
+                if (logRecording) logPerformanceMode("applied", highPerformance, performanceRefreshRate, composeView)
+                if (!highPerformance && !logRecording) return@LaunchedEffect
                 // And once the display has had time to switch, or not to.
                 delay(PERFORMANCE_LOG_SETTLE_MS)
-                logPerformanceMode("settled", highPerformance, performanceRefreshRate, composeView)
+                if (logRecording) logPerformanceMode("settled", highPerformance, performanceRefreshRate, composeView)
+                if (!highPerformance) return@LaunchedEffect
+                // The display changes mode for the window in front, so only a
+                // window that has been in front for a while says what its own
+                // request did. At launch the splash is in front of this one.
+                var waits = 0
+                while (!hasWindowFocus() && waits++ < PERFORMANCE_FOCUS_WAITS) delay(PERFORMANCE_FOCUS_WAIT_MS)
+                delay(PERFORMANCE_LOG_SETTLE_MS)
+                if (withdrawRefusedRefreshRate(performanceRefreshRate, composeView) && logRecording) {
+                    logPerformanceMode("taken back", highPerformance, performanceRefreshRate, composeView)
+                    delay(PERFORMANCE_LOG_SETTLE_MS)
+                    logPerformanceMode("settled", highPerformance, performanceRefreshRate, composeView)
+                }
+            }
+            // Frame times go into a log session while one is recording, so a
+            // report of stutter comes with the page and the numbers.
+            androidx.compose.runtime.DisposableEffect(logRecording) {
+                if (logRecording) com.music.bitchord.ui.performance.FrameLog.start(window)
+                onDispose { com.music.bitchord.ui.performance.FrameLog.stop(window) }
             }
             val darkTheme = when (theme) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
@@ -666,6 +696,10 @@ class MainActivity : AppCompatActivity() {
                     com.music.bitchord.ui.components.LocalFrostedSurface provides frosted,
                     com.music.bitchord.ui.components.LocalFrostedFields provides frostedFields,
                     LocalOverscrollFactory provides iosOverscrollFactory,
+                    // Compose's own haptics (slider ticks, long presses) obey
+                    // the "Disable haptics" switch, as Haptics.play does.
+                    androidx.compose.ui.platform.LocalHapticFeedback provides
+                        com.music.bitchord.ui.haptics.rememberGatedHapticFeedback(),
                     // Glass, Frost and Solid share one layout; the app style
                     // only decides what its surfaces are made of.
                     LocalLiquidGlassEnabled provides true,
@@ -700,6 +734,11 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+        // A log left on over this launch: its frame times start with the
+        // window's first frame, not once the first page has been composed.
+        if (com.music.bitchord.data.LogRecorder.recording.value) {
+            com.music.bitchord.ui.performance.FrameLog.start(window)
+        }
     }
 
     /**
@@ -720,27 +759,64 @@ class MainActivity : AppCompatActivity() {
      */
     private fun applyPerformanceMode(enabled: Boolean, refreshRate: Int, composeView: View) {
         val supportedRefreshRate = composeView.display.resolvePerformanceRefreshRate(refreshRate)
+        // Not a rate this display has already turned down: see
+        // [withdrawRefusedRefreshRate].
+        val ask = enabled && supportedRefreshRate != refusedRefreshRate
         window.attributes = window.attributes.apply {
-            preferredRefreshRate = if (enabled) supportedRefreshRate.toFloat() else 0f
+            preferredRefreshRate = if (ask) supportedRefreshRate.toFloat() else 0f
             // The mode itself as well as the rate. A preferred rate is only a
             // vote, and several phones answer it with their everyday ceiling
             // (120 on a 165Hz panel); naming the mode is the stronger ask. The
             // mode named has the resolution already in use, so this still
             // never changes that.
-            preferredDisplayModeId = if (enabled) {
+            preferredDisplayModeId = if (ask) {
                 composeView.display.performanceModeId(supportedRefreshRate)
             } else {
                 0
             }
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-            window.setFrameRatePowerSavingsBalanced(!enabled)
-            composeView.requestedFrameRate = if (enabled) {
+            window.setFrameRatePowerSavingsBalanced(!ask)
+            composeView.requestedFrameRate = if (ask) {
                 supportedRefreshRate.toFloat()
             } else {
                 View.REQUESTED_FRAME_RATE_CATEGORY_DEFAULT
             }
         }
+    }
+
+    /**
+     * The rate this display was asked for and answered with less, in this run
+     * of the app. Not asked for again: see [withdrawRefusedRefreshRate].
+     */
+    private var refusedRefreshRate = 0
+
+    /**
+     * Takes the request for a refresh rate back if the display has answered
+     * it with a slower one, and says whether it did.
+     *
+     * The request is meant to raise the rate. A 165Hz OnePlus ran the app at
+     * 120Hz for as long as it asked for 165, mode and rate both, and at 165Hz
+     * when it asked for nothing: there the phone gives its top rate only to a
+     * window with no request of its own, and the request was what held the
+     * app down. With it taken back the window is as it is with high
+     * performance mode off, which is the most such a phone gives.
+     *
+     * A phone that takes the request runs the mode asked for, and nothing
+     * changes for it.
+     */
+    private fun withdrawRefusedRefreshRate(refreshRate: Int, composeView: View): Boolean {
+        if (!hasWindowFocus()) return false
+        val display = composeView.display ?: return false
+        val asked = display.resolvePerformanceRefreshRate(refreshRate)
+        if (asked == refusedRefreshRate) return false
+        // The mode's rate and the rate the app is given: either one at the
+        // rate asked for is the request taken.
+        val running = maxOf(display.refreshRate, display.mode?.refreshRate ?: 0f)
+        if (!refreshRateRefused(askedHz = asked, runningHz = running)) return false
+        refusedRefreshRate = asked
+        applyPerformanceMode(true, refreshRate, composeView)
+        return true
     }
 
     /** What was asked of the display and what it is doing; see [describeForLog]. */
@@ -758,6 +834,12 @@ class MainActivity : AppCompatActivity() {
                 "view rate=$viewRate, API ${Build.VERSION.SDK_INT}, ${Build.MANUFACTURER} ${Build.MODEL}; " +
                 composeView.display.describeForLog(),
         )
+    }
+
+    /** Every touch on the window goes by here: the frame log times the first frames of a swipe. */
+    override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
+        com.music.bitchord.ui.performance.FrameLog.touch(ev)
+        return super.dispatchTouchEvent(ev)
     }
 
     /**
@@ -1546,7 +1628,7 @@ private fun BitChordApp(
         }
     }
 
-    val homeListState = rememberLazyListState()
+    val homeListState = rememberHomeListState()
     val exploreListState = rememberLazyListState()
     val moodGenreListState = rememberLazyListState()
     val libraryListState = rememberLazyListState()
@@ -1590,6 +1672,9 @@ private fun BitChordApp(
         // Likewise for Library: a playlist created or a song liked since it
         // was last fetched is a change to exactly this page.
         if (currentFeed == MainViewModel.Feed.LIBRARY) viewModel.onLibraryShown()
+        // Explore's categories come in behind Home at launch; the pages they
+        // open are only read ahead once the tab has been looked at.
+        if (currentFeed == MainViewModel.Feed.EXPLORE) viewModel.onExploreShown()
     }
     // Coming back to the app on Home is opening Home too: without this, the
     // dial kept what it had when the app went to the background, however
@@ -2122,10 +2207,17 @@ private fun BitChordApp(
      * destroy the queue already playing. Once ready, the whole old queue is
      * replaced in one Media3 operation.
      */
-    /** Starts a radio off [song]; [announce] says so in a toast once it is playing. */
-    val startRadioFrom: (Song, Boolean) -> Unit = { song, announce ->
+    /**
+     * Starts a radio off [song]; [announce] says so in a toast once it is playing.
+     * [station] is the station made ready ahead of time, if one was (see
+     * `MainViewModel.prepareLucky`). [onStarted] is told once the song is
+     * sounding, or once it is known that none will start.
+     */
+    val startRadioWith: (Song, Boolean, kotlinx.coroutines.Deferred<Result<List<Song>>>?, (() -> Unit)?) -> Unit = { song, announce, station, onStarted ->
         val originalController = controller
-        if (originalController != null && !refusedByHost()) {
+        if (originalController == null || refusedByHost()) {
+            onStarted?.invoke()
+        } else {
             val request = ++playRequestGeneration
             // Ignore AutoPlay's tail: it may legitimately grow while the
             // request is in flight and does not mean the listener chose a
@@ -2135,13 +2227,13 @@ private fun BitChordApp(
                 .filterNot { it.fromAutoplay }
                 .map { it.mediaId }
             scope.launch {
-                val seed = song.copy(
-                    radioName = song.title,
-                    playbackSource = song.title,
-                    playbackSourceType = PlaybackSourceType.SHARED_LINK,
-                    playbackSourceId = song.videoId,
-                )
-                val related = loadAutoplayTracks(
+                try {
+                val seed = song.asRadioSeed()
+                // The one made ready, unless it failed or came back empty then:
+                // that says nothing about now, so it is asked for again.
+                val ready = station?.let { runCatching { it.await() }.getOrNull()?.getOrNull() }
+                    ?.takeIf { it.isNotEmpty() }
+                val related = ready ?: loadAutoplayTracks(
                     existing = listOf(seed),
                     seedSong = seed,
                     limit = INITIAL_RADIO_TRACKS,
@@ -2187,6 +2279,12 @@ private fun BitChordApp(
                 } else {
                     activeRadioSeed = null
                     activeController.playSongs(listOf(seed) + related, 0)
+                    // Whoever is waiting on the song waits for it to sound,
+                    // not for the queue to be handed over.
+                    if (onStarted != null) {
+                        activeController.awaitSounding(currentItem?.mediaId, RADIO_START_WAIT_MS)
+                        onStarted()
+                    }
                 }
                 // Make this station — never the queue from before it — what a
                 // fresh process restores, even if it is killed immediately.
@@ -2198,9 +2296,15 @@ private fun BitChordApp(
                         Toast.LENGTH_SHORT,
                     ).show()
                 }
+                } finally {
+                    // However it ended. A second call does nothing: the die
+                    // only waits for the first.
+                    onStarted?.invoke()
+                }
             }
         }
     }
+    val startRadioFrom: (Song, Boolean) -> Unit = { song, announce -> startRadioWith(song, announce, null, null) }
     val startRadio: (Song) -> Unit = { song -> startRadioFrom(song, true) }
     val addToQueue: (Song) -> Unit = { song ->
         scope.launch {
@@ -2624,18 +2728,23 @@ private fun BitChordApp(
     // off a random seed from the session's pool — see MainViewModel.feelingLucky.
     val feelingLuckyOn by CustomizationSettings.feelingLucky.collectAsStateWithLifecycle()
     val luckyLabel = stringResource(R.string.feeling_lucky)
-    // Quietly: the die landing is all the answer a roll needs.
-    val latestStartRadio by rememberUpdatedState<(Song) -> Unit>({ song -> startRadioFrom(song, false) })
+    // Quietly: the die landing is all the answer a roll needs. It lands when
+    // the song is sounding (`landed`), so the two are one thing, not one after
+    // the other.
+    val latestStartLucky by rememberUpdatedState<(MainViewModel.LuckyRoll, () -> Unit) -> Unit>(
+        { roll, landed -> startRadioWith(roll.seed, false, roll.station, landed) },
+    )
     val speedDialLucky = remember(feelingLuckyOn, luckyLabel) {
         if (!feelingLuckyOn) {
             null
         } else {
-            SpeedDialLucky(luckyLabel) {
-                viewModel.feelingLucky { seed ->
-                    if (seed != null) {
-                        latestStartRadio(seed)
+            SpeedDialLucky(luckyLabel) { landed ->
+                viewModel.feelingLucky { roll ->
+                    if (roll != null) {
+                        latestStartLucky(roll, landed)
                     } else {
                         Toast.makeText(context, R.string.feeling_lucky_empty, Toast.LENGTH_SHORT).show()
+                        landed()
                     }
                 }
             }
@@ -3332,6 +3441,7 @@ private fun BitChordApp(
     // the artwork's most common one.
     val ambientOn by CustomizationSettings.ambientBackground.collectAsStateWithLifecycle()
     val ambientFollowsArtwork by CustomizationSettings.ambientFollowsArtwork.collectAsStateWithLifecycle()
+    val ambientStatic by CustomizationSettings.ambientStatic.collectAsStateWithLifecycle()
     val ambientSongTint = nowPlayingTint.takeIf { ambientOn && ambientFollowsArtwork && player.song != null }
     val ambientArtColors = if (ambientSongTint != null) {
         com.music.bitchord.ui.player.rememberArtworkColors(player.song?.thumbnailUrl).colors
@@ -3356,7 +3466,7 @@ private fun BitChordApp(
         rememberAmbientBlobs(
             ambientPrimary,
             ambientSecondary,
-            animate = !reduceAnimationSetting && !showNowPlaying,
+            animate = !reduceAnimationSetting && !ambientStatic && !showNowPlaying && appForeground,
         )
     } else {
         null
@@ -3393,6 +3503,14 @@ private fun BitChordApp(
     val dialShowing = homePage != HomePage.EXPLORE && selectedTab == TAB_HOME && detail == null &&
         selectedMoodGenre == null && libraryShowAll == null && !showSettings
     LaunchedEffect(dialShowing, navBarScroll) { navBarScroll.holdExpanded = dialShowing }
+    // For the frame log: the bar changes its form as a scroll starts, and
+    // the log shows which of a swipe's first frames that fell in. Read as a
+    // flow, so the change recomposes nothing here.
+    LaunchedEffect(navBarScroll) {
+        androidx.compose.runtime.snapshotFlow { navBarScroll.isInline }.collect { inline ->
+            com.music.bitchord.ui.performance.FrameLog.mark(if (inline) "bar small" else "bar full")
+        }
+    }
     // The system splash stays up until Home has something to show (or,
     // starting on another page, for a moment). See LaunchGate.
     var splashTimedOut by remember { mutableStateOf(false) }
@@ -3612,6 +3730,18 @@ private fun BitChordApp(
                 LaunchedEffect(librarySource, signedIn, libraryDeals) {
                     val source = librarySource
                     if (libraryFeed?.source != source) libraryFeed = null
+                    // The deal reads the whole library: every page of the
+                    // account's songs and the device's files. At launch that
+                    // waits for Home to be in, so it does not share the first
+                    // seconds with the page on screen; opening the Library
+                    // meanwhile ends the wait at once.
+                    if (libraryFeed == null) {
+                        viewModel.awaitHomeSettled(
+                            sooner = androidx.compose.runtime.snapshotFlow {
+                                selectedTab == TAB_LIBRARY || selectedTab == TAB_PLAYLISTS
+                            },
+                        )
+                    }
                     try {
                         coroutineScope {
                             val songs = async {
@@ -3711,6 +3841,10 @@ private fun BitChordApp(
                     else -> "$TAB_KEY$selectedTab"
                 }
                 val pageKey = pageKeyFor()
+                // Named for the frame times a log session keeps.
+                androidx.compose.runtime.SideEffect {
+                    com.music.bitchord.ui.performance.FrameLog.page = if (showNowPlaying) "player" else pageKey
+                }
                 // The tab each page was last up on, for the transition to tell
                 // a page left for another tab from one stepped back out of.
                 val tabOfPage = remember { HashMap<String, Int>() }
@@ -3903,7 +4037,126 @@ private fun BitChordApp(
                 ) {
                 // The colour behind the pages, and what the dial's glass tiles see.
                 com.music.bitchord.ui.components.DialTileBackdropLayer(ambientBlobs)
-                rememberTransition(pageTransitionState, label = "content").AnimatedContent(
+                val pages = rememberTransition(pageTransitionState, label = "content")
+                // Home is built once and kept. While another page is up it waits
+                // off stage (below, after the pages), and coming back to it moves
+                // it into its place again instead of building it: see [KeptPage].
+                val keepHome by AppSettings.keepHome.collectAsStateWithLifecycle()
+                val keptHome = remember { KeptPage(HOME_PAGE_KEY) }
+                keptHome.keep = keepHome
+                // `shown`: in its place among the pages, not off stage.
+                val homeBody: @Composable (Boolean) -> Unit = { shown ->
+                    KeptPageLocals(HOME_PAGE_KEY, cardLaunch = !reduceAnimationSetting) {
+                        HomeScreen(
+                            // Remembered: with a custom cover set, this is a new
+                            // list each time it is asked for, and Home redrew with
+                            // every state the app above it read.
+                            state = remember(arrangedHomeState, customCovers) {
+                                arrangedHomeState.withCustomCovers(customCovers)
+                            },
+                            speedDialPinned = speedDialPinnedIds,
+                            onSpeedDialHeaderLongPress = { editingSpeedDial = true },
+                            speedDialRows = speedDialRows,
+                            onSpeedDialReorder = { reordered ->
+                                CustomizationSettings.setSpeedDialPins(reordered)
+                            },
+                            artistDialPinned = artistDialPinnedIds,
+                            onArtistDialReorder = { reordered ->
+                                CustomizationSettings.setArtistDialPins(reordered)
+                            },
+                            speedDialLucky = speedDialLucky,
+                            dialHistoryLabel = stringResource(R.string.dial_history),
+                            speedDialNewReleases = homeFeed.newReleaseIds,
+                            mixesDialOn = homeFeed.mixesDialOn,
+                            mixesDial = homeFeed.mixes,
+                            mixesDialNamed = homeFeed.mixesNamed,
+                            mixesDialEmptyLabel = stringResource(R.string.mixes_dial_empty),
+                            newReleaseLabel = stringResource(R.string.dial_new_release),
+                            onSpeedDialHistory = {
+                                viewModel.loadDialHistory()
+                                historyMode = HistoryMode.DIAL_SONGS
+                                showHistory = true
+                            },
+                            onArtistDialHistory = {
+                                viewModel.loadDialHistory()
+                                historyMode = HistoryMode.DIAL_ARTISTS
+                                showHistory = true
+                            },
+                            dialLabels = dialLabels,
+                            dialLabelOverrides = dialHiddenLabels,
+                            dialPinIcon = dialPinIcon,
+                            skeletonSpeedDialFirst = speedDialsOn,
+                            listState = homeListState,
+                            currentSong = player.song,
+                            // The playing bars and the moving artwork hold still off stage:
+                            // each frame of them is work, seen or not.
+                            isPlaying = player.isPlaying && shown,
+                            title = stringResource(R.string.listen_now),
+                            signedIn = signedIn,
+                            onSignIn = { webSession = WebSessionMode.SIGN_IN },
+                            onItemClick = { item, shelfTitle ->
+                                val song = shelfSong(item)
+                                // Hoisted because ShelfItem lives in :shared, and
+                                // Kotlin will not smart-cast a public nullable
+                                // property declared in another module.
+                                val browseId = item.browseId
+                                when {
+                                    song != null -> playRadio(
+                                        song,
+                                        QueueSource(shelfTitle, PlaybackSourceType.HOME),
+                                    )
+                                    browseId != null -> viewModel.openDetail(
+                                        browseId = browseId,
+                                        title = item.title,
+                                        subtitle = item.subtitle,
+                                        thumbnailUrl = item.thumbnailUrl,
+                                        // The artists' dial opens each one's page.
+                                        type = if (shelfTitle == ARTIST_DIAL_SHELF_TITLE) {
+                                            BrowseType.ARTIST
+                                        } else {
+                                            BrowseType.OTHER
+                                        },
+                                    )
+                                }
+                            },
+                            onItemLongPress = onShelfLongPress,
+                            onDialItemLongPress = onDialLongPress,
+                            onRetry = viewModel::loadHome,
+                            refreshing = MainViewModel.Feed.HOME in refreshing,
+                            onRefresh = { viewModel.refresh(MainViewModel.Feed.HOME) },
+                            pullState = homePull,
+                            contentPadding = listPadding,
+                            onLoadMore = viewModel::loadMoreHome,
+                            onSectionsRevealed = viewModel::revealHomeSections,
+                            loadingMore = homeLoadingMore,
+                            // The saved dial needs no placeholder while Recently played loads.
+                            recentlyPlayedLoading = homeRecentlyPlayedLoading && !holdSavedDial,
+                            topPicks = topPicks,
+                            topPicksLoading = topPicksLoading,
+                            listenerName = account?.name,
+                            onTopPickClick = openTopPick,
+                            onMoodClick = { mood, label -> openTopPick(TopPicks.moodStation(mood), label) },
+                            artworkMotion = artworkMotion && shown,
+                            onTopPickLongPress = { pick ->
+                                pick.browseId?.let { browseId ->
+                                    onShelfLongPress(
+                                        ShelfItem(
+                                            title = pick.title,
+                                            subtitle = pick.artistName.orEmpty(),
+                                            thumbnailUrl = pick.images.firstOrNull(),
+                                            videoId = null,
+                                            browseId = browseId,
+                                        ),
+                                    )
+                                }
+                            },
+                        )
+                    }
+                }
+                // The page itself is made once; what it draws is this composition's.
+                val latestHomeBody by rememberUpdatedState(homeBody)
+                val keptHomeContent = remember { movableContentOf<Boolean> { shown -> latestHomeBody(shown) } }
+                pages.AnimatedContent(
                     // Library pages pan: one pushed from the Library slides in
                     // from the right as the page it was opened from goes off to
                     // the left, and back reverses it. Side by side, never one
@@ -3998,8 +4251,12 @@ private fun BitChordApp(
                             val p = detailBackProgress.value
                             if (p > 0f) {
                                 alpha = 1f - 0.65f * p
-                                val radius = 28.dp.toPx() * p
-                                renderEffect = BlurEffect(radius, radius, TileMode.Decal)
+                                // Solid blurs nothing, this included: a blur of
+                                // the whole page, redone each frame of the swipe.
+                                if (!AppSettings.reduceDynamicBlur.value) {
+                                    val radius = 28.dp.toPx() * p
+                                    renderEffect = BlurEffect(radius, radius, TileMode.Decal)
+                                }
                             }
                         },
                 ) { key ->
@@ -4648,103 +4905,11 @@ private fun BitChordApp(
                     } else when (
                         if (key.startsWith(MOOD_PAGE_KEY)) TAB_EXPLORE else key.removePrefix(TAB_KEY).toIntOrNull() ?: selectedTab
                     ) {
-                        TAB_HOME -> HomeScreen(
-                            state = arrangedHomeState.withCustomCovers(customCovers),
-                            speedDialPinned = speedDialPinnedIds,
-                            onSpeedDialHeaderLongPress = { editingSpeedDial = true },
-                            speedDialRows = speedDialRows,
-                            onSpeedDialReorder = { reordered ->
-                                CustomizationSettings.setSpeedDialPins(reordered)
-                            },
-                            artistDialPinned = artistDialPinnedIds,
-                            onArtistDialReorder = { reordered ->
-                                CustomizationSettings.setArtistDialPins(reordered)
-                            },
-                            speedDialLucky = speedDialLucky,
-                            dialHistoryLabel = stringResource(R.string.dial_history),
-                            speedDialNewReleases = homeFeed.newReleaseIds,
-                            mixesDialOn = homeFeed.mixesDialOn,
-                            mixesDial = homeFeed.mixes,
-                            mixesDialNamed = homeFeed.mixesNamed,
-                            mixesDialEmptyLabel = stringResource(R.string.mixes_dial_empty),
-                            newReleaseLabel = stringResource(R.string.dial_new_release),
-                            onSpeedDialHistory = {
-                                viewModel.loadDialHistory()
-                                historyMode = HistoryMode.DIAL_SONGS
-                                showHistory = true
-                            },
-                            onArtistDialHistory = {
-                                viewModel.loadDialHistory()
-                                historyMode = HistoryMode.DIAL_ARTISTS
-                                showHistory = true
-                            },
-                            dialLabels = dialLabels,
-                            dialLabelOverrides = dialHiddenLabels,
-                            dialPinIcon = dialPinIcon,
-                            skeletonSpeedDialFirst = speedDialsOn,
-                            listState = homeListState,
-                            currentSong = player.song,
-                            isPlaying = player.isPlaying,
-                            title = stringResource(R.string.listen_now),
-                            signedIn = signedIn,
-                            onSignIn = { webSession = WebSessionMode.SIGN_IN },
-                            onItemClick = { item, shelfTitle ->
-                                val song = shelfSong(item)
-                                // Hoisted because ShelfItem lives in :shared, and
-                                // Kotlin will not smart-cast a public nullable
-                                // property declared in another module.
-                                val browseId = item.browseId
-                                when {
-                                    song != null -> playRadio(
-                                        song,
-                                        QueueSource(shelfTitle, PlaybackSourceType.HOME),
-                                    )
-                                    browseId != null -> viewModel.openDetail(
-                                        browseId = browseId,
-                                        title = item.title,
-                                        subtitle = item.subtitle,
-                                        thumbnailUrl = item.thumbnailUrl,
-                                        // The artists' dial opens each one's page.
-                                        type = if (shelfTitle == ARTIST_DIAL_SHELF_TITLE) {
-                                            BrowseType.ARTIST
-                                        } else {
-                                            BrowseType.OTHER
-                                        },
-                                    )
-                                }
-                            },
-                            onItemLongPress = onShelfLongPress,
-                            onDialItemLongPress = onDialLongPress,
-                            onRetry = viewModel::loadHome,
-                            refreshing = MainViewModel.Feed.HOME in refreshing,
-                            onRefresh = { viewModel.refresh(MainViewModel.Feed.HOME) },
-                            pullState = homePull,
-                            contentPadding = listPadding,
-                            onLoadMore = viewModel::loadMoreHome,
-                            onSectionsRevealed = viewModel::revealHomeSections,
-                            loadingMore = homeLoadingMore,
-                            // The saved dial needs no placeholder while Recently played loads.
-                            recentlyPlayedLoading = homeRecentlyPlayedLoading && !holdSavedDial,
-                            topPicks = topPicks,
-                            topPicksLoading = topPicksLoading,
-                            listenerName = account?.name,
-                            onTopPickClick = openTopPick,
-                            onMoodClick = { mood, label -> openTopPick(TopPicks.moodStation(mood), label) },
-                            artworkMotion = artworkMotion,
-                            onTopPickLongPress = { pick ->
-                                pick.browseId?.let { browseId ->
-                                    onShelfLongPress(
-                                        ShelfItem(
-                                            title = pick.title,
-                                            subtitle = pick.artistName.orEmpty(),
-                                            thumbnailUrl = pick.images.firstOrNull(),
-                                            videoId = null,
-                                            browseId = browseId,
-                                        ),
-                                    )
-                                }
-                            },
-                        )
+                        TAB_HOME -> if (key == HOME_PAGE_KEY) {
+                            keptHome.Place(transition, pages) { keptHomeContent(true) }
+                        } else {
+                            homeBody(true)
+                        }
                         // The mood this page is for, held while it closes: by
                         // then no mood is selected, and it would shrink away
                         // as Explore itself.
@@ -5137,6 +5302,9 @@ private fun BitChordApp(
                     }
                     }
                 }
+                // Home, kept while another page is up. After the pages, so that
+                // this is composed in the same pass in which they let go of it.
+                keptHome.OffStage(pages) { keptHomeContent(false) }
 
                 // ---- Settings sub-screen overlays ----
                 // When a sub-screen is opened from Settings, AnimatedContent keeps
@@ -8775,6 +8943,10 @@ private const val TAB_PLAYLISTS = 4
 private const val TAB_KEY = "tab:"
 /** How long after asking for a display mode the log reads back what the display did. */
 private const val PERFORMANCE_LOG_SETTLE_MS = 1_500L
+
+/** How long, at most, the refresh rate check waits for the window to be the one in front. */
+private const val PERFORMANCE_FOCUS_WAITS = 20
+private const val PERFORMANCE_FOCUS_WAIT_MS = 500L
 
 /** How often a pinned mix's cover is asked for at launch before giving up, and the first wait between. */
 private const val PIN_ART_TRIES = 3

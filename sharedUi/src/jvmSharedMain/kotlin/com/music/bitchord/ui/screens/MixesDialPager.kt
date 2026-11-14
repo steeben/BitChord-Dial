@@ -15,8 +15,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -48,6 +50,9 @@ private val MIN_FLING_VELOCITY = 400.dp
 
 /** How far off a page counts as between two, as a share of a page. */
 private const val SETTLED_FRACTION = 0.001f
+
+/** How many frames the dial in view has to itself before the one beside it is made up. */
+private const val BESIDE_AFTER_FRAMES = 3
 
 /**
  * The page a swipe let go at [position] (pages, with the part of the next one
@@ -129,6 +134,14 @@ internal fun MixesDialPager(
     val minFling = with(LocalDensity.current) { MIN_FLING_VELOCITY.toPx() }
     val reversed = LocalLayoutDirection.current == LayoutDirection.Rtl
     val handoff = remember(state, minFling, reversed) { DialFlingHandoff(state, minFling, reversed) }
+    // The frame that brings Home in builds the dial in view and nothing
+    // beside it: the two dials in one frame made that frame a long one, each
+    // time Home came back from a page. The other is made up a few frames on.
+    var besideReady by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        repeat(BESIDE_AFTER_FRAMES) { withFrameNanos { } }
+        besideReady = true
+    }
     HorizontalPager(
         state = state,
         verticalAlignment = Alignment.Top,
@@ -136,7 +149,7 @@ internal fun MixesDialPager(
         // The page out of view is kept made up beside the one in view, so the
         // mixes' covers and tags are loaded before the swipe that shows them
         // rather than coming in one by one as the page slides over.
-        beyondViewportPageCount = 1,
+        beyondViewportPageCount = if (besideReady) 1 else 0,
         modifier = Modifier.fillMaxWidth(),
     ) { page ->
         // Between the dials and this pager: see [DialFlingHandoff].

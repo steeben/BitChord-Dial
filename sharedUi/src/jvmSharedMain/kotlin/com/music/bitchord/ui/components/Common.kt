@@ -443,11 +443,23 @@ fun SwipeToQueueBox(
     )
     swipeStateHolder.value = swipeState
 
+    // What a swipe uncovers, and the tick below, are for a row that has been
+    // moved. Almost none ever is, and every row of every list made up both
+    // labels and started the watch all the same, in lists that compose a
+    // row or more a frame as they scroll (a log of a fling named the labels).
+    // From the first pixel of a row's first swipe, and kept from then on.
+    val movedOnce = remember { booleanArrayOf(false) }
+    val moving by remember(swipeState) {
+        derivedStateOf { (try { swipeState.requireOffset() } catch (e: Exception) { 0f }) != 0f }
+    }
+    if (moving) movedOnce[0] = true
+    val moved = movedOnce[0]
+
     // The row reveals its action from the first pixel of the drag, but it only
     // *commits* past 45% of the width — so without this the label is a promise
     // the finger can't check. One light tick at the crossing is the whole point:
     // let go now and it queues.
-    LaunchedEffect(swipeState, boxWidth) {
+    if (moved) LaunchedEffect(swipeState, boxWidth) {
         if (boxWidth <= 0f) return@LaunchedEffect
         val armAt = boxWidth * 0.45f
         var armed = false
@@ -470,7 +482,7 @@ fun SwipeToQueueBox(
     SwipeToDismissBox(
         state = swipeState,
         modifier = modifier.onSizeChanged { boxWidth = it.width.toFloat() },
-        backgroundContent = { QueueSwipeBackground(swipeState) },
+        backgroundContent = { if (moved) QueueSwipeBackground(swipeState) },
         enableDismissFromStartToEnd = enabled,
         enableDismissFromEndToStart = enabled,
     ) {
