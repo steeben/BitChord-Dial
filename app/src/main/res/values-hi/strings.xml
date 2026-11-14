@@ -270,6 +270,8 @@
     <string name="high_performance_battery_needed">Dial की बैटरी उपयोग सेटिंग को “अप्रतिबंधित” पर सेट करें। सेटिंग खोलने के लिए यहां टैप करें।</string>
     <string name="disable_haptics">हैप्टिक्स बंद करें</string>
     <string name="disable_haptics_subtitle">Dial में सभी वाइब्रेशन फ़ीडबैक बंद करता है</string>
+    <string name="static_background">स्थिर बैकग्राउंड रंग</string>
+    <string name="static_background_subtitle">ऐप के पेजों के पीछे के रंगों की हलचल रोकता है</string>
     <string name="enable">चालू करें</string>
     <string name="activity">एक्टिविटी</string>
     <string name="activity_competing">प्रतिस्पर्धा</string>

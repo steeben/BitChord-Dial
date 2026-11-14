@@ -272,6 +272,8 @@
     <string name="high_performance_battery_needed">Defina o uso da bateria do Dial como Irrestrito. Toque aqui para abrir as configurações.</string>
     <string name="disable_haptics">Desativar resposta tátil</string>
     <string name="disable_haptics_subtitle">Para todas as vibrações no Dial</string>
+    <string name="static_background">Cores de fundo estáticas</string>
+    <string name="static_background_subtitle">Para o movimento das cores atrás das páginas do app</string>
     <string name="enable">Ativar</string>
     <string name="activity">Atividade</string>
     <string name="activity_competing">Competindo</string>

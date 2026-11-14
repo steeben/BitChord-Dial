@@ -3465,6 +3465,7 @@ private fun BitChordApp(
     // the artwork's most common one.
     val ambientOn by CustomizationSettings.ambientBackground.collectAsStateWithLifecycle()
     val ambientFollowsArtwork by CustomizationSettings.ambientFollowsArtwork.collectAsStateWithLifecycle()
+    val ambientStatic by CustomizationSettings.ambientStatic.collectAsStateWithLifecycle()
     val ambientSongTint = nowPlayingTint.takeIf { ambientOn && ambientFollowsArtwork && player.song != null }
     val ambientArtColors = if (ambientSongTint != null) {
         com.music.bitchord.ui.player.rememberArtworkColors(player.song?.thumbnailUrl).colors
@@ -3489,7 +3490,7 @@ private fun BitChordApp(
         rememberAmbientBlobs(
             ambientPrimary,
             ambientSecondary,
-            animate = !reduceAnimationSetting && !showNowPlaying && appForeground,
+            animate = !reduceAnimationSetting && !ambientStatic && !showNowPlaying && appForeground,
         )
     } else {
         null

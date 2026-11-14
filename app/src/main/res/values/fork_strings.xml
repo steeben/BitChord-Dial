@@ -214,7 +214,7 @@
     <string name="speed_dial_source_youtube">YT Music</string>
     <string name="dial_new_release">New release</string>
     <string name="performance_mode">Performance mode</string>
-    <string name="performance_mode_subtitle">Turns off the effects that use the most power: glass and blur, animations, the moving background and Canvas video. Turn it off to get your settings back.</string>
+    <string name="performance_mode_subtitle">Turns off the effects that use the most power: glass and blur, animations, the moving background, Canvas video and haptics. Turn it off to get your settings back.</string>
     <string name="performance_mode_on">On. Each setting that it changed stays in its own row, and you can change it there.</string>
     <string name="keep_home">Keep Home loaded</string>
     <string name="keep_home_subtitle">Home stays ready while you look at other pages, and comes back with no delay. It uses more memory.</string>

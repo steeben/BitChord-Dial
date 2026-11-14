@@ -271,6 +271,8 @@
     <string name="high_performance_battery_needed">Réglez l\'utilisation de la batterie de Dial sur Illimitée. Touchez ici pour ouvrir les paramètres.</string>
     <string name="disable_haptics">Désactiver le retour haptique</string>
     <string name="disable_haptics_subtitle">Arrête toutes les vibrations dans Dial</string>
+    <string name="static_background">Couleurs d\'arrière-plan statiques</string>
+    <string name="static_background_subtitle">Arrête le mouvement des couleurs derrière les pages de l\'appli</string>
     <string name="enable">Activer</string>
     <string name="activity">Activité</string>
     <string name="activity_competing">Compétition</string>

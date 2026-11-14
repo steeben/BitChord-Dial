@@ -317,6 +317,8 @@
     <string name="high_performance_battery_needed">Hãy đặt mức sử dụng pin của Dial thành Không hạn chế. Nhấn vào đây để mở cài đặt.</string>
     <string name="disable_haptics">Tắt phản hồi xúc giác</string>
     <string name="disable_haptics_subtitle">Dừng mọi phản hồi rung trong Dial</string>
+    <string name="static_background">Màu nền tĩnh</string>
+    <string name="static_background_subtitle">Dừng chuyển động của các màu phía sau các trang của ứng dụng</string>
     <string name="enable">Bật</string>
     <string name="activity">Hoạt động</string>
     <string name="activity_competing">Đang thi đấu</string>

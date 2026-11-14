@@ -147,6 +147,13 @@ object CustomizationSettings {
     /** Slow colour blobs behind the app's pages. */
     val ambientBackground = MutableStateFlow(true)
 
+    /**
+     * Those blobs hold still: the colours stay, the drift stops. Each step of
+     * the drift redraws the page and every blurred bar over it, a few times a
+     * second for as long as the app is in front.
+     */
+    val ambientStatic = MutableStateFlow(false)
+
     /** Whether those blobs take the playing song's artwork colour. */
     val ambientFollowsArtwork = MutableStateFlow(true)
 
@@ -325,6 +332,7 @@ object CustomizationSettings {
             ?.takeIf { it.size == DEFAULT_TAB_VIEWS.size }
             ?: DEFAULT_TAB_VIEWS
         ambientBackground.value = p.getBoolean(KEY_AMBIENT_BACKGROUND, true)
+        ambientStatic.value = p.getBoolean(KEY_AMBIENT_STATIC, false)
         ambientFollowsArtwork.value = p.getBoolean(KEY_AMBIENT_FOLLOWS_ARTWORK, true)
         // The glass's defaults were redrawn (90% see-through, 4dp, 90%
         // saturation, black shaded 30% on dark, white unshaded on light). The
@@ -816,6 +824,11 @@ object CustomizationSettings {
         prefs?.edit()?.putBoolean(KEY_AMBIENT_BACKGROUND, value)?.apply()
     }
 
+    fun setAmbientStatic(value: Boolean) {
+        ambientStatic.value = value
+        prefs?.edit()?.putBoolean(KEY_AMBIENT_STATIC, value)?.apply()
+    }
+
     fun setAmbientFollowsArtwork(value: Boolean) {
         ambientFollowsArtwork.value = value
         prefs?.edit()?.putBoolean(KEY_AMBIENT_FOLLOWS_ARTWORK, value)?.apply()
@@ -1055,6 +1068,7 @@ object CustomizationSettings {
     private const val KEY_GLOW_PROGRESS_BAR = "custom_glow_progress_bar"
     private const val KEY_PROGRESS_BAR_STYLE = "custom_progress_bar_style"
     private const val KEY_AMBIENT_BACKGROUND = "custom_ambient_background"
+    private const val KEY_AMBIENT_STATIC = "custom_ambient_static"
     private const val KEY_LIBRARY_TAB_VIEWS = "custom_library_tab_views"
     private const val KEY_AMBIENT_FOLLOWS_ARTWORK = "custom_ambient_follows_artwork"
     /** What a glass option's key ends in for the light theme's copy of it. */

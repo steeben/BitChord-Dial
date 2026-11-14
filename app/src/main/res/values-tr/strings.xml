@@ -310,6 +310,8 @@
     <string name="high_performance_battery_needed">Dial\'ın pil kullanımını Sınırsız olarak ayarlayın. Ayarları açmak için buraya dokunun.</string>
     <string name="disable_haptics">Dokunsal geri bildirimi kapat</string>
     <string name="disable_haptics_subtitle">Dial\'daki tüm titreşimleri durdurur</string>
+    <string name="static_background">Sabit arka plan renkleri</string>
+    <string name="static_background_subtitle">Uygulama sayfalarının arkasındaki renklerin hareketini durdurur</string>
     <string name="enable">Etkinleştir</string>
     <string name="activity">Etkinlik</string>
     <string name="activity_competing">Yarışıyor</string>

@@ -270,6 +270,8 @@
     <string name="high_performance_battery_needed">Stelle den Akkuverbrauch von Dial auf Uneingeschränkt. Tippe hier, um die Einstellungen zu öffnen.</string>
     <string name="disable_haptics">Haptik deaktivieren</string>
     <string name="disable_haptics_subtitle">Stoppt jedes Vibrationsfeedback in Dial</string>
+    <string name="static_background">Statische Hintergrundfarben</string>
+    <string name="static_background_subtitle">Stoppt die Bewegung der Farben hinter den Seiten der App</string>
     <string name="enable">Aktivieren</string>
     <string name="activity">Aktivität</string>
     <string name="activity_competing">Tritt an</string>

@@ -265,6 +265,8 @@
     <string name="high_performance_battery_needed">Dialのバッテリー使用を「制限なし」に設定してください。ここをタップすると設定が開きます。</string>
     <string name="disable_haptics">触覚フィードバックを無効にする</string>
     <string name="disable_haptics_subtitle">Dialのすべての振動フィードバックを停止します</string>
+    <string name="static_background">背景色を静止</string>
+    <string name="static_background_subtitle">アプリのページの背景にある色の動きを止めます</string>
     <string name="enable">有効にする</string>
     <string name="activity">アクティビティ</string>
     <string name="activity_competing">参加中</string>

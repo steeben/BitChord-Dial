@@ -304,6 +304,8 @@
     <string name="high_performance_battery_needed">ตั้งค่าการใช้แบตเตอรี่ของ Dial เป็นไม่จำกัด แตะที่นี่เพื่อเปิดการตั้งค่า</string>
     <string name="disable_haptics">ปิดการสั่นตอบสนอง</string>
     <string name="disable_haptics_subtitle">หยุดการสั่นตอบสนองทั้งหมดใน Dial</string>
+    <string name="static_background">สีพื้นหลังแบบนิ่ง</string>
+    <string name="static_background_subtitle">หยุดการเคลื่อนไหวของสีด้านหลังหน้าต่าง ๆ ของแอป</string>
     <string name="enable">เปิดใช้งาน</string>
     <string name="activity">กิจกรรม</string>
     <string name="activity_competing">กำลังแข่งขัน</string>
