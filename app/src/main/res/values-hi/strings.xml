@@ -247,6 +247,10 @@
     <string name="filter_non_music_audio">गैर-संगीत ऑडियो फ़िल्टर करें</string>
     <string name="filter_non_music_audio_subtitle">30 सेकंड से छोटे क्लिप, WAV फ़ाइलें, वॉइस नोट्स, रिकॉर्डिंग और सिस्टम साउंड छिपाता है</string>
     <string name="performance">परफ़ॉर्मेंस</string>
+    <string name="video_quality">वीडियो क्वालिटी</string>
+    <string name="video_quality_subtitle">म्यूज़िक वीडियो के लिए, और उस म्यूज़िक वीडियो के लिए जो किसी गाने के Canvas के रूप में दिखता है। ऑटो 1080p का उपयोग करता है, या मोबाइल डेटा पर 480p का। अधिकतम क्वालिटी सभी कनेक्शन पर 4K तक का उपयोग करती है। इसमें बहुत ज़्यादा डेटा और बैटरी लगती है, और कमज़ोर फ़ोन पर यह धीमी हो सकती है।</string>
+    <string name="video_quality_auto">ऑटो</string>
+    <string name="video_quality_max">अधिकतम क्वालिटी</string>
     <string name="high_performance_mode">हाई परफ़ॉर्मेंस मोड</string>
     <string name="high_performance_subtitle">पूरे एनिमेशन और ब्लर का उपयोग करता है, और डिस्प्ले का ज़्यादा रिफ़्रेश रेट मांगता है</string>
     <string name="high_performance_active">%1$d Hz का अनुरोध किया गया। ज़रूरत पड़ने पर Android इसे कम कर सकता है।</string>

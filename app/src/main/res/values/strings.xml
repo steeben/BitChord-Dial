@@ -432,8 +432,8 @@
     <string name="video_quality">Video quality</string>
     <string name="video_quality_subtitle">For music videos, and for a music video that shows as the Canvas of a song. Auto uses 1080p, or 480p on mobile data. Max quality uses up to 4K on all connections. It uses much more data and battery, and can be slow on weak phones.</string>
     <string name="video_quality_auto">Auto</string>
-    <string name="video_quality_480">480p</string>
-    <string name="video_quality_1080">1080p</string>
+    <string name="video_quality_480" translatable="false">480p</string>
+    <string name="video_quality_1080" translatable="false">1080p</string>
     <string name="video_quality_max">Max quality</string>
     <string name="high_performance_mode">High performance mode</string>
     <string name="high_performance_subtitle">Uses full animations and blur, and requests a higher display refresh rate</string>

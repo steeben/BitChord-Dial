@@ -247,6 +247,10 @@
     <string name="filter_non_music_audio">Nicht-Musik-Audio filtern</string>
     <string name="filter_non_music_audio_subtitle">Blendet Clips unter 30 Sekunden, WAV-Dateien, Sprachnotizen, Aufnahmen und Systemtöne aus</string>
     <string name="performance">Leistung</string>
+    <string name="video_quality">Videoqualität</string>
+    <string name="video_quality_subtitle">Für Musikvideos und für ein Musikvideo, das als Canvas eines Titels gezeigt wird. Automatisch verwendet 1080p oder 480p bei mobilen Daten. Maximale Qualität verwendet bis zu 4K bei allen Verbindungen. Sie braucht viel mehr Daten und Akku und kann auf schwachen Geräten langsam sein.</string>
+    <string name="video_quality_auto">Automatisch</string>
+    <string name="video_quality_max">Maximale Qualität</string>
     <string name="high_performance_mode">Hochleistungsmodus</string>
     <string name="high_performance_subtitle">Verwendet vollständige Animationen und Unschärfe und fordert eine höhere Bildwiederholrate an</string>
     <string name="high_performance_active">%1$d Hz angefordert. Android kann die Rate bei Bedarf verringern.</string>

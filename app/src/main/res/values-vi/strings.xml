@@ -294,6 +294,10 @@
     <string name="filter_non_music_audio">Lọc âm thanh không phải nhạc</string>
     <string name="filter_non_music_audio_subtitle">Ẩn các đoạn âm thanh dưới 30 giây, tệp WAV, ghi âm giọng nói, bản thu âm và âm thanh hệ thống</string>
     <string name="performance">Hiệu năng</string>
+    <string name="video_quality">Chất lượng video</string>
+    <string name="video_quality_subtitle">Dành cho video âm nhạc và video âm nhạc hiển thị làm Canvas của bài hát. Tự động dùng 1080p, hoặc 480p khi dùng dữ liệu di động. Chất lượng tối đa dùng đến 4K trên mọi kết nối. Lựa chọn này dùng nhiều dữ liệu và pin hơn nhiều, và có thể chậm trên điện thoại yếu.</string>
+    <string name="video_quality_auto">Tự động</string>
+    <string name="video_quality_max">Chất lượng tối đa</string>
     <string name="high_performance_mode">Chế độ hiệu năng cao</string>
     <string name="high_performance_subtitle">Sử dụng đầy đủ hiệu ứng chuyển động và làm mờ, đồng thời yêu cầu tần số quét màn hình cao hơn</string>
     <string name="high_performance_active">Đã yêu cầu %1$d Hz. Android có thể giảm tần số khi cần.</string>

@@ -242,6 +242,10 @@
     <string name="filter_non_music_audio">音楽以外の音声を除外</string>
     <string name="filter_non_music_audio_subtitle">30秒未満のクリップ、WAVファイル、ボイスメモ、録音、システム音を非表示にします</string>
     <string name="performance">パフォーマンス</string>
+    <string name="video_quality">動画の画質</string>
+    <string name="video_quality_subtitle">ミュージックビデオと、曲の Canvas として表示されるミュージックビデオに適用されます。自動は 1080p、モバイルデータでは 480p を使います。最高画質はすべての接続で最大 4K を使います。データとバッテリーを大幅に多く使い、性能の低い端末では動作が遅くなることがあります。</string>
+    <string name="video_quality_auto">自動</string>
+    <string name="video_quality_max">最高画質</string>
     <string name="high_performance_mode">高パフォーマンスモード</string>
     <string name="high_performance_subtitle">フルアニメーションとぼかしを使用し、より高いディスプレイリフレッシュレートをリクエストします</string>
     <string name="high_performance_active">%1$d Hzをリクエスト中です。必要に応じてAndroidが下げることがあります。</string>

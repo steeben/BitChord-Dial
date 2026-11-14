@@ -245,6 +245,10 @@
     <string name="filter_non_music_audio">Filtruj dźwięk inny niż muzyka</string>
     <string name="filter_non_music_audio_subtitle">Ukrywa klipy krótsze niż 30 sekund, pliki WAV, notatki głosowe, nagrania i dźwięki systemowe</string>
     <string name="performance">Wydajność</string>
+    <string name="video_quality">Jakość wideo</string>
+    <string name="video_quality_subtitle">Dla teledysków i dla teledysku pokazywanego jako Canvas utworu. Automatyczna używa 1080p lub 480p przy danych komórkowych. Maksymalna jakość używa do 4K przy każdym połączeniu. Zużywa dużo więcej danych i baterii i może działać wolno na słabszych telefonach.</string>
+    <string name="video_quality_auto">Automatyczna</string>
+    <string name="video_quality_max">Maksymalna jakość</string>
     <string name="high_performance_mode">Tryb wysokiej wydajności</string>
     <string name="high_performance_subtitle">Używa pełnych animacji i rozmycia oraz żąda wyższej częstotliwości odświeżania ekranu</string>
     <string name="high_performance_active">Zażądano %1$d Hz. Android może ją obniżyć, jeśli to konieczne.</string>
