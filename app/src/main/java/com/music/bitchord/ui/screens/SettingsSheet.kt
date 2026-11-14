@@ -12,14 +12,11 @@ import android.content.Context
 import android.content.Intent
 import android.media.AudioFormat
 import android.media.audiofx.AudioEffect
-import android.net.Uri
 import android.os.Build
-import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -78,6 +75,7 @@ import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.FilterAlt
 import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.Gradient
 import androidx.compose.material.icons.rounded.GraphicEq
@@ -207,11 +205,7 @@ import com.music.bitchord.playback.AudioOutputStatus
 import com.music.bitchord.playback.audio.bitperfect.BitPerfectOutput
 import com.music.bitchord.data.settings.AutomixPerformanceMode
 import com.music.bitchord.R
-import com.music.bitchord.ui.components.frostedThumbFill
-import com.music.bitchord.ui.components.frostedGlassFill
-import com.music.bitchord.ui.components.frostedTrackTint
 import com.music.bitchord.ui.components.lightweightLiquidGlass
-import com.music.bitchord.ui.components.rememberFrostedGlassDensity
 import com.music.bitchord.ui.components.SquareLogo
 import com.music.bitchord.ui.theme.AccentRed
 import com.music.bitchord.ui.theme.LocalNowPlayingTint
@@ -222,6 +216,8 @@ import com.music.bitchord.data.sources.DeviceCodecs
 import com.music.bitchord.data.settings.AudioQuality
 import com.music.bitchord.data.settings.DownloadQuality
 import com.music.bitchord.data.settings.ThemeMode
+import com.music.bitchord.data.settings.VideoQuality
+import com.music.bitchord.ui.player.MusicVideoEngine
 import com.music.bitchord.data.stats.Backup
 import com.music.bitchord.playback.AudioCache
 import com.music.bitchord.ui.player.fullBleedArtworkAvailable
@@ -322,6 +318,8 @@ fun SettingsScreen(
     val signatureApiEnabled by AppSettings.signatureApiEnabled.collectAsStateWithLifecycle()
     val signatureApiUrl by AppSettings.signatureApiUrl.collectAsStateWithLifecycle()
     val canvasOverCellular by AppSettings.canvasOverCellular.collectAsStateWithLifecycle()
+    val videoQualityWifi by AppSettings.videoQualityWifi.collectAsStateWithLifecycle()
+    val videoQualityMobile by AppSettings.videoQualityMobile.collectAsStateWithLifecycle()
     val fullBleedArtwork by AppSettings.fullBleedArtwork.collectAsStateWithLifecycle()
     val legacyMeshGradient by AppSettings.legacyMeshGradient.collectAsStateWithLifecycle()
     val syncedLyrics by AppSettings.syncedLyrics.collectAsStateWithLifecycle()
@@ -369,6 +367,7 @@ fun SettingsScreen(
     val ambientBackground by CustomizationSettings.ambientBackground.collectAsStateWithLifecycle()
     val ambientFollowsArtwork by CustomizationSettings.ambientFollowsArtwork.collectAsStateWithLifecycle()
     val hideSongStatus by AppSettings.hideSongStatus.collectAsStateWithLifecycle()
+    val hidePlayerStatusBar by AppSettings.hidePlayerStatusBar.collectAsStateWithLifecycle()
     val showQueueHistory by AppSettings.showQueueHistory.collectAsStateWithLifecycle()
     val dontRepeatSuggestions by AppSettings.dontRepeatSuggestions.collectAsStateWithLifecycle()
     val smartVersionAlignment by AppSettings.smartVersionAlignment.collectAsStateWithLifecycle()
@@ -423,15 +422,8 @@ fun SettingsScreen(
     var importStatus by remember { mutableStateOf<String?>(null) }
     var confirmImport by remember { mutableStateOf(false) }
     var confirmClearSongCache by remember { mutableStateOf(false) }
-    var showPerformanceWarning by remember { mutableStateOf(false) }
-    var showPerformanceConfirmation by remember { mutableStateOf(false) }
     val backupScope = rememberCoroutineScope()
 
-    val batterySettingsLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult(),
-    ) {
-        showPerformanceConfirmation = true
-    }
     val localMusicFolderPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree(),
     ) { folder ->
@@ -1668,36 +1660,17 @@ fun SettingsScreen(
         }
 
         if (shows(SettingsCategory.PERFORMANCE)) SearchableSettingsGroup(search, header = stringResource(R.string.performance)) {
+            val performanceModeTitle = stringResource(R.string.performance_mode)
+            row(performanceModeTitle, "stutter", "lag", "slow", "smooth", "effects", "blur", "glass", "animation", "battery") {
+                PerformanceModeRow(performanceModeTitle)
+            }
+            val keepHomeTitle = stringResource(R.string.keep_home)
+            row(keepHomeTitle, "home", "memory", "ram", "stutter", "load", "smooth") {
+                KeepHomeRow(keepHomeTitle)
+            }
             val highPerformanceModeTitle = stringResource(R.string.high_performance_mode)
             row(highPerformanceModeTitle, "frame rate", "refresh rate", "hz", "battery", "smooth") {
-                SettingsRow(
-                    icon = BitChordIcons.Performance,
-                    title = highPerformanceModeTitle,
-                    subtitle = if (highPerformanceMode) {
-                        stringResource(R.string.high_performance_active, selectedPerformanceRefreshRate)
-                    } else {
-                        stringResource(R.string.high_performance_subtitle)
-                    },
-                    trailing = {
-                        IosSwitch(
-                            checked = highPerformanceMode,
-                            onCheckedChange = { enabled ->
-                                if (enabled) {
-                                    showPerformanceWarning = true
-                                } else {
-                                    AppSettings.setHighPerformanceMode(false)
-                                }
-                            },
-                        )
-                    },
-                    onClick = {
-                        if (highPerformanceMode) {
-                            AppSettings.setHighPerformanceMode(false)
-                        } else {
-                            showPerformanceWarning = true
-                        }
-                    },
-                )
+                HighPerformanceRow(highPerformanceModeTitle, selectedPerformanceRefreshRate)
             }
             if (highPerformanceMode) {
                 val refreshRateTitle = stringResource(R.string.refresh_rate)
@@ -1719,6 +1692,45 @@ fun SettingsScreen(
                         ),
                     )
                 }
+            }
+            val videoQualityTitle = stringResource(R.string.video_quality)
+            val videoQualityOptions = listOf(
+                stringResource(R.string.video_quality_480),
+                stringResource(R.string.video_quality_1080),
+                stringResource(R.string.video_quality_max),
+            )
+            row(videoQualityTitle, "music video", "canvas", "resolution", "480p", "1080p", "4k", "hd", "data", "wifi", "mobile") {
+                SettingsRow(
+                    icon = Icons.Rounded.Videocam,
+                    title = videoQualityTitle,
+                    subtitle = stringResource(R.string.video_quality_subtitle),
+                )
+                VideoQualityChoice(
+                    label = stringResource(R.string.video_quality_wifi),
+                    options = videoQualityOptions,
+                    selected = videoQualityWifi,
+                    onSelect = {
+                        AppSettings.setVideoQualityWifi(it)
+                        MusicVideoEngine.onQualitySettingChanged(context)
+                    },
+                )
+                VideoQualityChoice(
+                    label = stringResource(R.string.video_quality_mobile),
+                    options = videoQualityOptions,
+                    selected = videoQualityMobile,
+                    onSelect = {
+                        AppSettings.setVideoQualityMobile(it)
+                        MusicVideoEngine.onQualitySettingChanged(context)
+                    },
+                )
+            }
+            val staticBackgroundTitle = stringResource(R.string.static_background)
+            row(staticBackgroundTitle, "background", "colour", "color", "ambient", "blobs", "animation", "still", "move") {
+                StaticBackgroundRow(staticBackgroundTitle)
+            }
+            val disableHapticsTitle = stringResource(R.string.disable_haptics)
+            row(disableHapticsTitle, "haptic", "vibration", "vibrate", "touch feedback", "buzz") {
+                DisableHapticsRow(title = disableHapticsTitle)
             }
         }
 
@@ -2051,6 +2063,21 @@ fun SettingsScreen(
                     onClick = { AppSettings.setHideSongStatus(!hideSongStatus) },
                 )
             }
+            val hidePlayerStatusBarTitle = stringResource(R.string.hide_player_status_bar)
+            row(hidePlayerStatusBarTitle, "player", "status bar", "full screen", "immersive", "vignette") {
+                SettingsRow(
+                    icon = Icons.Rounded.Fullscreen,
+                    title = hidePlayerStatusBarTitle,
+                    subtitle = stringResource(R.string.hide_player_status_bar_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = hidePlayerStatusBar,
+                            onCheckedChange = AppSettings::setHidePlayerStatusBar,
+                        )
+                    },
+                    onClick = { AppSettings.setHidePlayerStatusBar(!hidePlayerStatusBar) },
+                )
+            }
             val showQueueHistoryTitle = stringResource(R.string.show_queue_history)
             row(showQueueHistoryTitle, "player", "queue", "history", "previously played") {
                 SettingsRow(
@@ -2331,58 +2358,6 @@ fun SettingsScreen(
             dismissButton = {
                 TextButton(onClick = { confirmImport = false }) {
                     Text(stringResource(R.string.cancel))
-                }
-            },
-        )
-    }
-
-    if (showPerformanceWarning) {
-        AlertDialog(
-            onDismissRequest = { showPerformanceWarning = false },
-            title = { Text(stringResource(R.string.high_performance_before_enabling)) },
-            text = { Text(stringResource(R.string.high_performance_battery_warning)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showPerformanceWarning = false
-                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                            data = Uri.fromParts("package", context.packageName, null)
-                        }
-                        val settingsIntent = intent.takeIf {
-                            it.resolveActivity(context.packageManager) != null
-                        } ?: Intent(Settings.ACTION_SETTINGS)
-                        batterySettingsLauncher.launch(settingsIntent)
-                    },
-                ) {
-                    Text(stringResource(R.string.open_battery_settings))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showPerformanceWarning = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            },
-        )
-    }
-
-    if (showPerformanceConfirmation) {
-        AlertDialog(
-            onDismissRequest = { showPerformanceConfirmation = false },
-            title = { Text(stringResource(R.string.enable_high_performance_title)) },
-            text = { Text(stringResource(R.string.enable_high_performance_confirmation)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showPerformanceConfirmation = false
-                        AppSettings.setHighPerformanceMode(true)
-                    },
-                ) {
-                    Text(stringResource(R.string.enable))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showPerformanceConfirmation = false }) {
-                    Text(stringResource(R.string.not_yet))
                 }
             },
         )
@@ -3983,85 +3958,26 @@ internal fun DestructiveRow(
     }
 }
 
-/** Sliding pill selector, for the handful of settings with two or three states. */
+/** One line of the video quality setting: the connection name above its three choices. */
 @Composable
-internal fun SegmentedControl(
+private fun VideoQualityChoice(
+    label: String,
     options: List<String>,
-    selectedIndex: Int,
-    onSelect: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    /** A glass track (liquid glass when that is on, a frosted film otherwise) for over the page's backdrop. */
-    glass: Boolean = false,
+    selected: VideoQuality,
+    onSelect: (VideoQuality) -> Unit,
 ) {
-    val haptics = LocalHapticFeedback.current
-    val trackShape = RoundedCornerShape(10.dp)
-    val pillShape = RoundedCornerShape(8.dp)
-    // Frosted like the settings' switches: a see-through track with a sheen
-    // and a light rim, and the chosen option on a pill made exactly like the
-    // switches' white thumb, rather than a solid grey slab with a solid
-    // accent block in it.
-    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val glassDensity = rememberFrostedGlassDensity()
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .then(
-                if (glass) {
-                    Modifier.lightweightLiquidGlass(
-                        shape = trackShape,
-                        fallbackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
-                    )
-                } else {
-                    Modifier.frostedGlassFill(frostedTrackTint(dark, glassDensity), trackShape, dark)
-                },
-            )
-            // Enough of a margin for the track to read as a track. At 2dp the
-            // selected pill sat all but flush against the container's own edge,
-            // so the two rounded rectangles merged into one shape and the
-            // control stopped looking like something with a position in it.
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        options.forEachIndexed { index, label ->
-            val chosen = index == selectedIndex
-            val pill by animateFloatAsState(
-                targetValue = if (chosen) 1f else 0f,
-                animationSpec = tween(160),
-                label = "segmentPill",
-            )
-            val labelColor by animateColorAsState(
-                // Dark on the white pill, as the switch's thumb would carry it.
-                targetValue = if (chosen) {
-                    Color.Black.copy(alpha = 0.87f)
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                animationSpec = tween(160),
-                label = "segmentLabel",
-            )
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .frostedThumbFill(pillShape, dark, pill)
-                    .clickable(enabled = enabled) {
-                        if (!chosen) {
-                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onSelect(index)
-                        }
-                    }
-                    .padding(vertical = 9.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = labelColor,
-                    maxLines = 1,
-                )
-            }
-        }
-    }
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = TEXT_INSET, end = ROW_INSET, bottom = 6.dp),
+    )
+    SegmentedControl(
+        options = options,
+        selectedIndex = VideoQuality.entries.indexOf(selected),
+        onSelect = { index -> onSelect(VideoQuality.entries[index]) },
+        modifier = Modifier.padding(start = TEXT_INSET, end = ROW_INSET, bottom = 14.dp),
+    )
 }
 
 /** This app's own repository, linked from the foot of the page. */

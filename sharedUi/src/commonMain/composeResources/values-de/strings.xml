@@ -24,6 +24,11 @@
     <string name="choose_lyrics_provider">Songtext-Anbieter wählen</string>
     <string name="clear">Löschen</string>
     <string name="close_lyrics">Songtexte schließen</string>
+    <string name="comments">Kommentare</string>
+    <string name="comments_off">Kommentare sind deaktiviert</string>
+    <string name="comments_unavailable">Kommentare können nicht geladen werden</string>
+    <string name="more_comments">Mehr Kommentare</string>
+    <string name="no_comments">Keine Kommentare</string>
     <string name="data_saver">Data-Saver</string>
     <string name="decrease_lyrics_offset">Decrease lyrics offset</string>
     <string name="downgraded_from">↓ von %1$s</string>

@@ -57,6 +57,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.offset
@@ -109,9 +110,11 @@ import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.positionOnScreen
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.geometry.lerp
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.clipRect
@@ -161,14 +164,19 @@ import coil3.request.ImageRequest
 import coil3.compose.LocalPlatformContext
 import coil3.SingletonImageLoader
 import com.music.bitchord.ui.theme.rememberScreenOrientation
+import com.music.bitchord.ui.theme.HideStatusBar
+import com.music.bitchord.ui.theme.PageStatusBarIcons
 import com.music.bitchord.ui.theme.StatusBarIcons
 import com.music.bitchord.ui.theme.rememberArtworkLuminance
 import com.music.bitchord.ui.theme.rememberArtworkControlsBandLuminance
 import com.music.bitchord.ui.theme.controlsBandLuminance
 import com.music.bitchord.ui.theme.rememberArtworkTopBandLuminance
+import com.music.bitchord.ui.theme.stableStatusBarTop
 import com.music.bitchord.ui.theme.topBandScrimAlpha
 import com.music.bitchord.ui.LyricsProviderState
 import com.music.bitchord.ui.components.optimizedHazeEffect
+import com.music.bitchord.ui.components.THUMBNAIL_BORDER_WIDTH
+import com.music.bitchord.ui.components.thumbnailBorderColor
 import com.music.bitchord.ui.haptics.Haptic
 import com.music.bitchord.ui.haptics.rememberHaptics
 import com.music.bitchord.ui.icons.BitChordIcons
@@ -178,6 +186,7 @@ import com.music.bitchord.data.canvas.CanvasSource
 import com.music.bitchord.data.canvas.AnimatedArtKind
 import com.music.bitchord.data.canvas.kind
 import com.music.bitchord.data.AudioOnlyVideos
+import com.music.bitchord.data.EpisodeVideo
 import com.music.bitchord.data.CanvasAudioFixes
 import com.music.bitchord.data.VideoCanvases
 import com.music.bitchord.data.lyrics.LyricLine
@@ -190,6 +199,7 @@ import com.music.bitchord.data.model.ROW_ART_PX
 import com.music.bitchord.data.model.PLAYER_ART_PX
 import com.music.bitchord.data.model.artworkAt
 import com.music.bitchord.data.model.Song
+import com.music.bitchord.data.model.isEpisode
 import dev.chrisbanes.haze.HazeInputScale
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
@@ -1168,6 +1178,8 @@ fun NowPlayingScreen(
     var showCast by remember { mutableStateOf(false) }
     var showAudioOutput by remember { mutableStateOf(false) }
     var showLyricsProviders by remember { mutableStateOf(false) }
+    // A podcast episode's comments, which its lyrics button opens — see [EpisodeCommentsSheet].
+    var showComments by remember { mutableStateOf(false) }
     // Gated on the Bluetooth permission the first time — see [rememberOutputPicker].
     val openAudioOutput = rememberOutputPicker { showAudioOutput = true }
     // Listening in a party whose host has taken the controls: the transport
@@ -1182,7 +1194,8 @@ fun NowPlayingScreen(
 
     val syncedLyricsEnabled by PlayerSettings.syncedLyrics.collectAsStateWithLifecycle()
     // Off in Settings or marked instrumental, the current-line strip goes.
-    val lyricStripShown = syncedLyricsEnabled && !lyricsInstrumental
+    // Nor has a podcast episode a line to show: no lyrics are looked for it.
+    val lyricStripShown = syncedLyricsEnabled && !lyricsInstrumental && !song.isEpisode
     val lyricsOffsetMs by PlayerSettings.lyricsOffsetMs.collectAsStateWithLifecycle()
     // A lambda, not a value: read by the lyric strip and panel in scopes of
     // their own, so a tick recomposes them and not the player around them.
@@ -1193,6 +1206,7 @@ fun NowPlayingScreen(
     val hideVolumeBar by PlayerSettings.hideVolumeBar.collectAsStateWithLifecycle()
     val showNerdStats by PlayerSettings.showNerdStats.collectAsStateWithLifecycle()
     val hideSongStatus by PlayerSettings.hideSongStatus.collectAsStateWithLifecycle()
+    val hidePlayerStatusBar by PlayerSettings.hidePlayerStatusBar.collectAsStateWithLifecycle()
 
     // Animated cover art: the looping video some labels publish alongside a
     // release, laid over the sleeve. A miss is the normal answer — see
@@ -1203,7 +1217,10 @@ fun NowPlayingScreen(
     val mixing by PlayerSettings.smartMixInProgress.collectAsStateWithLifecycle()
     // A music video plays its own picture where the sleeve is — see
     // [MusicVideoSurface] — and takes the place of any animated cover.
-    val musicVideo = showsMusicVideo(song) && song.videoId !in audioOnlyVideos
+    // An episode plays its video only while the "…" menu's switch is on.
+    val episodeVideoOn by EpisodeVideo.on.collectAsStateWithLifecycle()
+    val musicVideo = showsMusicVideo(song) && song.videoId !in audioOnlyVideos &&
+        (song.isVideo || !song.isEpisode || episodeVideoOn)
     val restoredPlayerScreen = remember { PlayerSettings.lastPlayerScreen.value }
     var queueOpen by remember {
         mutableStateOf(restoredPlayerScreen == LastPlayerScreen.QUEUE)
@@ -1227,9 +1244,19 @@ fun NowPlayingScreen(
     // behind the landscape player, which draws it aside for them — see
     // [LandscapePlayerLayout]'s videoLyrics. Whatever Appearance says about
     // video as artwork: this is the video being watched, not standing in.
-    val videoBesideLyrics = musicVideo && landscapeLayout && lyricsOpen
-    val videoAsCanvas = musicVideo &&
-        ((playerFillsWindow(windowWidth) && videoArtAllowed) || videoBesideLyrics)
+    // A podcast episode's picture is neither of those. Upright it plays where
+    // the cover is, cropped to the cover's own shape (the card, or the banner
+    // when the artwork runs full bleed): the sleeve's clip, as an animated
+    // cover is. Sideways it is the whole screen, fitted, under the video
+    // player's own controls. Whatever Appearance says about video as artwork:
+    // an episode's picture is the episode.
+    val episodeVideo = musicVideo && song.isEpisode
+    val videoBesideLyrics = musicVideo && !episodeVideo && landscapeLayout && lyricsOpen
+    val videoAsCanvas = musicVideo && if (episodeVideo) {
+        !landscapeLayout
+    } else {
+        (playerFillsWindow(windowWidth) && videoArtAllowed) || videoBesideLyrics
+    }
     val videoMode = musicVideo && !videoAsCanvas
     val clipBehindPlayer = playerFillsWindow(windowWidth) || landscapeLayout
     // Fixes the listener made from the ⋯ menu — see [CanvasAudioFixes].
@@ -1283,10 +1310,12 @@ fun NowPlayingScreen(
     val holdClip = videoStandInWanted && clipBehindPlayer && !videoSearched
     val canvas = if (videoAsCanvas || pictureVideoId != null) {
         val pictureId = pictureVideoId ?: song.videoId
-        remember(pictureId) {
+        remember(pictureId, episodeVideo) {
             CanvasArtwork(
                 url = "$MUSIC_VIDEO_CANVAS_SCHEME$pictureId",
-                source = CanvasSource.SPOTIFY,
+                // Spotify's is the clip that runs under the whole screen; an
+                // episode's picture stays in the sleeve.
+                source = if (episodeVideo) CanvasSource.OTHER else CanvasSource.SPOTIFY,
                 musicVideoId = pictureId,
             )
         }
@@ -1547,9 +1576,14 @@ fun NowPlayingScreen(
     // open but the half-player was not, so every trip into lyrics briefly
     // started an exit animation and reversed it on the following frame.
     val openLyrics: () -> Unit = {
-        lyricsControlsOpen = true
-        lyricsOpen = true
-        queueOpen = false
+        if (song.isEpisode) {
+            // An episode has no lyrics to open: its comments are what there is to read.
+            showComments = true
+        } else {
+            lyricsControlsOpen = true
+            lyricsOpen = true
+            queueOpen = false
+        }
     }
     val closeLyrics: () -> Unit = {
         lyricsControlsOpen = false
@@ -1557,6 +1591,14 @@ fun NowPlayingScreen(
     }
     val toggleLyrics: () -> Unit = {
         if (lyricsOpen) closeLyrics() else openLyrics()
+    }
+    // The lyrics a song left open are not an episode's, and its comments are not a song's.
+    LaunchedEffect(song.videoId) {
+        if (song.isEpisode) {
+            if (lyricsOpen) closeLyrics()
+        } else {
+            showComments = false
+        }
     }
     val toggleQueue: () -> Unit = {
         val opening = !queueOpen
@@ -2219,7 +2261,14 @@ fun NowPlayingScreen(
     fun clipFadeFractionOf(clipBottom: Dp): Float = if (clipBottom > 0.dp) {
         (heroHeight.value * HERO_FADE_FRACTION / clipBottom.value).coerceIn(0f, 1f)
     } else 0f
-    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    // With "Hide status bar" on, the bar's height whether or not it is showing:
+    // the bar goes as the player lands and comes back as it leaves, and the
+    // player must not move under it either time.
+    val statusBarTop = if (hidePlayerStatusBar) {
+        stableStatusBarTop()
+    } else {
+        WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    }
     // What sits between the status bar and the artwork: the drag strip. Read
     // in three places — the strip itself,
     // the scrim drawn over it and the banner's own height — which all have to
@@ -2384,6 +2433,7 @@ fun NowPlayingScreen(
             repeatMode = repeatMode,
             autoplayEnabled = autoplayEnabled,
             onToggleLyrics = toggleLyrics,
+            comments = song.isEpisode,
             onToggleQueue = toggleQueue,
             onToggleShuffle = onToggleShuffle,
             onCycleRepeat = onCycleRepeat,
@@ -2393,7 +2443,7 @@ fun NowPlayingScreen(
             onOpenListenTogetherMembers = openListenTogetherMembers,
             // Lyrics load whether or not the strip is shown, so there is
             // always a provider to choose between.
-            onChooseLyricsProvider = { showLyricsProviders = true },
+            onChooseLyricsProvider = if (song.isEpisode) null else ({ showLyricsProviders = true }),
         )
         // Keep the current output caption visible in every state but the
         // compact controls under the queue and lyrics.
@@ -2430,6 +2480,13 @@ fun NowPlayingScreen(
                 // glass sees the player, not this drawer.
                 handlesBack = !showAudioPipeline && !showCast,
                 hidden = showAudioPipeline || showCast,
+            )
+        }
+        if (showComments && song.isEpisode) {
+            EpisodeCommentsSheet(
+                hazeState = playerHaze,
+                videoId = song.videoId,
+                onDismiss = { showComments = false },
             )
         }
         if (showLyricsProviders) {
@@ -2669,6 +2726,10 @@ fun NowPlayingScreen(
                 artRequest = art.request,
                 rendered = videoRendered,
                 onRenderedChanged = { videoRendered = it },
+                // An episode can be sound alone, over one picture: then its
+                // cover is what is watched, and it is dimmed a little under
+                // the controls as the picture is.
+                episode = song.isEpisode,
                 onExitFullscreen = screenOrientation::portrait,
                 scrubber = {
                     PlayerScrubber(
@@ -3546,11 +3607,41 @@ fun NowPlayingScreen(
         // and so keep light icons.
         val statusIconsDark = heroMode && !spotifyCanvasPresentation && !playerSubviewOpen &&
             (artTopLuminance ?: 0f) >= STATUS_ICONS_DARK_LUMINANCE
-        StatusBarIcons(dark = statusIconsDark)
+        // On the way to or from the mini player the page is what is under the
+        // bar, not this artwork: the glyphs are the page's for the trip, and
+        // this cover's only once the player has landed.
+        StatusBarIcons(dark = if (dockMoving) PageStatusBarIcons.dark else statusIconsDark)
+        // "Hide status bar": the bar is there for the whole of the trip up
+        // from the mini player and slides away only once the player has
+        // landed; it slides back as soon as the player starts down (a drag, a
+        // back swipe or a close), and away again if that is called off and the
+        // player lands once more.
+        //
+        // Off the sheet's own position, not [dockMoving]: that one says "not
+        // moving" for the first frames of an open, before the mini player's
+        // cover is known, and the bar went in those frames, came back for the
+        // trip and went again. And only after the player has stayed landed
+        // for a moment, so no single frame's reading can take the bar.
+        val playerLanded by remember(dock) {
+            derivedStateOf { dock == null || dock.openFraction() >= 1f }
+        }
+        var statusBarAway by remember { mutableStateOf(false) }
+        LaunchedEffect(playerLanded, hidePlayerStatusBar, dock == null) {
+            if (playerLanded && hidePlayerStatusBar) {
+                // Without the dock ("Reduce animation") the sheet slides up on
+                // its own and does not say where it is: its slide's length.
+                delay(if (dock == null) 450L else 120L)
+                statusBarAway = true
+            } else {
+                statusBarAway = false
+            }
+        }
+        HideStatusBar(hidden = statusBarAway)
         // Read in the scrim's draw pass only, so the fade redraws that strip
-        // without recomposing the player.
+        // without recomposing the player. With the status bar hidden there is
+        // nothing for the scrim to hold up, so it goes with the bar.
         val topScrimFade = animateFloatAsState(
-            targetValue = if (statusIconsDark) 0f else 1f,
+            targetValue = if (statusIconsDark || hidePlayerStatusBar) 0f else 1f,
             animationSpec = tween(durationMillis = 450, easing = FastOutSlowInEasing),
             label = "statusScrimFade",
         )
@@ -3571,7 +3662,15 @@ fun NowPlayingScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
+                .then(
+                    if (hidePlayerStatusBar) {
+                        // The same space as statusBarsPadding(), kept while
+                        // the bar is hidden — see statusBarTop.
+                        Modifier.padding(top = statusBarTop).consumeWindowInsets(WindowInsets.statusBars)
+                    } else {
+                        Modifier.statusBarsPadding()
+                    },
+                )
                 .navigationBarsPadding()
                 // Observe unclaimed taps across the whole Canvas. Buttons and
                 // the compact metadata row consume their own taps first; empty
@@ -4144,6 +4243,7 @@ fun NowPlayingScreen(
                 // Whether the mini player's thumbnail is standing in for the
                 // cover inside the sleeve, until the larger copies arrive.
                 var rowArtLoaded by remember(art) { mutableStateOf(false) }
+                val coverEdgeColor = thumbnailBorderColor()
                 // Any picture at all in the sleeve: what its shadow and clip
                 // wait on. Not the full-size cover alone, which can arrive from
                 // disk only after the open has finished, and the shadow it
@@ -4291,6 +4391,22 @@ fun NowPlayingScreen(
                         // up into that edge as it collapses.
                         .drawWithContent {
                             drawContent()
+                            // The mini player's hairline round its cover,
+                            // coming in as the artwork lands on it rather than
+                            // all at once when the cover takes over.
+                            val edge = dock?.miniArtEdge() ?: 0f
+                            if (edge > 0f) {
+                                val width = THUMBNAIL_BORDER_WIDTH.toPx()
+                                val radius = (sleeveCorner().toPx() - width / 2f).coerceAtLeast(0f)
+                                drawRoundRect(
+                                    color = coverEdgeColor,
+                                    topLeft = Offset(width / 2f, width / 2f),
+                                    size = Size(size.width - width, size.height - width),
+                                    cornerRadius = CornerRadius(radius, radius),
+                                    style = Stroke(width),
+                                    alpha = edge,
+                                )
+                            }
                             val shown = sleeveShown()
                             if (shown > 0f) {
                                 drawRect(

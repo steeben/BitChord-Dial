@@ -66,6 +66,8 @@ class LetterboxCrop : Transformation() {
             if (!com.music.bitchord.data.settings.CustomizationSettings.cropThumbnails.value &&
                 videoIdOf(url)?.let { it in AudioOnlyVideos } != true
             ) return chain.proceed()
+            // Already put on by VideoThumbnailUpgrade, for a 4:3 file.
+            if (request.transformations.any { it is LetterboxCrop }) return chain.proceed()
             return chain.withRequest(
                 request.newBuilder().transformations(request.transformations + LetterboxCrop()).build(),
             ).proceed()

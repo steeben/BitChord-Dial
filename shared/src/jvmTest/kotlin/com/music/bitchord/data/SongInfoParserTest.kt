@@ -30,6 +30,14 @@ class SongInfoParserTest {
         assertNull(SongInfoParser.parse(html.replace("1987-07-27", "1987-02-30"), "abcdefghijk").releaseDate)
     }
 
+    @Test fun episodeReleaseDateIsThePublishDate() {
+        val html = page().replace("\"uploadDate\":\"2024-02-03\"",
+            "\"uploadDate\":\"2024-02-03\",\"publishDate\":\"2024-02-04T07:00:12-08:00\"")
+        assertEquals("2024-02-04", SongInfoParser.parse(html, "abcdefghijk", episode = true).releaseDate)
+        assertEquals("2024-02-03", SongInfoParser.parse(page(), "abcdefghijk", episode = true).releaseDate)
+        assertNull(SongInfoParser.parse(html, "abcdefghijk").releaseDate)
+    }
+
     @Test fun ignoresRecommendedVideoLikesAndMissingCounts() {
         val info = SongInfoParser.parse(page("""{"recommendations":{"toggleButtonRenderer":{
             "defaultIcon":{"iconType":"LIKE"},"defaultText":{"simpleText":"999"}}}}""", views = "-1"), "abcdefghijk")

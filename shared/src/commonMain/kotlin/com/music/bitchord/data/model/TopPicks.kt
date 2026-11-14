@@ -41,6 +41,9 @@ enum class TopPickKind {
 
     /** Music the listener hasn't played yet — YouTube's Discover Mix. */
     DISCOVERY_STATION,
+
+    /** A podcast show, on the Podcasts page's row of them. Opens the show. */
+    PODCAST_SHOW,
 }
 
 /**

@@ -33,13 +33,16 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import com.music.bitchord.data.AudioOnlyVideos
 import com.music.bitchord.data.CanvasAudioFixes
+import com.music.bitchord.data.EpisodeVideo
 import com.music.bitchord.data.VideoCanvases
 import com.music.bitchord.data.Http
 import com.music.bitchord.data.TrackLog
 import com.music.bitchord.data.canvas.CanvasDownloads
 import com.music.bitchord.data.innertube.InnerTubeXResolver
 import com.music.bitchord.data.model.Song
+import com.music.bitchord.data.model.isEpisode
 import com.music.bitchord.data.settings.AppSettings
+import com.music.bitchord.data.settings.VideoQuality
 import com.music.bitchord.playback.ChunkedDataSource
 import com.music.bitchord.playback.toSong
 import com.music.bitchord.ui.rememberIsForeground
@@ -165,7 +168,7 @@ object MusicVideoEngine {
     /** What the loaded stream was asked for, so a failed high one can step down once. */
     private var loadedCap = 0
 
-    /** Videos whose held height wouldn't decode here, played at [AUTO_HEIGHT] instead. */
+    /** Videos whose height above 1080p did not decode here. They play at [VideoQuality.SAFE_HEIGHT]. */
     private val stepDown = HashSet<String>()
 
     private val _playing = MutableStateFlow(false)
@@ -223,9 +226,9 @@ object MusicVideoEngine {
             val id = loadedId ?: return
             TrackLog.w(TAG, "video: playback failed at ${loadedCap}p (${error.errorCodeName})", about = id)
             streams.remove(id)
-            // Above 1080p YouTube serves VP9 and AV1, which not every phone
-            // decodes: one more try on the H.264 ladder before giving up.
-            if (loadedCap > AUTO_HEIGHT && stepDown.add(id)) {
+            // Some phones cannot decode the video above 1080p. Try one more
+            // time at 1080p or less.
+            if (loadedCap > VideoQuality.SAFE_HEIGHT && stepDown.add(id)) {
                 load(id, standInSong())
                 return
             }
@@ -276,13 +279,7 @@ object MusicVideoEngine {
         surfaces += Surface(view, priority)
         val app = view.context.applicationContext
         appContext = app
-        if (prefs == null) {
-            prefs = app.getSharedPreferences("music_video", Context.MODE_PRIVATE).also { stored ->
-                val held = stored.getInt(KEY_QUALITY, 0).takeIf { it > 0 }
-                _quality.value = _quality.value.copy(held = held)
-                stillVideos += stored.getStringSet(KEY_STILL, emptySet()).orEmpty()
-            }
-        }
+        ensurePrefs(app)
         val exo = ensurePlayer(app)
         if (top() === view) {
             _frameOn.value = null
@@ -307,6 +304,26 @@ object MusicVideoEngine {
                 }
             }
         }
+    }
+
+    /** Reads the stored quality box height and the still videos, one time. */
+    private fun ensurePrefs(app: Context) {
+        if (prefs != null) return
+        prefs = app.getSharedPreferences("music_video", Context.MODE_PRIVATE).also { stored ->
+            val held = stored.getInt(KEY_QUALITY, 0).takeIf { it > 0 }
+            _quality.value = _quality.value.copy(held = held)
+            stillVideos += stored.getStringSet(KEY_STILL, emptySet()).orEmpty()
+        }
+    }
+
+    /**
+     * The video quality in Settings changed. The height held by the quality
+     * box is removed, so the new setting applies at once, also to the video
+     * that plays now. Main thread.
+     */
+    fun onQualitySettingChanged(context: Context) {
+        ensurePrefs(context.applicationContext)
+        setQuality(null)
     }
 
     private fun ensurePlayer(context: Context): ExoPlayer = player ?: ExoPlayer.Builder(context)
@@ -335,7 +352,10 @@ object MusicVideoEngine {
      */
     private fun wanted(): Pair<String, Song?>? {
         val song = controller?.currentMediaItem?.toSong() ?: return null
-        if (song.isVideo) {
+        // A podcast episode's picture is its own too, though it is filed as audio.
+        if (song.isVideo || song.isEpisode) {
+            // An episode set to audio only has no picture to decode.
+            if (!song.isVideo && !EpisodeVideo.on.value) return null
             return (song.videoId to null).takeIf {
                 song.videoId !in noPicture && song.videoId !in AudioOnlyVideos && song.videoId !in stillVideos
             }
@@ -413,13 +433,12 @@ object MusicVideoEngine {
     private fun standInSong(): Song? =
         loadedFor?.let { id -> controller?.currentMediaItem?.toSong()?.takeIf { it.videoId == id } }
 
-    /** The height asked for: the held one, else what Auto opens at for this connection. */
-    private fun capFor(videoId: String): Int {
-        val metered = AppSettings.meteredConnection.value == true
-        val auto = if (metered) METERED_HEIGHT else AUTO_HEIGHT
-        val held = _quality.value.held ?: return auto
-        return if (videoId in stepDown) minOf(held, AUTO_HEIGHT) else held
-    }
+    /** The height to ask for: the held one, or the one from the setting for this connection. */
+    private fun capFor(videoId: String): Int = VideoQuality.heightToAsk(
+        setting = AppSettings.videoQualityNow,
+        held = _quality.value.held,
+        steppedDown = videoId in stepDown,
+    )
 
     private fun load(videoId: String, standInFor: Song? = null) {
         unload()
@@ -464,6 +483,15 @@ object MusicVideoEngine {
                 return@launch
             }
             if (loadedId != videoId) return@launch
+            // The cause of the height, for a log from a listener.
+            TrackLog.d(
+                TAG,
+                "video: asked for a maximum of ${cap}p (setting=${AppSettings.videoQualityNow}, " +
+                    "held=${_quality.value.held}, metered=${AppSettings.meteredConnection.value}); " +
+                    "got ${stream?.let { "${it.width}x${it.height} ${it.mimeType}" }}, " +
+                    "available heights=${stream?.heights}",
+                about = videoId,
+            )
             // A catalogue track's "video" is its cover held still; nothing to show.
             if (stream == null || stream.aspect < MIN_VIDEO_ASPECT) {
                 noPicture += videoId
@@ -621,9 +649,6 @@ object MusicVideoEngine {
     /** Narrower than this is a cover held still, not a picture worth showing. */
     private const val MIN_VIDEO_ASPECT = 1.2f
 
-    /** Where Auto opens, as on the web player: the top of YouTube's H.264 ladder. */
-    private const val AUTO_HEIGHT = 1080
-    private const val METERED_HEIGHT = 480
     private const val KEY_QUALITY = "quality"
     private const val KEY_STILL = "still_videos"
 }

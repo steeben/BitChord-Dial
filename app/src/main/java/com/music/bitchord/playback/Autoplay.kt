@@ -6,6 +6,8 @@ import com.music.bitchord.data.model.SearchFilter
 import com.music.bitchord.data.model.SearchResult
 import com.music.bitchord.data.model.QueueTier
 import com.music.bitchord.data.model.Song
+import com.music.bitchord.data.model.isEpisode
+import com.music.bitchord.data.podcasts.EpisodeAutoplay
 import com.music.bitchord.data.sources.SourceRegistry
 import com.music.bitchord.data.sources.TrackMatcher
 import com.music.bitchord.data.spotify.SpotifyRecommendations
@@ -14,6 +16,21 @@ import kotlinx.coroutines.CancellationException
 
 /** Most AutoPlay-suggested tracks kept queued ahead of the current one at once. */
 const val MAX_QUEUED_AUTOPLAY = 10
+
+/** How many tracks a station starts with, behind its seed. */
+const val INITIAL_RADIO_TRACKS = 24
+
+/**
+ * This song as the seed of its own station: named for it, and the source every
+ * track of the station is filed under. The same wherever a station is made
+ * ready, so one made ready ahead of time is the one that would be loaded.
+ */
+fun Song.asRadioSeed(): Song = copy(
+    radioName = title,
+    playbackSource = title,
+    playbackSourceType = com.music.bitchord.data.model.PlaybackSourceType.SHARED_LINK,
+    playbackSourceId = videoId,
+)
 
 /**
  * Whether AutoPlay is on for the music this device is playing.
@@ -102,6 +119,20 @@ suspend fun loadAutoplayTracks(
     seedSong: Song,
     limit: Int = MAX_QUEUED_AUTOPLAY,
 ): Result<List<Song>> {
+    // A podcast episode plays on with episodes: its show's next one, or else
+    // recommended shows' episodes. Never a station of songs.
+    if (seedSong.isEpisode) {
+        val episodes = runCatching { EpisodeAutoplay.tracks(existing, seedSong, limit) }
+            .getOrElse { if (it is CancellationException) throw it else return Result.failure(it) }
+        return Result.success(episodes.map {
+            it.copy(
+                radioName = seedSong.radioName,
+                playbackSource = seedSong.playbackSource,
+                playbackSourceType = seedSong.playbackSourceType,
+                playbackSourceId = seedSong.playbackSourceId,
+            ).asQueueEntry(QueueTier.AUTOPLAY)
+        })
+    }
     val seed = youtubeSeedFor(seedSong) ?: return Result.success(emptyList())
     // A music video plays on with music videos, as YouTube Music does.
     val videos = seedSong.isVideo && seed == seedSong.videoId

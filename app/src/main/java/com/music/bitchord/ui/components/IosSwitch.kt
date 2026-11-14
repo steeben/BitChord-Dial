@@ -194,24 +194,8 @@ internal fun Modifier.frostedGlassFill(tint: Color, shape: Shape, dark: Boolean)
         .background(TRACK_SHEEN, shape)
         .border(GLASS_EDGE_WIDTH, if (dark) Color.White.copy(alpha = 0.16f) else Color.White.copy(alpha = 0.55f), shape)
 
-/** How milky the thumb is at rest. */
-private fun thumbAlpha(dark: Boolean): Float = if (dark) 0.84f else 0.9f
-
-/**
- * The switch's thumb on any shape — its milky white fill, the bead-of-glass
- * sheen and the bright rim, with the same small shadow — so a segmented
- * selector's chosen option looks like the white part of a switch beside it.
- * [presence] fades the whole thing in and out (0 draws nothing).
- */
-internal fun Modifier.frostedThumbFill(shape: Shape, dark: Boolean, presence: Float = 1f): Modifier {
-    if (presence <= 0f) return this.clip(shape)
-    return this
-        .shadow(1.5.dp * presence, shape, clip = false)
-        .clip(shape)
-        .background(Color.White.copy(alpha = thumbAlpha(dark) * presence), shape)
-        .drawBehind { drawRect(THUMB_SHEEN, alpha = presence) }
-        .border(GLASS_EDGE_WIDTH, THUMB_RIM.copy(alpha = THUMB_RIM.alpha * presence), shape)
-}
+/** How milky the thumb is at rest; the segmented selector's thumb is made the same. */
+internal fun thumbAlpha(dark: Boolean): Float = if (dark) 0.84f else 0.9f
 
 /** The tint of a frosted track that is off, or empty: a faint film either side of the theme. */
 internal fun frostedTrackTint(dark: Boolean, density: Float): Color =
@@ -238,13 +222,13 @@ private val TRACK_SHEEN = Brush.verticalGradient(
 )
 
 /** The thumb's sheen: brighter at the top, a little shade at the foot, like a bead of glass. */
-private val THUMB_SHEEN = Brush.verticalGradient(
+internal val THUMB_SHEEN = Brush.verticalGradient(
     0f to Color.White.copy(alpha = 0.55f),
     0.5f to Color.White.copy(alpha = 0.08f),
     1f to Color.Black.copy(alpha = 0.06f),
 )
 
-private val THUMB_RIM = Color.White.copy(alpha = 0.7f)
+internal val THUMB_RIM = Color.White.copy(alpha = 0.7f)
 
 private val TrackWidth = 64.dp
 private val TrackHeight = 28.dp

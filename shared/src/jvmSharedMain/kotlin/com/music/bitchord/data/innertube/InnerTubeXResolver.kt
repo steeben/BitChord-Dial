@@ -300,7 +300,8 @@ object InnerTubeXResolver {
         val mime = stream.videoMimeType.orEmpty()
         TrackLog.d(
             TAG,
-            "video: ${width}x$height $mime ${stream.videoCodecs.orEmpty()} via ${stream.clientName}",
+            "video: ${width}x$height $mime ${stream.videoCodecs.orEmpty()} via ${stream.clientName}, " +
+                "maximum asked ${maxHeight}p, available heights ${stream.availableVideoHeights.orEmpty()}",
             about = videoId,
         )
         return VideoStream(

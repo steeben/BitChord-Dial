@@ -43,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -214,6 +215,8 @@ fun HomeScreen(
      * drawn by a caller that can act on it, i.e. passes [onTopPickClick].
      */
     topPicks: List<TopPick>? = null,
+    /** The row's heading, for a page whose row is not Home's own: null is "Top Picks for You". */
+    topPicksTitle: String? = null,
     topPicksLoading: Boolean = false,
     /** The signed-in account's name, for the personal station's "Name's Station". */
     listenerName: String? = null,
@@ -254,8 +257,9 @@ fun HomeScreen(
             null
         }
         // The dial's whole first screen: from its top to the foot of the list's
-        // viewport, so nothing below it is composed, or loads its artwork, until
-        // the list is scrolled to it.
+        // viewport, so nothing below it is part of Home's first frame. The row
+        // under it is made after that frame, ahead of the first scroll, where
+        // the caller's list state asks for it.
         val dialPageHeight: Dp? = if (title != null) (maxHeight - dialTop).coerceAtLeast(0.dp) else null
         // The artists' dial below it: a copy of the speed dial's page, resting
         // in the same place under the logo, so turning to it changes the
@@ -284,8 +288,14 @@ fun HomeScreen(
             if (onTopPickClick != null) {
                 when {
                     !topPicks.isNullOrEmpty() -> item(key = "top-picks") {
+                        // A row can be made ahead of the scroll, or kept behind
+                        // it, with no place on the screen. Its clips wait for
+                        // one: a clip is a player and a decoder.
+                        val inView by remember(listState) {
+                            derivedStateOf { listState.layoutInfo.visibleItemsInfo.any { it.key == "top-picks" } }
+                        }
                         CompositionLocalProvider(
-                            LocalArtworkMotion provides (artworkMotion && feedReady),
+                            LocalArtworkMotion provides (artworkMotion && feedReady && inView),
                             LocalArtworkImages provides feedReady,
                         ) {
                             PausedWhileScrolling(listState) {
@@ -294,6 +304,7 @@ fun HomeScreen(
                                     listenerName = listenerName,
                                     onClick = onTopPickClick,
                                     onLongPress = onTopPickLongPress,
+                                    title = topPicksTitle,
                                 )
                             }
                         }
@@ -317,8 +328,10 @@ fun HomeScreen(
         val artistPageShown by rememberUpdatedState(
             (state as? UiState.Success)?.data?.getOrNull(1)?.title == ARTIST_DIAL_SHELF_TITLE,
         )
-        val defaultFling = ScrollableDefaults.flingBehavior()
+        // Home's flings go by each frame's own time: see EvenFling.kt.
         val decay = rememberSplineBasedDecay<Float>()
+        val evenFling = remember(decay) { EvenFling(decay) }
+        FrameBeatWhileScrolling(listState)
         val dialFling = remember(listState, decay, density) {
             DialPageFling(
                 listState = listState,
@@ -331,7 +344,7 @@ fun HomeScreen(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            flingBehavior = if (dialLeads) dialFling else defaultFling,
+            flingBehavior = if (dialLeads) dialFling else evenFling,
             // The heading sits higher than the other tabs' first row: pull the
             // whole feed up by [HOME_TITLE_LIFT] with it.
             contentPadding = if (title != null) {
@@ -1646,6 +1659,20 @@ fun VideoShelfCard(
                 modifier = Modifier.fillMaxSize(),
             )
             if (isCurrent && isPlaying) SearchPlayingBars(Modifier.align(Alignment.Center))
+            // A podcast episode says how long it is, in the still's corner.
+            item.durationText?.let { duration ->
+                Text(
+                    text = duration,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White,
+                    maxLines = 1,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(8.dp)
+                        .background(Color.Black.copy(alpha = 0.72f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                )
+            }
         }
         Spacer(Modifier.height(10.dp))
         Text(

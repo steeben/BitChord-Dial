@@ -74,7 +74,12 @@ And more, on top of everything BitChord already does.
 
 ## Install and updates
 
-Download the latest APK from the [Releases](https://github.com/steeben/Dial/releases) page. Sideloading requires enabling "Install unknown apps" for whichever app you download it with.
+Download the latest APK from the [Releases](https://github.com/steeben/Dial/releases) page. Each release has two APK files:
+
+- **arm64-v8a.** For most phones. Try this file first.
+- **armeabi-v7a.** For phones with a 32-bit system. Many Android Go phones are in this group. Use this file if the first file does not install.
+
+Before you install, you must permit "Install unknown apps" for the app that you use to download the file.
 
 The app installs as **Dial**, a separate app from the official BitChord, so the two can sit side by side and neither touches the other's data. You'll need to sign in again the first time.
 

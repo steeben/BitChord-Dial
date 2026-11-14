@@ -111,6 +111,9 @@ import coil3.compose.AsyncImage
 import com.music.bitchord.data.model.LikeStatus
 import com.music.bitchord.data.model.ROW_ART_PX
 import com.music.bitchord.data.model.Song
+import com.music.bitchord.data.model.isEpisode
+import com.music.bitchord.data.EpisodeVideo
+import androidx.compose.ui.semantics.Role
 import com.music.bitchord.data.model.artworkAt
 import com.music.bitchord.data.webdav.WebDavUploads
 import com.music.bitchord.download.DownloadState
@@ -325,6 +328,9 @@ fun SongActionsSheet(
     // A local file or a finished download has no YouTube identity behind it to
     // rate, save, queue into a playlist, fetch again, or share a link for.
     val isOffline = song.localUri != null
+    // A podcast episode: no other cut to swap to, no radio, mix, lyrics or
+    // song fixes; its one choice is the video or the sound alone.
+    val episode = song.isEpisode
 
     val rows: @Composable ColumnScope.() -> Unit = {
         // The menu leads with the actions it is opened for most, as tiles in
@@ -368,7 +374,12 @@ fun SongActionsSheet(
         // a substituted copy, the other for a track held on YouTube's own —
         // and between them they are the whole of the choice, which is why they
         // sit in the same place under the same divider.
-        if (onRollbackToOriginal != null || onUpgradeQuality != null || onToggleAudioVersion != null) {
+        if (episode) {
+            if (showSleepTimer) {
+                EpisodeVideoRow()
+                GroupSeparator(palette)
+            }
+        } else if (onRollbackToOriginal != null || onUpgradeQuality != null || onToggleAudioVersion != null) {
             (onRollbackToOriginal ?: onUpgradeQuality)?.let {
                 ActionRow(
                     icon = if (onRollbackToOriginal != null) {
@@ -492,13 +503,13 @@ fun SongActionsSheet(
             )
         }
         WebDavUploadRow(song, palette, isOffline, onUploadToWebDav)
-        ActionRow(
+        if (!episode) ActionRow(
             icon = Icons.Rounded.Radio,
             label = stringResource(R.string.start_radio),
             accent = palette.accent,
             onClick = onStartRadio,
         )
-        onAiMix?.let {
+        onAiMix?.takeIf { !episode }?.let {
             ActionRow(
                 icon = BitChordIcons.AiMix,
                 label = stringResource(R.string.ai_mix),
@@ -583,7 +594,11 @@ fun SongActionsSheet(
                 LinkRowState.Absent -> Unit
             }
         }
-        ActionRow(Icons.Rounded.Info, stringResource(R.string.song_info), accent = palette.accent) {
+        ActionRow(
+            Icons.Rounded.Info,
+            stringResource(if (episode) R.string.episode_info else R.string.song_info),
+            accent = palette.accent,
+        ) {
             showingSongInfo = true
         }
         onLinkToYouTube?.let {
@@ -608,7 +623,7 @@ fun SongActionsSheet(
         // completed downloads use the same player lyric clock (including
         // embedded synced lyrics), so they need this control just as much as
         // streamed songs do.
-        onLyricsOffset?.let {
+        onLyricsOffset?.takeIf { !episode }?.let {
             ActionRow(
                 icon = Icons.Rounded.Tune,
                 label = stringResource(R.string.lyrics_offset),
@@ -627,7 +642,7 @@ fun SongActionsSheet(
         // Near the bottom, just above the log: a repair for the track playing
         // now, reached for rarely and only when something is visibly wrong.
         // Its choices slide up as a page of their own — see [SongFixPage].
-        if (!canvasAudioFixes.isNullOrEmpty()) {
+        if (!episode && !canvasAudioFixes.isNullOrEmpty()) {
             ActionRow(
                 icon = Icons.Rounded.Build,
                 label = stringResource(R.string.fix_canvas_audio_mismatch),
@@ -1406,6 +1421,48 @@ internal fun ActionRow(
             Spacer(Modifier.width(14.dp))
             iconView()
         }
+    }
+}
+
+/**
+ * The player menu's switch for a podcast episode: its video, or the sound
+ * alone. One choice for every episode — see [EpisodeVideo].
+ */
+@Composable
+private fun EpisodeVideoRow() {
+    val on by EpisodeVideo.on.collectAsStateWithLifecycle()
+    val label = stringResource(R.string.episode_play_video)
+    if (LocalActionRowStyle.current == ActionRowStyle.Menu) {
+        IosMenuRow(
+            label = label,
+            icon = Icons.Rounded.Videocam,
+            onClick = { EpisodeVideo.set(!on) },
+            trailing = { IosSwitch(checked = on, onCheckedChange = EpisodeVideo::set) },
+        )
+        return
+    }
+    val foreground = MaterialTheme.colorScheme.onBackground
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(role = Role.Switch) { EpisodeVideo.set(!on) }
+            .padding(start = 22.dp, end = 18.dp, top = 9.dp, bottom = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Videocam,
+            contentDescription = null,
+            tint = foreground,
+            modifier = Modifier.size(22.dp),
+        )
+        Spacer(Modifier.width(18.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = foreground,
+            modifier = Modifier.weight(1f),
+        )
+        IosSwitch(checked = on, onCheckedChange = EpisodeVideo::set)
     }
 }
 

@@ -24,6 +24,11 @@
     <string name="choose_lyrics_provider">Söz sağlayıcısını seç</string>
     <string name="clear">Temizle</string>
     <string name="close_lyrics">Sözleri kapat</string>
+    <string name="comments">Yorumlar</string>
+    <string name="comments_off">Yorumlar kapalı</string>
+    <string name="comments_unavailable">Yorumlar yüklenemiyor</string>
+    <string name="more_comments">Daha fazla yorum</string>
+    <string name="no_comments">Yorum yok</string>
     <string name="data_saver">Data-Saver</string>
     <string name="decrease_lyrics_offset">Decrease lyrics offset</string>
     <string name="downgraded_from">↓ %1$s kaynağından</string>

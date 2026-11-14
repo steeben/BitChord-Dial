@@ -38,6 +38,15 @@
     <string name="audio_files_on_device">Audio files on device</string>
     <string name="on_device">On Device</string>
     <string name="playlists">Playlists</string>
+    <string name="podcasts">Podcasts</string>
+    <string name="podcasts_dial_menu">Podcasts options</string>
+    <string name="podcast">Podcast</string>
+    <string name="read_more">Read more</string>
+    <string name="about_podcast">About the podcast</string>
+    <string name="new_episode">New episode</string>
+    <string name="episodes_for_later">Episodes for later</string>
+    <string name="podcast_source">Recommended shows</string>
+    <string name="podcast_source_both">Both</string>
     <string name="new_playlist">New playlist</string>
     <string name="saved_to_youtube_music">Saved to YouTube Music</string>
     <string name="sign_in">Sign in</string>
@@ -411,6 +420,8 @@
     <string name="hide_volume_bar_subtitle">Removes the volume slider from the main player</string>
     <string name="hide_song_status">Hide Song Status</string>
     <string name="hide_song_status_subtitle">Hides the “Playing from” or “Played by” text and the drag handle in the main player</string>
+    <string name="hide_player_status_bar">Hide status bar</string>
+    <string name="hide_player_status_bar_subtitle">Hides the status bar and the top shadow in the main player</string>
     <string name="show_queue_history">Show queue history</string>
     <string name="show_queue_history_subtitle">Show up to 25 previously played songs above Now playing in the queue</string>
     <string name="off">Off</string>
@@ -429,18 +440,24 @@
     <string name="filter_non_music_audio">Filter non-music audio</string>
     <string name="filter_non_music_audio_subtitle">Hides clips under 30 seconds, WAV files, voice notes, recordings and system sounds</string>
     <string name="performance">Performance</string>
+    <string name="video_quality">Video quality</string>
+    <string name="video_quality_subtitle">For music videos, and for a music video that shows as the Canvas of a song. Max quality uses up to 4K. It uses much more data and battery, and can be slow on weak phones.</string>
+    <string name="video_quality_wifi" translatable="false">Wi-Fi</string>
+    <string name="video_quality_mobile">Mobile data</string>
+    <string name="video_quality_480" translatable="false">480p</string>
+    <string name="video_quality_1080" translatable="false">1080p</string>
+    <string name="video_quality_max">Max quality</string>
     <string name="high_performance_mode">High performance mode</string>
-    <string name="high_performance_subtitle">Uses full animations and blur, and requests a higher display refresh rate</string>
+    <string name="high_performance_subtitle">Requests a higher display refresh rate</string>
     <string name="high_performance_active">%1$d Hz requested. Android may lower it when needed.</string>
     <string name="beta">Beta</string>
     <string name="refresh_rate">Refresh rate</string>
-    <string name="high_performance_before_enabling">Before enabling</string>
-    <string name="high_performance_battery_warning">First set Dial\'s battery usage to Unrestricted. Higher refresh rates use more battery, CPU and GPU, and may warm your device.</string>
-    <string name="open_battery_settings">Open battery settings</string>
-    <string name="enable_high_performance_title">Enable high performance mode?</string>
-    <string name="enable_high_performance_confirmation">Enable only if Dial\'s battery use is set to Unrestricted. Android can still limit the refresh rate when the device is hot or low on power.</string>
+    <string name="high_performance_battery_needed">Set the battery usage of Dial to Unrestricted. Tap here to open the settings.</string>
+    <string name="disable_haptics">Disable haptics</string>
+    <string name="disable_haptics_subtitle">Stops all vibration feedback in Dial</string>
+    <string name="static_background">Static background colours</string>
+    <string name="static_background_subtitle">Stops the movement of the colours behind the app\'s pages</string>
     <string name="enable">Enable</string>
-    <string name="not_yet">Not yet</string>
     <string name="activity">Activity</string>
     <string name="activity_competing">Competing</string>
     <string name="activity_dialog_message">The verb shown above the card.</string>
@@ -1305,4 +1322,19 @@
     <string name="old_app_notice_body">Your settings, library, listening history and sign-ins from the old app don\'t come over on their own. In the old app, open Settings, then Your data, and tap Export data. Then tap Import data here and pick that file. You\'ll need to sign in again.</string>
     <string name="old_app_notice_take_me_there">Take Me There</string>
     <string name="old_app_notice_got_it">Got It</string>
+    <string name="episode_info">Info</string>
+    <string name="episode_play_video">Play video</string>
+    <string name="search_podcasts_hint">Search podcasts</string>
+    <string name="podcast_search_hint">Search for shows and episodes.</string>
+    <string name="podcast_search_library_hint">Search the shows you follow, the shows on your dial and your episodes for later.</string>
+    <string name="podcast_search_failed">Could not search. Try again.</string>
+    <string name="podcast_search_none">No shows or episodes for “%1$s”.</string>
+    <string name="podcast_search_shows">Shows</string>
+    <string name="podcast_search_episodes">Episodes</string>
+    <string name="episode_filter">Filter episodes</string>
+    <string name="episode_filter_all">All</string>
+    <string name="episode_filter_unplayed">Unplayed</string>
+    <string name="episode_filter_in_progress">In progress</string>
+    <string name="episode_filter_played">Played</string>
+    <string name="episode_filter_none">No episodes in this filter.</string>
 </resources>

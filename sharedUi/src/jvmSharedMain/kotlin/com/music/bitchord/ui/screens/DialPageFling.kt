@@ -1,15 +1,17 @@
 package com.music.bitchord.ui.screens
 
-import androidx.compose.animation.core.AnimationState
+import androidx.compose.animation.core.DecayAnimation
 import androidx.compose.animation.core.DecayAnimationSpec
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animate
-import androidx.compose.animation.core.animateDecay
+import androidx.compose.animation.core.TargetBasedAnimation
+import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.calculateTargetValue
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.ScrollScope
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.ui.MotionDurationScale
+import kotlin.coroutines.coroutineContext
 import kotlin.math.abs
 
 /** A shelf's key in Home's list: by title, so shelves landing above it don't re-key it. */
@@ -37,6 +39,8 @@ val ARTIST_DIAL_PAGE_KEY: String = homeShelfKey(ARTIST_DIAL_SHELF_TITLE)
  * dial sits exactly where the speed dial does. [nextOffsetPx] is where
  * anything after the dials comes to rest, clear of the top bar.
  * [artistPageFollows] says whether the speed dial has the artists' dial after it.
+ *
+ * Both the glide and the settle go by each frame's own time, see [runEven].
  */
 internal class DialPageFling(
     private val listState: LazyListState,
@@ -89,14 +93,15 @@ internal class DialPageFling(
         var remaining = initialVelocity
         var caught = false
         var last = 0f
-        AnimationState(initialValue = 0f, initialVelocity = initialVelocity).animateDecay(decay) {
+        DecayAnimation(decay, Float.VectorConverter, 0f, initialVelocity).runEven { value, velocity ->
             val delta = value - last
             val consumed = scrollBy(delta)
             last = value
             remaining = velocity
             when {
-                straddlingPage() != null -> { caught = true; cancelAnimation() }
-                abs(delta - consumed) > 0.5f -> { remaining = 0f; cancelAnimation() }
+                straddlingPage() != null -> { caught = true; false }
+                abs(delta - consumed) > 0.5f -> { remaining = 0f; false }
+                else -> true
             }
         }
         return if (caught) finishOnPage(remaining, remaining) else remaining
@@ -113,13 +118,15 @@ internal class DialPageFling(
     private suspend fun ScrollScope.settle(target: Float, initialVelocity: Float) {
         if (abs(target) < 1f) return
         var scrolled = 0f
-        animate(
+        TargetBasedAnimation(
+            animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
+            typeConverter = Float.VectorConverter,
             initialValue = 0f,
             targetValue = target,
             initialVelocity = initialVelocity,
-            animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
-        ) { value, _ ->
+        ).runEven(scale = coroutineContext[MotionDurationScale]?.scaleFactor ?: 1f) { value, _ ->
             scrolled += scrollBy(value - scrolled)
+            true
         }
     }
 }

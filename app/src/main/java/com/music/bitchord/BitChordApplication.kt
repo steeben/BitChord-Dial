@@ -59,6 +59,8 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         // The player is drawn by the shared UI module; this is what it reads
         // underneath — settings, the Canvas decoder, outputs, the party.
         AndroidStreamHooks.installEarly()
+        // A log left on carries on from here, so that it has the launch.
+        com.music.bitchord.data.LogRecorder.resumeAtLaunch(this)
         PlayerPlatform.install(AndroidPlayerHost(this))
         com.music.bitchord.ui.AppUi.install(com.music.bitchord.ui.AndroidAppUiHost)
         // Per-song Canvas/audio fixes, from the player's ⋯ menu.
@@ -163,6 +165,8 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         com.music.bitchord.playback.BoundedContextPersistence.init(this)
         com.music.bitchord.data.settings.PlayedCollections.init(this)
         com.music.bitchord.data.settings.DevicePlays.init(this)
+        // Only told where its file is: it is read when a show's page or playback first needs it.
+        com.music.bitchord.data.podcasts.EpisodeProgress.init(this)
         com.music.bitchord.playback.PartyPersonalQueueStash.init(this)
         // Which tracks the listener has reverted to YouTube's own upload. Read
         // by [Song.toMediaItem], so it has to be open before the restart
@@ -252,6 +256,10 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
             // the header is attached per request instead. See WebDavCoilAuth.
             .components {
                 add(WebDavCoilAuth())
+                // A video's picture is listed at 400x225; where it is drawn
+                // large, load a larger copy. Before LetterboxCrop, which
+                // then sees the address in use. See VideoThumbnailUpgrade.
+                add(com.music.bitchord.data.VideoThumbnailUpgrade())
                 // Video thumbnails come letterboxed; trim the bars so a
                 // square crop fills with picture. See LetterboxCrop.
                 add(com.music.bitchord.data.LetterboxCrop.Install())

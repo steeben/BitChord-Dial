@@ -339,12 +339,15 @@ internal fun Modifier.miniPlayerGestures(
  * them into a position only on the frames it is actually flying to them, so a
  * bar folding and unfolding on every scroll pays nothing for this.
  *
+ * [bordered] says this cover wears [thumbnailBorder], so the player's artwork
+ * takes that line on as it lands — see [PlayerDock.miniArtEdge].
+ *
  * Stands aside while the player's own artwork is on its way to or from here.
  * Read at draw, off the sheet's offset — a layer property per frame of the
  * sheet's travel, never a recomposition of the bar.
  */
 @Composable
-internal fun Modifier.playerDockArt(dock: PlayerDock?, corner: Dp): Modifier {
+internal fun Modifier.playerDockArt(dock: PlayerDock?, corner: Dp, bordered: Boolean = false): Modifier {
     if (dock == null) return this
     val placed = remember { arrayOfNulls<LayoutCoordinates>(1) }
     DisposableEffect(dock) {
@@ -353,7 +356,7 @@ internal fun Modifier.playerDockArt(dock: PlayerDock?, corner: Dp): Modifier {
     return this
         .onPlaced { coordinates ->
             placed[0] = coordinates
-            dock.reportMiniArt(coordinates, corner)
+            dock.reportMiniArt(coordinates, corner, bordered)
         }
         .graphicsLayer { alpha = if (dock.coversMiniArt) 0f else 1f }
 }
@@ -530,7 +533,7 @@ fun MiniPlayer(
             Box(
                 modifier = Modifier
                     .size(width = artWidth, height = 40.dp)
-                    .playerDockArt(dock, artCorner)
+                    .playerDockArt(dock, artCorner, bordered = true)
                     .clip(RoundedCornerShape(artCorner))
                     .thumbnailBorder(RoundedCornerShape(artCorner))
                     .background(MaterialTheme.colorScheme.surfaceVariant),

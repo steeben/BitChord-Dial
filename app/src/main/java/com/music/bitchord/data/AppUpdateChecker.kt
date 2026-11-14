@@ -106,18 +106,21 @@ object AppUpdateChecker {
     }
 
     /**
-     * The release usually carries exactly one `.apk`; take its direct download
-     * URL. A release without one (source-only draft, renamed asset) leaves
-     * [UpdateInfo.apkUrl] null and the UI falls back to opening the releases
-     * page as before.
+     * The direct download URL of the release's `.apk` for this phone: a
+     * release carries one for each ABI (see [pickUpdateApk]). A release with
+     * none that fits leaves [UpdateInfo.apkUrl] null and the UI falls back to
+     * opening the releases page.
      */
     private fun apkAssetUrl(release: JsonObject): String? = runCatching {
-        release["assets"]?.jsonArray
+        val assets = release["assets"]?.jsonArray
             ?.mapNotNull { it as? JsonObject }
-            ?.firstOrNull { asset ->
-                asset["name"]?.jsonPrimitive?.contentOrNull?.endsWith(".apk", ignoreCase = true) == true &&
-                    asset["state"]?.jsonPrimitive?.contentOrNull == "uploaded"
-            }
+            ?.filter { it["state"]?.jsonPrimitive?.contentOrNull == "uploaded" }
+            .orEmpty()
+        val name = pickUpdateApk(
+            assets.mapNotNull { it["name"]?.jsonPrimitive?.contentOrNull },
+            Build.SUPPORTED_ABIS.toList(),
+        )
+        assets.firstOrNull { it["name"]?.jsonPrimitive?.contentOrNull == name }
             ?.get("browser_download_url")
             ?.jsonPrimitive
             ?.contentOrNull

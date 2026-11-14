@@ -53,10 +53,18 @@ import com.music.bitchord.data.model.ArtistPage
 import com.music.bitchord.data.model.BrowseType
 import com.music.bitchord.data.model.DetailPage
 import com.music.bitchord.data.model.HomeShelf
+import com.music.bitchord.data.podcasts.PodcastsDial
+import com.music.bitchord.data.podcasts.PodcastsFeed
+import com.music.bitchord.data.spotify.SpotifyPodcasts
+import com.music.bitchord.data.spotify.SpotifyRecommendations
+import com.music.bitchord.data.podcasts.PodcastSearch
 import com.music.bitchord.data.model.withoutRepeatsOf
 import com.music.bitchord.data.model.LibraryPage
 import com.music.bitchord.data.model.LibraryState
 import com.music.bitchord.data.model.LikeStatus
+import com.music.bitchord.data.ExploreArtCache
+import com.music.bitchord.data.artByKey
+import com.music.bitchord.data.withArt
 import com.music.bitchord.data.model.MoodGenre
 import com.music.bitchord.data.model.MoodGenreSection
 import com.music.bitchord.data.model.PlaylistPrivacy
@@ -109,6 +117,9 @@ import com.music.bitchord.data.sources.TrackMatcher
 import com.music.bitchord.playback.AudioCache
 import com.music.bitchord.playback.BoundedContextRequests
 import com.music.bitchord.playback.DirectSourceGate
+import com.music.bitchord.playback.INITIAL_RADIO_TRACKS
+import com.music.bitchord.playback.asRadioSeed
+import com.music.bitchord.playback.loadAutoplayTracks
 import com.music.bitchord.playback.contextEntryKey
 import com.music.bitchord.playback.StreamChoice
 import com.music.bitchord.ui.screens.CACHE_FOLDER_BROWSE_ID
@@ -123,6 +134,12 @@ import com.music.bitchord.data.DuplicateGroup
 import com.music.bitchord.data.ArtistOnDevice
 import com.music.bitchord.data.DeviceArtists
 import com.music.bitchord.data.LibraryArtists
+import com.music.bitchord.data.LibraryAlbums
+import com.music.bitchord.data.model.SearchTopPick
+import com.music.bitchord.data.model.SourceSearch
+import com.music.bitchord.data.spotify.SpotifySearch
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import com.music.bitchord.data.canvas.AppleArtistArtRepository
 import com.music.bitchord.data.model.BrowseItem
 import kotlinx.coroutines.flow.map
@@ -335,43 +352,119 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }.flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    /** An artist or album made of a source's own songs: its row on the search page and its tracks. */
+    private class SongGroupHit(val item: BrowseItem, val songs: List<Song>)
+
     /**
-     * The Library source's artists for the current query: everyone in the
-     * Library's songs whose name matches, each a row above the songs that
-     * opens their page. Empty while the field is.
+     * The artists and albums among [songs] whose name has [query] in it, for
+     * the Library and Addons sources: artists first, then albums. Each opens
+     * as a page of its own songs ([openSourceBrowse]).
      */
-    private val libraryArtistHits: StateFlow<List<Pair<String, List<Song>>>> =
+    private fun songGroupHits(songs: List<Song>, query: String): List<SongGroupHit> {
+        val resources = getApplication<Application>().resources
+        val artists = LibraryArtists.search(songs, query).map { (name, tracks) ->
+            SongGroupHit(
+                BrowseItem(
+                    browseId = libraryGroupId(BrowseType.ARTIST, name),
+                    title = name,
+                    subtitle = resources.getQuantityString(R.plurals.song_count_plural, tracks.size, tracks.size),
+                    thumbnailUrl = AppleArtistArtRepository.cached(name)?.heroUrl
+                        ?: tracks.firstNotNullOfOrNull { it.thumbnailUrl },
+                    type = BrowseType.ARTIST,
+                ),
+                tracks,
+            )
+        }
+        val albums = LibraryAlbums.search(songs, query).map { album ->
+            SongGroupHit(
+                BrowseItem(
+                    browseId = libraryGroupId(BrowseType.ALBUM, album.name, album.artist),
+                    title = album.name,
+                    subtitle = album.artist,
+                    thumbnailUrl = album.tracks.firstNotNullOfOrNull { it.thumbnailUrl },
+                    type = BrowseType.ALBUM,
+                ),
+                album.tracks,
+            )
+        }
+        return artists + albums
+    }
+
+    /** The Library source's artists and albums for the current query. Empty while the field is. */
+    private val libraryGroupHits: StateFlow<List<SongGroupHit>> =
         combine(_librarySongs, _query) { state, query ->
-            if (state is UiState.Success) LibraryArtists.search(state.data, query) else emptyList()
+            if (state is UiState.Success) songGroupHits(state.data, query) else emptyList()
         }.flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** [libraryArtistHits] as the rows the search page draws. */
-    val libraryArtistResults: StateFlow<List<BrowseItem>> = libraryArtistHits.map { hits ->
-        val resources = getApplication<Application>().resources
-        hits.map { (name, tracks) ->
-            BrowseItem(
-                browseId = libraryGroupId(BrowseType.ARTIST, name),
-                title = name,
-                subtitle = resources.getQuantityString(R.plurals.song_count_plural, tracks.size, tracks.size),
-                thumbnailUrl = AppleArtistArtRepository.cached(name)?.heroUrl
-                    ?: tracks.firstNotNullOfOrNull { it.thumbnailUrl },
-                type = BrowseType.ARTIST,
-            )
+    /** The Addons source's artists and albums, found among the songs of [addonResults]. */
+    private val _addonGroupHits = MutableStateFlow<List<SongGroupHit>>(emptyList())
+
+    /** The Spotify source's artists, albums and playlists for the submitted query. */
+    private val _spotifyBrowse = MutableStateFlow<List<BrowseItem>>(emptyList())
+
+    /** Spotify's own top result for the submitted query, when its answer names one. */
+    private val _spotifyTopPick = MutableStateFlow<SearchTopPick?>(null)
+
+    /**
+     * The artist, album and playlist rows of the source the Search tab looks
+     * at, for its tabs and its top result card. YouTube's rows come with its
+     * results, so this is empty for it.
+     */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val sourceBrowseResults: StateFlow<List<BrowseItem>> = _searchSource.flatMapLatest { source ->
+        when (source) {
+            SearchSource.LIBRARY -> libraryGroupHits.map { hits -> hits.map { it.item } }
+            SearchSource.ADDONS -> _addonGroupHits.map { hits -> hits.map { it.item } }
+            SearchSource.SPOTIFY -> _spotifyBrowse
+            SearchSource.YOUTUBE -> flowOf(emptyList<BrowseItem>())
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** Opens the page of a [libraryArtistResults] row, as the Library's own artist list does. */
-    fun openLibraryArtist(item: BrowseItem) {
-        val tracks = libraryArtistHits.value.firstOrNull { it.first == item.title }?.second ?: return
-        openSongGroup(
-            browseId = item.browseId,
-            title = item.title,
-            subtitle = "",
-            thumbnailUrl = null,
-            type = BrowseType.ARTIST,
-            songs = tracks,
-        )
+    /** The top result the source names itself; null lets the page pick by name. */
+    val sourceTopPick: StateFlow<SearchTopPick?> = combine(_searchSource, _spotifyTopPick) { source, pick ->
+        pick.takeIf { source == SearchSource.SPOTIFY }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /**
+     * Opens a [sourceBrowseResults] row. A Library or Addons artist or album
+     * is a page of its own songs. A Spotify playlist opens as Spotify
+     * playlists do. Spotify has no artist or album page here, so those open
+     * the YouTube Music page of the same name, or say that there is none.
+     */
+    fun openSourceBrowse(item: BrowseItem) {
+        if (item.browseId.startsWith(LIBRARY_GROUP_PREFIX)) {
+            val hit = (libraryGroupHits.value + _addonGroupHits.value)
+                .firstOrNull { it.item.browseId == item.browseId } ?: return
+            openSongGroup(
+                browseId = item.browseId,
+                title = item.title,
+                subtitle = if (item.type == BrowseType.ALBUM) item.subtitle else "",
+                thumbnailUrl = null,
+                type = item.type,
+                songs = hit.songs,
+            )
+            return
+        }
+        if (item.browseId.startsWith(SPOTIFY_PAGE_PREFIX)) {
+            openDetail(item.browseId, item.title, item.subtitle, item.thumbnailUrl, BrowseType.PLAYLIST)
+            return
+        }
+        viewModelScope.launch {
+            val found = if (item.type == BrowseType.ARTIST) {
+                YtMusicRepository.findArtistPageId(item.title).getOrNull()
+                    ?.let { item.copy(browseId = it, subtitle = text(R.string.artist)) }
+            } else {
+                YtMusicRepository.search("${item.title} ${item.subtitle}".trim(), SearchFilter.ALBUMS).getOrNull()
+                    ?.filterIsInstance<SearchResult.Browse>()
+                    ?.let { rows -> SourceSearch.matchAlbum(item.title, rows.map { it.item }) }
+            }
+            if (found == null) {
+                toast(getApplication<Application>().getString(R.string.couldnt_find, item.title))
+            } else {
+                openDetail(found.browseId, found.title, found.subtitle, found.thumbnailUrl ?: item.thumbnailUrl, found.type)
+            }
+        }
     }
 
     // The search pipeline's own state. Declared here, above [init], because
@@ -516,8 +609,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         durationMs: Long,
         album: String? = null,
         localUri: String? = null,
+        /** A podcast episode: it has no lyrics, so none are looked for. */
+        episode: Boolean = false,
     ) {
-        reloadLyrics = { loadLyrics(videoId, title, artist, durationMs, album, localUri) }
+        reloadLyrics = { loadLyrics(videoId, title, artist, durationMs, album, localUri, episode) }
         // Looked up whether or not "Synced lyrics" is on: that setting only
         // hides the strip on the player, and the lyrics button still opens them.
         val sources = AppSettings.lyricsSources.value
@@ -564,6 +659,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _lyricsInstrumental.value = videoId in AppSettings.instrumentalTracks.value
         if (_lyricsInstrumental.value) {
             // Marked instrumental: nothing to look up and nothing to show.
+            _lyricsChecked.value = true
+            return
+        }
+        if (episode) {
+            // Talk, not a song: no service is asked, and the player offers
+            // the episode's comments where the lyrics would be.
             _lyricsChecked.value = true
             return
         }
@@ -1095,17 +1196,46 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun knownArtistSubscription(browseId: String): SubscriptionState? =
         _detailStack.value.firstOrNull { it.browseId == browseId }?.subscription
             ?: artistCardPages[browseId]?.subscription
+            ?: artistCardStars[browseId]
 
     /**
-     * Fetches the artists' cards ahead of their menus — the artists' dial,
+     * Fetches the artists' stars ahead of their menus — the artists' dial,
      * which is held for its menu more than anything — one at a time, so the
-     * star and the shuffle are there the moment a menu opens.
+     * star is there the moment a menu opens.
+     *
+     * The star is all a menu needs before it is used, and the artist's landing
+     * page carries it: one request. This used to read each artist's whole page,
+     * every song and release paged out, and to start again from the top each
+     * time Home changed while a run was still going, so a launch read the
+     * dial's three dozen artists four and five times over, for half a minute.
+     * Now there is one run, each artist is asked once, and it waits for Home.
      */
     fun prefetchArtistCards(browseIds: List<String>) {
-        viewModelScope.launch {
-            browseIds.filterNot { it in artistCardPages }.forEach { artistCardPage(it) }
+        artistStarQueue += browseIds.filterNot { it in artistCardStars || it in artistCardPages }
+        if (artistStarJob?.isActive == true) return
+        artistStarJob = viewModelScope.launch {
+            awaitHomeSettled()
+            while (true) {
+                val browseId = artistStarQueue.firstOrNull() ?: break
+                artistStarQueue.remove(browseId)
+                if (browseId in artistCardStars || browseId in artistCardPages) continue
+                artistStar(browseId)
+            }
         }
     }
+
+    /** The artists whose stars [prefetchArtistCards] has yet to ask for, and its one run. */
+    private val artistStarQueue = LinkedHashSet<String>()
+    private var artistStarJob: Job? = null
+
+    /** Stars read off artists' landing pages, by artist. */
+    private val artistCardStars = HashMap<String, SubscriptionState>()
+
+    private suspend fun artistStar(browseId: String): SubscriptionState? =
+        artistCardPages[browseId]?.subscription
+            ?: artistCardStars[browseId]
+            ?: YtMusicRepository.artistLanding(browseId).getOrNull()?.subscription
+                ?.also { artistCardStars[browseId] = it }
 
     fun loadArtistSubscription(browseId: String, onResult: (SubscriptionState?) -> Unit) {
         val known = _detailStack.value.firstOrNull { it.browseId == browseId }?.subscription
@@ -1113,7 +1243,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             onResult(known)
             return
         }
-        viewModelScope.launch { onResult(artistCardPage(browseId)?.subscription) }
+        viewModelScope.launch { onResult(artistStar(browseId)) }
     }
 
     /**
@@ -1132,18 +1262,60 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /**
      * "I'm Feeling Lucky"'s seeds for this session: about twenty songs drawn
      * evenly from what was played lately, what has been in heavy rotation and
-     * what is liked — gathered on the first roll and re-rolled from after that.
+     * what is liked — gathered ahead of the first roll and re-rolled from after that.
      */
     private var luckyPool: List<Song>? = null
     private var lastLucky: String? = null
 
-    /** A random seed from the pool (never the last one twice running), or null if there is none. */
-    fun feelingLucky(onSeed: (Song?) -> Unit) {
+    /** One roll of the die: the song it landed on, as a station's seed, and that station, in or on its way. */
+    class LuckyRoll(val seed: Song, val station: kotlinx.coroutines.Deferred<Result<List<Song>>>)
+
+    /**
+     * The next roll, made ready before the die is tapped.
+     *
+     * A roll needs its seeds, its station and its first song's stream, one
+     * after the other, and the die's own turn is over long before all three
+     * are in: the song came a second or more after the die had landed. Ready
+     * ahead of time, a tap has only the song itself left to start.
+     */
+    private var luckyNext: kotlinx.coroutines.Deferred<LuckyRoll?>? = null
+
+    /** Makes the next roll ready, if one is not ready or on its way already. */
+    fun prepareLucky() {
+        if (luckyNext != null) return
+        luckyNext = viewModelScope.async { rollLucky() }
+    }
+
+    /** Picks a seed from the pool (never the last one twice running) and starts on its station and stream. */
+    private suspend fun rollLucky(): LuckyRoll? {
+        val pool = luckyPool ?: gatherLuckySeeds().also { if (it.isNotEmpty()) luckyPool = it }
+        val pick = pool.filter { it.videoId != lastLucky }.ifEmpty { pool }.randomOrNull() ?: return null
+        lastLucky = pick.videoId
+        val seed = pick.asRadioSeed()
+        viewModelScope.launch { runCatching { warmStream(seed) } }
+        val station = viewModelScope.async {
+            runCatching {
+                loadAutoplayTracks(existing = listOf(seed), seedSong = seed, limit = INITIAL_RADIO_TRACKS)
+            }.getOrElse { Result.failure(it) }
+        }
+        return LuckyRoll(seed, station)
+    }
+
+    /** The roll made ready for this tap, or one made now; null if there is nothing to roll from. */
+    fun feelingLucky(onRoll: (LuckyRoll?) -> Unit) {
         viewModelScope.launch {
-            val pool = luckyPool ?: gatherLuckySeeds().also { if (it.isNotEmpty()) luckyPool = it }
-            val seed = pool.filter { it.videoId != lastLucky }.ifEmpty { pool }.randomOrNull()
-            lastLucky = seed?.videoId
-            onSeed(seed)
+            val ready = luckyNext
+            luckyNext = null
+            // One made ready with nothing to roll from (no network at the
+            // time) is not the answer to this tap: it is rolled again now.
+            val roll = ready?.let { runCatching { it.await() }.getOrNull() }
+                ?: runCatching { rollLucky() }.getOrNull()
+            onRoll(roll)
+            // The one after it, once this one has had the network to itself.
+            if (roll != null) {
+                delay(LUCKY_NEXT_DELAY_MS)
+                prepareLucky()
+            }
         }
     }
 
@@ -1236,9 +1408,22 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** Artist pages fetched for card menus, so the menu's rows share one request. */
     private val artistCardPages = HashMap<String, ArtistPage>()
 
-    private suspend fun artistCardPage(browseId: String): ArtistPage? =
-        artistCardPages[browseId] ?: YtMusicRepository.artistPage(browseId).getOrNull()
-            ?.also { artistCardPages[browseId] = it }
+    /** The same pages while they are on their way, so two askers share one request. */
+    private val artistCardLoads = HashMap<String, kotlinx.coroutines.Deferred<ArtistPage?>>()
+
+    private suspend fun artistCardPage(browseId: String): ArtistPage? {
+        artistCardPages[browseId]?.let { return it }
+        val load = artistCardLoads.getOrPut(browseId) {
+            viewModelScope.async {
+                YtMusicRepository.artistPage(browseId).getOrNull()?.also { artistCardPages[browseId] = it }
+            }
+        }
+        return try {
+            load.await()
+        } finally {
+            if (artistCardLoads[browseId] === load) artistCardLoads.remove(browseId)
+        }
+    }
 
     /** Stars or un-stars an artist from a menu; [onDone] gets whether it worked. */
     fun setArtistSubscribed(browseId: String, state: SubscriptionState, subscribed: Boolean, onDone: (Boolean) -> Unit) {
@@ -1256,6 +1441,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         artistCardPages[browseId]?.let { card ->
             card.subscription?.let { artistCardPages[browseId] = card.copy(subscription = it.copy(subscribed = subscribed)) }
         }
+        artistCardStars[browseId]?.let { artistCardStars[browseId] = it.copy(subscribed = subscribed) }
         _detailStack.value = _detailStack.value.map { page ->
             val subscription = page.subscription
             if (page.browseId != browseId || subscription == null) {
@@ -1880,11 +2066,26 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 if (!offered && _activeAccountId.value == DeveloperOptions.PLACEHOLDER_ACCOUNT_ID) leavePlaceholder()
             }
         }
+        // The die's first roll, made ready once the launch is out of the way.
+        viewModelScope.launch {
+            CustomizationSettings.feelingLucky.collectLatest { on ->
+                if (on) {
+                    delay(LUCKY_WARM_DELAY_MS)
+                    prepareLucky()
+                }
+            }
+        }
         startSearchPipeline()
         startSuggestPipeline()
         startTypeaheadMediaPipeline()
         loadHome()
-        loadExplore()
+        // Explore waits its turn: nothing shows it at launch, and Home's own
+        // requests should not have to share the first seconds with it. Opening
+        // the tab before then asks for it at once, see [onExploreShown].
+        viewModelScope.launch {
+            awaitHomeSettled()
+            ensureExplore()
+        }
         if (_signedIn.value) {
             loadLibrary()
             loadAccount()
@@ -2064,9 +2265,53 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * Suspends until this launch's Home is in (its feed and Recently played,
+     * or their failure), or for [STARTUP_SETTLE_MS] at the longest. What Home
+     * itself does not show waits on this, so that the first seconds of a
+     * launch belong to the page that is on screen.
+     */
+    suspend fun awaitHomeSettled() {
+        withTimeoutOrNull(STARTUP_SETTLE_MS) { _homeFresh.first { it } }
+    }
+
+    /** [awaitHomeSettled], given up at once when [sooner] says the wait is over. */
+    suspend fun awaitHomeSettled(sooner: kotlinx.coroutines.flow.Flow<Boolean>) {
+        withTimeoutOrNull(STARTUP_SETTLE_MS) {
+            kotlinx.coroutines.flow.merge(_homeFresh, sooner).first { it }
+        }
+    }
+
+    /** Whether Explore's categories have been asked for since the app started. */
+    private var exploreRequested = false
+
+    /**
+     * Whether the Explore tab has been opened since the app started. The page
+     * behind each category is only read ahead from then on.
+     */
+    private var exploreShown = false
+
+    /** Categories whose page has been read since the app started, and those being read now. */
+    private val exploreWarmed = HashSet<String>()
+    private val exploreInFlight = HashSet<String>()
+    private val exploreArtLimiter = Semaphore(EXPLORE_ART_PARALLELISM)
+
     fun loadExplore() {
+        exploreRequested = true
         _explore.value = UiState.Loading
         viewModelScope.launch { fetchExplore() }
+    }
+
+    private fun ensureExplore() {
+        if (!exploreRequested) loadExplore()
+    }
+
+    /** Call when the Explore tab becomes visible. */
+    fun onExploreShown() {
+        ensureExplore()
+        if (exploreShown) return
+        exploreShown = true
+        (_explore.value as? UiState.Success)?.data?.let(::loadMoodGenreArtwork)
     }
 
     private suspend fun fetchExplore() {
@@ -2080,38 +2325,87 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             },
             onFailure = { UiState.Error(it.friendly()) },
         )
-        _explore.value = state
-        (state as? UiState.Success)?.data?.let(::loadMoodGenreArtwork)
+        if (state !is UiState.Success) {
+            _explore.value = state
+            return
+        }
+        // The categories arrive with the pictures they showed last time, in
+        // one write, so the grid is whole the first time it is seen.
+        val saved = withContext(Dispatchers.IO) { ExploreArtCache.read(getApplication()) }
+        val sections = state.data.withArt(saved)
+        _explore.value = UiState.Success(sections)
+        loadMoodGenreArtwork(sections)
     }
 
     /**
      * Category buttons do not carry thumbnails themselves. Resolve a small
      * number at a time from the shelves they open, so the grid gains real art
      * without saturating the browse client or delaying the category list.
+     *
+     * Each picture costs the whole page its category opens. Until the Explore
+     * tab has been opened, only categories with no saved picture are asked for
+     * (a first launch, a category YouTube has added). Once it has been, every
+     * category's page is read ahead as before, so a tap opens it at once, and
+     * the picture it has now is saved for the next launch.
      */
     private fun loadMoodGenreArtwork(sections: List<MoodGenreSection>) {
+        val wanted = sections.flatMap(MoodGenreSection::items)
+            .distinctBy { ExploreArtCache.keyOf(it) }
+            .filter { item ->
+                val key = ExploreArtCache.keyOf(item)
+                key !in exploreInFlight &&
+                    if (exploreShown) key !in exploreWarmed else item.thumbnailUrl == null
+            }
+        if (wanted.isEmpty()) return
+        wanted.forEach { exploreInFlight += ExploreArtCache.keyOf(it) }
         viewModelScope.launch {
-            val limiter = Semaphore(4)
-            coroutineScope {
-                sections.flatMap(MoodGenreSection::items).forEach { item ->
-                    launch {
-                        val artwork = limiter.withPermit {
-                            YtMusicRepository.moodGenreArtwork(item.browseId, item.params).getOrNull()
-                        } ?: return@launch
-                        val current = (_explore.value as? UiState.Success)?.data ?: return@launch
-                        _explore.value = UiState.Success(current.map { section ->
-                            section.copy(items = section.items.map { currentItem ->
-                                if (currentItem.browseId == item.browseId && currentItem.params == item.params) {
-                                    currentItem.copy(thumbnailUrl = artwork)
-                                } else {
-                                    currentItem
-                                }
-                            })
-                        })
+            val found = HashMap<String, String>()
+            try {
+                coroutineScope {
+                    // Put on the grid a few at a time, not one write a picture:
+                    // each write redraws the page.
+                    val publisher = launch {
+                        while (true) {
+                            delay(EXPLORE_ART_PUBLISH_MS)
+                            publishExploreArt(found)
+                        }
                     }
+                    wanted.map { item ->
+                        launch {
+                            val key = ExploreArtCache.keyOf(item)
+                            val artwork = exploreArtLimiter.withPermit {
+                                YtMusicRepository.moodGenreArtwork(item.browseId, item.params)
+                            }
+                            if (artwork.isSuccess) exploreWarmed += key
+                            artwork.getOrNull()?.let { found[key] = it }
+                        }
+                    }.forEach { it.join() }
+                    publisher.cancel()
                 }
+            } finally {
+                wanted.forEach { exploreInFlight -= ExploreArtCache.keyOf(it) }
+                publishExploreArt(found)
+            }
+            // What each page shows now is kept for the next launch, also where
+            // the grid holds on to the picture it already had.
+            val shown = (_explore.value as? UiState.Success)?.data?.artByKey().orEmpty()
+            val keep = shown + found
+            if (keep.isNotEmpty()) {
+                withContext(Dispatchers.IO) { ExploreArtCache.write(getApplication(), keep) }
             }
         }
+    }
+
+    /**
+     * Puts the pictures in [art] on the Explore categories that have none. A
+     * category that already shows one keeps it until the next launch: a
+     * picture that changes while it is looked at is the pop this avoids.
+     */
+    private fun publishExploreArt(art: Map<String, String>) {
+        if (art.isEmpty()) return
+        val current = (_explore.value as? UiState.Success)?.data ?: return
+        val updated = current.withArt(art, replace = false)
+        if (updated !== current) _explore.value = UiState.Success(updated)
     }
 
     fun openMoodGenre(item: MoodGenre) {
@@ -2137,6 +2431,166 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** Tapping a tab should leave any pushed page behind. */
     fun clearDetail() {
         if (_detailStack.value.isNotEmpty()) _detailStack.value = emptyList()
+    }
+
+    // ── Podcasts ────────────────────────────────────────────────────────
+
+    private val _podcasts = MutableStateFlow<UiState<PodcastsFeed>>(UiState.Loading)
+
+    /** The Podcasts page's feed. Read when the page is first opened, not at launch. */
+    val podcasts: StateFlow<UiState<PodcastsFeed>> = _podcasts.asStateFlow()
+
+    private val _podcastsRefreshing = MutableStateFlow(false)
+
+    /** Whether a pull on the Podcasts page is reading its feed again. */
+    val podcastsRefreshing: StateFlow<Boolean> = _podcastsRefreshing.asStateFlow()
+
+    private val _podcastsLoadingMore = MutableStateFlow(false)
+
+    /** Whether the next page of the Podcasts page's shelves is on its way. */
+    val podcastsLoadingMore: StateFlow<Boolean> = _podcastsLoadingMore.asStateFlow()
+
+    private val _podcastSpotify = MutableStateFlow<List<ShelfItem>?>(null)
+
+    /**
+     * The shows Spotify recommends, found on YouTube Music, for the Podcasts
+     * page's dial when its source is Spotify or both. Null until they are in;
+     * empty when Spotify has none or cannot be reached.
+     */
+    val podcastSpotify: StateFlow<List<ShelfItem>?> = _podcastSpotify.asStateFlow()
+    private var podcastSpotifyJob: Job? = null
+
+    /**
+     * The Podcasts page's dial takes Spotify's shows: reads them, unless that
+     * is under way. They are kept for a while (see [SpotifyPodcasts]), so
+     * most calls cost nothing; [fresh] asks Spotify again, for a pull.
+     */
+    fun loadPodcastSpotify(fresh: Boolean = false) {
+        if (podcastSpotifyJob?.isActive == true) return
+        podcastSpotifyJob = viewModelScope.launch {
+            _podcastSpotify.value = SpotifyPodcasts.shows(fresh)
+        }
+    }
+
+    /** Whose feed [podcasts] holds or is waiting for, once one was asked for. */
+    private var podcastsListener: String? = null
+    private var podcastsAsked = false
+    private var podcastsJob: Job? = null
+
+    /**
+     * The Podcasts page is up: reads its feed, unless this listener's is in
+     * already or on its way. A feed that failed is asked for again.
+     */
+    fun openPodcasts() {
+        if (podcastsAsked && podcastsListener == listenerKey() && _podcasts.value !is UiState.Error) return
+        loadPodcasts()
+    }
+
+    /** Reads the Podcasts page's feed from the start: for a new listener, and its retry button. */
+    fun loadPodcasts() {
+        val identity = listenerKey()
+        podcastsListener = identity
+        podcastsAsked = true
+        podcastsJob?.cancel()
+        _podcasts.value = UiState.Loading
+        podcastsJob = viewModelScope.launch {
+            val state = fetchPodcasts()
+            if (identity == listenerKey()) _podcasts.value = state
+        }
+    }
+
+    /** A pull on the Podcasts page. One that fails leaves the page as it is. */
+    fun refreshPodcasts() {
+        if (_podcastsRefreshing.value) return
+        val identity = listenerKey()
+        _podcastsRefreshing.value = true
+        // Spotify's shows too, when the dial takes them.
+        val source = CustomizationSettings.podcastSource.value.effective(SpotifyRecommendations.connected())
+        if (source.usesSpotify) loadPodcastSpotify(fresh = true)
+        viewModelScope.launch {
+            try {
+                val state = fetchPodcasts()
+                val current = identity == listenerKey() && identity == podcastsListener
+                if (current && (state is UiState.Success || _podcasts.value !is UiState.Success)) {
+                    _podcasts.value = state
+                }
+            } finally {
+                _podcastsRefreshing.value = false
+            }
+        }
+    }
+
+    /**
+     * The next page of the Podcasts page's shelves, as its list nears its
+     * end. A page that fails ends the paging, and the landing page's shelves
+     * follow what is there.
+     */
+    fun loadMorePodcasts() {
+        val current = (_podcasts.value as? UiState.Success)?.data ?: return
+        val token = current.continuation ?: return
+        if (_podcastsLoadingMore.value) return
+        val identity = listenerKey()
+        _podcastsLoadingMore.value = true
+        viewModelScope.launch {
+            try {
+                val result = YtMusicRepository.morePodcastsHome(token)
+                // Only onto the feed the page was asked of: a pull or another listener's has its own.
+                val latest = (_podcasts.value as? UiState.Success)?.data
+                if (identity != listenerKey() || latest == null || latest.continuation != token) return@launch
+                _podcasts.value = UiState.Success(
+                    result.fold(
+                        onSuccess = { page -> PodcastsDial.more(latest, page.shelves, page.continuation) },
+                        onFailure = { latest.copy(continuation = null) },
+                    ),
+                )
+            } finally {
+                _podcastsLoadingMore.value = false
+            }
+        }
+    }
+
+    /**
+     * Home's podcasts page and the Podcasts landing page, asked for together.
+     * Either one is enough for the page, so only both failing is an error.
+     */
+    private suspend fun fetchPodcasts(): UiState<PodcastsFeed> = coroutineScope {
+        val identity = listenerKey()
+        val home = async { YtMusicRepository.podcastsHome() }
+        val landing = async { YtMusicRepository.podcastsLanding() }
+        // The followed shows' newest episodes, and the shows themselves for
+        // their tiles. Only an account has them, and the page does not wait
+        // on a failure of either: there is then no show to bring forward.
+        val signedIn = _signedIn.value
+        val newEpisodes = async {
+            if (signedIn) YtMusicRepository.newEpisodes().getOrNull().orEmpty() else emptyList()
+        }
+        val followed = async {
+            if (signedIn) YtMusicRepository.followedShows().getOrNull().orEmpty() else emptyList()
+        }
+        val homeResult = home.await()
+        val landingResult = landing.await()
+        val homeShelves = homeResult.getOrNull()?.shelves.orEmpty()
+        val landingShelves = landingResult.getOrNull().orEmpty()
+        // "Shows for you" is not in every answer: kept when it is, for the ones it is not in.
+        PodcastsDial.showShelves(homeShelves).firstOrNull()
+            ?.let { CustomizationSettings.setPodcastShowsForYou(it, identity) }
+        val feed = PodcastsDial.feed(
+            home = homeShelves,
+            continuation = homeResult.getOrNull()?.continuation,
+            landing = landingShelves,
+            savedForYou = CustomizationSettings.podcastShowsFor(identity),
+            fresh = PodcastsDial.fresh(
+                episodes = newEpisodes.await(),
+                followed = followed.await(),
+                known = PodcastsDial.picks(homeShelves, landingShelves),
+            ),
+        )
+        if (feed.picks.isNotEmpty() || feed.shelves.isNotEmpty()) {
+            UiState.Success(feed)
+        } else {
+            val failure = landingResult.exceptionOrNull() ?: homeResult.exceptionOrNull()
+            UiState.Error(failure?.friendly() ?: text(R.string.nothing_to_explore))
+        }
     }
 
     fun loadHome() {
@@ -2646,6 +3100,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * a blank placeholder.
      */
     fun searchFor(term: String) {
+        if (PodcastSearch.active.value) {
+            _query.value = term
+            PodcastSearch.submit(viewModelScope, term)
+            return
+        }
         _query.value = term
         searchSubmitted = true
         _suggestions.value = emptyList()
@@ -2662,6 +3121,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onQueryChange(newValue: String) {
         _query.value = newValue
+        // Opened from the Podcasts tab: the field searches podcasts alone.
+        if (PodcastSearch.active.value) {
+            PodcastSearch.onQuery(viewModelScope, newValue)
+            return
+        }
         if (newValue.isBlank()) {
             searchSubmitted = false
             _suggestions.value = emptyList()
@@ -2669,8 +3133,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             _results.value = null
             addonSearchJob?.cancel()
             _addonResults.value = null
+            _addonGroupHits.value = emptyList()
             spotifySearchJob?.cancel()
             _spotifyResults.value = null
+            _spotifyBrowse.value = emptyList()
+            _spotifyTopPick.value = null
             // The list is about to switch from search results to recent
             // searches (or the empty state) — without this it can keep
             // whatever scroll offset the results list was left at, landing
@@ -2693,6 +3160,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * full search, and records the term in history for future recall.
      */
     fun submitSearch() {
+        if (PodcastSearch.active.value) {
+            PodcastSearch.submit(viewModelScope, _query.value)
+            return
+        }
         val q = _query.value.trim()
         if (q.isEmpty() || _searchSource.value == SearchSource.LIBRARY) return
         searchSubmitted = true
@@ -2724,6 +3195,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         _addonResults.value = UiState.Loading
+        _addonGroupHits.value = emptyList()
         addonSearchJob = viewModelScope.launch {
             val perAddon = coroutineScope {
                 addons.map { addon ->
@@ -2738,6 +3210,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 val longest = perAddon.maxOfOrNull { it.size } ?: 0
                 for (i in 0 until longest) perAddon.forEach { rows -> rows.getOrNull(i)?.let(::add) }
             }
+            _addonGroupHits.value = withContext(Dispatchers.Default) { songGroupHits(merged, q) }
             _addonResults.value = UiState.Success(merged)
         }
     }
@@ -2775,14 +3248,24 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         _spotifyResults.value = UiState.Loading
+        _spotifyBrowse.value = emptyList()
+        _spotifyTopPick.value = null
         spotifySearchJob = viewModelScope.launch {
-            val tracks = runCatching { SpotifyLibrary.searchTracks(q, limit = SPOTIFY_SEARCH_LIMIT) }.getOrElse {
+            val search = runCatching { SpotifyLibrary.search(q, limit = SPOTIFY_SEARCH_LIMIT) }.getOrElse {
                 if (it is kotlinx.coroutines.CancellationException) throw it
                 spotifySearchTracks = emptyList()
                 _spotifyResults.value = UiState.Error(it.message ?: text(R.string.failed))
                 return@launch
             }
+            val tracks = search.tracks
             spotifySearchTracks = tracks
+            val browse = spotifyBrowseRows(search)
+            _spotifyBrowse.value = browse
+            _spotifyTopPick.value = search.topUri?.let { uri ->
+                val song = tracks.indexOfFirst { "spotify:track:${it.id}" == uri }
+                val row = browse.firstOrNull { it.browseId == uri }
+                if (song >= 0 || row != null) SearchTopPick(song, row) else null
+            }
             _spotifyResults.value = UiState.Success(tracks.map { it.asPendingSong() })
             val gate = Semaphore(SPOTIFY_MATCH_PARALLELISM)
             coroutineScope {
@@ -2792,6 +3275,19 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
     }
+
+    /**
+     * The artist, album and playlist hits of [search] as search rows. Each
+     * row's id is its Spotify URI; see [openSourceBrowse] for what it opens.
+     */
+    private fun spotifyBrowseRows(search: SpotifySearch): List<BrowseItem> =
+        search.artists.map {
+            BrowseItem("spotify:artist:${it.id}", it.name, "", it.imageUrl, BrowseType.ARTIST)
+        } + search.albums.map {
+            BrowseItem("spotify:album:${it.id}", it.name, it.artist, it.imageUrl, BrowseType.ALBUM)
+        } + search.playlists.map {
+            BrowseItem(SPOTIFY_PAGE_PREFIX + it.id, it.name, it.owner.orEmpty(), it.imageUrl, BrowseType.PLAYLIST)
+        }
 
     /** Finds [track] on YouTube Music and swaps it into row [index], unless that row has moved on. */
     private suspend fun matchSpotifySearchRow(index: Int, track: SpotifyTrack): Song {
@@ -3157,43 +3653,46 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 is SearchResult.Browse -> null
             }
         } ?: return
+        viewModelScope.launch { runCatching { warmStream(song) } }
+    }
+
+    /**
+     * Has [audio]'s stream found before it is played, so that playing it has
+     * only the song itself to fetch.
+     */
+    private suspend fun warmStream(audio: Song) {
         // Direct Source Stream fetches nothing before it is played. Warming
         // here would also pin JioSaavn's quick answer ahead of the addon.
         if (DirectSourceGate.isActive()) return
-        viewModelScope.launch {
-            runCatching {
-                val audio = song
-                // A source-backed row resolves through its own source already
-                // and never takes the YouTube path — warming either half of
-                // this for one would be work nothing asks for.
-                if (SourceRegistry.parseTrackKey(audio.videoId) != null) return@runCatching
-                // Pinned to one source by hand: playback asks only that one.
-                if (com.music.bitchord.playback.SourcePins.of(audio.videoId) != null) return@runCatching
-                // JioSaavn first, on the same reasoning as the queue's
-                // read-ahead: it is the copy that will actually be played if it
-                // has the track, so warming YouTube's URL instead warms the one
-                // that loses. Pinned through [StreamChoice] so playback opens
-                // this very stream rather than racing for it again — see
-                // [SourceResolver.prefetchSubstitute], which requires it.
-                val warmed = SourceResolver.prefetchSubstitute(
-                    TrackMatcher.Target(
-                        title = audio.title,
-                        artist = audio.artist,
-                        durationSec = TrackMatcher.secondsOf(audio.durationText),
-                        album = audio.albumName,
-                        isExplicit = audio.isExplicit,
-                        isVideo = audio.isVideo,
-                    ),
-                )
-                if (warmed != null) {
-                    StreamChoice.remember(audio.videoId, warmed, substituted = true)
-                    return@runCatching
-                }
-                // Disabled, or hasn't got it: the tap path falls back to
-                // YouTube, so that is what is worth having ready.
-                StreamResolver.resolve(audio.videoId)
-            }
+        // A source-backed row resolves through its own source already
+        // and never takes the YouTube path — warming either half of
+        // this for one would be work nothing asks for.
+        if (SourceRegistry.parseTrackKey(audio.videoId) != null) return
+        // Pinned to one source by hand: playback asks only that one.
+        if (com.music.bitchord.playback.SourcePins.of(audio.videoId) != null) return
+        // JioSaavn first, on the same reasoning as the queue's
+        // read-ahead: it is the copy that will actually be played if it
+        // has the track, so warming YouTube's URL instead warms the one
+        // that loses. Pinned through [StreamChoice] so playback opens
+        // this very stream rather than racing for it again — see
+        // [SourceResolver.prefetchSubstitute], which requires it.
+        val warmed = SourceResolver.prefetchSubstitute(
+            TrackMatcher.Target(
+                title = audio.title,
+                artist = audio.artist,
+                durationSec = TrackMatcher.secondsOf(audio.durationText),
+                album = audio.albumName,
+                isExplicit = audio.isExplicit,
+                isVideo = audio.isVideo,
+            ),
+        )
+        if (warmed != null) {
+            StreamChoice.remember(audio.videoId, warmed, substituted = true)
+            return
         }
+        // Disabled, or hasn't got it: the tap path falls back to
+        // YouTube, so that is what is worth having ready.
+        StreamResolver.resolve(audio.videoId)
     }
 
     companion object {
@@ -4812,6 +5311,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
 private const val HOME_CACHE_WRITE_DELAY_MS = 2_000L
 
+/**
+ * The longest anything waits on Home's first load before going ahead without
+ * it: see [MainViewModel.awaitHomeSettled].
+ */
+private const val STARTUP_SETTLE_MS = 6_000L
+
+/** How many Explore category pages are read at a time, and how often their pictures are put on the grid. */
+private const val EXPLORE_ART_PARALLELISM = 4
+private const val EXPLORE_ART_PUBLISH_MS = 300L
+
 private const val DETAIL_CACHE_SIZE = 40
 private const val DETAIL_CACHE_TTL_MS = 30 * 60 * 1000L
 
@@ -4838,6 +5347,15 @@ private const val LIKED_RETRY_STEP_MS = 1_000L
 
 /** How many seeds "I'm Feeling Lucky" keeps per session. */
 private const val LUCKY_POOL_SIZE = 20
+
+/**
+ * How long after the app opens, or the die is turned on, its first roll is made
+ * ready: after the launch has had the network and the phone to itself.
+ */
+private const val LUCKY_WARM_DELAY_MS = 6_000L
+
+/** How long after a roll the next one is made ready. */
+private const val LUCKY_NEXT_DELAY_MS = 3_000L
 
 /** How far back into history, and down the most-played lists, its seeds are drawn from. */
 private const val LUCKY_RECENT_REACH = 30

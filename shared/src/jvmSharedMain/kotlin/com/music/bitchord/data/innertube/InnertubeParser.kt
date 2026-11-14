@@ -7,6 +7,7 @@ import com.music.bitchord.data.model.ArtistNameIndex
 import com.music.bitchord.data.model.ArtistPage
 import com.music.bitchord.data.model.ArtistRef
 import com.music.bitchord.data.model.completeArtistCredits
+import com.music.bitchord.data.model.EpisodeInfo
 import com.music.bitchord.data.model.BrowseItem
 import com.music.bitchord.data.model.BrowseType
 import com.music.bitchord.data.model.HomeShelf
@@ -14,8 +15,10 @@ import com.music.bitchord.data.model.LibraryState
 import com.music.bitchord.data.model.LikeStatus
 import com.music.bitchord.data.model.MoodGenre
 import com.music.bitchord.data.model.MoodGenreSection
+import com.music.bitchord.data.model.PODCAST_SHOW_PREFIX
 import com.music.bitchord.data.model.SearchResult
 import com.music.bitchord.data.model.ShelfItem
+import com.music.bitchord.data.model.ShelfLayout
 import com.music.bitchord.data.model.shelfLayoutFor
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.model.SongMenu
@@ -28,6 +31,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
 import java.util.Locale
 
 /**
@@ -276,6 +280,95 @@ object InnertubeParser {
         }
         walk(root)
         return out
+    }
+
+    /**
+     * The shelves of a podcasts page: Home under its Podcasts chip, the
+     * Podcasts landing page (`FEmusic_non_music_audio`), or a continuation of
+     * either. A shelf is one of two kinds, and says which by its layout:
+     * shows ([ShelfLayout.CARDS], each opening its `MPSP…` page) or episodes
+     * ([ShelfLayout.VIDEO], each playable, with its show as the subtitle and
+     * its runtime in [ShelfItem.durationText]).
+     *
+     * Walked out wherever they land, as [parseHomeContinuation] does, since
+     * the first page and its continuations wrap them differently. Not read
+     * with [carouselShelf]: that one knows nothing of episode rows, and drops
+     * a card whose name has "video" in it, which a show's may.
+     */
+    fun parsePodcastShelves(root: JsonElement): List<HomeShelf> {
+        val out = mutableListOf<HomeShelf>()
+        fun walk(node: JsonElement) {
+            when (node) {
+                is JsonObject -> {
+                    (node["musicCarouselShelfRenderer"] as? JsonObject)?.let(::podcastShelf)?.let(out::add)
+                    node.values.forEach(::walk)
+                }
+                is JsonArray -> node.forEach(::walk)
+                else -> Unit
+            }
+        }
+        walk(root)
+        return out
+    }
+
+    private fun podcastShelf(carousel: JsonObject): HomeShelf? {
+        val header = carousel.o("header").o("musicCarouselShelfBasicHeaderRenderer")
+        val title = header.o("title").runs()
+        if (title.isBlank()) return null
+        val contents = carousel.a("contents").orEmpty()
+        val episodes = contents.mapNotNull { item ->
+            val renderer = item.o("musicMultiRowListItemRenderer")
+            parseMultiRowListItem(renderer, show = null)?.let { song ->
+                ShelfItem(
+                    title = song.title,
+                    // Away from its own page a row names its show; one that doesn't says nothing.
+                    subtitle = renderer.o("secondTitle").runs(),
+                    thumbnailUrl = song.thumbnailUrl,
+                    videoId = song.videoId,
+                    browseId = null,
+                    durationText = song.durationText,
+                )
+            }
+        }
+        val more = header.o("moreContentButton").o("buttonRenderer").o("navigationEndpoint").o("browseEndpoint")
+        if (episodes.isNotEmpty()) {
+            return HomeShelf(
+                title = title,
+                items = episodes,
+                subtitle = header.o("strapline").runs(),
+                moreBrowseId = more.s("browseId"),
+                moreParams = more.s("params"),
+                layout = ShelfLayout.VIDEO,
+            )
+        }
+        val shows = contents.mapNotNull { item -> podcastShowCard(item.o("musicTwoRowItemRenderer")) }
+        if (shows.isEmpty()) return null
+        return HomeShelf(
+            title = title,
+            items = shows,
+            subtitle = header.o("strapline").runs(),
+            moreBrowseId = more.s("browseId"),
+            moreParams = more.s("params"),
+            layout = ShelfLayout.CARDS,
+        )
+    }
+
+    /** A show's card: its name, who publishes it, its square cover and its `MPSP…` page. */
+    private fun podcastShowCard(renderer: JsonObject?): ShelfItem? {
+        if (renderer == null) return null
+        val browseId = renderer.o("navigationEndpoint").o("browseEndpoint").s("browseId")
+            ?.takeIf { it.startsWith(PODCAST_SHOW_PREFIX) }
+            ?: return null
+        val title = renderer.o("title").runs()
+        if (title.isBlank()) return null
+        return ShelfItem(
+            title = title,
+            subtitle = renderer.o("subtitle").runs(),
+            thumbnailUrl = renderer.o("thumbnailRenderer").o("musicThumbnailRenderer")
+                .o("thumbnail").a("thumbnails").best(),
+            videoId = null,
+            browseId = browseId,
+        )
     }
 
     private fun carouselShelf(carousel: JsonObject): HomeShelf? {
@@ -591,11 +684,7 @@ object InnertubeParser {
         if (playlistScope == null && suggestionShelves.isEmpty()) return null
 
         val pageCredit = pageCredit(root)
-        val songs = playlistScope?.let { playlist ->
-            collectRenderers(playlist, "musicResponsiveListItemRenderer")
-                .mapNotNull { parseResponsiveListItem(it, pageCredit) }
-                .distinctBy { it.videoId }
-        }.orEmpty()
+        val songs = playlistScope?.let { playlist -> playlistRows(playlist, pageCredit) }.orEmpty()
         val knownSongs = songs.mapTo(HashSet()) { it.videoId }
         val suggested = suggestionShelves
             .flatMap { collectRenderers(it, "musicResponsiveListItemRenderer") }
@@ -608,6 +697,34 @@ object InnertubeParser {
         // continuation means more real tracks.
         val token = playlistScope?.let { continuationToken(it) }
         return PlaylistShelfPage(songs, suggested, token)
+    }
+
+    /**
+     * A playlist shelf's own rows, in its order: tracks, and on a playlist of
+     * podcast episodes ("Episodes for later", "New episodes") the episode
+     * rows, which are another renderer; see [parseMultiRowListItem].
+     */
+    private fun playlistRows(playlist: JsonObject, pageCredit: Credits): List<Song> {
+        val out = LinkedHashMap<String, Song>()
+        fun walk(node: JsonElement) {
+            when (node) {
+                is JsonObject -> {
+                    val track = node["musicResponsiveListItemRenderer"] as? JsonObject
+                    val episode = node["musicMultiRowListItemRenderer"] as? JsonObject
+                    when {
+                        track != null -> parseResponsiveListItem(track, pageCredit)
+                            ?.let { out.putIfAbsent(it.videoId, it) }
+                        episode != null -> parseMultiRowListItem(episode, null)
+                            ?.let { out.putIfAbsent(it.videoId, it) }
+                        else -> node.values.forEach(::walk)
+                    }
+                }
+                is JsonArray -> node.forEach(::walk)
+                else -> Unit
+            }
+        }
+        walk(playlist)
+        return out.values.toList()
     }
 
     /** One page of saved library cards, plus the token for the next page. */
@@ -769,6 +886,8 @@ object InnertubeParser {
             // episode, whose art is a widescreen still too: it is listened to,
             // and a "video" is dropped from the All tab's results.
             isVideo = !episode && (rowType == "video" || thumbnails.isNotSquare()),
+            // What the player knows an episode by: it shows the episode's own picture.
+            episode = if (episode) EpisodeInfo(showId = showIdFromRuns(subtitleRuns)) else null,
             isExplicit = renderer.hasExplicitBadge(),
             // Extract the "Remove from history" feedback token from the row's menu, if present.
             feedbackToken = extractFeedbackToken(renderer),
@@ -799,6 +918,7 @@ object InnertubeParser {
             ?: return null
         val title = renderer.o("title").runs()
         if (title.isBlank()) return null
+        val progress = renderer.o("playbackProgress").o("musicPlaybackProgressRenderer")
         return Song(
             videoId = videoId,
             title = title,
@@ -807,27 +927,81 @@ object InnertubeParser {
                 ?: "Unknown artist",
             thumbnailUrl = renderer.o("thumbnail").o("musicThumbnailRenderer")
                 .o("thumbnail").a("thumbnails").best(),
-            durationText = episodeRuntime(
-                renderer.o("playbackProgress").o("musicPlaybackProgressRenderer")
-                    .o("durationText").runs(),
-            ),
+            durationText = episodeRuntime(progress.o("durationText").runs()),
             isExplicit = renderer.hasExplicitBadge(),
+            episode = EpisodeInfo(
+                description = renderer.o("description").runs().trim().takeIf { it.isNotEmpty() },
+                released = episodeReleased(renderer.o("subtitle").a("runs")),
+                views = episodeViews(renderer.o("subtitle").a("runs")),
+                playedPercent = ((progress?.get("playbackProgressPercentage") as? JsonPrimitive)?.intOrNull ?: 0)
+                    .coerceIn(0, 100),
+                showId = renderer.o("secondTitle").a("runs").orEmpty().firstNotNullOfOrNull { run ->
+                    run.o("navigationEndpoint").o("browseEndpoint").s("browseId")
+                        ?.takeIf { it.startsWith(PODCAST_SHOW_PREFIX) }
+                },
+            ),
         )
+    }
+
+    /**
+     * When an episode came out, off its row's subtitle ("489K views • 1d
+     * ago", "8M views • Oct 24"): the last part of it. Null for a subtitle of
+     * one part, which is the views alone.
+     */
+    private fun episodeReleased(runs: JsonArray?): String? {
+        val parts = runs.orEmpty()
+            .mapNotNull { it.s("text")?.trim() }
+            .filter { part -> part.any { it.isLetterOrDigit() } }
+        return parts.lastOrNull()?.takeIf { parts.size >= 2 }
+    }
+
+    /**
+     * How many times an episode was played, off the first part of its row's
+     * subtitle ("489K views • 1d ago"): the count alone ("489K") where the
+     * text is English, and YouTube Music's whole text in another language,
+     * where the count and its unit cannot be told apart safely. Null for a
+     * subtitle with no count in it.
+     */
+    internal fun episodeViews(runs: JsonArray?): String? {
+        val parts = runs.orEmpty()
+            .mapNotNull { it.s("text")?.trim() }
+            .filter { part -> part.any { it.isLetterOrDigit() } }
+        val first = parts.firstOrNull() ?: return null
+        ENGLISH_VIEWS.matchEntire(first)?.let { return it.groupValues[1].replace(" ", "") }
+        // In another language the count is known only by its place: ahead of the date.
+        return first.takeIf { parts.size >= 2 && it.any(Char::isDigit) }
     }
 
     /**
      * "2 hr 43 min" as the "2:43:00" every other row states its runtime in,
      * which is what [com.music.bitchord.data.model.durationMillis] reads.
-     * Null for anything it can't read, such as another language's units.
+     *
+     * YouTube writes the runtime in the app's language ("1 h 5 min", "1 Std.
+     * 5 Min.", "1時間5分"), so where the English units are not found it is
+     * read by its numbers: two are hours and minutes, and one is minutes
+     * unless the words beside it say hours. Null for anything with no number
+     * in it, or with more than three.
      */
-    private fun episodeRuntime(text: String): String? {
+    internal fun episodeRuntime(text: String): String? {
         var seconds = 0L
-        RUNTIME_PART.findAll(text).forEach { part ->
-            val count = part.groupValues[1].toLong()
-            seconds += when (part.groupValues[2].lowercase(Locale.ROOT).first()) {
-                'h' -> count * 3_600
-                'm' -> count * 60
-                else -> count
+        val numbers = RUNTIME_NUMBER.findAll(text).map { it.value.toLong() }.toList()
+        val english = RUNTIME_PART.findAll(text).toList()
+        // Only when every number has an English unit: "1 h 5 min" has one for the 5 alone.
+        if (english.size == numbers.size) {
+            english.forEach { part ->
+                val count = part.groupValues[1].toLong()
+                seconds += when (part.groupValues[2].lowercase(Locale.ROOT).first()) {
+                    'h' -> count * 3_600
+                    'm' -> count * 60
+                    else -> count
+                }
+            }
+        } else {
+            seconds = when (numbers.size) {
+                1 -> numbers[0] * if (HOUR_WORD.containsMatchIn(text)) 3_600 else 60
+                2 -> numbers[0] * 3_600 + numbers[1] * 60
+                3 -> numbers[0] * 3_600 + numbers[1] * 60 + numbers[2]
+                else -> 0L
             }
         }
         if (seconds == 0L) return null
@@ -842,6 +1016,13 @@ object InnertubeParser {
     }
 
     /** The show an episode row's subtitle links to, by the page type that link opens. */
+    /** The browse id ("MPSP…") of the show an episode row links to, where it links to one. */
+    private fun showIdFromRuns(runs: List<JsonElement>): String? =
+        runs.firstNotNullOfOrNull { run ->
+            run.o("navigationEndpoint").o("browseEndpoint").s("browseId")
+                ?.takeIf { it.startsWith(PODCAST_SHOW_PREFIX) }
+        }
+
     private fun showNameFromRuns(runs: List<JsonElement>): String? =
         runs.firstOrNull { run ->
             run.o("navigationEndpoint").o("browseEndpoint")
@@ -1340,6 +1521,8 @@ object InnertubeParser {
         // Those same runs link out to the artist and album pages, which is
         // how a track started from the queue knows where it came from.
         val credits = creditsOf(bylineRuns)
+        // What follows an episode in its queue is more episodes.
+        val episode = renderer.musicVideoType() == PODCAST_EPISODE_TYPE
         return Song(
             videoId = videoId,
             title = title,
@@ -1352,8 +1535,10 @@ object InnertubeParser {
             albumName = credits.albumName,
             // A catalogue track is credited "Artist • Album • Year"; the
             // matching music video is "Artist • 417M views • 2.4M likes".
-            isVideo = byline.any { it.contains("views", ignoreCase = true) },
+            // An episode's byline counts its views too, and it is no music video.
+            isVideo = !episode && byline.any { it.contains("views", ignoreCase = true) },
             isExplicit = renderer.hasExplicitBadge(),
+            episode = if (episode) EpisodeInfo() else null,
         )
     }
 
@@ -1518,6 +1703,15 @@ object InnertubeParser {
         return LibraryState(
             playlistId = play.o("watchPlaylistEndpoint").s("playlistId")
                 ?: play.o("watchEndpoint").s("playlistId")
+                // A podcast show's header has no play button. Its "Find in
+                // show" row names the show's own playlist, which is what the
+                // save likes, as an album's play button does.
+                ?: buttons.firstNotNullOfOrNull { button ->
+                    button.o("menuRenderer").a("items")?.firstNotNullOfOrNull {
+                        it.o("menuServiceItemRenderer").o("serviceEndpoint")
+                            .o("playlistFilterSearchEndpoint").s("playlistId")
+                    }
+                }
                 ?: return null,
             // The toggle carries the answer directly, rather than the
             // which-icon-leads reading a menu toggle needs: a button that is
@@ -1706,6 +1900,16 @@ object InnertubeParser {
     private val DURATION = Regex("""\d+:\d{2}""")
     /** One unit of an episode's runtime — "2 hr", "43 min", "10 sec". */
     private val RUNTIME_PART = Regex("""(\d+)\s*(hours?|hr|min|sec)""", RegexOption.IGNORE_CASE)
+    private val RUNTIME_NUMBER = Regex("""\d+""")
+    /**
+     * A word for hours in the languages the app is offered in, for a runtime
+     * of whole hours ("2 h", "2 Std.", "2 ч", "2時間"): the one case a single
+     * number is not minutes.
+     */
+    private val HOUR_WORD = Regex(
+        """\bh\b|\bhs?\.|hora|heure|\bstd|stunde|godz|\bjam\b|\bore?\b|\bsaat|giờ|ч|час|שע|घंट|時間|时|시간|ชั่วโมง|ชม""",
+        RegexOption.IGNORE_CASE,
+    )
     private val YEAR = Regex("""\d{4}""")
     /**
      * A counted quantity rather than a name — "12.4M plays", "13 songs",
@@ -1771,7 +1975,12 @@ private fun JsonElement?.hasKey(key: String): Boolean = when (this) {
 
 /** Whether a row plays a podcast episode, by the type its play action states. */
 private fun JsonObject.isPodcastEpisode(): Boolean =
-    findString("musicVideoType") == "MUSIC_VIDEO_TYPE_PODCAST_EPISODE"
+    findString("musicVideoType") == PODCAST_EPISODE_TYPE
+
+private const val PODCAST_EPISODE_TYPE = "MUSIC_VIDEO_TYPE_PODCAST_EPISODE"
+
+/** "489K views", "1.2M views", "1 view", "12,345 views": the count is group 1. */
+private val ENGLISH_VIEWS = Regex("""([\d.,]+\s?[KMB]?)\s+views?""", RegexOption.IGNORE_CASE)
 
 /**
  * Whether a track row says it is one of the signed-in user's own uploads.
