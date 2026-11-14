@@ -21,6 +21,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material3.minimumInteractiveComponentSize
@@ -553,11 +554,16 @@ private fun ArtworkPageBackButton(
         MaterialTheme.colorScheme.onSurface
     }
 
-    IconButton(
-        onClick = onClick,
+    // Not an IconButton: that grows to its 48dp minimum touch size inside this
+    // 44dp circle, and the surface is drawn at the size of what it wraps. The
+    // glass then came out 48dp wide behind a 44dp clip, which cut away its
+    // outer 2dp: the rim light, and the hairline with it.
+    Box(
+        contentAlignment = Alignment.Center,
         modifier = modifier
             .size(44.dp)
-            .then(artworkPageSurface(shape = shape, hazeState = hazeState)),
+            .then(artworkPageSurface(shape = shape, hazeState = hazeState))
+            .clickable(role = Role.Button, onClick = onClick),
     ) {
         Icon(
             BitChordIcons.ChevronBack,
