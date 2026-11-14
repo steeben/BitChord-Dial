@@ -48,6 +48,7 @@ internal fun NavPage.label(): String = stringResource(
         NavPage.LIBRARY -> R.string.library
         NavPage.SEARCH -> R.string.search
         NavPage.PLAYLISTS -> R.string.playlists
+        NavPage.PODCASTS -> R.string.podcasts
     },
 )
 

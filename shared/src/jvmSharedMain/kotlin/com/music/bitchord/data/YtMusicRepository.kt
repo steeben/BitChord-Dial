@@ -133,6 +133,34 @@ object YtMusicRepository {
     }
 
     /**
+     * Home under its Podcasts chip: now and then a shelf of shows picked for
+     * the listener ("Shows for you"), and always shelves of episodes by
+     * category, three to a page. See [InnertubeParser.parsePodcastShelves].
+     */
+    suspend fun podcastsHome(): Result<HomeFeed> = call("podcasts") {
+        val response = Innertube.browse("FEmusic_home", PODCASTS_CHIP_PARAMS)
+        HomeFeed(InnertubeParser.parsePodcastShelves(response), InnertubeParser.continuationToken(response))
+    }
+
+    /** More of [podcastsHome]'s shelves, by its continuation. */
+    suspend fun morePodcastsHome(token: String): Result<HomeFeed> = call("podcasts:more") {
+        val response = Innertube.browseContinuation(token)
+        HomeFeed(InnertubeParser.parsePodcastShelves(response), InnertubeParser.continuationToken(response))
+    }
+
+    /**
+     * The Podcasts landing page: shows to start with, the popular shows and
+     * episodes, then shows by category. The same for everyone, and always
+     * there, where [podcastsHome]'s picked shows are not.
+     */
+    suspend fun podcastsLanding(): Result<List<HomeShelf>> = call("podcasts:landing") {
+        InnertubeParser.parsePodcastShelves(Innertube.browse("FEmusic_non_music_audio"))
+    }
+
+    /** What Home's Podcasts chip sends as its browse params. */
+    private const val PODCASTS_CHIP_PARAMS = "ggMGSgQIDBAD"
+
+    /**
      * The lead shelf: the account's listening history, newest first.
      *
      * YouTube's home already carries a "Listen again", but it ranks by how

@@ -34,6 +34,8 @@
     <string name="audio_files_on_device">קובצי אודיו במכשיר</string>
     <string name="on_device">במכשיר</string>
     <string name="playlists">פלייליסטים</string>
+    <string name="podcasts">פודקאסטים</string>
+    <string name="podcasts_dial_menu">אפשרויות פודקאסטים</string>
     <string name="new_playlist">פלייליסט חדש</string>
     <string name="saved_to_youtube_music">נשמר ל-YouTube Music</string>
     <string name="sign_in">התחברות</string>

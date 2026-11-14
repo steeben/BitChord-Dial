@@ -31,6 +31,8 @@
     <string name="audio_files_on_device">ไฟล์เสียงในอุปกรณ์</string>
     <string name="on_device">ในอุปกรณ์</string>
     <string name="playlists">เพลย์ลิสต์</string>
+    <string name="podcasts">พอดแคสต์</string>
+    <string name="podcasts_dial_menu">ตัวเลือกพอดแคสต์</string>
     <string name="new_playlist">เพลย์ลิสต์ใหม่</string>
     <string name="saved_to_youtube_music">บันทึกลง YouTube Music แล้ว</string>
     <string name="sign_in">ลงชื่อเข้าใช้</string>

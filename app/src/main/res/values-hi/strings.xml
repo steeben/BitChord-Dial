@@ -32,6 +32,8 @@
     <string name="audio_files_on_device">डिवाइस पर ऑडियो फ़ाइलें</string>
     <string name="on_device">डिवाइस पर</string>
     <string name="playlists">प्लेलिस्ट</string>
+    <string name="podcasts">पॉडकास्ट</string>
+    <string name="podcasts_dial_menu">पॉडकास्ट के विकल्प</string>
     <string name="new_playlist">नई प्लेलिस्ट</string>
     <string name="saved_to_youtube_music">YouTube Music में सेव की गई</string>
     <string name="sign_in">साइन इन करें</string>

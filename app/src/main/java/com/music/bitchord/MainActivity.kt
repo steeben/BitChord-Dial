@@ -1561,6 +1561,7 @@ private fun BitChordApp(
         TAB_EXPLORE -> if (selectedMoodGenre == null) exploreListState else moodGenreListState
         TAB_LIBRARY -> libraryListState
         TAB_PLAYLISTS -> playlistsListState
+        TAB_PODCASTS -> PodcastsTab.listState
         else -> searchListState
     }
 
@@ -1677,13 +1678,15 @@ private fun BitChordApp(
     val sharedLinkLabel = stringResource(R.string.shared_link)
     val openedFileLabel = stringResource(R.string.opened_file)
     val playlistsLabel = stringResource(R.string.playlists)
-    val pageTabs = remember(homeLabel, exploreLabel, libraryLabel, searchLabel, playlistsLabel) {
+    val podcastsLabel = stringResource(R.string.podcasts)
+    val pageTabs = remember(homeLabel, exploreLabel, libraryLabel, searchLabel, playlistsLabel, podcastsLabel) {
         mapOf(
             TAB_HOME to BottomTab(homeLabel, BitChordIcons.Home),
             TAB_EXPLORE to BottomTab(exploreLabel, BitChordIcons.TabExplore),
             TAB_LIBRARY to BottomTab(libraryLabel, BitChordIcons.TabLibrary),
             TAB_SEARCH to BottomTab(searchLabel, BitChordIcons.TabSearch),
             TAB_PLAYLISTS to BottomTab(playlistsLabel, Icons.AutoMirrored.Rounded.QueueMusic),
+            TAB_PODCASTS to BottomTab(podcastsLabel, BitChordIcons.TabPodcasts),
         )
     }
     val tabs = remember(pageTabs, barPages) { barPages.map { pageTabs.getValue(it) } }
@@ -3390,8 +3393,11 @@ private fun BitChordApp(
             }
         }
     }
-    val dialShowing = homePage != HomePage.EXPLORE && selectedTab == TAB_HOME && detail == null &&
-        selectedMoodGenre == null && libraryShowAll == null && !showSettings
+    // The Podcasts page's dial holds the bar open the same way.
+    val dialShowing = (
+        (homePage != HomePage.EXPLORE && selectedTab == TAB_HOME) ||
+            (selectedTab == TAB_PODCASTS && PodcastsTab.dialShowing)
+        ) && detail == null && selectedMoodGenre == null && libraryShowAll == null && !showSettings
     LaunchedEffect(dialShowing, navBarScroll) { navBarScroll.holdExpanded = dialShowing }
     // The system splash stays up until Home has something to show (or,
     // starting on another page, for a moment). See LaunchGate.
@@ -3934,8 +3940,8 @@ private fun BitChordApp(
                                 (initialState == "settings" && targetState in SETTINGS_PAGE_KEYS) ||
                                 (targetState == "settings" && initialState in SETTINGS_PAGE_KEYS)
                         val dialZoom = !reduceAnimationSetting && DialLaunch.zooms(initialState, targetState)
-                        // Home's mark follows the tabs' fade through, and nothing else.
-                        HomeMark.tabSwap = false
+                        // Home's mark, and the Podcasts page's, follow the tabs' fade through, and nothing else.
+                        PageMark.tabSwap = false
                         when {
                             // A tile's page opening, as an app does from a
                             // phone's home screen: the page grows out of the tile
@@ -3967,7 +3973,7 @@ private fun BitChordApp(
                                     slideOutHorizontally(slide) { if (forward) -it else it }
                             }
                             tabSwap -> {
-                                HomeMark.tabSwap = true
+                                PageMark.tabSwap = true
                                 (
                                     fadeIn(tween(TAB_FADE_IN_MS, delayMillis = TAB_FADE_OUT_MS, easing = LinearOutSlowInEasing)) +
                                         scaleIn(
@@ -4005,7 +4011,11 @@ private fun BitChordApp(
                 ) { key ->
                     // Home's mark is drawn over the pages: it takes this page's transition from here.
                     if (key == HOME_PAGE_KEY) {
-                        HomeMarkFollow(transition, TAB_FADE_OUT_MS, TAB_FADE_IN_MS, TAB_FADE_IN_SCALE)
+                        PageMarkFollow(HomeMark, transition, TAB_FADE_OUT_MS, TAB_FADE_IN_MS, TAB_FADE_IN_SCALE)
+                    }
+                    // As is the Podcasts page's.
+                    if (key == PODCASTS_PAGE_KEY) {
+                        PageMarkFollow(PodcastsMark, transition, TAB_FADE_OUT_MS, TAB_FADE_IN_MS, TAB_FADE_IN_SCALE)
                     }
                     // A page opened from a tile grows out of it, and shrinks back on closing.
                     DialLaunchPage(
@@ -4745,6 +4755,16 @@ private fun BitChordApp(
                                 }
                             },
                         )
+                        // A dial of podcast shows, then shelves of them: Home's
+                        // page over another feed, read when this is first opened.
+                        TAB_PODCASTS -> PodcastsTabPage(
+                            viewModel = viewModel,
+                            currentSong = player.song,
+                            isPlaying = player.isPlaying,
+                            contentPadding = listPadding,
+                            onItemLongPress = onShelfLongPress,
+                            onDialItemLongPress = onDialLongPress,
+                        )
                         // The mood this page is for, held while it closes: by
                         // then no mood is selected, and it would shrink away
                         // as Explore itself.
@@ -5291,10 +5311,19 @@ private fun BitChordApp(
 
                 // Home with nothing opened over it: the page whose mark is pinned in
                 // the top left and whose refresh is the mark spinning.
-                val homeRoot = selectedTab == TAB_HOME && detail == null && selectedMoodGenre == null &&
+                // [rootTab] is that tab, or none: the Podcasts page is one more
+                // such page, with a mark and a "…" menu of its own.
+                val rootTab = if (detail == null && selectedMoodGenre == null &&
                     libraryShowAll == null && !showSpotify && !showDiscord && !showHistory &&
                     !showSettings && !showAccountScrobbling && !showSources && !showListenTogether &&
                     !showEqualizer && !showReplay && !showStats
+                ) {
+                    selectedTab
+                } else {
+                    -1
+                }
+                val homeRoot = rootTab == TAB_HOME
+                val podcastsRoot = rootTab == TAB_PODCASTS
                 // The Library with nothing opened over it, whose heading carries
                 // the same mark and the same pull as Home's.
                 val libraryRoot = pageKey == "$TAB_KEY$TAB_LIBRARY"
@@ -5416,7 +5445,8 @@ private fun BitChordApp(
                 ) {
                 FrostedTopBar(
                     title = when {
-                        homeRoot -> ""
+                        // Home's and the Podcasts page's titles are in their marks.
+                        rootTab == TAB_HOME || rootTab == TAB_PODCASTS -> ""
                         showStats && !showReplay && !showSettings && settingsSubScreen == null -> stringResource(R.string.stats)
                         showSpotify && detail == null -> stringResource(R.string.spotify)
                         showDiscord -> "Discord"
@@ -5470,15 +5500,15 @@ private fun BitChordApp(
                         detail != null -> detailScrolled
                         else -> scrolled || selectedTab == TAB_SEARCH || selectedTab == TAB_PLAYLISTS
                     },
-                    // Home and the Library show a pull in their own marks, so
-                    // the bar's puck stays put on both.
-                    refreshing = !homeRoot && !libraryRoot && (
+                    // Home, the Podcasts page and the Library show a pull in their
+                    // own marks, so the bar's puck stays put on all three.
+                    refreshing = rootTab != TAB_HOME && rootTab != TAB_PODCASTS && !libraryRoot && (
                         (currentFeed != null && currentFeed in refreshing) ||
                             (currentFeed == null && detail != null && detail.browseId in detailRefreshing)
                         ),
                     pullFraction = {
                         when {
-                            homeRoot || libraryRoot -> 0f
+                            rootTab == TAB_HOME || rootTab == TAB_PODCASTS || libraryRoot -> 0f
                             currentPull != null -> currentPull.distanceFraction
                             detail != null -> detailPull?.distanceFraction ?: 0f
                             else -> 0f
@@ -5713,7 +5743,7 @@ private fun BitChordApp(
                             // Left of the account photo, on Home itself: the
                             // dial's settings. The menu is [HomeDialMenu],
                             // composed with the other frosted overlays below.
-                            if (homeRoot) {
+                            if (rootTab == TAB_HOME) {
                                 IconButton(
                                     onClick = { dialMenuOpen = true },
                                     modifier = Modifier.tourAnchor(com.music.bitchord.data.TourTarget.DIAL_MENU),
@@ -5721,6 +5751,16 @@ private fun BitChordApp(
                                     Icon(
                                         Icons.Rounded.MoreHoriz,
                                         contentDescription = stringResource(R.string.home_dial_menu),
+                                        tint = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
+                            }
+                            // The same place on the Podcasts page: its dial's settings.
+                            if (rootTab == TAB_PODCASTS) {
+                                IconButton(onClick = { PodcastsTab.menuOpen = true }) {
+                                    Icon(
+                                        Icons.Rounded.MoreHoriz,
+                                        contentDescription = stringResource(R.string.podcasts_dial_menu),
                                         tint = MaterialTheme.colorScheme.onSurface,
                                     )
                                 }
@@ -5837,6 +5877,13 @@ private fun BitChordApp(
                 }
                 }
 
+                // The Podcasts page's mark, in the same place and by the same rules.
+                PodcastsMarkLayer(
+                    visible = podcastsRoot,
+                    viewModel = viewModel,
+                    topPadding = topBarContentPadding(),
+                )
+
                 // Drawn before the bars so their own glass reads on top of it.
                 BottomFadeScrim(
                     withMiniPlayer = player.song != null,
@@ -5941,9 +5988,14 @@ private fun BitChordApp(
                 val onTabSelected: (Int) -> Unit = { index ->
                     // Home tapped while already on Home, with nothing open over
                     // it: back up to the speed dial, on its first page.
-                    if (index == TAB_HOME && homeRoot) {
+                    if (index == TAB_HOME && rootTab == TAB_HOME) {
                         HomeReset.request()
                         scope.launch { homeListState.animateScrollToItem(0) }
+                    }
+                    // The same for Podcasts: back up to its dial, on its first page.
+                    if (index == TAB_PODCASTS && rootTab == TAB_PODCASTS) {
+                        HomeReset.request()
+                        scope.launch { PodcastsTab.listState.animateScrollToItem(0) }
                     }
                     // Search opened from the Library looks through the library
                     // first; opened from anywhere else it goes back to YouTube
@@ -7373,7 +7425,9 @@ private fun BitChordApp(
                             browseActions = null
                         }
                     },
-                inSpeedDial = target.browseId in speedDialPinnedIds || target.browseId in artistDialPinnedIds,
+                // Read as the menu is drawn, which it is afresh each time it opens.
+                // That covers a show pinned to the Podcasts page's dial too.
+                inSpeedDial = CustomizationSettings.isPinnedToSpeedDial(target.browseId),
                 onToggleSpeedDial = target.browseId?.takeIf { remote && speedDialsOn }?.let { id ->
                     {
                         val pinned = CustomizationSettings.toggleSpeedDial(
@@ -7871,6 +7925,7 @@ private fun BitChordApp(
                 hazeState = hazeState,
                 onDismiss = { dialMenuOpen = false },
             )
+            PodcastsDialMenuHost(hazeState)
         }
 
         run {
@@ -8664,7 +8719,7 @@ private fun String?.isDeviceFolder(): Boolean =
  * Albums page, which is a device folder's).
  */
 private fun launchesCards(key: String): Boolean =
-    key == HOME_PAGE_KEY || key == "$TAB_KEY$TAB_EXPLORE" || key.startsWith(MOOD_PAGE_KEY) ||
+    key == HOME_PAGE_KEY || key == PODCASTS_PAGE_KEY || key == "$TAB_KEY$TAB_EXPLORE" || key.startsWith(MOOD_PAGE_KEY) ||
         key == "$TAB_KEY$TAB_LIBRARY" || key == "$TAB_KEY$TAB_PLAYLISTS" ||
         key == "library_show_all" || key == "spotify" ||
         key.isDeviceFolder()
@@ -8765,6 +8820,7 @@ private const val TAB_EXPLORE = 1
 private const val TAB_LIBRARY = 2
 private const val TAB_SEARCH = 3
 private const val TAB_PLAYLISTS = 4
+private const val TAB_PODCASTS = 5
 
 /**
  * What a tab's key is prefixed with in the content switcher above.
@@ -8781,6 +8837,7 @@ private const val PIN_ART_TRIES = 3
 private const val PIN_ART_RETRY_MS = 4_000L
 
 private const val HOME_PAGE_KEY = "$TAB_KEY$TAB_HOME"
+private const val PODCASTS_PAGE_KEY = "$TAB_KEY$TAB_PODCASTS"
 
 /** How far Home sinks back while a dial tile's page opens over it. */
 private const val DIAL_HOME_SINK = 0.94f

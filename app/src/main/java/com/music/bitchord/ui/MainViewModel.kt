@@ -53,6 +53,8 @@ import com.music.bitchord.data.model.ArtistPage
 import com.music.bitchord.data.model.BrowseType
 import com.music.bitchord.data.model.DetailPage
 import com.music.bitchord.data.model.HomeShelf
+import com.music.bitchord.data.podcasts.PodcastsDial
+import com.music.bitchord.data.podcasts.PodcastsFeed
 import com.music.bitchord.data.model.withoutRepeatsOf
 import com.music.bitchord.data.model.LibraryPage
 import com.music.bitchord.data.model.LibraryState
@@ -2137,6 +2139,84 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** Tapping a tab should leave any pushed page behind. */
     fun clearDetail() {
         if (_detailStack.value.isNotEmpty()) _detailStack.value = emptyList()
+    }
+
+    // ── Podcasts ────────────────────────────────────────────────────────
+
+    private val _podcasts = MutableStateFlow<UiState<PodcastsFeed>>(UiState.Loading)
+
+    /** The Podcasts page's feed. Read when the page is first opened, not at launch. */
+    val podcasts: StateFlow<UiState<PodcastsFeed>> = _podcasts.asStateFlow()
+
+    private val _podcastsRefreshing = MutableStateFlow(false)
+
+    /** Whether a pull on the Podcasts page is reading its feed again. */
+    val podcastsRefreshing: StateFlow<Boolean> = _podcastsRefreshing.asStateFlow()
+
+    /** Whose feed [podcasts] holds or is waiting for, once one was asked for. */
+    private var podcastsListener: String? = null
+    private var podcastsAsked = false
+    private var podcastsJob: Job? = null
+
+    /**
+     * The Podcasts page is up: reads its feed, unless this listener's is in
+     * already or on its way. A feed that failed is asked for again.
+     */
+    fun openPodcasts() {
+        if (podcastsAsked && podcastsListener == listenerKey() && _podcasts.value !is UiState.Error) return
+        loadPodcasts()
+    }
+
+    /** Reads the Podcasts page's feed from the start: for a new listener, and its retry button. */
+    fun loadPodcasts() {
+        val identity = listenerKey()
+        podcastsListener = identity
+        podcastsAsked = true
+        podcastsJob?.cancel()
+        _podcasts.value = UiState.Loading
+        podcastsJob = viewModelScope.launch {
+            val state = fetchPodcasts()
+            if (identity == listenerKey()) _podcasts.value = state
+        }
+    }
+
+    /** A pull on the Podcasts page. One that fails leaves the page as it is. */
+    fun refreshPodcasts() {
+        if (_podcastsRefreshing.value) return
+        val identity = listenerKey()
+        _podcastsRefreshing.value = true
+        viewModelScope.launch {
+            try {
+                val state = fetchPodcasts()
+                val current = identity == listenerKey() && identity == podcastsListener
+                if (current && (state is UiState.Success || _podcasts.value !is UiState.Success)) {
+                    _podcasts.value = state
+                }
+            } finally {
+                _podcastsRefreshing.value = false
+            }
+        }
+    }
+
+    /**
+     * Home's podcasts page and the Podcasts landing page, asked for together.
+     * Either one is enough for a dial, so only both failing is an error.
+     */
+    private suspend fun fetchPodcasts(): UiState<PodcastsFeed> = coroutineScope {
+        val home = async { YtMusicRepository.podcastsHome() }
+        val landing = async { YtMusicRepository.podcastsLanding() }
+        val homeResult = home.await()
+        val landingResult = landing.await()
+        val feed = PodcastsDial.feed(
+            home = homeResult.getOrNull()?.shelves.orEmpty(),
+            landing = landingResult.getOrNull().orEmpty(),
+        )
+        if (feed.picks.isNotEmpty()) {
+            UiState.Success(feed)
+        } else {
+            val failure = landingResult.exceptionOrNull() ?: homeResult.exceptionOrNull()
+            UiState.Error(failure?.friendly() ?: text(R.string.nothing_to_explore))
+        }
     }
 
     fun loadHome() {

@@ -35,6 +35,8 @@
     <string name="audio_files_on_device">기기의 오디오 파일</string>
     <string name="on_device">기기 내</string>
     <string name="playlists">재생목록</string>
+    <string name="podcasts">팟캐스트</string>
+    <string name="podcasts_dial_menu">팟캐스트 옵션</string>
     <string name="new_playlist">새 재생목록</string>
     <string name="saved_to_youtube_music">YouTube Music에 저장했습니다</string>
     <string name="sign_in">로그인</string>

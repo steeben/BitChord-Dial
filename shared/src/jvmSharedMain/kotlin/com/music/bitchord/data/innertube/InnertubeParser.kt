@@ -14,8 +14,10 @@ import com.music.bitchord.data.model.LibraryState
 import com.music.bitchord.data.model.LikeStatus
 import com.music.bitchord.data.model.MoodGenre
 import com.music.bitchord.data.model.MoodGenreSection
+import com.music.bitchord.data.model.PODCAST_SHOW_PREFIX
 import com.music.bitchord.data.model.SearchResult
 import com.music.bitchord.data.model.ShelfItem
+import com.music.bitchord.data.model.ShelfLayout
 import com.music.bitchord.data.model.shelfLayoutFor
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.model.SongMenu
@@ -276,6 +278,95 @@ object InnertubeParser {
         }
         walk(root)
         return out
+    }
+
+    /**
+     * The shelves of a podcasts page: Home under its Podcasts chip, the
+     * Podcasts landing page (`FEmusic_non_music_audio`), or a continuation of
+     * either. A shelf is one of two kinds, and says which by its layout:
+     * shows ([ShelfLayout.CARDS], each opening its `MPSP…` page) or episodes
+     * ([ShelfLayout.VIDEO], each playable, with its show as the subtitle and
+     * its runtime in [ShelfItem.durationText]).
+     *
+     * Walked out wherever they land, as [parseHomeContinuation] does, since
+     * the first page and its continuations wrap them differently. Not read
+     * with [carouselShelf]: that one knows nothing of episode rows, and drops
+     * a card whose name has "video" in it, which a show's may.
+     */
+    fun parsePodcastShelves(root: JsonElement): List<HomeShelf> {
+        val out = mutableListOf<HomeShelf>()
+        fun walk(node: JsonElement) {
+            when (node) {
+                is JsonObject -> {
+                    (node["musicCarouselShelfRenderer"] as? JsonObject)?.let(::podcastShelf)?.let(out::add)
+                    node.values.forEach(::walk)
+                }
+                is JsonArray -> node.forEach(::walk)
+                else -> Unit
+            }
+        }
+        walk(root)
+        return out
+    }
+
+    private fun podcastShelf(carousel: JsonObject): HomeShelf? {
+        val header = carousel.o("header").o("musicCarouselShelfBasicHeaderRenderer")
+        val title = header.o("title").runs()
+        if (title.isBlank()) return null
+        val contents = carousel.a("contents").orEmpty()
+        val episodes = contents.mapNotNull { item ->
+            val renderer = item.o("musicMultiRowListItemRenderer")
+            parseMultiRowListItem(renderer, show = null)?.let { song ->
+                ShelfItem(
+                    title = song.title,
+                    // Away from its own page a row names its show; one that doesn't says nothing.
+                    subtitle = renderer.o("secondTitle").runs(),
+                    thumbnailUrl = song.thumbnailUrl,
+                    videoId = song.videoId,
+                    browseId = null,
+                    durationText = song.durationText,
+                )
+            }
+        }
+        val more = header.o("moreContentButton").o("buttonRenderer").o("navigationEndpoint").o("browseEndpoint")
+        if (episodes.isNotEmpty()) {
+            return HomeShelf(
+                title = title,
+                items = episodes,
+                subtitle = header.o("strapline").runs(),
+                moreBrowseId = more.s("browseId"),
+                moreParams = more.s("params"),
+                layout = ShelfLayout.VIDEO,
+            )
+        }
+        val shows = contents.mapNotNull { item -> podcastShowCard(item.o("musicTwoRowItemRenderer")) }
+        if (shows.isEmpty()) return null
+        return HomeShelf(
+            title = title,
+            items = shows,
+            subtitle = header.o("strapline").runs(),
+            moreBrowseId = more.s("browseId"),
+            moreParams = more.s("params"),
+            layout = ShelfLayout.CARDS,
+        )
+    }
+
+    /** A show's card: its name, who publishes it, its square cover and its `MPSP…` page. */
+    private fun podcastShowCard(renderer: JsonObject?): ShelfItem? {
+        if (renderer == null) return null
+        val browseId = renderer.o("navigationEndpoint").o("browseEndpoint").s("browseId")
+            ?.takeIf { it.startsWith(PODCAST_SHOW_PREFIX) }
+            ?: return null
+        val title = renderer.o("title").runs()
+        if (title.isBlank()) return null
+        return ShelfItem(
+            title = title,
+            subtitle = renderer.o("subtitle").runs(),
+            thumbnailUrl = renderer.o("thumbnailRenderer").o("musicThumbnailRenderer")
+                .o("thumbnail").a("thumbnails").best(),
+            videoId = null,
+            browseId = browseId,
+        )
     }
 
     private fun carouselShelf(carousel: JsonObject): HomeShelf? {

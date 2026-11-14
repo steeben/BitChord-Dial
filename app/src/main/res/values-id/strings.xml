@@ -31,6 +31,8 @@
     <string name="audio_files_on_device">File audio di perangkat</string>
     <string name="on_device">Di Perangkat</string>
     <string name="playlists">Playlist</string>
+    <string name="podcasts">Podcast</string>
+    <string name="podcasts_dial_menu">Opsi podcast</string>
     <string name="new_playlist">Playlist baru</string>
     <string name="saved_to_youtube_music">Disimpan ke YouTube Music</string>
     <string name="sign_in">Masuk</string>

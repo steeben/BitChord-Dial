@@ -410,7 +410,16 @@ data class ShelfItem(
      * picture the player can show. Drawn as a 16:9 card, as the web player does.
      */
     val isVideo: Boolean = false,
+    /** A podcast episode's runtime, as "2:43:00" or "34:00"; null for anything else. */
+    val durationText: String? = null,
 )
+
+/** What the browse id of a podcast show's page starts with. */
+const val PODCAST_SHOW_PREFIX = "MPSP"
+
+/** Whether this card is a podcast show: it opens the show's page, and plays nothing by itself. */
+val ShelfItem.isPodcastShow: Boolean
+    get() = videoId == null && browseId?.startsWith(PODCAST_SHOW_PREFIX) == true
 
 /** How a shelf's items are laid out — the web player's `ShelfLayout`, by the same rules. */
 enum class ShelfLayout {

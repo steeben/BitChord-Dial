@@ -31,6 +31,8 @@
     <string name="audio_files_on_device">デバイス内のオーディオファイル</string>
     <string name="on_device">デバイス内</string>
     <string name="playlists">プレイリスト</string>
+    <string name="podcasts">ポッドキャスト</string>
+    <string name="podcasts_dial_menu">ポッドキャストのオプション</string>
     <string name="new_playlist">新しいプレイリスト</string>
     <string name="saved_to_youtube_music">YouTube Musicに保存済み</string>
     <string name="sign_in">ログイン</string>

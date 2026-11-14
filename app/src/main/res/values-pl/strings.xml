@@ -35,6 +35,8 @@
     <string name="audio_files_on_device">Pliki audio na urządzeniu</string>
     <string name="on_device">Na urządzeniu</string>
     <string name="playlists">Playlisty</string>
+    <string name="podcasts">Podcasty</string>
+    <string name="podcasts_dial_menu">Opcje podcastów</string>
     <string name="new_playlist">Nowa playlista</string>
     <string name="saved_to_youtube_music">Zapisano do YouTube Music</string>
     <string name="sign_in">Zaloguj</string>

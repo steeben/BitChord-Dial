@@ -196,6 +196,39 @@ object BitChordIcons {
     }
 
     /** A filled glyph outline in the 512-unit em box — see [TabExplore]. */
+    /**
+     * The phone tab bar's Podcasts glyph: a head and a tapered body with two
+     * rings of sound round them, open at the foot. Drawn here, as [Home] is,
+     * since the font the other tab glyphs come from has none: the head and
+     * body filled, the rings stroked at a weight that sits with the solid
+     * glyphs beside it.
+     */
+    val TabPodcasts: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "bc_tab_podcasts",
+            defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f,
+        ).addPath(
+            pathData = addPathNodes(
+                // Head
+                "M10 11.1A2 2 0 1 1 14 11.1A2 2 0 1 1 10 11.1Z" +
+                    // Body, wider at the shoulders than at the foot
+                    "M10.9 13.9H13.1Q13.95 13.9 13.85 14.75L13.2 20.3Q13.08 21.3 12 21.3" +
+                    "Q10.92 21.3 10.8 20.3L10.15 14.75Q10.05 13.9 10.9 13.9Z",
+            ),
+            fill = stroke,
+        ).addPath(
+            // The inner ring, then the outer: each from its left end over the top to its right.
+            pathData = addPathNodes(
+                "M8.54 14.56A4.9 4.9 0 1 1 15.46 14.56" +
+                    "M8.81 18.87A8.4 8.4 0 1 1 15.19 18.87",
+            ),
+            stroke = stroke,
+            strokeLineWidth = 1.8f,
+            strokeLineCap = StrokeCap.Round,
+        ).build()
+    }
+
     private fun fontGlyph(name: String, pathData: String): ImageVector =
         ImageVector.Builder(
             name = name,

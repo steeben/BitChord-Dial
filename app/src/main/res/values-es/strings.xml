@@ -33,6 +33,8 @@
     <string name="audio_files_on_device">Archivos de audio del dispositivo</string>
     <string name="on_device">En el dispositivo</string>
     <string name="playlists">Listas de reproducción</string>
+    <string name="podcasts">Pódcasts</string>
+    <string name="podcasts_dial_menu">Opciones de pódcasts</string>
     <string name="new_playlist">Nueva lista</string>
     <string name="saved_to_youtube_music">Guardada en YouTube Music</string>
     <string name="sign_in">Iniciar sesión</string>
