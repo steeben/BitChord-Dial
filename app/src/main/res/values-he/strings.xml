@@ -232,6 +232,8 @@
     <string name="hide_volume_bar_subtitle">מסיר את מחוון עוצמת הקול מהנגן הראשי</string>
     <string name="hide_song_status">הסתרת סטטוס השיר</string>
     <string name="hide_song_status_subtitle">מסתיר את הטקסט „מושמע מתוך” או „הושמע על ידי” בנגן הראשי</string>
+    <string name="hide_player_status_bar">הסתרת שורת המצב</string>
+    <string name="hide_player_status_bar_subtitle">מסתיר את שורת המצב ואת הצל העליון בנגן הראשי</string>
     <string name="off">כבוי</string>
     <string name="low">נמוך</string>
     <string name="medium">בינוני</string>

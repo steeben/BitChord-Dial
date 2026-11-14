@@ -232,6 +232,8 @@
     <string name="hide_volume_bar_subtitle">Retire le curseur de volume du lecteur principal</string>
     <string name="hide_song_status">Masquer le statut du titre</string>
     <string name="hide_song_status_subtitle">Masque le texte « Lecture depuis » ou « Lu par » dans le lecteur principal</string>
+    <string name="hide_player_status_bar">Masquer la barre d’état</string>
+    <string name="hide_player_status_bar_subtitle">Masque la barre d’état et l’ombre du haut dans le lecteur principal</string>
     <string name="off">Désactivé</string>
     <string name="low">Faible</string>
     <string name="medium">Moyenne</string>

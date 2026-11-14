@@ -229,6 +229,8 @@
     <string name="hide_volume_bar_subtitle">Usuwa suwak głośności z głównego odtwarzacza</string>
     <string name="hide_song_status">Ukryj status utworu</string>
     <string name="hide_song_status_subtitle">Ukrywa tekst „Odtwarzane z” lub „Odtwarzane przez” w głównym odtwarzaczu</string>
+    <string name="hide_player_status_bar">Ukryj pasek stanu</string>
+    <string name="hide_player_status_bar_subtitle">Ukrywa pasek stanu i górny cień w głównym odtwarzaczu</string>
     <string name="off">Wyłączone</string>
     <string name="low">Niskie</string>
     <string name="medium">Średnie</string>

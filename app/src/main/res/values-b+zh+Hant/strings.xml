@@ -228,6 +228,8 @@
     <string name="hide_volume_bar_subtitle">從主播放器中移除音量滑塊</string>
     <string name="hide_song_status">隱藏歌曲狀態</string>
     <string name="hide_song_status_subtitle">隱藏主播放器中的“播放自”或“播放者”文字</string>
+    <string name="hide_player_status_bar">隱藏狀態列</string>
+    <string name="hide_player_status_bar_subtitle">在主播放器中隱藏狀態列和頂部陰影</string>
     <string name="off">關閉</string>
     <string name="low">低</string>
     <string name="medium">中</string>

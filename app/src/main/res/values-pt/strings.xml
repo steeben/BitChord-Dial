@@ -233,6 +233,8 @@
     <string name="hide_volume_bar_subtitle">Remove o controle de volume do player principal</string>
     <string name="hide_song_status">Ocultar status da música</string>
     <string name="hide_song_status_subtitle">Oculta o texto “Tocando de” ou “Tocado por” no player principal</string>
+    <string name="hide_player_status_bar">Ocultar a barra de estado</string>
+    <string name="hide_player_status_bar_subtitle">Oculta a barra de estado e a sombra superior no leitor principal</string>
     <string name="off">Desativado</string>
     <string name="low">Baixa</string>
     <string name="medium">Média</string>

@@ -348,6 +348,8 @@
     <string name="show_queue_history">대기열 기록 표시</string>
     <string name="show_queue_history_subtitle">이전에 재생한 최대 25곡을 대기열의 지금 재생 중인 곡 위에 표시합니다</string>
     <string name="hide_song_status_subtitle">메인 플레이어에서 “—에서 재생”, “—님이 재생함” 문구와 드래그 핸들을 숨깁니다</string>
+    <string name="hide_player_status_bar">상태 표시줄 숨기기</string>
+    <string name="hide_player_status_bar_subtitle">메인 플레이어에서 상태 표시줄과 상단 그림자를 숨깁니다</string>
     <string name="off">끔</string>
     <string name="low">낮음</string>
     <string name="medium">보통</string>

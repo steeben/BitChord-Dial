@@ -271,6 +271,8 @@
     <string name="hide_volume_bar_subtitle">Ses kaydırıcısını ana oynatıcıdan kaldırır</string>
     <string name="hide_song_status">Şarkı durumunu gizle</string>
     <string name="hide_song_status_subtitle">Ana oynatıcıdaki “Şuradan çalınıyor” veya “Çalan” yazısını gizler</string>
+    <string name="hide_player_status_bar">Durum çubuğunu gizle</string>
+    <string name="hide_player_status_bar_subtitle">Ana oynatıcıda durum çubuğunu ve üst gölgeyi gizler</string>
     <string name="off">Kapalı</string>
     <string name="low">Düşük</string>
     <string name="medium">Orta</string>

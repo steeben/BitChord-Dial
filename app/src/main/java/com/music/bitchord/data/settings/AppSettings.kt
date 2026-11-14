@@ -485,6 +485,9 @@ object AppSettings {
     /** Hides the "Playing from" / "Played by" caption at the top of the main player. */
     val hideSongStatus = MutableStateFlow(true)
 
+    /** Takes the status bar, and the dark gradient under it, off the full player. */
+    val hidePlayerStatusBar = MutableStateFlow(false)
+
     /** The queue lists what has already played above the playing track. On by default in this fork. */
     val showQueueHistory = MutableStateFlow(true)
 
@@ -1072,6 +1075,7 @@ object AppSettings {
         stopOnTaskRemoved.value = prefs.getBoolean(KEY_STOP_ON_TASK_REMOVED, false)
         hideVolumeBar.value = prefs.getBoolean(KEY_HIDE_VOLUME_BAR, true)
         hideSongStatus.value = prefs.getBoolean(KEY_HIDE_SONG_STATUS, true)
+        hidePlayerStatusBar.value = prefs.getBoolean(KEY_HIDE_PLAYER_STATUS_BAR, false)
         showQueueHistory.value = prefs.getBoolean(KEY_SHOW_QUEUE_HISTORY, true)
         dontRepeatSuggestions.value = prefs.getBoolean(KEY_DONT_REPEAT_SUGGESTIONS, false)
         smartVersionAlignment.value = prefs.getBoolean(KEY_SMART_VERSION_ALIGNMENT, true)
@@ -1507,6 +1511,11 @@ object AppSettings {
     fun setHideSongStatus(value: Boolean) {
         hideSongStatus.value = value
         prefs.edit().putBoolean(KEY_HIDE_SONG_STATUS, value).apply()
+    }
+
+    fun setHidePlayerStatusBar(value: Boolean) {
+        hidePlayerStatusBar.value = value
+        prefs.edit().putBoolean(KEY_HIDE_PLAYER_STATUS_BAR, value).apply()
     }
 
     fun setShowQueueHistory(value: Boolean) {
@@ -2461,6 +2470,7 @@ object AppSettings {
     private const val KEY_STOP_ON_TASK_REMOVED = "stop_on_task_removed"
     private const val KEY_HIDE_VOLUME_BAR = "hide_volume_bar"
     private const val KEY_HIDE_SONG_STATUS = "hide_song_status"
+    private const val KEY_HIDE_PLAYER_STATUS_BAR = "hide_player_status_bar"
     private const val KEY_SHOW_QUEUE_HISTORY = "show_queue_history"
     private const val KEY_DONT_REPEAT_SUGGESTIONS = "dont_repeat_suggestions"
     private const val KEY_SMART_VERSION_ALIGNMENT = "smart_version_alignment"

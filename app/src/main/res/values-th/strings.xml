@@ -265,6 +265,8 @@
     <string name="hide_volume_bar_subtitle">เอาแถบเลื่อนระดับเสียงออกจากเครื่องเล่นหลัก</string>
     <string name="hide_song_status">ซ่อนสถานะเพลง</string>
     <string name="hide_song_status_subtitle">ซ่อนข้อความ “กำลังเล่นจาก” หรือ “เล่นโดย” ในเพลเยอร์หลัก</string>
+    <string name="hide_player_status_bar">ซ่อนแถบสถานะ</string>
+    <string name="hide_player_status_bar_subtitle">ซ่อนแถบสถานะและเงาด้านบนในเครื่องเล่นหลัก</string>
     <string name="off">ปิด</string>
     <string name="low">ต่ำ</string>
     <string name="medium">ปานกลาง</string>

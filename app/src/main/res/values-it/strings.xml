@@ -289,6 +289,8 @@
     <string name="hide_volume_bar_subtitle">Rimuove il cursore del volume dal player principale</string>
     <string name="hide_song_status">Nascondi stato del brano</string>
     <string name="hide_song_status_subtitle">Nasconde il testo «In riproduzione da» o «Riprodotto da» nel player principale</string>
+    <string name="hide_player_status_bar">Nascondi la barra di stato</string>
+    <string name="hide_player_status_bar_subtitle">Nasconde la barra di stato e l’ombra superiore nel lettore principale</string>
     <string name="off">Disattivato</string>
     <string name="low">Bassa</string>
     <string name="medium">Media</string>
